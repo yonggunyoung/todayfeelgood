@@ -1,0 +1,4 @@
+.env
+daily_learn.log
+__pycache__/
+*.pyc

@@ -44,18 +44,37 @@ export function clampParams(p: Partial<FontParams>): FontParams {
   };
 }
 
+/** 출력 폰트 포맷. 프리뷰는 woff, 다운로드는 woff/ttf 선택. */
+export type FontFormat = "woff" | "ttf";
+
+/** 포맷별 MIME 타입과 파일 확장자 */
+export const FONT_FORMATS: Record<FontFormat, { mime: string; ext: string }> = {
+  woff: { mime: "font/woff", ext: "woff" },
+  ttf: { mime: "font/ttf", ext: "ttf" },
+};
+
+/**
+ * imagePng 업로드 상한(바이트). 프론트 BFF와 엔진 양쪽에서 동일하게 검증해
+ * 거대 페이로드로 인한 메모리 고갈(무료 티어)을 막는다.
+ */
+export const MAX_IMAGE_PNG_BYTES = 2_000_000; // 2MB
+
 /**
  * POST /generate 요청 바디.
- * imagePng: 사용자가 그린 글씨(선택). Phase 1 전통 방식에서는 스타일 참고용으로만 쓰거나 생략 가능.
+ * - format: 출력 포맷(기본 woff). 프리뷰=woff, 다운로드 시 ttf 가능.
+ * - imagePng: 사용자가 그린 글씨(선택). Phase 1 전통 방식에서는 스타일 참고용으로만 쓰거나 생략.
+ *   슬라이더 자동 프리뷰 호출에는 보내지 말 것(불필요한 왕복 방지).
  */
 export interface GenerateRequest {
   params: FontParams;
-  imagePng?: string | null; // data URL 또는 base64 (선택)
+  format?: FontFormat;
+  imagePng?: string | null;
 }
 
-/** 엔진 /generate 응답: WOFF 폰트(base64) + 메타 */
+/** 엔진 /generate 응답: 폰트(base64) + 메타 */
 export interface GenerateResponse {
-  fontWoffBase64: string;
+  fontBase64: string;
+  format: FontFormat;
   fontFamily: string;
   generatedBy: "traditional";
   appliedParams: FontParams;

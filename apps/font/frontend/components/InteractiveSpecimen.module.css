@@ -1,43 +1,50 @@
 .wrap {
   display: grid;
-  gap: 1.5rem;
+  gap: var(--sp-6);
 }
 
 .stage {
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
+  gap: var(--sp-1);
   overflow: hidden;
-  padding: 0.5rem 0;
+  padding: var(--sp-2) 0;
 }
 
 .glyphLine {
-  font-size: clamp(4rem, 16vw, 11rem);
-  line-height: 0.92;
+  font-size: clamp(4rem, 16vw, 10rem);
+  line-height: 0.95;
   letter-spacing: -0.03em;
   color: var(--ink);
-  transition: font-weight 0.5s cubic-bezier(0.2, 0.7, 0.2, 1),
-    transform 0.12s ease;
+  transition: font-weight var(--dur-slow) var(--ease-spring),
+    transform var(--dur-fast) var(--ease-out);
   transform-origin: left bottom;
   display: inline-block;
 }
 
 .glyphLine2 {
-  font-size: clamp(1.6rem, 5vw, 3.2rem);
+  font-size: clamp(1.6rem, 5vw, 3rem);
   letter-spacing: 0.02em;
   color: var(--accent);
-  transition: font-weight 0.5s cubic-bezier(0.2, 0.7, 0.2, 1),
-    transform 0.12s ease;
+  transition: font-weight var(--dur-slow) var(--ease-spring),
+    transform var(--dur-fast) var(--ease-out);
   transform-origin: left bottom;
   display: inline-block;
 }
 
 .controls {
   display: flex;
-  gap: 2.5rem;
+  gap: var(--sp-8);
   max-width: 30rem;
 }
 
 .controls > * {
   flex: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .glyphLine,
+  .glyphLine2 {
+    transition: none;
+  }
 }

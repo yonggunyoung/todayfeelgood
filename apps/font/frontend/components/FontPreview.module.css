@@ -1,61 +1,76 @@
 .preview {
-  border: 1px solid var(--rule);
-  background: var(--paper);
+  background: var(--surface);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
 }
 
 .tab {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.7rem 1.2rem;
-  border-bottom: 1px solid var(--rule);
-  font-size: 0.76rem;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  padding: var(--sp-4) var(--sp-6);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-med);
   color: var(--ink-faint);
+  background: var(--surface-2);
 }
 
-.dim {
+.tabName {
+  color: var(--ink-soft);
+}
+
+.dot {
+  font-size: var(--text-caption);
+  font-weight: var(--weight-semi);
+  color: var(--ink-faint);
+  background: var(--surface);
+  padding: 2px var(--sp-3);
+  border-radius: var(--r-pill);
+}
+
+.live {
   color: var(--accent);
+  background: var(--accent-weak);
 }
 
 .sheet {
-  padding: 2rem 2rem 2.4rem;
+  padding: var(--sp-8) var(--sp-8) var(--sp-10);
   word-break: break-word;
 }
 
 .display {
   font-size: clamp(4rem, 12vw, 8rem);
   line-height: 0.9;
-  margin: 0 0 1.2rem;
+  margin: 0 0 var(--sp-5);
   letter-spacing: -0.03em;
 }
 
 .headline {
   font-size: clamp(1.6rem, 4vw, 2.6rem);
   line-height: 1.1;
-  margin: 0 0 1.4rem;
+  margin: 0 0 var(--sp-5);
 }
 
 .body {
-  font-size: 1.15rem;
+  font-size: var(--text-lg);
   line-height: 1.55;
   color: var(--ink-soft);
-  margin: 0 0 1.8rem;
+  margin: 0 0 var(--sp-6);
   max-width: 34rem;
 }
 
 .row {
   font-size: clamp(1.3rem, 3vw, 1.9rem);
   letter-spacing: 0.04em;
-  margin: 0 0 0.35rem;
+  margin: 0 0 var(--sp-1);
 }
 
 .rowDim {
   font-size: clamp(1rem, 2.4vw, 1.4rem);
   letter-spacing: 0.06em;
   color: var(--ink-soft);
-  margin: 0.4rem 0 1.2rem;
+  margin: var(--sp-2) 0 var(--sp-5);
 }
 
 .nums {
@@ -66,10 +81,28 @@
   margin: 0;
 }
 
-.note {
-  padding: 1rem 1.2rem 1.2rem;
-  border-top: 1px solid var(--rule);
+/* 빈 상태 — 마스코트 */
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-4);
+  text-align: center;
+  padding: var(--sp-16) var(--sp-6);
+  min-height: 16rem;
+}
+
+.emptyText {
   color: var(--ink-faint);
-  font-size: 0.88rem;
+  font-size: var(--text-body);
+  max-width: 22rem;
+}
+
+.note {
+  padding: var(--sp-4) var(--sp-6);
+  background: var(--surface-2);
+  color: var(--ink-faint);
+  font-size: var(--text-sm);
   margin: 0;
 }

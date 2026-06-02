@@ -1,97 +1,70 @@
 .studio {
-  padding-top: 2.5rem;
-  padding-bottom: 2rem;
+  padding-top: var(--sp-8);
+  padding-bottom: var(--sp-8);
 }
 
 .header {
   max-width: 44rem;
-  margin-bottom: 2.5rem;
-}
-
-.kicker {
-  font-size: 0.78rem;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--accent);
-  margin-bottom: 0.6rem;
+  margin-bottom: var(--sp-8);
 }
 
 .title {
-  font-size: clamp(2rem, 4vw, 3rem);
-  margin-bottom: 0.8rem;
+  font-size: var(--text-large);
+  margin-bottom: var(--sp-3);
 }
 
 .lead {
   color: var(--ink-soft);
-  font-size: 1.05rem;
+  font-size: var(--text-lg);
 }
 
-/* 비대칭 2단: 도구(좁게) + 견본(넓게). 똑같은 1fr 1fr 지양. */
+/* 도구(좁게) + 견본(넓게) */
 .grid {
   display: grid;
-  grid-template-columns: minmax(0, 22rem) minmax(0, 1fr);
-  gap: 2.5rem;
+  grid-template-columns: minmax(0, 24rem) minmax(0, 1fr);
+  gap: var(--sp-8);
   align-items: start;
 }
 
 @media (max-width: 900px) {
   .grid {
     grid-template-columns: 1fr;
-    gap: 2rem;
+    gap: var(--sp-6);
   }
 }
 
 .tools {
   display: flex;
   flex-direction: column;
-  gap: 2rem;
+  gap: var(--sp-5);
 }
 
-.toolBlock {
+/* 그룹드 카드 — 떠 있는 표면(보더 폐기) */
+.group {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: var(--sp-4);
+  background: var(--surface);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-sm);
+  padding: var(--sp-5);
 }
 
-.blockHead {
-  font-size: 0.8rem;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+/* 올캡스 트래킹 폐지 → 일반 케이스 small + semi */
+.groupHead {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semi);
   color: var(--ink-faint);
-  padding-bottom: 0.5rem;
-  border-bottom: 1px solid var(--rule);
 }
 
-.formatRow {
+.chips {
   display: flex;
-  gap: 0.5rem;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
 }
 
-.formatBtn {
-  flex: 1;
-  background: transparent;
-  border: 1px solid var(--rule);
-  color: var(--ink-soft);
-  padding: 0.5rem 0;
-  border-radius: 2px;
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  cursor: pointer;
-}
-
-.formatBtn:hover {
-  border-color: var(--ink);
-}
-
-.formatBtn:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-
-.formatActive {
-  background: var(--ink);
-  color: var(--paper);
-  border-color: var(--ink);
+.formatSeg {
+  width: 100%;
 }
 
 .downloadBtn {
@@ -100,7 +73,7 @@
 
 .statusRow {
   min-height: 1.2rem;
-  font-size: 0.88rem;
+  font-size: var(--text-sm);
 }
 
 .status {
@@ -113,11 +86,25 @@
 
 .preview {
   position: sticky;
-  top: 1.5rem;
+  top: 84px;
 }
 
 @media (max-width: 900px) {
   .preview {
     position: static;
   }
+}
+
+/* 정직성 라벨 */
+.honesty {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-top: var(--sp-6);
+  padding: var(--sp-3) var(--sp-5);
+  background: var(--surface-2);
+  border-radius: var(--r-pill);
+  color: var(--ink-soft);
+  font-size: var(--text-sm);
+  line-height: 1.4;
 }

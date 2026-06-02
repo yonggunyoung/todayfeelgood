@@ -1,82 +1,74 @@
+/* 블러 머티리얼 내비 — sticky로 떠 있다 */
 .header {
-  border-bottom: 1px solid var(--rule);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--material-bg);
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
 }
 
 .bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-top: 1.1rem;
-  padding-bottom: 1.1rem;
+  padding-top: var(--sp-3);
+  padding-bottom: var(--sp-3);
 }
 
 .brand {
   display: inline-flex;
   align-items: center;
-  gap: 0.7rem;
+  gap: var(--sp-3);
   text-decoration: none;
   color: var(--ink);
-}
-
-/* 도장처럼 보이는 워드마크 마크 */
-.mark {
-  display: inline-grid;
-  place-items: center;
-  width: 2.1rem;
-  height: 2.1rem;
-  background: var(--accent);
-  color: var(--paper);
-  font-size: 1.2rem;
-  font-weight: 700;
-  border-radius: 3px;
 }
 
 .wordmark {
   display: inline-flex;
   align-items: baseline;
-  gap: 0.45rem;
+  gap: var(--sp-2);
 }
 
 .name {
-  font-size: 1.25rem;
-  font-weight: 700;
+  font-size: var(--text-title3);
+  font-weight: var(--weight-bold);
   letter-spacing: -0.01em;
 }
 
 .sub {
-  font-size: 0.78rem;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-med);
   color: var(--ink-faint);
 }
 
 .right {
-  font-size: 0.9rem;
+  font-size: var(--text-sm);
   color: var(--ink-soft);
   display: flex;
-  gap: 1.2rem;
+  gap: var(--sp-4);
   align-items: center;
 }
 
 .footer {
-  border-top: 1px solid var(--rule);
-  margin-top: 5rem;
+  margin-top: var(--sp-20);
+  background: var(--surface-2);
 }
 
 .footerInner {
-  padding-top: 2rem;
-  padding-bottom: 2.5rem;
+  padding-top: var(--sp-8);
+  padding-bottom: var(--sp-10);
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: var(--sp-2);
 }
 
 .colophon {
-  font-size: 0.92rem;
+  font-size: var(--text-sm);
   color: var(--ink-soft);
 }
 
 .fineprint {
-  font-size: 0.8rem;
+  font-size: var(--text-caption);
   color: var(--ink-faint);
 }

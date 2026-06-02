@@ -1,0 +1,26 @@
+.mascot {
+  display: inline-block;
+  vertical-align: middle;
+  flex: none;
+}
+
+/* idle 시 살짝 둥실 */
+.float {
+  animation: hoek-float var(--dur-slow, 420ms) ease-in-out infinite alternate;
+  animation-duration: 2600ms;
+}
+
+@keyframes hoek-float {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-5px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .float {
+    animation: none;
+  }
+}

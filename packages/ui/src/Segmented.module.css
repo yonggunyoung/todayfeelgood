@@ -1,0 +1,63 @@
+.track {
+  position: relative;
+  display: flex;
+  gap: 0;
+  padding: 4px;
+  background: var(--surface-2);
+  border-radius: var(--r-pill);
+  box-shadow: var(--inset);
+}
+
+/* 슬라이드하는 흰 알약 인디케이터 */
+.thumb {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  bottom: 4px;
+  background: var(--surface);
+  border-radius: var(--r-pill);
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--dur-base) var(--ease-out);
+  pointer-events: none;
+}
+
+.seg {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  min-height: 36px;
+  padding: 0 var(--sp-4);
+  background: transparent;
+  border: none;
+  border-radius: var(--r-pill);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semi);
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition: color var(--dur-fast) var(--ease-out);
+}
+
+.seg:hover:not(:disabled) {
+  color: var(--ink);
+}
+
+.seg:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.active {
+  color: var(--ink);
+}
+
+.seg:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--accent-weak);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .thumb {
+    transition: none;
+  }
+}

@@ -1,20 +1,101 @@
 /*
- * 디자인 토큰 — "획(劃) 폰트공방" 미감.
- * 종이/먹의 웜뉴트럴 + 확신 있는 단일 악센트(주묵, 도장 인주의 붉은색).
- * 인디고/바이올렛 그라데이션 금지. 라이트 한 무드로 완성.
+ * 디자인 토큰 — "소프트 iOS 문방구"(Phase 2 Wave A).
+ * 밝은 색지 바탕 + 단일 잉크-블루베리 악센트, 연속곡률 라운드, 부드러운 그림자/클레이/블러,
+ * 스프링 모션. 귀여움은 마스코트 "획이"와 캔디 파스텔 악센트로 소량 주입.
+ *
+ * 폐기(블랙리스트): 세리프 본문, 올캡스+레터스페이싱 라벨, 전면 1px 보더 구획,
+ * 2px 라운드, 보라 그라데이션, 제네릭 블루. (idea-design-direction.md 7장)
+ *
+ * ★ 홈(home/app/globals.css)과 키 이름을 동일하게 유지해야 @webapp/ui가 공유된다.
  */
 :root {
-  --paper: #f7f4ec; /* 한지 같은 따뜻한 바탕 */
-  --paper-2: #efe9dc; /* 살짝 가라앉은 면(패널) */
-  --ink: #1a1714; /* 먹 */
-  --ink-soft: #4a443c; /* 본문 보조 */
-  --ink-faint: #645d52; /* 캡션/보조 텍스트 — WCAG AA 4.5:1 충족(종이 5.9:1, 패널 5.4:1) */
-  --rule: #d8d0c0; /* 얇은 괘선 */
-  --accent: #b5341f; /* 주묵(朱墨) — 인주 붉은색, 유일 악센트 */
-  --accent-weak: rgba(181, 52, 31, 0.22);
-  --danger: #9a2b1c;
+  /* 표면(surface) — 색지 느낌의 밝은 중성. 순백 지양 */
+  --bg: #f6f5f2;
+  --surface: #ffffff;
+  --surface-2: #f0eef0;
+  --surface-sunken: #eceaef;
 
-  --maxw: 1180px;
+  /* 잉크(텍스트) — 완전 검정 금지 */
+  --ink: #2b2a33;
+  --ink-soft: #5b5966;
+  --ink-faint: #76737f; /* 캡션 — surface 대비 AA 충족 */
+
+  /* 악센트 — 잉크-블루베리. 제네릭 블루 회피 */
+  --accent: #5b6cf0;
+  --accent-press: #4a59d6;
+  --accent-weak: rgba(91, 108, 240, 0.14);
+  --accent-ink: #ffffff;
+
+  /* 보조 포인트(소량만 — 마스코트·뱃지·리워드) */
+  --candy-coral: #ff7a85;
+  --candy-mint: #57d6b0;
+  --candy-butter: #ffd36e;
+  --candy-lavender: #c9b6ff;
+
+  /* 시맨틱 */
+  --success: #2fb886;
+  --warning: #f0a93a;
+  --danger: #f0556b;
+  --info: var(--accent);
+
+  /* 라인(최소화 — 선 대신 면/그림자로 구획) */
+  --hairline: rgba(43, 42, 51, 0.08);
+
+  /* 라운드(연속곡률 지향, 후하게). 2px 전면 폐기. */
+  --r-xs: 8px;
+  --r-sm: 12px;
+  --r-md: 18px;
+  --r-lg: 24px;
+  --r-xl: 32px;
+  --r-pill: 999px;
+
+  /* 그림자 / 블러 — depth */
+  --shadow-sm: 0 1px 2px rgba(43, 42, 51, 0.04), 0 4px 12px rgba(43, 42, 51, 0.06);
+  --shadow-md: 0 2px 6px rgba(43, 42, 51, 0.05), 0 12px 28px rgba(43, 42, 51, 0.1);
+  --shadow-lg: 0 8px 24px rgba(43, 42, 51, 0.08), 0 24px 60px rgba(43, 42, 51, 0.14);
+  --clay: 0 10px 24px rgba(43, 42, 51, 0.1),
+    inset 0 2px 4px rgba(255, 255, 255, 0.9),
+    inset 0 -3px 6px rgba(43, 42, 51, 0.06);
+  --inset: inset 0 2px 5px rgba(43, 42, 51, 0.1);
+  --blur: saturate(180%) blur(20px);
+  --material-bg: rgba(246, 245, 242, 0.72);
+
+  /* 타이포 위계 (1rem=16px) */
+  --text-caption: 0.78rem;
+  --text-sm: 0.88rem;
+  --text-body: 1rem;
+  --text-lg: 1.18rem;
+  --text-title3: 1.4rem;
+  --text-title2: 1.9rem;
+  --text-title1: 2.5rem;
+  --text-large: clamp(2.4rem, 5vw, 3.6rem);
+  --weight-reg: 400;
+  --weight-med: 500;
+  --weight-semi: 600;
+  --weight-bold: 700;
+
+  /* 간격(4px 베이스) */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-8: 32px;
+  --sp-10: 40px;
+  --sp-12: 48px;
+  --sp-16: 64px;
+  --sp-20: 80px;
+  --touch-min: 44px;
+  --maxw: 1100px;
+
+  /* 모션 */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-in-out: cubic-bezier(0.45, 0, 0.2, 1);
+  --dur-fast: 140ms;
+  --dur-base: 240ms;
+  --dur-slow: 420ms;
 }
 
 * {
@@ -27,37 +108,36 @@ html {
 
 body {
   margin: 0;
-  background: var(--paper);
+  background: var(--bg);
   color: var(--ink);
-  /* next/font가 주입한 --font-serif(Noto Serif KR) 사용. 미로드 시 시스템 세리프 폴백. */
-  font-family: var(--font-serif), Georgia, "Times New Roman", serif;
+  /* 본문/UI는 산세리프(Noto Sans KR). 세리프 본문 폐기. */
+  font-family: var(--font-sans), system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: var(--text-body);
   line-height: 1.6;
   font-feature-settings: "kern" 1, "liga" 1;
   -webkit-font-smoothing: antialiased;
 }
 
-/* 본문 UI(라벨·버튼 등)는 산세리프로, 제목/스페시먼은 세리프로 대비 */
-.sans {
-  font-family: var(--font-sans), system-ui, -apple-system, "Segoe UI",
-    sans-serif;
+/* 둥근 디스플레이(로고·라지타이틀·마스코트 말풍선) — 라운드 산세리프 */
+.display {
+  font-family: var(--font-display), var(--font-sans), system-ui, sans-serif;
 }
 
 h1,
 h2,
 h3 {
-  font-weight: 700;
+  font-weight: var(--weight-bold);
   letter-spacing: -0.02em;
-  line-height: 1.08;
+  line-height: 1.15;
   margin: 0;
 }
 
 a {
-  color: var(--ink);
-  text-decoration-color: var(--accent);
-  text-underline-offset: 3px;
+  color: var(--accent);
+  text-decoration: none;
 }
 a:hover {
-  color: var(--accent);
+  color: var(--accent-press);
 }
 
 p {
@@ -69,21 +149,21 @@ button {
 }
 
 ::selection {
-  background: var(--accent);
-  color: var(--paper);
+  background: var(--accent-weak);
+  color: var(--ink);
 }
 
 .container {
   max-width: var(--maxw);
   margin: 0 auto;
-  padding: 0 1.5rem;
+  padding: 0 var(--sp-5);
 }
 
-/* 종이 위 얇은 격자 괘선 — 공방 노트 느낌의 배경 디테일 */
-.ruled {
-  background-image: linear-gradient(
-    var(--rule) 1px,
-    transparent 1px
-  );
-  background-size: 100% 2.4rem;
+/* 모션 줄이기 선호 존중 */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

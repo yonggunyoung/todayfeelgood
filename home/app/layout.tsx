@@ -1,21 +1,21 @@
 import type { ReactNode } from "react";
 import type { Metadata } from "next";
-import { Noto_Sans_KR, Noto_Serif_KR } from "next/font/google";
+import { Noto_Sans_KR, Quicksand } from "next/font/google";
 import { siteUrl } from "@webapp/seo";
 import "./globals.css";
 
-// 폰트앱과 동일한 타이포(self-host): 산세리프=Noto Sans KR, 세리프=Noto Serif KR.
+// 폰트앱과 동일한 타이포(self-host): 본문/UI=Noto Sans KR, 디스플레이=Quicksand(둥근 산세리프).
 const sansKr = Noto_Sans_KR({
   subsets: ["latin"],
   weight: ["400", "500", "700"],
   display: "swap",
   variable: "--font-sans",
 });
-const serifKr = Noto_Serif_KR({
+const display = Quicksand({
   subsets: ["latin"],
-  weight: ["400", "600", "700"],
+  weight: ["500", "600", "700"],
   display: "swap",
-  variable: "--font-serif",
+  variable: "--font-display",
 });
 
 export const metadata: Metadata = {
@@ -30,7 +30,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="ko" className={`${sansKr.variable} ${serifKr.variable}`}>
+    <html lang="ko" className={`${sansKr.variable} ${display.variable}`}>
       <body>{children}</body>
     </html>
   );

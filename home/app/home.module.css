@@ -1,40 +1,31 @@
 .hero {
-  padding: 5rem 1.5rem 3rem;
+  padding: var(--sp-20) var(--sp-5) var(--sp-10);
   max-width: 44rem;
 }
 
-.mark {
-  display: inline-grid;
-  place-items: center;
-  width: 2.6rem;
-  height: 2.6rem;
-  background: var(--accent);
-  color: var(--paper);
-  font-size: 1.5rem;
-  font-weight: 700;
-  border-radius: 3px;
-  margin-bottom: 1.6rem;
+.mascot {
+  margin-bottom: var(--sp-5);
 }
 
 .title {
-  font-size: clamp(2.2rem, 5.5vw, 3.8rem);
-  line-height: 1.04;
-  letter-spacing: -0.03em;
-  margin-bottom: 1.3rem;
+  font-size: var(--text-large);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  margin-bottom: var(--sp-4);
 }
 
 .lede {
   color: var(--ink-soft);
-  font-size: 1.12rem;
-  line-height: 1.65;
+  font-size: var(--text-lg);
+  line-height: 1.6;
 }
 
 .grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 1.5rem;
-  padding-top: 1.5rem;
-  padding-bottom: 3rem;
+  gap: var(--sp-5);
+  padding-top: var(--sp-5);
+  padding-bottom: var(--sp-12);
 }
 
 @media (max-width: 720px) {
@@ -46,40 +37,40 @@
 .appCard {
   display: flex;
   flex-direction: column;
-  gap: 0.9rem;
+  gap: var(--sp-4);
   min-height: 13rem;
 }
 
 .appName {
-  font-size: 1.5rem;
+  font-size: var(--text-title3);
 }
 
 .appDesc {
   color: var(--ink-soft);
-  font-size: 0.98rem;
+  font-size: var(--text-body);
   line-height: 1.6;
   flex: 1;
 }
 
 .appCta {
   text-decoration: none;
-  font-weight: 700;
+  font-weight: var(--weight-semi);
   color: var(--accent);
   align-self: flex-start;
 }
 .appCta:hover {
-  color: var(--ink);
+  color: var(--accent-press);
 }
 
 .appSoon {
-  font-weight: 600;
+  font-weight: var(--weight-med);
   color: var(--ink-faint);
-  font-size: 0.9rem;
+  font-size: var(--text-sm);
 }
 
 .footer {
-  border-top: 1px solid var(--rule);
-  padding: 2rem 0 2.5rem;
+  background: var(--surface-2);
+  padding: var(--sp-8) 0 var(--sp-10);
   color: var(--ink-faint);
-  font-size: 0.88rem;
+  font-size: var(--text-sm);
 }

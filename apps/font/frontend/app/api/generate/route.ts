@@ -3,6 +3,7 @@ import {
   clampParams,
   MAX_IMAGE_PNG_BYTES,
   type FontFormat,
+  type FontScript,
   type GenerateRequest,
   type GenerateResponse,
 } from "@webapp/core";
@@ -30,6 +31,10 @@ function engineUrl(): string {
 
 function normalizeFormat(f: unknown): FontFormat {
   return f === "ttf" ? "ttf" : "woff";
+}
+
+function normalizeScript(s: unknown): FontScript {
+  return s === "hangul" ? "hangul" : "latin";
 }
 
 export async function POST(req: Request) {
@@ -79,9 +84,10 @@ export async function POST(req: Request) {
     // 스킴이 다르면 조용히 드롭(엔진에 신뢰되지 않은 입력 미전달)
   }
 
-  // 방어적으로 파라미터를 허용 범위로 강제
+  // 방어적으로 파라미터를 허용 범위로 강제 + script 정규화(그대로 엔진 전달)
   const payload: GenerateRequest = {
     params: clampParams(body.params ?? {}),
+    script: normalizeScript(body.script),
     format: normalizeFormat(body.format),
     imagePng,
   };

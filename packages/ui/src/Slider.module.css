@@ -1,37 +1,50 @@
 .row {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: var(--sp-3);
 }
 
 .head {
   display: flex;
   justify-content: space-between;
-  align-items: baseline;
+  align-items: center;
 }
 
+/* 올캡스 트래킹 폐지 — 일반 케이스 + medium */
 .label {
-  font-size: 0.82rem;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-med);
   color: var(--ink-soft);
 }
 
+/* 값은 연한 악센트 알약 칩 */
 .value {
   font-variant-numeric: tabular-nums;
-  font-weight: 700;
-  color: var(--ink);
-  font-size: 0.95rem;
+  font-weight: var(--weight-semi);
+  font-size: var(--text-sm);
+  color: var(--accent);
+  background: var(--accent-weak);
+  padding: 2px var(--sp-3);
+  border-radius: var(--r-pill);
 }
 
+/* 인셋 트랙 + 악센트 채움(좌측 --fill까지) */
 .input {
   -webkit-appearance: none;
   appearance: none;
   width: 100%;
-  height: 2px;
-  background: var(--rule);
-  border-radius: 0;
+  height: 6px;
+  border-radius: var(--r-pill);
+  background: linear-gradient(
+    to right,
+    var(--accent) 0,
+    var(--accent) var(--fill, 0%),
+    var(--surface-2) var(--fill, 0%),
+    var(--surface-2) 100%
+  );
+  box-shadow: var(--inset);
   cursor: pointer;
+  margin: var(--sp-2) 0;
 }
 
 .input:disabled {
@@ -39,32 +52,48 @@
   opacity: 0.5;
 }
 
+/* 통통한 클레이 thumb */
 .input::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 18px;
-  height: 18px;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
-  background: var(--ink);
-  border: 2px solid var(--paper);
-  box-shadow: 0 0 0 1px var(--ink);
+  background: var(--surface);
+  box-shadow: var(--clay);
+  border: none;
+  transition: transform var(--dur-fast) var(--ease-spring);
+}
+.input::-moz-range-thumb {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: var(--clay);
+  border: none;
+  transition: transform var(--dur-fast) var(--ease-spring);
 }
 
-.input::-moz-range-thumb {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: var(--ink);
-  border: 2px solid var(--paper);
+.input:active::-webkit-slider-thumb {
+  transform: scale(1.12);
+}
+.input:active::-moz-range-thumb {
+  transform: scale(1.12);
 }
 
 .input:focus-visible {
   outline: none;
 }
-
 .input:focus-visible::-webkit-slider-thumb {
-  box-shadow: 0 0 0 1px var(--ink), 0 0 0 4px var(--accent-weak);
+  box-shadow: var(--clay), 0 0 0 4px var(--accent-weak);
 }
 .input:focus-visible::-moz-range-thumb {
-  box-shadow: 0 0 0 4px var(--accent-weak);
+  box-shadow: var(--clay), 0 0 0 4px var(--accent-weak);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .input:active::-webkit-slider-thumb,
+  .input:active::-moz-range-thumb {
+    transform: none;
+  }
 }

@@ -1,52 +1,80 @@
 .btn {
   font: inherit;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  border-radius: 2px;
-  padding: 0.7rem 1.3rem;
+  font-weight: var(--weight-semi);
+  min-height: var(--touch-min);
+  padding: 0 var(--sp-6);
+  border-radius: var(--r-md);
+  border: none;
   cursor: pointer;
-  border: 1px solid transparent;
-  transition: background-color 0.15s ease, color 0.15s ease,
-    border-color 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
   line-height: 1.2;
+  transition: background-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-base) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
+}
+
+/* 누름: 살짝 눌리고 복귀는 스프링 */
+.btn:active:not(:disabled) {
+  transform: scale(0.96);
 }
 
 .btn:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
+  outline: none;
+  box-shadow: 0 0 0 4px var(--accent-weak);
 }
 
 .btn:disabled {
   cursor: not-allowed;
-  opacity: 0.45;
+  opacity: 0.5;
 }
 
-/* 먹(잉크) 채움 — 종이 위 도장 같은 인상 */
 .solid {
-  background: var(--ink);
-  color: var(--paper);
-  border-color: var(--ink);
+  background: var(--accent);
+  color: var(--accent-ink);
+  box-shadow: var(--shadow-sm);
 }
 .solid:hover:not(:disabled) {
-  background: var(--accent);
-  border-color: var(--accent);
+  background: var(--accent-press);
 }
 
-.outline {
-  background: transparent;
-  color: var(--ink);
-  border-color: var(--rule);
+.soft {
+  background: var(--accent-weak);
+  color: var(--accent);
 }
-.outline:hover:not(:disabled) {
-  border-color: var(--ink);
+.soft:hover:not(:disabled) {
+  background: rgba(91, 108, 240, 0.2);
+}
+
+/* 통통한 클레이 CTA */
+.clay {
+  background: var(--accent);
+  color: var(--accent-ink);
+  box-shadow: var(--clay);
+  border-radius: var(--r-lg);
+}
+.clay:hover:not(:disabled) {
+  background: var(--accent-press);
+}
+.clay:active:not(:disabled) {
+  transform: scale(0.97);
 }
 
 .ghost {
   background: transparent;
   color: var(--ink-soft);
-  padding-left: 0.6rem;
-  padding-right: 0.6rem;
 }
 .ghost:hover:not(:disabled) {
+  background: var(--surface-2);
   color: var(--ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn:active:not(:disabled),
+  .clay:active:not(:disabled) {
+    transform: none;
+  }
 }

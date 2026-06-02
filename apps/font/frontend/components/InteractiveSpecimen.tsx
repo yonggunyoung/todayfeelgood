@@ -52,7 +52,7 @@ export default function InteractiveSpecimen() {
         </span>
       </div>
 
-      <div className={`sans ${styles.controls}`}>
+      <div className={styles.controls}>
         <Slider
           label="굵기"
           display={String(weight)}

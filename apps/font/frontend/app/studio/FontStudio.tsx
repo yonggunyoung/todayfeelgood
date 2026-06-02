@@ -225,8 +225,8 @@ export default function FontStudio() {
           </span>
         </h1>
         <p className={styles.lead}>
-          슬라이더를 움직이면 오른쪽 견본이 바로 표정을 바꿔요. 마음에 드는
-          순간을 골라 그대로 받아 가세요.
+          슬라이더를 움직이면 오른쪽 견본이 바로 표정을 바꿔요. 마음에 든 순간을
+          그대로 받아 가세요.
         </p>
       </header>
 
@@ -374,7 +374,7 @@ export default function FontStudio() {
       {justDownloaded && (
         <div className={styles.toast} role="status" aria-live="polite">
           <Mascot mood="love" size={56} label="" />
-          <span>받았어요! 멋진 글씨가 손에 들어왔네요.</span>
+          <span>받았다 너굴.</span>
         </div>
       )}
 

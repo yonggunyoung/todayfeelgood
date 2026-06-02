@@ -45,8 +45,7 @@ export default function HomePage() {
             </p>
             <h1 className={`display ${styles.title}`}>손으로 빚는 작은 도구 공방</h1>
             <p className={styles.lede}>
-              거창한 플랫폼은 아니에요. 쓸모 있는 도구를 하나씩, 제대로 만들어
-              둡니다. 첫 작업대는 글자체예요.
+              쓸모 있는 도구를 하나씩, 제대로. 첫 작업대는 글자체다 너굴.
             </p>
             <a className={styles.heroCta} href="/font">
               폰트공방 들어가기 →
@@ -91,11 +90,9 @@ export default function HomePage() {
           <div className={`container ${styles.meetInner}`}>
             <Mascot mood="love" size={132} className={styles.meetMascot} label="너굴이 마스코트" />
             <div>
-              <h2 className={`display ${styles.meetTitle}`}>안녕, 너굴이예요</h2>
+              <h2 className={`display ${styles.meetTitle}`}>너굴이다</h2>
               <p className={styles.meetBody}>
-                붓을 등에 멘 너구리, 너굴이가 작업대 곳곳에서 거들어요. 글자가
-                비어 있을 땐 꾸벅꾸벅 졸고, 새 글씨가 나오면 깜짝 놀라죠. 만드는
-                내내 옆에서 응원할게요.
+                붓 멘 너구리. 거드는 건 내 담당이다 너굴.
               </p>
             </div>
           </div>
@@ -108,8 +105,8 @@ export default function HomePage() {
             <Card tag="폰트" interactive className={styles.appCard}>
               <h3 className={`display ${styles.appName}`}>폰트공방</h3>
               <p className={styles.appDesc}>
-                슬라이더로 굵기·기울기·구불구불·괴상함을 다듬어 글자체를 만들고
-                WOFF·TTF로 받아요. 변주 갤러리로 9가지 변형을 한눈에 골라요.
+                슬라이더로 굵기·기울기·곡률을 다듬어 글자체를 만들고 WOFF·TTF로
+                받아요. 변주 갤러리에서 9종을 한눈에.
               </p>
               <a className={styles.appCta} href="/font">
                 공방 들어가기 →
@@ -118,8 +115,8 @@ export default function HomePage() {
             <Card tag="스티커" interactive className={styles.appCard}>
               <h3 className={`display ${styles.appName}`}>스티커공방</h3>
               <p className={styles.appDesc}>
-                캐릭터 하나만 그리면 표정·색·테두리 변주 12종을 자동으로. 투명
-                PNG 스티커 팩으로 받아 카톡·인스타·디스코드에 바로 써요(비AI).
+                캐릭터 하나만 그리면 표정·색 변주 12종을 자동으로. 투명 PNG 팩으로
+                받아 카톡·인스타·디스코드에 바로(비AI).
               </p>
               <a className={styles.appCta} href="/sticker">
                 공방 들어가기 →

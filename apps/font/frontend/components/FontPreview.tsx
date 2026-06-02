@@ -315,8 +315,8 @@ export default function FontPreview({
           <Mascot mood={loading ? "surprised" : "sleepy"} size={88} />
           <p className={styles.emptyText}>
             {loading
-              ? "글자를 깨우는 중이에요…"
-              : "왼쪽 슬라이더를 움직이면 여기 견본이 나타나요."}
+              ? "굽는 중… 너굴."
+              : "슬라이더 움직여봐 너굴."}
           </p>
         </div>
       )}

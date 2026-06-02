@@ -269,7 +269,7 @@ export default function StickerStudio() {
           </button>
           {items.length > 0 && (
             <button type="button" className={styles.secondary} onClick={downloadAll}>
-              전체 ZIP 받기
+              전체 ZIP 챙기기
             </button>
           )}
         </div>
@@ -284,8 +284,8 @@ export default function StickerStudio() {
           <div className={styles.empty}>
             <Mascot mood="sleepy" size={96} label="너굴이가 기다려요" />
             <p className={styles.emptyText}>
-              왼쪽에 캐릭터를 그리고 <strong>표정 {MAX_STICKER_SET_SIZE}종 만들기</strong>를
-              눌러요. 한 번 그리면 기쁨·슬픔·윙크·하트… 한 세트가 자동으로 나와요.
+              그려봐 너굴. 동그라미 하나면 <strong>표정 {MAX_STICKER_SET_SIZE}종</strong>이
+              한 세트로 떨어진다 너굴.
             </p>
             <p className={styles.honesty}>
               AI 아님 · 절차적 자동 합성 · 그림은 이 브라우저 밖으로 나가지 않아요.
@@ -314,8 +314,8 @@ export default function StickerStudio() {
                 ))}
               </div>
               <p className={styles.honesty}>
-                전부 자동 합성(비AI)된 투명 PNG예요. 같은 시드(현재 #{seed})면 같은 세트가 다시
-                나와요.
+                {MAX_STICKER_SET_SIZE}종 떴다 너굴. 전부 자동 합성(비AI)된 투명 PNG예요. 같은
+                시드(현재 #{seed})면 같은 세트가 다시 나와요.
               </p>
             </>
           )

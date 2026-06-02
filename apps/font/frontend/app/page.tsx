@@ -98,10 +98,9 @@ export default function HomePage() {
             <div>
               <h2 className={`display ${styles.howTitle}`}>만드는 법은 간단해요</h2>
               <p className={styles.howBody}>
-                슬라이더로 굵기·기울기·곡률·괴상함을 다듬고, 무드 프리셋을 톡
-                눌러 분위기를 골라요. 마음에 든 순간을 WOFF나 TTF로 바로 받으면
-                끝. 인공지능 없이, 공개 가변폰트를 슬라이더로 변형하는
-                방식이에요(내가 그린 글씨가 아니라 정직하게 안내해요).
+                슬라이더로 굵기·기울기·곡률을 다듬고, 무드 프리셋으로 분위기를
+                골라 WOFF·TTF로 받으면 끝. AI 아님 — 공개 가변폰트를 슬라이더로
+                변형한 결과예요(내가 그린 글씨는 아닙니다).
               </p>
               <Link href="/studio" className={styles.howCta}>
                 작업대 열기 →

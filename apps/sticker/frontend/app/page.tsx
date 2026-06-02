@@ -132,9 +132,9 @@ export default function LandingPage() {
             <div>
               <h2 className={`display ${styles.howTitle}`}>정직하게, 전부 자동 합성이에요</h2>
               <p className={styles.howBody}>
-                인공지능을 쓰지 않아요. 그린 그림에 표정 파츠를 얹고, 색과 테두리를 규칙으로
-                변주하는 절차적 방식이에요. 그림은 이 브라우저 밖으로 나가지 않고, 같은 시드면
-                같은 세트가 다시 나와 공유·재현이 쉬워요.
+                AI 아님 · 절차적 자동 합성이에요. 그린 그림에 표정 파츠를 얹고 색·테두리를
+                규칙으로 변주해요. 그림은 이 브라우저 밖으로 안 나가고, 같은 시드면 같은
+                세트가 다시 나와요.
               </p>
               <Link href="/studio" className={styles.howCta}>
                 작업대 열기 →

@@ -1,31 +1,198 @@
-.hero {
-  text-align: center;
-  padding: 5rem 1rem;
-}
-
-.title {
-  font-size: clamp(2rem, 5vw, 3.25rem);
-  margin: 0 0 1rem;
-  line-height: 1.15;
-}
-
-.subtitle {
-  color: var(--muted);
-  max-width: 38rem;
-  margin: 0 auto 2.5rem;
-  font-size: 1.1rem;
-}
-
-.cta {
-  display: inline-block;
-  background: var(--accent-2);
-  color: #fff;
+.headerCta {
   text-decoration: none;
-  padding: 0.9rem 1.6rem;
-  border-radius: 0.6rem;
+  color: var(--paper);
+  background: var(--ink);
+  padding: 0.5rem 1.05rem;
+  border-radius: 2px;
   font-weight: 600;
+  font-size: 0.9rem;
+}
+.headerCta:hover {
+  background: var(--accent);
+  color: var(--paper);
 }
 
-.cta:hover {
+/* ── 히어로: 비대칭 2단(텍스트 좁게 + 스페시먼 넓게) ── */
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 26rem) minmax(0, 1fr);
+  gap: 3.5rem;
+  align-items: center;
+  padding-top: 4rem;
+  padding-bottom: 4rem;
+}
+
+@media (max-width: 920px) {
+  .hero {
+    grid-template-columns: 1fr;
+    gap: 2.5rem;
+    padding-top: 2.5rem;
+  }
+}
+
+.kicker {
+  font-size: 0.8rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 1.4rem;
+}
+
+.headline {
+  font-size: clamp(2.6rem, 6vw, 4.6rem);
+  line-height: 1.02;
+  letter-spacing: -0.03em;
+  margin-bottom: 1.6rem;
+}
+
+.lede {
+  color: var(--ink-soft);
+  font-size: 1.12rem;
+  line-height: 1.65;
+  max-width: 30rem;
+  margin-bottom: 2rem;
+}
+
+.heroActions {
+  display: flex;
+  align-items: center;
+  gap: 1.4rem;
+  flex-wrap: wrap;
+}
+
+.primary {
+  text-decoration: none;
   background: var(--accent);
+  color: var(--paper);
+  padding: 0.85rem 1.5rem;
+  border-radius: 2px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.primary:hover {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.secondary {
+  color: var(--ink);
+  text-decoration: none;
+  font-weight: 600;
+  border-bottom: 1px solid var(--accent);
+  padding-bottom: 2px;
+}
+.secondary:hover {
+  color: var(--accent);
+}
+
+.heroStage {
+  border-left: 1px solid var(--rule);
+  padding-left: 2.5rem;
+}
+
+@media (max-width: 920px) {
+  .heroStage {
+    border-left: none;
+    padding-left: 0;
+    border-top: 1px solid var(--rule);
+    padding-top: 2rem;
+  }
+}
+
+/* ── 스페시먼 띠 ── */
+.band {
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  background: var(--paper-2);
+  padding: 2.5rem 0;
+}
+
+.bandRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.bandRule {
+  height: 1px;
+  background: var(--rule);
+  margin: 1.4rem 0;
+}
+
+.bandHeavy {
+  font-size: clamp(2rem, 6vw, 3.6rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.bandSerif {
+  font-size: clamp(1.4rem, 4vw, 2.4rem);
+  line-height: 1.2;
+}
+
+.bandWide {
+  font-size: clamp(1.6rem, 5vw, 3rem);
+  letter-spacing: 0.12em;
+  font-variant-numeric: tabular-nums;
+}
+
+.bandLabel {
+  font-size: 0.78rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  white-space: nowrap;
+}
+
+/* ── 작업 순서 ── */
+.how {
+  padding-top: 4.5rem;
+}
+
+.howTitle {
+  font-size: clamp(1.8rem, 4vw, 2.6rem);
+  margin-bottom: 2.5rem;
+}
+
+.steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2.5rem;
+}
+
+@media (max-width: 820px) {
+  .steps {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+}
+
+.step {
+  border-top: 2px solid var(--ink);
+  padding-top: 1.2rem;
+}
+
+.stepNo {
+  display: block;
+  font-size: 0.85rem;
+  letter-spacing: 0.1em;
+  color: var(--accent);
+  font-weight: 700;
+  margin-bottom: 0.8rem;
+}
+
+.stepHead {
+  font-size: 1.2rem;
+  margin-bottom: 0.6rem;
+}
+
+.stepBody {
+  color: var(--ink-soft);
+  font-size: 0.98rem;
+  line-height: 1.6;
 }

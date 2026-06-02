@@ -1,6 +1,8 @@
 /**
  * 공용 React UI 컴포넌트 모음.
- * 폰트 앱에서 만든 재사용 컴포넌트(Slider, Card 등)를 여기로 승격해
- * 이후 추가될 앱들이 공유한다. (지금은 자리만 마련)
+ * 폰트앱·홈이 함께 쓰는 순수 UI(복붙 금지 규칙). 무거운 의존성 없이 CSS Module만 사용.
+ * 색/여백 토큰은 각 앱의 globals.css가 제공하는 CSS 변수(--ink, --paper, --accent 등)에 의존한다.
  */
-export {};
+export { Button, default as ButtonDefault } from "./Button";
+export { Slider, default as SliderDefault } from "./Slider";
+export { Card, default as CardDefault } from "./Card";

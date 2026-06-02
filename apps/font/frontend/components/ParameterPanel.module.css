@@ -1,38 +1,5 @@
 .panel {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 0.6rem;
-  padding: 1.25rem;
-}
-
-.heading {
-  margin: 0 0 1rem;
-  font-size: 1.05rem;
-}
-
-.row {
-  margin-bottom: 1.1rem;
-}
-
-.row:last-child {
-  margin-bottom: 0;
-}
-
-.labelRow {
   display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  margin-bottom: 0.4rem;
-  font-size: 0.9rem;
-}
-
-.value {
-  color: var(--accent);
-  font-variant-numeric: tabular-nums;
-  font-weight: 600;
-}
-
-.slider {
-  width: 100%;
-  accent-color: var(--accent-2);
+  flex-direction: column;
+  gap: 1.4rem;
 }

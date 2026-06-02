@@ -1,46 +1,88 @@
+/*
+ * 디자인 토큰 — "획(劃) 폰트공방" 미감.
+ * 종이/먹의 웜뉴트럴 + 확신 있는 단일 악센트(주묵, 도장 인주의 붉은색).
+ * 인디고/바이올렛 그라데이션 금지. 라이트 한 무드로 완성.
+ */
 :root {
-  --bg: #0f1115;
-  --panel: #171a21;
-  --panel-2: #1e222b;
-  --border: #2a2f3a;
-  --text: #e6e8ec;
-  --muted: #9aa1ad;
-  --accent: #6ea8fe;
-  --accent-2: #4f86f7;
-  --danger: #ff6b6b;
+  --paper: #f7f4ec; /* 한지 같은 따뜻한 바탕 */
+  --paper-2: #efe9dc; /* 살짝 가라앉은 면(패널) */
+  --ink: #1a1714; /* 먹 */
+  --ink-soft: #4a443c; /* 본문 보조 */
+  --ink-faint: #8a8275; /* 캡션/괘선 라벨 */
+  --rule: #d8d0c0; /* 얇은 괘선 */
+  --accent: #b5341f; /* 주묵(朱墨) — 인주 붉은색, 유일 악센트 */
+  --accent-weak: rgba(181, 52, 31, 0.22);
+  --danger: #9a2b1c;
+
+  --maxw: 1180px;
 }
 
 * {
   box-sizing: border-box;
 }
 
-html,
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
   margin: 0;
-  padding: 0;
-  background: var(--bg);
-  color: var(--text);
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans KR",
-    sans-serif;
-  line-height: 1.5;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: "Iropke", "Noto Serif KR", Georgia, "Times New Roman", serif;
+  line-height: 1.6;
+  font-feature-settings: "kern" 1, "liga" 1;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 본문 UI(라벨·버튼 등)는 산세리프로, 제목/스페시먼은 세리프로 대비 */
+.sans {
+  font-family: "Pretendard", system-ui, -apple-system, "Segoe UI",
+    "Noto Sans KR", sans-serif;
+}
+
+h1,
+h2,
+h3 {
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.08;
+  margin: 0;
 }
 
 a {
+  color: var(--ink);
+  text-decoration-color: var(--accent);
+  text-underline-offset: 3px;
+}
+a:hover {
   color: var(--accent);
 }
 
-button {
-  font: inherit;
-  cursor: pointer;
+p {
+  margin: 0;
 }
 
-button:disabled {
-  cursor: not-allowed;
-  opacity: 0.5;
+button {
+  font-family: inherit;
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--paper);
 }
 
 .container {
-  max-width: 1100px;
+  max-width: var(--maxw);
   margin: 0 auto;
-  padding: 2rem 1.25rem 4rem;
+  padding: 0 1.5rem;
+}
+
+/* 종이 위 얇은 격자 괘선 — 공방 노트 느낌의 배경 디테일 */
+.ruled {
+  background-image: linear-gradient(
+    var(--rule) 1px,
+    transparent 1px
+  );
+  background-size: 100% 2.4rem;
 }

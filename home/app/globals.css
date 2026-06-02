@@ -1,0 +1,67 @@
+/*
+ * 디자인 토큰 — 폰트앱과 동일한 "획 폰트공방" 팔레트(종이/먹 + 주묵 악센트).
+ * 공용 UI(@webapp/ui)가 이 CSS 변수에 의존하므로 키 이름을 폰트앱과 맞춘다.
+ */
+:root {
+  --paper: #f7f4ec;
+  --paper-2: #efe9dc;
+  --ink: #1a1714;
+  --ink-soft: #4a443c;
+  --ink-faint: #8a8275;
+  --rule: #d8d0c0;
+  --accent: #b5341f;
+  --accent-weak: rgba(181, 52, 31, 0.22);
+  --danger: #9a2b1c;
+  --maxw: 1100px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: "Noto Serif KR", Georgia, "Times New Roman", serif;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+.sans {
+  font-family: "Pretendard", system-ui, -apple-system, "Segoe UI",
+    "Noto Sans KR", sans-serif;
+}
+
+h1,
+h2,
+h3 {
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  margin: 0;
+}
+
+a {
+  color: var(--ink);
+  text-decoration-color: var(--accent);
+  text-underline-offset: 3px;
+}
+a:hover {
+  color: var(--accent);
+}
+
+p {
+  margin: 0;
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--paper);
+}
+
+.container {
+  max-width: var(--maxw);
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}

@@ -1,0 +1,85 @@
+.hero {
+  padding: 5rem 1.5rem 3rem;
+  max-width: 44rem;
+}
+
+.mark {
+  display: inline-grid;
+  place-items: center;
+  width: 2.6rem;
+  height: 2.6rem;
+  background: var(--accent);
+  color: var(--paper);
+  font-size: 1.5rem;
+  font-weight: 700;
+  border-radius: 3px;
+  margin-bottom: 1.6rem;
+}
+
+.title {
+  font-size: clamp(2.2rem, 5.5vw, 3.8rem);
+  line-height: 1.04;
+  letter-spacing: -0.03em;
+  margin-bottom: 1.3rem;
+}
+
+.lede {
+  color: var(--ink-soft);
+  font-size: 1.12rem;
+  line-height: 1.65;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+  padding-top: 1.5rem;
+  padding-bottom: 3rem;
+}
+
+@media (max-width: 720px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.appCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  min-height: 13rem;
+}
+
+.appName {
+  font-size: 1.5rem;
+}
+
+.appDesc {
+  color: var(--ink-soft);
+  font-size: 0.98rem;
+  line-height: 1.6;
+  flex: 1;
+}
+
+.appCta {
+  text-decoration: none;
+  font-weight: 700;
+  color: var(--accent);
+  align-self: flex-start;
+}
+.appCta:hover {
+  color: var(--ink);
+}
+
+.appSoon {
+  font-weight: 600;
+  color: var(--ink-faint);
+  font-size: 0.9rem;
+}
+
+.footer {
+  border-top: 1px solid var(--rule);
+  padding: 2rem 0 2.5rem;
+  color: var(--ink-faint);
+  font-size: 0.88rem;
+}

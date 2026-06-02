@@ -103,14 +103,20 @@ export const STYLE_PRESETS: StylePreset[] = [
   { id: "sharp", label: "날카로움", params: { weight: 680, slant: -4, curvature: 0, contrast: 0.6, roundness: 0, letterSpacing: -0.02 } },
 ];
 
-/** 출력 폰트 포맷. 프리뷰는 woff, 다운로드는 woff/ttf 선택. */
-export type FontFormat = "woff" | "ttf";
+/** 출력 폰트 포맷. 프리뷰는 woff, 다운로드는 woff/woff2/ttf/otf 선택. */
+export type FontFormat = "woff" | "woff2" | "ttf" | "otf";
 
 /** 포맷별 MIME 타입과 파일 확장자 */
 export const FONT_FORMATS: Record<FontFormat, { mime: string; ext: string }> = {
   woff: { mime: "font/woff", ext: "woff" },
+  woff2: { mime: "font/woff2", ext: "woff2" },
   ttf: { mime: "font/ttf", ext: "ttf" },
+  otf: { mime: "font/otf", ext: "otf" },
 };
+
+/** 무료 기본 포맷과 "풀포맷"(상업/내보내기) 구분 — 수익화 게이팅 기준점 */
+export const FREE_FORMATS: FontFormat[] = ["woff", "ttf"];
+export const FULL_FORMATS: FontFormat[] = ["woff", "woff2", "ttf", "otf"];
 
 /**
  * [PREVIEW] 전용 스타일 — 벡터 폰트 파일에는 구울 수 없는 표면 효과.

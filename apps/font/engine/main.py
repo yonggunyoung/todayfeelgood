@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 """
-Font Engine API (FastAPI) — Phase 2 전통(비AI) 방식. 계약 v3.
+Font Engine API (FastAPI) — Phase 2 전통(비AI) 방식. 계약 v4.
 
 [비용 가드] 이 서비스의 모든 경로(/generate, /health)는 로컬 fontTools 연산과
 공개 OFL 폰트 미러 다운로드(앱 시작 시 1회)만 사용한다. 외부 유료 API(LLM/이미지
 생성 등) 호출이 전혀 없으며, 운영 비용은 0이다.
 
 엔드포인트:
-  - POST /generate : GenerateRequest -> GenerateResponse(JSON, 계약 v3)
+  - POST /generate : GenerateRequest -> GenerateResponse(JSON, 계약 v4)
   - GET  /health   : { status, font_loaded, hangul_font_loaded }
 
 생성 방식(generatedBy): "baseFontVariation"
@@ -76,7 +76,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="Font Engine", version="3.0.0", lifespan=lifespan)
+app = FastAPI(title="Font Engine", version="4.0.0", lifespan=lifespan)
 
 # CORS: 와일드카드 금지(security H2). 환경변수 화이트리스트 + 최소 메서드/헤더.
 app.add_middleware(
@@ -88,7 +88,7 @@ app.add_middleware(
 )
 
 
-# ---- 계약(packages/core) v3와 동일한 스키마 ----
+# ---- 계약(packages/core) v4와 동일한 스키마 ----
 class FontParamsModel(BaseModel):
     # pydantic 범위 제약(범위 밖이면 422). 서버 clamp는 generator에서 한 번 더(방어적).
     weight: float = Field(default=400, ge=100, le=900)
@@ -99,9 +99,15 @@ class FontParamsModel(BaseModel):
     weirdness: float = Field(default=0, ge=0, le=100)
     seed: int = Field(default=1, ge=0, le=999999)
     letterSpacing: float = Field(default=0, ge=-0.05, le=0.6)
+    # v4 심화 컨트롤(계약 PARAM_RANGES와 동일 범위).
+    waviness: float = Field(default=0, ge=0, le=1)
+    waveFreq: float = Field(default=2, ge=0.5, le=6)
+    contrast: float = Field(default=0, ge=0, le=1)
+    roundness: float = Field(default=0, ge=0, le=1)
 
     @field_validator(
-        "weight", "slant", "curvature", "mono", "cursive", "weirdness", "letterSpacing"
+        "weight", "slant", "curvature", "mono", "cursive", "weirdness",
+        "letterSpacing", "waviness", "waveFreq", "contrast", "roundness",
     )
     @classmethod
     def _finite(cls, v: float) -> float:
@@ -168,6 +174,10 @@ def _generate_blocking(req: GenerateRequest):
         weirdness=p.weirdness,
         seed=p.seed,
         letterSpacing=p.letterSpacing,
+        waviness=p.waviness,
+        waveFreq=p.waveFreq,
+        contrast=p.contrast,
+        roundness=p.roundness,
         fmt=req.format,
         script=req.script,
         image_png=req.imagePng,  # 미사용
@@ -234,5 +244,9 @@ async def generate(req: GenerateRequest) -> GenerateResponse:
             weirdness=applied.weirdness,
             seed=applied.seed,
             letterSpacing=applied.letterSpacing,
+            waviness=applied.waviness,
+            waveFreq=applied.waveFreq,
+            contrast=applied.contrast,
+            roundness=applied.roundness,
         ),
     )

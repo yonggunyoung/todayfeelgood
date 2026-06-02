@@ -35,6 +35,39 @@ def test_clamp_new_params():
     assert p.letterSpacing == 0.6
 
 
+def test_clamp_v4_params():
+    """v4 심화 컨트롤 클램프(waviness/waveFreq/contrast/roundness)."""
+    p = generator.clamp_params(
+        weight=400, slant=0, curvature=0,
+        waviness=5, waveFreq=99, contrast=-1, roundness=2,
+    )
+    assert p.waviness == 1.0
+    assert p.waveFreq == 6.0     # max
+    assert p.contrast == 0.0     # 음수 → min
+    assert p.roundness == 1.0
+
+    p2 = generator.clamp_params(
+        weight=400, slant=0, curvature=0,
+        waviness=-1, waveFreq=0.1, contrast=2, roundness=-5,
+    )
+    assert p2.waviness == 0.0
+    assert p2.waveFreq == 0.5    # min
+    assert p2.contrast == 1.0
+    assert p2.roundness == 0.0
+
+
+def test_clamp_v4_invalid_defaults():
+    """NaN/None은 각 기본값으로."""
+    p = generator.clamp_params(
+        weight=400, slant=0, curvature=0,
+        waviness=float("nan"), waveFreq=None, contrast="x", roundness=float("inf"),
+    )
+    assert p.waviness == 0.0
+    assert p.waveFreq == 2.0     # default
+    assert p.contrast == 0.0
+    assert p.roundness == 0.0
+
+
 def test_clamp_params_invalid_values():
     p = generator.clamp_params(weight=None, slant=float("nan"), curvature="x")
     assert p.weight == 400.0
@@ -152,6 +185,116 @@ def test_letter_spacing_changes_advance(base_font_path):
     assert wf["hmtx"][name][0] > bf["hmtx"][name][0]
 
 
+# ---------------- v4 심화 컨트롤 ----------------
+
+def _glyph_A_coords(b64):
+    raw = base64.b64decode(b64)
+    f = TTFont(io.BytesIO(raw))
+    return f["glyf"][f.getBestCmap()[ord("A")]].coordinates[:]
+
+
+def test_waviness_changes_coords(base_font_path):
+    """waviness>0이면 기본값(0) 대비 좌표가 실제로 달라진다."""
+    base, *_ = generator.generate_font_base64(
+        base_font_path, weight=400, slant=0, curvature=0, waviness=0, fmt="ttf"
+    )
+    wavy, *_ = generator.generate_font_base64(
+        base_font_path, weight=400, slant=0, curvature=0,
+        waviness=0.8, waveFreq=3, fmt="ttf"
+    )
+    assert base != wavy
+    assert _glyph_A_coords(base) != _glyph_A_coords(wavy)
+
+
+def test_waviness_seed_independent_deterministic(base_font_path):
+    """waviness는 규칙적·결정적 → seed가 달라도 동일 결과(랜덤 무관)."""
+    a, *_ = generator.generate_font_base64(
+        base_font_path, weight=400, slant=0, curvature=0,
+        waviness=0.6, waveFreq=2, weirdness=0, seed=1, fmt="ttf"
+    )
+    b, *_ = generator.generate_font_base64(
+        base_font_path, weight=400, slant=0, curvature=0,
+        waviness=0.6, waveFreq=2, weirdness=0, seed=987654, fmt="ttf"
+    )
+    assert a == b
+
+
+def test_waviness_reproducible(base_font_path):
+    """같은 waviness/waveFreq → 동일 바이트(재현성)."""
+    a, *_ = generator.generate_font_base64(
+        base_font_path, weight=400, slant=0, curvature=0,
+        waviness=0.5, waveFreq=4, fmt="ttf"
+    )
+    b, *_ = generator.generate_font_base64(
+        base_font_path, weight=400, slant=0, curvature=0,
+        waviness=0.5, waveFreq=4, fmt="ttf"
+    )
+    assert a == b
+
+
+def test_wavefreq_changes_result(base_font_path):
+    """같은 waviness라도 waveFreq가 다르면 파형이 달라진다."""
+    f2, *_ = generator.generate_font_base64(
+        base_font_path, weight=400, slant=0, curvature=0,
+        waviness=0.7, waveFreq=2, fmt="ttf"
+    )
+    f5, *_ = generator.generate_font_base64(
+        base_font_path, weight=400, slant=0, curvature=0,
+        waviness=0.7, waveFreq=5, fmt="ttf"
+    )
+    assert f2 != f5
+
+
+def test_contrast_changes_coords(base_font_path):
+    """contrast>0이면 좌표가 기본값 대비 달라진다(획 대비 근사)."""
+    base, *_ = generator.generate_font_base64(
+        base_font_path, weight=400, slant=0, curvature=0, contrast=0, fmt="ttf"
+    )
+    high, *_ = generator.generate_font_base64(
+        base_font_path, weight=400, slant=0, curvature=0, contrast=0.6, fmt="ttf"
+    )
+    assert base != high
+    assert _glyph_A_coords(base) != _glyph_A_coords(high)
+
+
+def test_contrast_seed_independent(base_font_path):
+    """contrast는 결정적 → seed 무관."""
+    a, *_ = generator.generate_font_base64(
+        base_font_path, weight=400, slant=0, curvature=0,
+        contrast=0.5, seed=1, fmt="ttf"
+    )
+    b, *_ = generator.generate_font_base64(
+        base_font_path, weight=400, slant=0, curvature=0,
+        contrast=0.5, seed=42, fmt="ttf"
+    )
+    assert a == b
+
+
+def test_roundness_changes_coords(base_font_path):
+    """roundness>0이면 좌표가 기본값 대비 달라진다(모서리 스무딩 근사)."""
+    base, *_ = generator.generate_font_base64(
+        base_font_path, weight=400, slant=0, curvature=0, roundness=0, fmt="ttf"
+    )
+    round_, *_ = generator.generate_font_base64(
+        base_font_path, weight=400, slant=0, curvature=0, roundness=0.9, fmt="ttf"
+    )
+    assert base != round_
+    assert _glyph_A_coords(base) != _glyph_A_coords(round_)
+
+
+def test_v4_combined_still_valid_woff(base_font_path):
+    """waviness+contrast+roundness 섞어도 유효한 woff 매직."""
+    b64, *_ = generator.generate_font_base64(
+        base_font_path, weight=500, slant=-6, curvature=0.3,
+        weirdness=20, waviness=0.5, waveFreq=3, contrast=0.4, roundness=0.5,
+        fmt="woff"
+    )
+    raw = base64.b64decode(b64)
+    assert raw[:4] == b"wOFF"
+    f = TTFont(io.BytesIO(raw))
+    assert ord("A") in f.getBestCmap()
+
+
 # ---------------- hangul ----------------
 
 def test_generate_hangul_woff(hangul_font_path):
@@ -181,6 +324,20 @@ def test_generate_hangul_ttf_with_slant_shear(hangul_font_path):
     raw = base64.b64decode(slanted)
     assert raw[:4] in (b"\x00\x01\x00\x00", b"true", b"OTTO")
     assert straight != slanted  # 합성 shear가 실제 적용됨
+
+
+def test_hangul_v4_waviness_woff(hangul_font_path):
+    """한글에도 waviness/contrast 적용 시 좌표 변화 + woff 매직 유지."""
+    base, *_ = generator.generate_font_base64(
+        hangul_font_path, weight=400, slant=0, fmt="ttf", script="hangul"
+    )
+    deep, *_ = generator.generate_font_base64(
+        hangul_font_path, weight=400, slant=0,
+        waviness=0.6, waveFreq=3, contrast=0.4, roundness=0.3,
+        fmt="woff", script="hangul"
+    )
+    assert base64.b64decode(deep)[:4] == b"wOFF"
+    assert base != deep
 
 
 def test_hangul_subset_size_bounded(hangul_font_path):

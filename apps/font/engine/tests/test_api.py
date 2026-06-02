@@ -74,6 +74,48 @@ def test_generate_with_new_params(client, font_ready):
     assert ap["seed"] == 42
 
 
+def test_generate_with_v4_params(client, font_ready):
+    """v4 심화 컨트롤이 응답 appliedParams에 그대로 반영되고 woff 생성."""
+    r = client.post(
+        "/generate",
+        json={
+            "params": {
+                "weight": 500, "slant": -6,
+                "waviness": 0.6, "waveFreq": 3, "contrast": 0.4, "roundness": 0.5,
+            },
+            "format": "woff",
+        },
+    )
+    assert r.status_code == 200
+    ap = r.json()["appliedParams"]
+    assert ap["waviness"] == 0.6
+    assert ap["waveFreq"] == 3
+    assert ap["contrast"] == 0.4
+    assert ap["roundness"] == 0.5
+    assert base64.b64decode(r.json()["fontBase64"])[:4] == b"wOFF"
+
+
+def test_v4_param_out_of_range_422(client):
+    # waviness le=1 위반.
+    r = client.post(
+        "/generate",
+        json={"params": {"weight": 400, "slant": 0, "waviness": 5}},
+    )
+    assert r.status_code == 422
+    # waveFreq ge=0.5 위반.
+    r2 = client.post(
+        "/generate",
+        json={"params": {"weight": 400, "slant": 0, "waveFreq": 0.1}},
+    )
+    assert r2.status_code == 422
+    # contrast le=1 위반.
+    r3 = client.post(
+        "/generate",
+        json={"params": {"weight": 400, "slant": 0, "contrast": 9}},
+    )
+    assert r3.status_code == 422
+
+
 def test_generate_ttf_v3(client, font_ready):
     r = client.post(
         "/generate",

@@ -11,10 +11,10 @@ ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$ROOT"
 echo "레포 루트: $ROOT"
 
-echo "── 1) 프론트엔드 빌드 ──"
+echo "── 1) 프론트엔드 빌드 (폰트앱 + 홈) ──"
 corepack enable >/dev/null 2>&1 || true
 pnpm install --frozen-lockfile
-pnpm --filter @webapp/font-frontend build
+pnpm -r build
 
 echo "── 2) 엔진 의존성 ──"
 cd apps/font/engine
@@ -30,11 +30,16 @@ echo "── 3) 프로세스 기동 안내 ──"
 cat <<'EOF'
 다음을 (예: systemd 또는 pm2/nohup) 서비스로 등록해 상시 구동하세요:
 
-  # 폰트 엔진 (FastAPI)
-  cd apps/font/engine && .venv/bin/uvicorn main:app --host 127.0.0.1 --port 8000
+  # 폰트 엔진 (FastAPI) — loopback 전용(외부 비노출). CORS 허용 출처는 운영 도메인으로.
+  cd apps/font/engine && \
+    ALLOWED_ORIGINS="https://<도메인>" .venv/bin/uvicorn main:app --host 127.0.0.1 --port 8000
 
-  # 폰트 프론트엔드 (Next)
-  pnpm --filter @webapp/font-frontend start -- --port 3001
+  # 폰트 프론트엔드 (Next, basePath=/font) — 엔진은 서버측에서만 호출
+  ENGINE_URL=http://127.0.0.1:8000 \
+    pnpm --filter @webapp/font-frontend exec next start -p 3001
+
+  # 메인 홈페이지 (Next)
+  pnpm --filter @webapp/home exec next start -p 3000
 
 그리고 infra/nginx/webapp.conf 를 nginx에 반영 후:
   sudo nginx -t && sudo systemctl reload nginx

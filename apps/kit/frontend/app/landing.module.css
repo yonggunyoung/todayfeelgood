@@ -1,0 +1,232 @@
+.headerCta {
+  background: var(--accent);
+  color: var(--accent-ink);
+  padding: var(--sp-2) var(--sp-5);
+  border-radius: var(--r-pill);
+  font-weight: var(--weight-semi);
+  font-size: var(--text-sm);
+}
+.headerCta:hover {
+  background: var(--accent-press);
+  color: var(--accent-ink);
+}
+
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 22rem);
+  gap: var(--sp-12);
+  align-items: center;
+  padding-top: var(--sp-16);
+  padding-bottom: var(--sp-12);
+}
+
+@media (max-width: 860px) {
+  .hero {
+    grid-template-columns: 1fr;
+    gap: var(--sp-8);
+    padding-top: var(--sp-10);
+  }
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semi);
+  color: var(--accent-ink-weak);
+  background: var(--accent-weak);
+  padding: var(--sp-2) var(--sp-3) var(--sp-2) var(--sp-2);
+  border-radius: var(--r-pill);
+  margin-bottom: var(--sp-5);
+}
+
+.headline {
+  font-size: var(--text-large);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  margin-bottom: var(--sp-4);
+}
+
+.lede {
+  color: var(--ink-soft);
+  font-size: var(--text-lg);
+  line-height: 1.6;
+  max-width: 32rem;
+  margin-bottom: var(--sp-6);
+}
+
+.heroActions {
+  display: flex;
+  gap: var(--sp-4);
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.primary {
+  background: var(--accent);
+  color: var(--accent-ink);
+  padding: var(--sp-3) var(--sp-6);
+  border-radius: var(--r-pill);
+  font-weight: var(--weight-semi);
+  font-size: var(--text-lg);
+  box-shadow: var(--shadow-md);
+}
+.primary:hover {
+  background: var(--accent-press);
+  color: var(--accent-ink);
+}
+
+.secondary {
+  font-weight: var(--weight-semi);
+  color: var(--accent-ink-weak);
+  font-size: var(--text-lg);
+}
+.secondary:hover {
+  color: var(--accent-press);
+}
+
+/* 히어로 우측 — 표정 변주 미리보기 카드(시스템 글꼴 흉내, 정적) */
+.previewCard {
+  position: relative;
+  background: var(--surface);
+  border-radius: var(--r-xl);
+  box-shadow: var(--shadow-lg);
+  padding: var(--sp-6);
+}
+
+.previewTape {
+  position: absolute;
+  top: calc(-1 * var(--sp-3));
+  left: var(--sp-6);
+}
+
+.previewGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--sp-3);
+}
+
+.face {
+  aspect-ratio: 1 / 1;
+  border-radius: var(--r-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.8rem;
+  background: color-mix(in srgb, var(--paper) 22%, var(--surface-2));
+}
+
+.previewNote {
+  margin-top: var(--sp-4);
+  text-align: center;
+  font-size: var(--text-caption);
+  color: var(--ink-faint);
+}
+
+/* 색지 밴드 */
+.band {
+  background: var(--surface-2);
+  padding: var(--sp-12) 0;
+  margin: var(--sp-6) 0;
+}
+
+.bandInner {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+.bandSticker {
+  position: absolute;
+  top: calc(-1 * var(--sp-8));
+  right: var(--sp-4);
+}
+
+.steps {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--sp-5);
+}
+
+@media (max-width: 720px) {
+  .steps {
+    grid-template-columns: 1fr;
+  }
+}
+
+.step {
+  background: var(--surface);
+  border-radius: var(--r-lg);
+  padding: var(--sp-5);
+  box-shadow: var(--shadow-sm);
+}
+
+.stepNum {
+  font-size: var(--text-caption);
+  font-weight: var(--weight-semi);
+  color: var(--accent-ink-weak);
+}
+
+.stepTitle {
+  font-size: var(--text-lg);
+  margin: var(--sp-2) 0;
+}
+
+.stepBody {
+  color: var(--ink-soft);
+  font-size: var(--text-sm);
+  line-height: 1.6;
+}
+
+.dividerWrap {
+  padding-top: var(--sp-4);
+  padding-bottom: var(--sp-2);
+  opacity: 0.5;
+}
+
+.how {
+  padding-top: var(--sp-8);
+  padding-bottom: var(--sp-12);
+}
+
+.howCard {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-6);
+  background: var(--surface);
+  border-radius: var(--r-xl);
+  padding: var(--sp-8);
+  box-shadow: var(--shadow-md);
+}
+
+@media (max-width: 620px) {
+  .howCard {
+    flex-direction: column;
+    text-align: center;
+  }
+}
+
+.howMascot {
+  flex: none;
+}
+
+.howTitle {
+  font-size: var(--text-title3);
+  margin-bottom: var(--sp-3);
+}
+
+.howBody {
+  color: var(--ink-soft);
+  line-height: 1.7;
+  margin-bottom: var(--sp-4);
+}
+
+.howCta {
+  font-weight: var(--weight-semi);
+  color: var(--accent-ink-weak);
+}
+.howCta:hover {
+  color: var(--accent-press);
+}

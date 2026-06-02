@@ -1,0 +1,280 @@
+/* 한 시야 2열: 좌 컨트롤 / 우 sticky 미리보기+받기 (plan.md UX 원칙) */
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 26rem);
+  gap: var(--sp-8);
+  padding-top: var(--sp-8);
+  padding-bottom: var(--sp-12);
+  align-items: start;
+}
+
+@media (max-width: 880px) {
+  .layout {
+    grid-template-columns: 1fr;
+    gap: var(--sp-6);
+  }
+}
+
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-5);
+}
+
+.panel {
+  background: var(--surface);
+  border-radius: var(--r-lg);
+  padding: var(--sp-5);
+  box-shadow: var(--shadow-sm);
+}
+
+.panelTitle {
+  font-size: var(--text-lg);
+  margin-bottom: var(--sp-4);
+}
+
+.fieldLabel {
+  display: block;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semi);
+  color: var(--ink-soft);
+  margin: var(--sp-3) 0 var(--sp-2);
+}
+
+.text {
+  width: 100%;
+  padding: var(--sp-3) var(--sp-4);
+  border: none;
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+  color: var(--ink);
+  font-size: var(--text-body);
+  box-shadow: var(--inset);
+}
+.text:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.hint {
+  margin-top: var(--sp-3);
+  font-size: var(--text-caption);
+  color: var(--ink-faint);
+  line-height: 1.5;
+}
+
+/* 세그먼티드 */
+.segmented {
+  display: inline-flex;
+  background: var(--surface-2);
+  border-radius: var(--r-pill);
+  padding: 3px;
+  gap: 3px;
+}
+.seg,
+.segOn {
+  border: none;
+  background: transparent;
+  padding: var(--sp-2) var(--sp-4);
+  border-radius: var(--r-pill);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-med);
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+.segOn {
+  background: var(--surface);
+  color: var(--accent-ink-weak);
+  font-weight: var(--weight-semi);
+  box-shadow: var(--shadow-sm);
+}
+
+/* 칩 */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+.chip,
+.chipOn {
+  border: none;
+  background: var(--surface-2);
+  color: var(--ink-soft);
+  padding: var(--sp-2) var(--sp-4);
+  border-radius: var(--r-pill);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-med);
+  cursor: pointer;
+}
+.chip:hover {
+  background: var(--accent-weak);
+}
+.chipOn {
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: var(--weight-semi);
+}
+
+/* 색 스와치 */
+.swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+  align-items: center;
+}
+.swatch {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--r-md);
+  border: 2px solid transparent;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+}
+.swatchOn {
+  border-color: var(--ink);
+  outline: 2px solid var(--accent-weak);
+}
+.pickerWrap {
+  display: inline-flex;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--r-md);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+}
+.picker {
+  width: 100%;
+  height: 100%;
+  border: none;
+  padding: 0;
+  background: none;
+  cursor: pointer;
+}
+
+/* 생성된 조화 팔레트 띠 */
+.paletteRow {
+  display: flex;
+  gap: var(--sp-2);
+  margin-top: var(--sp-4);
+}
+.paletteChip {
+  flex: 1;
+  height: 48px;
+  border-radius: var(--r-sm);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 2px;
+  box-shadow: var(--shadow-sm);
+}
+.paletteHex {
+  font-size: 0.55rem;
+  font-weight: var(--weight-semi);
+  color: rgba(255, 255, 255, 0.92);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+/* 받기 옵션 토글 */
+.toggle {
+  display: flex;
+  gap: var(--sp-3);
+  align-items: flex-start;
+  font-size: var(--text-sm);
+  color: var(--ink-soft);
+  line-height: 1.5;
+  cursor: pointer;
+}
+.toggle input {
+  margin-top: 3px;
+  accent-color: var(--accent);
+  width: 18px;
+  height: 18px;
+  flex: none;
+}
+
+/* 우측 미리보기 칼럼 */
+.previewCol {
+  min-width: 0;
+}
+.sticky {
+  position: sticky;
+  top: calc(var(--sp-16));
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+@media (max-width: 880px) {
+  .sticky {
+    position: static;
+  }
+}
+
+.sheetWrap {
+  position: relative;
+  background: var(--surface);
+  border-radius: var(--r-lg);
+  padding: var(--sp-3);
+  box-shadow: var(--shadow-md);
+}
+.sheetImg {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: var(--r-md);
+}
+.sheetEmpty {
+  aspect-ratio: 1200 / 750;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-3);
+  color: var(--ink-faint);
+  font-size: var(--text-sm);
+}
+.liveDot {
+  position: absolute;
+  top: var(--sp-4);
+  right: var(--sp-4);
+  font-size: var(--text-caption);
+  font-weight: var(--weight-semi);
+  color: var(--accent-ink-weak);
+  background: var(--accent-weak);
+  padding: 2px var(--sp-3);
+  border-radius: var(--r-pill);
+}
+
+.getBtn {
+  border: none;
+  background: var(--accent);
+  color: var(--accent-ink);
+  padding: var(--sp-4) var(--sp-6);
+  border-radius: var(--r-pill);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semi);
+  cursor: pointer;
+  box-shadow: var(--shadow-md);
+}
+.getBtn:hover:not(:disabled) {
+  background: var(--accent-press);
+}
+.getBtn:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.error {
+  font-size: var(--text-sm);
+  color: var(--danger);
+  background: var(--surface);
+  border-radius: var(--r-md);
+  padding: var(--sp-3) var(--sp-4);
+  box-shadow: var(--shadow-sm);
+}
+
+.honesty {
+  font-size: var(--text-caption);
+  color: var(--ink-faint);
+  line-height: 1.55;
+}

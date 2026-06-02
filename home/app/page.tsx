@@ -132,6 +132,16 @@ export default function HomePage() {
                 공방 들어가기 →
               </a>
             </Card>
+            <Card tag="브랜드키트" interactive className={styles.appCard}>
+              <h3 className={`display ${styles.appName}`}>키트공방</h3>
+              <p className={styles.appDesc}>
+                브랜드명·무드·색을 고르면 글씨체+조화 팔레트+미리보기 시트를 한 벌
+                키트로 묶어요. 폰트·CSS·라이선스까지 ZIP 한 방에(비AI).
+              </p>
+              <a className={styles.appCta} href="/kit">
+                공방 들어가기 →
+              </a>
+            </Card>
           </div>
         </section>
 

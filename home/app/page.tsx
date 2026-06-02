@@ -122,6 +122,16 @@ export default function HomePage() {
                 공방 들어가기 →
               </a>
             </Card>
+            <Card tag="서명" interactive className={styles.appCard}>
+              <h3 className={`display ${styles.appName}`}>싸인공방</h3>
+              <p className={styles.appDesc}>
+                이름을 적으면 흘림체 변형 + 절차적 장식으로 서명 스타일을 만들어요.
+                투명 PNG·SVG로 받아 문서·이메일 서명에 바로(비AI).
+              </p>
+              <a className={styles.appCta} href="/sign">
+                공방 들어가기 →
+              </a>
+            </Card>
           </div>
         </section>
 

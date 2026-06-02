@@ -1,0 +1,185 @@
+/* 싸인공방 랜딩 — 폰트앱 문방구 톤 재사용(디자인 토큰 공유). */
+
+.headerCta {
+  display: inline-flex;
+  align-items: center;
+  height: var(--touch-min);
+  padding: 0 var(--sp-5);
+  border-radius: var(--r-pill);
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: var(--weight-semi);
+  font-size: var(--text-sm);
+}
+.headerCta:hover {
+  background: var(--accent-press);
+  color: var(--accent-ink);
+}
+
+.hero {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: var(--sp-12);
+  align-items: center;
+  padding-top: var(--sp-16);
+  padding-bottom: var(--sp-12);
+}
+
+.heroText {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  color: var(--ink-soft);
+  font-weight: var(--weight-med);
+  font-size: var(--text-sm);
+}
+
+.headline {
+  font-size: var(--text-large);
+  line-height: 1.1;
+}
+
+.brushWord {
+  position: relative;
+  white-space: nowrap;
+  color: var(--accent);
+}
+.brushUnderline {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -0.18em;
+  width: 100%;
+}
+
+.lede {
+  color: var(--ink-soft);
+  font-size: var(--text-lg);
+  max-width: 30em;
+}
+
+.heroActions {
+  display: flex;
+  gap: var(--sp-3);
+  margin-top: var(--sp-2);
+  flex-wrap: wrap;
+}
+
+.primary {
+  display: inline-flex;
+  align-items: center;
+  height: var(--touch-min);
+  padding: 0 var(--sp-6);
+  border-radius: var(--r-pill);
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: var(--weight-semi);
+  box-shadow: var(--shadow-md);
+}
+.primary:hover {
+  background: var(--accent-press);
+  color: var(--accent-ink);
+}
+
+.secondary {
+  display: inline-flex;
+  align-items: center;
+  height: var(--touch-min);
+  padding: 0 var(--sp-5);
+  border-radius: var(--r-pill);
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: var(--weight-med);
+  box-shadow: var(--shadow-sm);
+}
+
+/* 히어로 견본 무대 — 종이 카드 위 큰 서명 예시 */
+.heroStage {
+  position: relative;
+  background: var(--surface);
+  border-radius: var(--r-xl);
+  box-shadow: var(--shadow-lg);
+  padding: var(--sp-12) var(--sp-8) var(--sp-8);
+  text-align: center;
+  overflow: hidden;
+}
+.stageTape {
+  position: absolute;
+  top: var(--sp-3);
+  left: var(--sp-4);
+}
+.sampleSign {
+  display: block;
+  font-family: var(--font-display), cursive;
+  font-size: clamp(2.6rem, 6vw, 3.8rem);
+  font-weight: var(--weight-bold);
+  font-style: italic;
+  color: var(--accent);
+  transform: skewX(-12deg);
+  letter-spacing: -0.03em;
+}
+.sampleStroke {
+  display: block;
+  height: 6px;
+  width: 60%;
+  margin: var(--sp-2) auto var(--sp-4);
+  border-radius: var(--r-pill);
+  background: linear-gradient(90deg, transparent, var(--accent) 20%, var(--accent) 80%, transparent);
+  opacity: 0.7;
+}
+.stageNote {
+  color: var(--ink-faint);
+  font-size: var(--text-sm);
+}
+
+.dividerWrap {
+  padding-top: var(--sp-6);
+  padding-bottom: var(--sp-6);
+}
+
+.how {
+  padding-bottom: var(--sp-16);
+}
+.howCard {
+  display: flex;
+  gap: var(--sp-6);
+  align-items: flex-start;
+  background: var(--surface);
+  border-radius: var(--r-xl);
+  box-shadow: var(--shadow-md);
+  padding: var(--sp-8);
+}
+.howMascot {
+  flex: none;
+}
+.howTitle {
+  font-size: var(--text-title2);
+  margin-bottom: var(--sp-3);
+}
+.howBody {
+  color: var(--ink-soft);
+  font-size: var(--text-lg);
+  margin-bottom: var(--sp-4);
+}
+.howCta {
+  font-weight: var(--weight-semi);
+}
+
+@media (max-width: 860px) {
+  .hero {
+    grid-template-columns: 1fr;
+    gap: var(--sp-8);
+    padding-top: var(--sp-12);
+  }
+  .howCard {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+}

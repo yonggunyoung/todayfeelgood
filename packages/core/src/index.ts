@@ -172,3 +172,68 @@ export interface GenerateResponse {
   generatedBy: "baseFontVariation";
   appliedParams: FontParams;
 }
+
+/* ──────────────────────────────────────────────────────────────
+ * 손글씨 코어 — "내가 그린 획 → 진짜 글씨체" (제품의 메인 메커니즘)
+ * 슬라이더 변형(위)과 달리, 사용자가 직접 그린 획을 외곽선 글리프로 조립한다.
+ * ────────────────────────────────────────────────────────────── */
+
+/** 한 획 = 셀 정규화 좌표(0..1)의 점 리스트. (0,0)=좌상단, (1,1)=우하단 */
+export interface GlyphStroke {
+  points: Array<[number, number]>;
+}
+
+/** 한 글자 = 문자 + 그 글자를 구성하는 획들 */
+export interface DrawnGlyph {
+  char: string;
+  strokes: GlyphStroke[];
+}
+
+/**
+ * 다듬기 파라미터 — "디자이너 고찰을 간편·고자유도로".
+ * 전부 0이면 날것(개성 100%), 올릴수록 정제. 개성은 살리되 글씨체로.
+ * - smoothing: 손떨림 정리(베지어) 0~1
+ * - nib:       획 두께/펜촉 0~1
+ * - taper:     획 끝 가늘어짐(필압 흉내) 0~1
+ * - straighten:기울기/베이스라인 보정 0~1
+ * - spacing:   자간(em)
+ */
+export interface RefineParams {
+  smoothing: number;
+  nib: number;
+  taper: number;
+  straighten: number;
+  spacing: number;
+}
+
+export const REFINE_RANGES = {
+  smoothing: { min: 0, max: 1, step: 0.05, default: 0.4 },
+  nib: { min: 0.2, max: 1, step: 0.05, default: 0.5 },
+  taper: { min: 0, max: 1, step: 0.05, default: 0 },
+  straighten: { min: 0, max: 1, step: 0.05, default: 0.2 },
+  spacing: { min: -0.05, max: 0.4, step: 0.01, default: 0.05 },
+} as const;
+
+export const DEFAULT_REFINE: RefineParams = Object.fromEntries(
+  (Object.keys(REFINE_RANGES) as Array<keyof RefineParams>).map((k) => [k, REFINE_RANGES[k].default]),
+) as unknown as RefineParams;
+
+/** 무료티어 메모리 가드: 글자당/전체 점 수 상한 */
+export const MAX_STROKE_POINTS_PER_GLYPH = 4000;
+export const MAX_TOTAL_GLYPHS = 120;
+
+/** 손글씨 폰트 생성 요청 */
+export interface HandwritingRequest {
+  glyphs: DrawnGlyph[];
+  refine: RefineParams;
+  format?: FontFormat;
+}
+
+/** 손글씨 폰트 생성 응답 — generatedBy:"handwriting"(진짜 내 글씨) */
+export interface HandwritingResponse {
+  fontBase64: string;
+  format: FontFormat;
+  fontFamily: string;
+  generatedBy: "handwriting";
+  glyphCount: number;
+}

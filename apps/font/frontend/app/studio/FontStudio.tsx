@@ -167,7 +167,7 @@ export default function FontStudio() {
         {/* 작업 도구: 캔버스 + 슬라이더 + 출력 */}
         <section className={`sans ${styles.tools}`}>
           <div className={styles.toolBlock}>
-            <h2 className={styles.blockHead}>밑그림 (선택)</h2>
+            <h2 className={styles.blockHead}>스케치 (미반영 · 준비 중)</h2>
             <DrawingCanvas ref={canvasRef} />
           </div>
 
@@ -176,7 +176,7 @@ export default function FontStudio() {
             <ParameterPanel
               value={params}
               onChange={onChangeParams}
-              disabled={loading}
+              disabled={loading || downloading}
             />
           </div>
 

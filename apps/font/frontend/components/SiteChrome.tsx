@@ -1,4 +1,3 @@
-import Link from "next/link";
 import type { ReactNode } from "react";
 import styles from "./SiteChrome.module.css";
 
@@ -7,13 +6,16 @@ export function SiteHeader({ right }: { right?: ReactNode }) {
   return (
     <header className={styles.header}>
       <div className={`container ${styles.bar}`}>
-        <Link href="/" className={styles.brand} aria-label="획 폰트공방 홈">
+        {/* 도메인 루트의 홈 허브(home/)로 이동.
+            폰트앱은 basePath=/font라 next/Link는 자동으로 /font를 붙여 홈 허브로 못 간다.
+            따라서 basePath가 붙지 않는 일반 <a href="/">로 도메인 루트(홈 허브)를 가리킨다. */}
+        <a href="/" className={styles.brand} aria-label="획 — 홈으로">
           <span className={styles.mark}>획</span>
           <span className={styles.wordmark}>
             <span className={styles.name}>획</span>
             <span className={`sans ${styles.sub}`}>폰트공방</span>
           </span>
-        </Link>
+        </a>
         {right && <div className={`sans ${styles.right}`}>{right}</div>}
       </div>
     </header>

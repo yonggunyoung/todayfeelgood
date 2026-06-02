@@ -48,6 +48,8 @@ export function Slider({
         step={step}
         value={value}
         disabled={disabled}
+        // 스크린리더가 raw 숫자가 아니라 사람이 읽는 값(단위 포함)을 읽도록.
+        aria-valuetext={`${label} ${display}`}
         onChange={(e) => onValueChange(Number(e.target.value))}
         {...rest}
       />

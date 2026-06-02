@@ -38,12 +38,17 @@ export default function InteractiveSpecimen() {
 
   return (
     <div className={styles.wrap}>
-      <div className={styles.stage} aria-hidden>
-        <span className={styles.glyphLine} style={style}>
+      {/* 데모용 시스템 글꼴을 굵기/기울기로 흉내 낸 미리보기(실제 생성 폰트 아님). */}
+      <div
+        className={styles.stage}
+        role="img"
+        aria-label="굵기와 기울기를 조절하는 라틴 글자 데모 (시스템 글꼴 흉내)"
+      >
+        <span className={styles.glyphLine} style={style} aria-hidden>
           {SAMPLE}
         </span>
-        <span className={styles.glyphLine2} style={style}>
-          가나다 ABG 0 1 2
+        <span className={styles.glyphLine2} style={style} aria-hidden>
+          Hwoek 0 1 2
         </span>
       </div>
 

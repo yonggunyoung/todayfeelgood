@@ -1,7 +1,23 @@
 import type { ReactNode } from "react";
 import type { Metadata } from "next";
+import { Noto_Sans_KR, Noto_Serif_KR } from "next/font/google";
 import { siteUrl } from "@webapp/seo";
 import "./globals.css";
+
+// 웹폰트 self-host(빌드시 자동 다운로드, 커밋 바이너리 불필요).
+// 산세리프(UI/본문 보조) = Noto Sans KR, 세리프(제목/견본 에디토리얼) = Noto Serif KR.
+const sansKr = Noto_Sans_KR({
+  subsets: ["latin"],
+  weight: ["400", "500", "700"],
+  display: "swap",
+  variable: "--font-sans",
+});
+const serifKr = Noto_Serif_KR({
+  subsets: ["latin"],
+  weight: ["400", "600", "700"],
+  display: "swap",
+  variable: "--font-serif",
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl()),
@@ -28,7 +44,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="ko">
+    <html lang="ko" className={`${sansKr.variable} ${serifKr.variable}`}>
       <body>{children}</body>
     </html>
   );

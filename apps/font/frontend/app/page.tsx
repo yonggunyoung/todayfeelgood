@@ -30,7 +30,7 @@ export default function HomePage() {
       />
       <SiteHeader
         right={
-          <Link href="/font/studio" className={styles.headerCta}>
+          <Link href="/studio" className={styles.headerCta}>
             공방 들어가기
           </Link>
         }
@@ -54,7 +54,7 @@ export default function HomePage() {
               마음에 들면 그대로 내려받으면 됩니다.
             </p>
             <div className={`sans ${styles.heroActions}`}>
-              <Link href="/font/studio" className={styles.primary}>
+              <Link href="/studio" className={styles.primary}>
                 글자체 빚으러 가기
               </Link>
               <a href="#how" className={styles.secondary}>
@@ -95,10 +95,11 @@ export default function HomePage() {
           <ol className={`sans ${styles.steps}`}>
             <li className={styles.step}>
               <span className={styles.stepNo}>01</span>
-              <h3 className={styles.stepHead}>밑그림을 그립니다</h3>
+              <h3 className={styles.stepHead}>세 축을 정합니다</h3>
               <p className={styles.stepBody}>
-                캔버스에 글씨를 끄적여 보세요. 손의 결을 참고하기 위한 밑그림일
-                뿐, 정교할 필요는 없습니다.
+                만들고 싶은 표정을 떠올려 보세요. 굵게, 기울게, 둥글게 —
+                세 가지 축으로 글자의 인상을 정합니다. (손글씨 그림 반영은
+                다음 단계로 준비 중입니다.)
               </p>
             </li>
             <li className={styles.step}>

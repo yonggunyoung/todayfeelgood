@@ -3,11 +3,13 @@ import { buildMeta, webApplicationJsonLd } from "@webapp/seo";
 import { Card } from "@webapp/ui";
 import styles from "./home.module.css";
 
+// 홈은 "도구 허브" 포지셔닝으로 키워드를 일반화한다.
+// "폰트 만들기/글씨체" 등 핵심 폰트 키워드는 /font 랜딩에만 집중시켜 자기잠식을 피한다.
 export const metadata: Metadata = buildMeta({
   title: "획 — 손으로 빚는 웹 도구 공방",
   description:
-    "글자체부터 시작하는 작은 도구 공방. 굵기·기울기·곡률로 나만의 라틴 폰트를 만들고 내려받으세요.",
-  keywords: ["폰트 만들기", "손글씨 폰트", "글씨체 만들기", "웹 도구"],
+    "쓸모 있는 웹 도구를 하나씩 제대로 만들어 두는 작은 공방. 첫 작업대는 글자체 도구입니다.",
+  keywords: ["웹 도구", "온라인 도구", "도구 모음", "획 공방"],
   path: "/",
 });
 

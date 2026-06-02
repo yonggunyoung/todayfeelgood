@@ -120,6 +120,8 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
         width={width}
         height={height}
         className={styles.canvas}
+        role="img"
+        aria-label="손글씨 스케치 영역(마우스·터치 전용, 키보드 미지원). 이 그림은 폰트에 반영되지 않습니다."
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={endStroke}
@@ -127,7 +129,9 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
         onPointerCancel={endStroke}
       />
       <div className={styles.toolbar}>
-        <span className={styles.hint}>여기에 마우스/손가락으로 글씨를 그려보세요</span>
+        <span className={styles.hint}>
+          손풀기용 스케치입니다. 지금은 폰트에 반영되지 않습니다(손글씨 반영은 다음 단계).
+        </span>
         <button type="button" onClick={clear} className={styles.clearBtn}>
           지우기
         </button>

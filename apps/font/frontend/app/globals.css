@@ -8,7 +8,7 @@
   --paper-2: #efe9dc; /* 살짝 가라앉은 면(패널) */
   --ink: #1a1714; /* 먹 */
   --ink-soft: #4a443c; /* 본문 보조 */
-  --ink-faint: #8a8275; /* 캡션/괘선 라벨 */
+  --ink-faint: #645d52; /* 캡션/보조 텍스트 — WCAG AA 4.5:1 충족(종이 5.9:1, 패널 5.4:1) */
   --rule: #d8d0c0; /* 얇은 괘선 */
   --accent: #b5341f; /* 주묵(朱墨) — 인주 붉은색, 유일 악센트 */
   --accent-weak: rgba(181, 52, 31, 0.22);
@@ -29,7 +29,8 @@ body {
   margin: 0;
   background: var(--paper);
   color: var(--ink);
-  font-family: "Iropke", "Noto Serif KR", Georgia, "Times New Roman", serif;
+  /* next/font가 주입한 --font-serif(Noto Serif KR) 사용. 미로드 시 시스템 세리프 폴백. */
+  font-family: var(--font-serif), Georgia, "Times New Roman", serif;
   line-height: 1.6;
   font-feature-settings: "kern" 1, "liga" 1;
   -webkit-font-smoothing: antialiased;
@@ -37,8 +38,8 @@ body {
 
 /* 본문 UI(라벨·버튼 등)는 산세리프로, 제목/스페시먼은 세리프로 대비 */
 .sans {
-  font-family: "Pretendard", system-ui, -apple-system, "Segoe UI",
-    "Noto Sans KR", sans-serif;
+  font-family: var(--font-sans), system-ui, -apple-system, "Segoe UI",
+    sans-serif;
 }
 
 h1,

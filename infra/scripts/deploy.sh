@@ -34,9 +34,11 @@ cat <<'EOF'
   cd apps/font/engine && \
     ALLOWED_ORIGINS="https://<도메인>" .venv/bin/uvicorn main:app --host 127.0.0.1 --port 8000
 
-  # 폰트 프론트엔드 (Next, basePath=/font) — 엔진은 서버측에서만 호출
-  ENGINE_URL=http://127.0.0.1:8000 \
-    pnpm --filter @webapp/font-frontend exec next start -p 3001
+  # 앱 프론트엔드들 (Next) — 엔진(8000)은 서버측 BFF에서만 호출
+  ENGINE_URL=http://127.0.0.1:8000 pnpm --filter @webapp/font-frontend    exec next start -p 3001  # /font
+  ENGINE_URL=http://127.0.0.1:8000 pnpm --filter @webapp/sticker-frontend exec next start -p 3002  # /sticker (서버 불요지만 통일)
+  ENGINE_URL=http://127.0.0.1:8000 pnpm --filter @webapp/sign-frontend    exec next start -p 3003  # /sign
+  ENGINE_URL=http://127.0.0.1:8000 pnpm --filter @webapp/kit-frontend     exec next start -p 3004  # /kit
 
   # 메인 홈페이지 (Next)
   pnpm --filter @webapp/home exec next start -p 3000

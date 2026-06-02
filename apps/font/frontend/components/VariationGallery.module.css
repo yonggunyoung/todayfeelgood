@@ -1,0 +1,82 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+.trigger {
+  width: 100%;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--sp-2);
+}
+
+.cell {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-2);
+  border: none;
+  border-radius: var(--r-md);
+  box-shadow: var(--inset);
+  cursor: pointer;
+  overflow: hidden;
+  transition: transform var(--dur-fast) var(--ease-spring),
+    box-shadow var(--dur-base) var(--ease-out);
+}
+
+.cell:hover:not(:disabled) {
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
+}
+
+.cell:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.cell:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--accent-weak);
+}
+
+.cell:disabled {
+  cursor: progress;
+  opacity: 0.55;
+}
+
+.glyph {
+  font-size: clamp(1.6rem, 7vw, 2.4rem);
+  font-weight: 600;
+  line-height: 1;
+  color: var(--ink);
+}
+
+.badge {
+  position: absolute;
+  top: var(--sp-1);
+  left: var(--sp-1);
+  font-size: 0.62rem;
+  font-weight: var(--weight-semi);
+  color: var(--accent-ink);
+  background: var(--accent);
+  padding: 1px var(--sp-2);
+  border-radius: var(--r-pill);
+}
+
+.hint {
+  font-size: var(--text-caption);
+  color: var(--ink-faint);
+  line-height: 1.4;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cell:hover:not(:disabled),
+  .cell:active:not(:disabled) {
+    transform: none;
+  }
+}

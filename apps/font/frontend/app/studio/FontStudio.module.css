@@ -95,16 +95,16 @@
   }
 }
 
-/* 정직성 라벨 */
+/* 정직성 라벨 — 긴 문장이 모바일에서 2줄이 되어도 어색하지 않게 r-lg + 상단 정렬 */
 .honesty {
   display: flex;
-  align-items: center;
-  gap: var(--sp-2);
+  align-items: flex-start;
+  gap: var(--sp-3);
   margin-top: var(--sp-6);
-  padding: var(--sp-3) var(--sp-5);
+  padding: var(--sp-4) var(--sp-5);
   background: var(--surface-2);
-  border-radius: var(--r-pill);
+  border-radius: var(--r-lg);
   color: var(--ink-soft);
   font-size: var(--text-sm);
-  line-height: 1.4;
+  line-height: 1.5;
 }

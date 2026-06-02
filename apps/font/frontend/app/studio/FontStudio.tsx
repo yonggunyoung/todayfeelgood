@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   clampParams,
   DEFAULT_PARAMS,
+  DEFAULT_PREVIEW_STYLE,
   FONT_FORMATS,
   PARAM_RANGES,
   STYLE_PRESETS,
@@ -12,6 +13,7 @@ import {
   type FontScript,
   type GenerateRequest,
   type GenerateResponse,
+  type PreviewStyle,
 } from "@webapp/core";
 import { Button, Chip, Mascot, Segmented } from "@webapp/ui";
 import { apiPath } from "../../lib/paths";
@@ -20,6 +22,8 @@ import DrawingCanvas, {
 } from "../../components/DrawingCanvas";
 import ParameterPanel from "../../components/ParameterPanel";
 import FontPreview from "../../components/FontPreview";
+import VariationGallery from "../../components/VariationGallery";
+import PreviewStylePanel from "../../components/PreviewStylePanel";
 import styles from "./FontStudio.module.css";
 
 // 슬라이더 조작 후 프리뷰 호출까지의 디바운스(ms)
@@ -65,6 +69,8 @@ export default function FontStudio() {
   const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [format, setFormat] = useState<FontFormat>("woff");
+  // [PREVIEW] 이미지 전용 스타일 — 엔진에 보내지 않음(프리뷰/PNG 전용)
+  const [previewStyle, setPreviewStyle] = useState<PreviewStyle>(DEFAULT_PREVIEW_STYLE);
 
   const canvasRef = useRef<DrawingCanvasHandle>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -228,6 +234,17 @@ export default function FontStudio() {
             </div>
           </div>
 
+          {/* 변주 갤러리 — 버튼 트리거로 9가지 변형을 한눈에 */}
+          <div className={styles.group}>
+            <h2 className={styles.groupHead}>변주 갤러리</h2>
+            <VariationGallery
+              base={params}
+              script={script}
+              onPick={onChangeParams}
+              disabled={downloading}
+            />
+          </div>
+
           {/* 슬라이더 */}
           <div className={styles.group}>
             <h2 className={styles.groupHead}>세부 조절</h2>
@@ -246,9 +263,19 @@ export default function FontStudio() {
             <DrawingCanvas ref={canvasRef} />
           </div>
 
+          {/* 이미지 전용 효과 — 엔진 미전송, 프리뷰/PNG에만 적용 */}
+          <div className={styles.group}>
+            <h2 className={styles.groupHead}>이미지 효과 (PNG 전용)</h2>
+            <PreviewStylePanel
+              value={previewStyle}
+              onChange={setPreviewStyle}
+              disabled={downloading}
+            />
+          </div>
+
           {/* 받아 가기 */}
           <div className={styles.group}>
-            <h2 className={styles.groupHead}>받아 가기</h2>
+            <h2 className={styles.groupHead}>폰트 받아 가기</h2>
             <Segmented<FontFormat>
               ariaLabel="파일 형식"
               value={format}
@@ -288,6 +315,7 @@ export default function FontStudio() {
             fontFamily={fontFamily}
             script={script}
             loading={loading}
+            previewStyle={previewStyle}
           />
         </section>
       </div>

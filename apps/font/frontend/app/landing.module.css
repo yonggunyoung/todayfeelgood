@@ -39,7 +39,7 @@
   gap: var(--sp-2);
   font-size: var(--text-sm);
   font-weight: var(--weight-semi);
-  color: var(--accent);
+  color: var(--accent-ink-weak);
   background: var(--accent-weak);
   padding: var(--sp-2) var(--sp-3) var(--sp-2) var(--sp-2);
   border-radius: var(--r-pill);
@@ -91,7 +91,7 @@
 }
 
 .secondary {
-  color: var(--accent);
+  color: var(--accent-ink-weak);
   text-decoration: none;
   font-weight: var(--weight-semi);
 }
@@ -191,7 +191,7 @@
 
 .howCta {
   font-weight: var(--weight-semi);
-  color: var(--accent);
+  color: var(--accent-ink-weak);
 }
 .howCta:hover {
   color: var(--accent-press);

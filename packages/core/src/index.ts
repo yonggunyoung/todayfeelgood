@@ -139,6 +139,12 @@ export const PREVIEW_TEXTURES: PreviewTexture[] = ["none", "grain", "paper", "ro
 export const PREVIEW_PATTERNS: PreviewPattern[] = ["none", "stripe", "dots", "grid"];
 
 /**
+ * imagePng 업로드 상한(바이트). 프론트 BFF와 엔진 양쪽에서 동일하게 검증해
+ * 거대 페이로드로 인한 메모리 고갈(무료 티어)을 막는다.
+ */
+export const MAX_IMAGE_PNG_BYTES = 2_000_000; // 2MB
+
+/**
  * POST /generate 요청 바디. (PreviewStyle은 포함하지 않음 — 프리뷰/이미지 전용)
  * - script: 대상 문자체계(기본 latin).
  * - format: 출력 포맷(기본 woff).

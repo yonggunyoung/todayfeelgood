@@ -1,9 +1,31 @@
+/* ── 히어로 — 비대칭 2열(소개 + 스타일 샘플 카드) ── */
 .hero {
-  padding: var(--sp-20) var(--sp-5) var(--sp-10);
-  max-width: 44rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 24rem);
+  gap: var(--sp-12);
+  align-items: center;
+  padding-top: var(--sp-16);
+  padding-bottom: var(--sp-12);
 }
 
-.mascot {
+@media (max-width: 860px) {
+  .hero {
+    grid-template-columns: 1fr;
+    gap: var(--sp-8);
+    padding-top: var(--sp-10);
+  }
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semi);
+  color: var(--accent-ink-weak);
+  background: var(--accent-weak);
+  padding: var(--sp-2) var(--sp-3) var(--sp-2) var(--sp-2);
+  border-radius: var(--r-pill);
   margin-bottom: var(--sp-5);
 }
 
@@ -18,14 +40,115 @@
   color: var(--ink-soft);
   font-size: var(--text-lg);
   line-height: 1.6;
+  max-width: 30rem;
+  margin-bottom: var(--sp-6);
+}
+
+.heroCta {
+  font-weight: var(--weight-semi);
+  color: var(--accent-ink-weak);
+  font-size: var(--text-lg);
+}
+.heroCta:hover {
+  color: var(--accent-press);
+}
+
+/* 스타일 샘플 카드 — 떠 있는 표면 */
+.sampleCard {
+  background: var(--surface);
+  border-radius: var(--r-xl);
+  box-shadow: var(--shadow-lg);
+  padding: var(--sp-6);
+}
+
+.sampleGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sp-4);
+}
+
+.sample {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-4) var(--sp-3);
+  background: var(--surface-2);
+  border-radius: var(--r-md);
+}
+
+.sampleWord {
+  font-size: 2rem;
+  line-height: 1;
+  color: var(--ink);
+}
+
+.sampleLabel {
+  font-size: var(--text-caption);
+  color: var(--ink-faint);
+  font-weight: var(--weight-med);
+}
+
+.sampleNote {
+  margin-top: var(--sp-4);
+  text-align: center;
+  font-size: var(--text-caption);
+  color: var(--ink-faint);
+}
+
+/* ── 너굴이 소개 — 색지 배경 면 분리 ── */
+.meet {
+  background: var(--surface-2);
+  padding: var(--sp-12) 0;
+  margin: var(--sp-6) 0;
+}
+
+.meetInner {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-8);
+}
+
+@media (max-width: 620px) {
+  .meetInner {
+    flex-direction: column;
+    text-align: center;
+    gap: var(--sp-4);
+  }
+}
+
+.meetMascot {
+  flex: none;
+}
+
+.meetTitle {
+  font-size: var(--text-title2);
+  margin-bottom: var(--sp-3);
+}
+
+.meetBody {
+  color: var(--ink-soft);
+  font-size: var(--text-body);
+  line-height: 1.7;
+  max-width: 38rem;
+}
+
+/* ── 도구 목록 ── */
+.tools {
+  padding-top: var(--sp-10);
+  padding-bottom: var(--sp-12);
+}
+
+.toolsTitle {
+  font-size: var(--text-title2);
+  margin-bottom: var(--sp-6);
 }
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
   gap: var(--sp-5);
-  padding-top: var(--sp-5);
-  padding-bottom: var(--sp-12);
+  align-items: stretch;
 }
 
 @media (max-width: 720px) {
@@ -55,17 +178,34 @@
 .appCta {
   text-decoration: none;
   font-weight: var(--weight-semi);
-  color: var(--accent);
+  color: var(--accent-ink-weak);
   align-self: flex-start;
 }
 .appCta:hover {
   color: var(--accent-press);
 }
 
-.appSoon {
-  font-weight: var(--weight-med);
+/* 다음 작업대 — 더미 카드 대신 가라앉은 안내 면 */
+.next {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  justify-content: center;
+  background: var(--surface-2);
+  border-radius: var(--r-lg);
+  padding: var(--sp-6);
+}
+
+.nextLabel {
+  font-size: var(--text-caption);
+  font-weight: var(--weight-semi);
   color: var(--ink-faint);
+}
+
+.nextBody {
+  color: var(--ink-soft);
   font-size: var(--text-sm);
+  line-height: 1.6;
 }
 
 .footer {

@@ -22,7 +22,7 @@
   right: var(--sp-5);
   font-size: var(--text-caption);
   font-weight: var(--weight-semi);
-  color: var(--accent);
+  color: var(--accent-ink-weak);
   background: var(--accent-weak);
   padding: var(--sp-1) var(--sp-3);
   border-radius: var(--r-pill);

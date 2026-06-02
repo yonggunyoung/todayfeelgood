@@ -1,12 +1,15 @@
 import { NextResponse } from "next/server";
 import {
   clampParams,
-  MAX_IMAGE_PNG_BYTES,
   type FontFormat,
   type FontScript,
   type GenerateRequest,
   type GenerateResponse,
 } from "@webapp/core";
+
+// imagePng 업로드 상한(바이트). 엔진 main.py의 MAX_IMAGE_PNG_BYTES(2MB)와 동일하게 유지.
+// (계약 v4가 고정되어 코어에서 export되지 않으므로 BFF에서 로컬 상수로 둔다.)
+const MAX_IMAGE_PNG_BYTES = 2_000_000;
 
 // 동적 라우트(매 요청 포워딩) — 정적 최적화 비활성
 export const dynamic = "force-dynamic";

@@ -22,7 +22,7 @@
   font-variant-numeric: tabular-nums;
   font-weight: var(--weight-semi);
   font-size: var(--text-sm);
-  color: var(--accent);
+  color: var(--accent-ink-weak);
   background: var(--accent-weak);
   padding: 2px var(--sp-3);
   border-radius: var(--r-pill);

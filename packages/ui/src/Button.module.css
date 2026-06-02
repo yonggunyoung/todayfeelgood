@@ -43,10 +43,10 @@
 
 .soft {
   background: var(--accent-weak);
-  color: var(--accent);
+  color: var(--accent-ink-weak);
 }
 .soft:hover:not(:disabled) {
-  background: rgba(91, 108, 240, 0.2);
+  background: var(--accent-weak-strong);
 }
 
 /* 통통한 클레이 CTA */

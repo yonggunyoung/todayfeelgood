@@ -1,0 +1,68 @@
+.cell {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border-radius: var(--r-md, 16px);
+  background: var(--surface, #fff);
+  border: 1.5px solid var(--line, #e7e3f0);
+  box-shadow: var(--shadow-sm, 0 1px 3px rgba(40, 30, 70, 0.06));
+  position: relative;
+}
+
+.cell.filled {
+  border-color: color-mix(in srgb, var(--accent, #7c6cf0) 55%, transparent);
+  background: color-mix(in srgb, var(--accent, #7c6cf0) 5%, var(--surface, #fff));
+}
+
+.glyphLabel {
+  position: absolute;
+  top: 10px;
+  left: 12px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--muted, #8b86a3);
+  pointer-events: none;
+  user-select: none;
+}
+
+.cell.filled .glyphLabel {
+  color: var(--accent, #7c6cf0);
+}
+
+.canvas {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 150 / 180;
+  display: block;
+  border-radius: var(--r-sm, 10px);
+  background: var(--surface-2, #faf9ff);
+  touch-action: none;
+  cursor: crosshair;
+}
+
+.cellActions {
+  display: flex;
+  gap: 6px;
+}
+
+.cellBtn {
+  flex: 1;
+  font-size: 0.72rem;
+  padding: 5px 4px;
+  border-radius: var(--r-sm, 10px);
+  border: 1px solid var(--line, #e7e3f0);
+  background: var(--surface, #fff);
+  color: var(--text, #2b2a33);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.cellBtn:hover:not(:disabled) {
+  background: var(--surface-2, #f3f0ff);
+}
+
+.cellBtn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}

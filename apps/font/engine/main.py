@@ -29,17 +29,24 @@ import asyncio
 import logging
 import os
 from contextlib import asynccontextmanager
-from typing import Literal, Optional
+from typing import List, Literal, Optional
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 import font_loader
 import generator
+import handwriting
 
 logger = logging.getLogger("font_engine")
+
+# 손글씨 페이로드 가드(계약 packages/core와 동일).
+MAX_STROKE_POINTS_PER_GLYPH = 4000
+MAX_TOTAL_GLYPHS = 120
+# 손글씨 조립도 CPU 집약. 별도 세마포어로 동시성 제한.
+MAX_CONCURRENT_HANDWRITING = 2
 
 # imagePng 업로드 상한(바이트). packages/core MAX_IMAGE_PNG_BYTES(2MB)와 동일.
 MAX_IMAGE_PNG_BYTES = 2_000_000
@@ -50,6 +57,7 @@ MAX_CONCURRENT_GENERATES = 3
 MAX_CONCURRENT_HANGUL = 1
 _generate_semaphore = asyncio.Semaphore(MAX_CONCURRENT_GENERATES)
 _hangul_semaphore = asyncio.Semaphore(MAX_CONCURRENT_HANGUL)
+_handwriting_semaphore = asyncio.Semaphore(MAX_CONCURRENT_HANDWRITING)
 
 
 def _allowed_origins() -> list[str]:
@@ -144,6 +152,79 @@ class GenerateResponse(BaseModel):
     fontFamily: str
     generatedBy: Literal["baseFontVariation"]
     appliedParams: FontParamsModel
+
+
+# ---- 손글씨 코어 계약(packages/core: HandwritingRequest 등) ----
+class GlyphStrokeModel(BaseModel):
+    # 점 = [x, y] 정규화(0..1). 좌표 자체 범위는 엔진이 셀 변환 시 흡수(약간의 오버드로 허용).
+    points: List[List[float]]
+
+    @field_validator("points")
+    @classmethod
+    def _valid_points(cls, v: List[List[float]]) -> List[List[float]]:
+        import math
+
+        for p in v:
+            if len(p) != 2 or not all(isinstance(c, (int, float)) and math.isfinite(c) for c in p):
+                raise ValueError("각 점은 유한한 [x, y] 두 값이어야 합니다.")
+        return v
+
+
+class DrawnGlyphModel(BaseModel):
+    char: str = Field(min_length=1, max_length=1)
+    strokes: List[GlyphStrokeModel]
+
+    @model_validator(mode="after")
+    def _point_budget(self) -> "DrawnGlyphModel":
+        # 글자당 점 수 상한(무료티어 메모리 가드).
+        total = sum(len(s.points) for s in self.strokes)
+        if total > MAX_STROKE_POINTS_PER_GLYPH:
+            raise ValueError(
+                f"글자당 점 수({total})가 상한({MAX_STROKE_POINTS_PER_GLYPH})을 초과했습니다."
+            )
+        return self
+
+
+class RefineParamsModel(BaseModel):
+    # REFINE_RANGES와 동일 범위. 범위 밖이면 422(서버에서 추가 clamp 불필요).
+    smoothing: float = Field(default=0.4, ge=0, le=1)
+    nib: float = Field(default=0.5, ge=0.2, le=1)
+    taper: float = Field(default=0, ge=0, le=1)
+    straighten: float = Field(default=0.2, ge=0, le=1)
+    spacing: float = Field(default=0.05, ge=-0.05, le=0.4)
+
+    @field_validator("smoothing", "nib", "taper", "straighten", "spacing")
+    @classmethod
+    def _finite(cls, v: float) -> float:
+        import math
+
+        if not math.isfinite(v):
+            raise ValueError("값은 유한한 숫자여야 합니다.")
+        return v
+
+
+class HandwritingRequest(BaseModel):
+    glyphs: List[DrawnGlyphModel]
+    refine: RefineParamsModel = RefineParamsModel()
+    format: Literal["woff", "woff2", "ttf", "otf"] = "woff"
+
+    @model_validator(mode="after")
+    def _glyph_budget(self) -> "HandwritingRequest":
+        if len(self.glyphs) == 0:
+            raise ValueError("그린 글자가 최소 1개 필요합니다.")
+        if len(self.glyphs) > MAX_TOTAL_GLYPHS:
+            raise ValueError(
+                f"글자 수({len(self.glyphs)})가 상한({MAX_TOTAL_GLYPHS})을 초과했습니다."
+            )
+        return self
+
+
+class HandwritingResponse(BaseModel):
+    fontBase64: str
+    format: Literal["woff", "woff2", "ttf", "otf"]
+    fontFamily: str
+    generatedBy: Literal["handwriting"]
+    glyphCount: int
 
 
 @app.exception_handler(Exception)
@@ -258,4 +339,57 @@ async def generate(req: GenerateRequest) -> GenerateResponse:
             contrast=applied.contrast,
             roundness=applied.roundness,
         ),
+    )
+
+
+# ──────────────────────────────────────────────────────────────
+# 손글씨 코어: 사용자가 직접 그린 획 → 진짜 글씨체.
+# [비용 가드] 로컬 fontTools + 표준 math만. 외부 유료 API 호출 없음(비용 0).
+# ──────────────────────────────────────────────────────────────
+def _handwriting_blocking(req: HandwritingRequest):
+    """스레드풀에서 실행되는 CPU 집약 손글씨 조립(이벤트루프 비블로킹)."""
+    glyphs = [
+        (g.char, [[(p[0], p[1]) for p in s.points] for s in g.strokes])
+        for g in req.glyphs
+    ]
+    refine = handwriting.RefineParams(
+        smoothing=req.refine.smoothing,
+        nib=req.refine.nib,
+        taper=req.refine.taper,
+        straighten=req.refine.straighten,
+        spacing=req.refine.spacing,
+    )
+    return handwriting.build_handwriting_font_base64(glyphs, refine, req.format)
+
+
+@app.post("/handwriting", response_model=HandwritingResponse)
+async def handwriting_endpoint(req: HandwritingRequest) -> HandwritingResponse:
+    # 동시성 제한: 포화 시 즉시 503(저비용 DoS 방어).
+    if _handwriting_semaphore.locked():
+        raise HTTPException(
+            status_code=503,
+            detail="요청이 많아 일시적으로 처리할 수 없습니다. 잠시 후 다시 시도하세요.",
+        )
+
+    async with _handwriting_semaphore:
+        loop = asyncio.get_running_loop()
+        try:
+            b64, family, count = await loop.run_in_executor(
+                None, _handwriting_blocking, req
+            )
+        except ValueError as e:
+            # 그린 내용이 비어있거나 유효 글리프 0 등 → 422.
+            raise HTTPException(status_code=422, detail=str(e))
+        except HTTPException:
+            raise
+        except Exception:
+            logger.exception("손글씨 폰트 생성 실패")
+            raise HTTPException(status_code=500, detail="폰트 생성에 실패했습니다.")
+
+    return HandwritingResponse(
+        fontBase64=b64,
+        format=req.format,
+        fontFamily=family,
+        generatedBy="handwriting",
+        glyphCount=count,
     )

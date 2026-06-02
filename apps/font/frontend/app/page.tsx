@@ -43,20 +43,20 @@ export default function HomePage() {
           <div className={styles.heroText}>
             <p className={styles.eyebrow}>
               <Mascot mood="happy" size={28} still label="" />
-              <span>슬라이더로 노는 글자체</span>
+              <span>직접 그리는 손글씨 폰트</span>
             </p>
             <h1 className={`display ${styles.headline}`}>
-              내 손으로 만드는 <span className={styles.brushWord}>글씨체
+              내가 그린 진짜 <span className={styles.brushWord}>내 글씨체
                 <BrushUnderline className={styles.brushUnderline} />
               </span>
             </h1>
             <p className={styles.lede}>
-              굵기를 누르고, 기울기를 밀고, 괴상함도 한 스푼. 슬라이더를 움직이면
-              그 자리에서 글자가 새 표정을 지어요. 마음에 들면 바로 받아 가세요.
+              칸마다 직접 글자를 그리면, 진짜 내가 그린 획으로 폰트를 구워 드려요.
+              원하는 글자만 그려도 OK. 다듬기로 손맛은 살리고 단정하게.
             </p>
             <div className={styles.heroActions}>
               <Link href="/studio" className={styles.primary}>
-                만들러 가기
+                그리러 가기
               </Link>
               <a href="#how" className={styles.secondary}>
                 어떻게 만드나요?
@@ -98,12 +98,13 @@ export default function HomePage() {
             <div>
               <h2 className={`display ${styles.howTitle}`}>만드는 법은 간단해요</h2>
               <p className={styles.howBody}>
-                슬라이더로 굵기·기울기·곡률을 다듬고, 무드 프리셋으로 분위기를
-                골라 WOFF·TTF로 받으면 끝. AI 아님 — 공개 가변폰트를 슬라이더로
-                변형한 결과예요(내가 그린 글씨는 아닙니다).
+                a–z 칸에 글자를 그리고, 다듬기로 손떨림만 살짝 정리한 뒤
+                WOFF·TTF로 받으면 끝. AI 아님 — 진짜 내가 그린 획으로 만든
+                폰트예요. 빠르게 둘러보고 싶다면 “빠른 시작 샘플”(기성 폰트
+                슬라이더 변형)도 있어요.
               </p>
               <Link href="/studio" className={styles.howCta}>
-                작업대 열기 →
+                그리기 작업대 열기 →
               </Link>
             </div>
           </div>

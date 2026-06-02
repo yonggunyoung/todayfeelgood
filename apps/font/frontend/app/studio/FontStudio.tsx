@@ -77,11 +77,14 @@ function matchPreset(
 }
 
 /**
- * 공방 메인(클라이언트).
+ * 공방 보조 모드(클라이언트) — "빠른 시작 샘플".
+ * 기성 가변폰트를 슬라이더로 변형하는 보조 모드. 메인은 직접 그리기(HandwritingStudio).
+ * embedded=true면 손글씨 스튜디오 탭 안에 본문만 임베드(자체 <main>/헤드라인 생략).
+ *
  * 흐름: script/슬라이더 → 디바운스 → /api/generate(format:"woff", imagePng 미전송) → fontBase64 → 프리뷰.
  * 다운로드: 선택 포맷으로 1회 요청 → fontBase64 디코드 → 브라우저 저장(앱 내 완결).
  */
-export default function FontStudio() {
+export default function FontStudio({ embedded = false }: { embedded?: boolean } = {}) {
   const [params, setParams] = useState<FontParams>(DEFAULT_PARAMS);
   const [script, setScript] = useState<FontScript>("latin");
   const [previewFont, setPreviewFont] = useState<string | null>(null);
@@ -249,20 +252,29 @@ export default function FontStudio() {
     </div>
   );
 
+  const Root = embedded ? "div" : "main";
+
   return (
-    <main className={`container ${styles.studio}`}>
-      <header className={styles.header}>
-        <h1 className={`display ${styles.title}`}>
-          <span className={styles.titleWord}>
-            글씨체를 빚는 작업대
-            <BrushUnderline className={styles.titleUnderline} />
-          </span>
-        </h1>
-        <p className={styles.lead}>
-          슬라이더를 움직이면 오른쪽 견본이 바로 표정을 바꿔요. 마음에 든 순간을
-          그대로 받아 가세요.
+    <Root className={embedded ? styles.studioEmbedded : `container ${styles.studio}`}>
+      {embedded ? (
+        <p className={styles.embeddedLead}>
+          기성 공개 가변폰트를 슬라이더로 변형하는 <strong>빠른 시작 샘플</strong>이에요.
+          진짜 내 글씨로 만들려면 위에서 “직접 그리기”를 골라 주세요.
         </p>
-      </header>
+      ) : (
+        <header className={styles.header}>
+          <h1 className={`display ${styles.title}`}>
+            <span className={styles.titleWord}>
+              글씨체를 빚는 작업대
+              <BrushUnderline className={styles.titleUnderline} />
+            </span>
+          </h1>
+          <p className={styles.lead}>
+            슬라이더를 움직이면 오른쪽 견본이 바로 표정을 바꿔요. 마음에 든 순간을
+            그대로 받아 가세요.
+          </p>
+        </header>
+      )}
 
       <div className={styles.grid}>
         {/* 작업 도구: 3단계 위계 — ① 빠른 시작 ② 세부 조절 ③ 고급/실험 + 받아 가기 */}
@@ -423,6 +435,6 @@ export default function FontStudio() {
         공개 폰트 변형 — 내가 그린 글씨가 아닙니다. 공개 가변폰트를 슬라이더로
         다듬어 만든 결과예요.
       </p>
-    </main>
+    </Root>
   );
 }

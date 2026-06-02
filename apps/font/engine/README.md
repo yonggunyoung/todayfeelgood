@@ -87,6 +87,51 @@ uvicorn main:app --port 8000
 }
 ```
 
+### `POST /handwriting` — 손글씨 코어 (제품 메인 메커니즘)
+
+> "공개 폰트 변형"인 `/generate`와 달리, **사용자가 직접 그린 획**을 그대로
+> 외곽선 글리프로 조립한다. `generatedBy: "handwriting"` (진짜 내 글씨 — 정직).
+> 베이스 폰트 불필요(획 기반) → 오프라인에서도 항상 동작. potrace/OpenCV 미사용.
+
+요청 (`HandwritingRequest`, `packages/core` 계약):
+```json
+{
+  "glyphs": [
+    { "char": "a", "strokes": [ { "points": [[0.5,0.1],[0.5,0.9]] } ] },
+    { "char": "b", "strokes": [ { "points": [[0.3,0.1],[0.3,0.9]] },
+                                { "points": [[0.3,0.9],[0.7,0.9]] } ] }
+  ],
+  "refine": { "smoothing": 0.4, "nib": 0.5, "taper": 0.0, "straighten": 0.2, "spacing": 0.05 },
+  "format": "woff"
+}
+```
+- `glyphs[].char`: 1글자. `strokes[].points`: 셀 정규화 `[x,y]` (0..1, (0,0)=좌상단, (1,1)=우하단).
+- **좌표 변환**: 셀 0..1 → 폰트 유닛(UPM 1000). y축 뒤집기(이미지 y하향 → 폰트 y상향).
+  셀 윗변(y=0)=어센더(800), 아랫변(y=1)=디센더(-200).
+- **가드**: 빈 `glyphs` **422**, 글자 수 > `MAX_TOTAL_GLYPHS`(120) **422**,
+  글자당 점 수 > `MAX_STROKE_POINTS_PER_GLYPH`(4000) **422**, `refine` 범위 밖(REFINE_RANGES) **422**,
+  잘못된 `format` **422**, `point`가 `[x,y]` 아니면 **422**. 동시성 `Semaphore(2)` 포화 시 **503**.
+
+응답 (`HandwritingResponse`):
+```json
+{ "fontBase64": "<base64>", "format": "woff", "fontFamily": "MyHand-xxxxxxxx",
+  "generatedBy": "handwriting", "glyphCount": 3 }
+```
+
+#### 다듬기(refine) — 개성 보존이 핵심. 전부 0이면 날것, 올릴수록 정제
+| 파라미터 | 범위 | 처리 |
+|---|---|---|
+| smoothing | 0~1 | 손떨림 정리. RDP 점 솎기 + Catmull-Rom 보간(원래 점 통과 → 형태 보존). 0=중복점만 제거(날것) |
+| nib | 0.2~1 | 획 두께(좌우 오프셋 반폭 14~70u). 한 점짜리 획은 원형 도트 |
+| taper | 0~1 | 획 끝으로 갈수록 폭 감소(필압 흉내). 양 끝 가늘게, 종(bell) 프로파일 |
+| straighten | 0~1 | 전체 기울기 보정. 모든 점의 최소제곱 회귀선 각도를 `straighten` 비율만큼 약하게 회전(과도 정규화 방지) |
+| spacing | -0.05~0.4 (em) | 사이드베어링/advance. 잉크폭 + 양쪽 여백, space advance에도 반영 |
+
+- **조립**: 각 획 → 중심선 폴리라인 → 법선 좌우 오프셋 외곽선 → `TTGlyphPen` 컨투어 → `FontBuilder`로 glyf.
+  cmap = 그린 char들 + space. `.notdef`/space는 빈 글리프(advance만). 안 그린/실패 글리프는 공백 폭.
+- **재현성**: `head.modified` 고정 → 같은 입력·refine → 동일 바이트.
+- **비용 0**: 외부 API 없음. `fontTools` + 표준 `math`만.
+
 ## 파라미터 처리
 
 | 파라미터 | UI 범위 | 처리 | 라틴 | 한글 |

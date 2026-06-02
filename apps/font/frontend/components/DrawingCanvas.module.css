@@ -1,0 +1,40 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.canvas {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 600 / 240;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  touch-action: none; /* 터치 스크롤 방지(그리기 우선) */
+  cursor: crosshair;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.hint {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.clearBtn {
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  padding: 0.4rem 0.9rem;
+  border-radius: 0.4rem;
+}
+
+.clearBtn:hover {
+  border-color: var(--accent);
+}

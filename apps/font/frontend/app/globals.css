@@ -48,6 +48,9 @@
   /* 라인(최소화 — 선 대신 면/그림자로 구획) */
   --hairline: rgba(43, 42, 51, 0.08);
 
+  /* 색지 그레인 — 인라인 SVG feTurbulence. 낮은 대비(opacity 0.04)로 흰 표면과 구분만. */
+  --paper-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+
   /* 라운드(연속곡률 지향, 후하게). 2px 전면 폐기. */
   --r-xs: 8px;
   --r-sm: 12px;
@@ -135,6 +138,9 @@
 
     --hairline: rgba(255, 255, 255, 0.1);
 
+    /* 다크에선 그레인을 흰 점으로(미세하게) — 어두운 색지 결 */
+    --paper-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.6 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
+
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 12px rgba(0, 0, 0, 0.34);
     --shadow-md: 0 2px 6px rgba(0, 0, 0, 0.34), 0 12px 28px rgba(0, 0, 0, 0.42);
     --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.4), 0 24px 60px rgba(0, 0, 0, 0.5);
@@ -156,7 +162,11 @@ html {
 
 body {
   margin: 0;
-  background: var(--bg);
+  /* 색지(色紙) 물성 — 아주 미세한 종이 그레인을 색지 톤 위에 옅게 깔아
+     순백 표면(카드)과 바탕을 구분한다. feTurbulence noise(저대비), 고정 첨부. */
+  background-color: var(--bg);
+  background-image: var(--paper-grain);
+  background-attachment: fixed;
   color: var(--ink);
   /* 본문/UI는 산세리프(Noto Sans KR). 세리프 본문 폐기. */
   font-family: var(--font-sans), system-ui, -apple-system, "Segoe UI", sans-serif;

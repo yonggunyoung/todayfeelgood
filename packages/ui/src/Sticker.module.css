@@ -1,0 +1,37 @@
+.base {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--text-caption);
+  font-weight: var(--weight-semi);
+  color: var(--ink);
+  white-space: nowrap;
+  user-select: none;
+}
+
+/* 마스킹테이프 — 반투명 색 띠, 양옆이 살짝 찢긴 듯 흐림 */
+.tape {
+  padding: var(--sp-1) var(--sp-4);
+  background: var(--tape-color);
+  /* 테이프 특유의 반투명 + 결 */
+  opacity: 0.88;
+  box-shadow: 0 1px 3px rgba(43, 42, 51, 0.14);
+  background-image: repeating-linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.18) 0 2px,
+    transparent 2px 7px
+  );
+  /* 찢긴 끝 느낌(살짝 들쭉날쭉) */
+  clip-path: polygon(
+    2% 0, 98% 4%, 100% 50%, 97% 100%, 3% 96%, 0 48%
+  );
+}
+
+/* 스티커 — 둥근 알약, 도톰한 그림자 + 흰 테두리 */
+.sticker {
+  padding: var(--sp-1) var(--sp-4);
+  background: var(--tape-color);
+  border-radius: var(--r-pill);
+  box-shadow: 0 2px 6px rgba(43, 42, 51, 0.18),
+    inset 0 0 0 2px rgba(255, 255, 255, 0.6);
+}

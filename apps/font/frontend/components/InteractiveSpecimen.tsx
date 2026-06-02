@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { PARAM_RANGES } from "@webapp/core";
-import { Slider } from "@webapp/ui";
+import { LiveText, Slider } from "@webapp/ui";
 import styles from "./InteractiveSpecimen.module.css";
 
 /**
@@ -44,9 +44,12 @@ export default function InteractiveSpecimen() {
         role="img"
         aria-label="굵기와 기울기를 조절하는 라틴 글자 데모 (시스템 글꼴 흉내)"
       >
-        <span className={styles.glyphLine} style={style} aria-hidden>
-          {SAMPLE}
-        </span>
+        {/* 메인 글자 — 굵기/기울기는 슬라이더로, 미세한 숨쉬기는 LiveText로(살아있는 글자) */}
+        <LiveText
+          text={SAMPLE}
+          className={styles.glyphLine}
+          style={style}
+        />
         <span className={styles.glyphLine2} style={style} aria-hidden>
           Hwoek 0 1 2
         </span>

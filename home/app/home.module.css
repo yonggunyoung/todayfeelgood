@@ -53,12 +53,20 @@
   color: var(--accent-press);
 }
 
-/* 스타일 샘플 카드 — 떠 있는 표면 */
+/* 스타일 샘플 카드 — 떠 있는 표면 + 마스킹테이프 라벨 */
 .sampleCard {
+  position: relative;
   background: var(--surface);
   border-radius: var(--r-xl);
   box-shadow: var(--shadow-lg);
   padding: var(--sp-6);
+}
+
+/* 모서리에 붙은 마스킹테이프 */
+.sampleTape {
+  position: absolute;
+  top: calc(-1 * var(--sp-3));
+  left: var(--sp-6);
 }
 
 .sampleGrid {
@@ -68,13 +76,26 @@
 }
 
 .sample {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: var(--sp-2);
   padding: var(--sp-4) var(--sp-3);
-  background: var(--surface-2);
+  /* 색지 — 캔디 톤을 surface-2 위에 아주 옅게 깐 색지 면 */
+  background: color-mix(in srgb, var(--paper) 16%, var(--surface-2));
   border-radius: var(--r-md);
+  overflow: hidden;
+}
+
+/* 색지 상단 한 줄 — 색지임을 또렷이(붓끝 같은 짧은 띠) */
+.sample::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 4px;
+  background: var(--paper);
+  opacity: 0.7;
 }
 
 .sampleWord {
@@ -185,8 +206,16 @@
   color: var(--accent-press);
 }
 
-/* 다음 작업대 — 더미 카드 대신 가라앉은 안내 면 */
+/* 섹션 사이 붓획 디바이더 */
+.dividerWrap {
+  padding-top: var(--sp-4);
+  padding-bottom: var(--sp-2);
+  opacity: 0.5;
+}
+
+/* 다음 작업대 — 더미 카드 대신 가라앉은 안내 면 + 스티커 + 너굴이 */
 .next {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: var(--sp-3);
@@ -194,6 +223,20 @@
   background: var(--surface-2);
   border-radius: var(--r-lg);
   padding: var(--sp-6);
+  overflow: hidden;
+}
+
+.nextSticker {
+  position: absolute;
+  top: var(--sp-4);
+  right: var(--sp-4);
+}
+
+.nextMascot {
+  position: absolute;
+  right: var(--sp-3);
+  bottom: var(--sp-2);
+  opacity: 0.9;
 }
 
 .nextLabel {

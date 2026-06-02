@@ -13,6 +13,17 @@
   margin-bottom: var(--sp-3);
 }
 
+.titleWord {
+  position: relative;
+  display: inline-block;
+}
+.titleUnderline {
+  position: absolute;
+  left: 0;
+  bottom: -0.18em;
+  width: 42%;
+}
+
 .lead {
   color: var(--ink-soft);
   font-size: var(--text-lg);
@@ -54,7 +65,95 @@
 .groupHead {
   font-size: var(--text-sm);
   font-weight: var(--weight-semi);
+  color: var(--ink-soft);
+}
+
+/* ── ① 빠른 시작 — 강조 표면(연한 악센트 배경) + 내부 서브그룹 ── */
+.quickStart {
+  background: linear-gradient(
+    180deg,
+    var(--accent-weak) 0,
+    var(--surface) 64px
+  );
+  box-shadow: var(--shadow-md);
+  gap: var(--sp-5);
+}
+
+.stageHead {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+}
+
+.stageBadge {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+  color: var(--accent-ink);
+  background: var(--accent);
+  padding: var(--sp-1) var(--sp-3);
+  border-radius: var(--r-pill);
+}
+
+.stageHint {
+  font-size: var(--text-caption);
   color: var(--ink-faint);
+}
+
+.subGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+/* ── 아코디언(세부·고급) — <details>/<summary> ── */
+.accSummary {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  cursor: pointer;
+  list-style: none;
+  outline: none;
+  border-radius: var(--r-sm);
+}
+.accSummary::-webkit-details-marker {
+  display: none;
+}
+.accSummary:focus-visible {
+  box-shadow: 0 0 0 3px var(--accent-weak);
+}
+
+/* 펼침 화살표 — 가벼운 회전 표시 */
+.accTitle {
+  position: relative;
+  font-size: var(--text-body);
+  font-weight: var(--weight-semi);
+  color: var(--ink);
+  padding-right: var(--sp-5);
+}
+.accTitle::after {
+  content: "";
+  position: absolute;
+  right: 2px;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid var(--ink-faint);
+  border-bottom: 2px solid var(--ink-faint);
+  transform: translateY(-70%) rotate(45deg);
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+details[open] > .accSummary .accTitle::after {
+  transform: translateY(-30%) rotate(-135deg);
+}
+
+.accSub {
+  font-size: var(--text-caption);
+  color: var(--ink-faint);
+}
+
+.accBody {
+  margin-top: var(--sp-4);
 }
 
 .chips {
@@ -92,6 +191,43 @@
 @media (max-width: 900px) {
   .preview {
     position: static;
+  }
+}
+
+/* 다운로드 성공 토스트 — 하단 중앙에 너굴이(love)와 함께 잠깐 등장 */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: var(--sp-8);
+  transform: translateX(-50%);
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-6) var(--sp-3) var(--sp-3);
+  background: var(--surface);
+  border-radius: var(--r-pill);
+  box-shadow: var(--shadow-lg);
+  color: var(--ink);
+  font-weight: var(--weight-semi);
+  font-size: var(--text-sm);
+  animation: toast-pop var(--dur-base) var(--ease-spring);
+}
+
+@keyframes toast-pop {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(12px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast {
+    animation: none;
   }
 }
 

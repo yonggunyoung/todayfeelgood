@@ -17,7 +17,7 @@ import {
   type GenerateResponse,
   type PreviewStyle,
 } from "@webapp/core";
-import { Button, Chip, Mascot, Segmented } from "@webapp/ui";
+import { BrushUnderline, Button, Chip, Mascot, Segmented } from "@webapp/ui";
 import { apiPath } from "../../lib/paths";
 import DrawingCanvas, {
   type DrawingCanvasHandle,
@@ -218,7 +218,12 @@ export default function FontStudio() {
   return (
     <main className={`container ${styles.studio}`}>
       <header className={styles.header}>
-        <h1 className={`display ${styles.title}`}>글씨체를 빚는 작업대</h1>
+        <h1 className={`display ${styles.title}`}>
+          <span className={styles.titleWord}>
+            글씨체를 빚는 작업대
+            <BrushUnderline className={styles.titleUnderline} />
+          </span>
+        </h1>
         <p className={styles.lead}>
           슬라이더를 움직이면 오른쪽 견본이 바로 표정을 바꿔요. 마음에 드는
           순간을 골라 그대로 받아 가세요.
@@ -226,77 +231,96 @@ export default function FontStudio() {
       </header>
 
       <div className={styles.grid}>
-        {/* 작업 도구: 문자체계 + 프리셋 + 슬라이더 + 출력 */}
+        {/* 작업 도구: 3단계 위계 — ① 빠른 시작 ② 세부 조절 ③ 고급/실험 + 받아 가기 */}
         <section className={styles.tools}>
-          {/* 문자체계 세그먼티드 */}
-          <div className={styles.group}>
-            <h2 className={styles.groupHead}>문자체계</h2>
-            <Segmented<FontScript>
-              ariaLabel="문자체계 선택"
-              value={script}
-              onChange={setScript}
-              options={[
-                { value: "latin", label: "라틴 Aa" },
-                { value: "hangul", label: "한글 가" },
-              ]}
-            />
-          </div>
+          {/* ── ① 빠른 시작 — 누르면 끝(프리셋·변주·문자체계). 강조 표면. ── */}
+          <div className={`${styles.group} ${styles.quickStart}`}>
+            <div className={styles.stageHead}>
+              <span className={styles.stageBadge}>빠른 시작</span>
+              <span className={styles.stageHint}>눌러서 분위기부터 골라요</span>
+            </div>
 
-          {/* 무드 프리셋 칩 */}
-          <div className={styles.group}>
-            <h2 className={styles.groupHead}>무드 프리셋</h2>
-            <div className={styles.chips}>
-              {STYLE_PRESETS.map((preset) => (
-                <Chip
-                  key={preset.id}
-                  selected={activePreset === preset.id}
-                  disabled={loading || downloading}
-                  onClick={() => applyPreset(preset.params)}
-                >
-                  {preset.label}
-                </Chip>
-              ))}
+            <div className={styles.subGroup}>
+              <h3 className={styles.groupHead}>문자체계</h3>
+              <Segmented<FontScript>
+                ariaLabel="문자체계 선택"
+                value={script}
+                onChange={setScript}
+                options={[
+                  { value: "latin", label: "라틴 Aa" },
+                  { value: "hangul", label: "한글 가" },
+                ]}
+              />
+            </div>
+
+            <div className={styles.subGroup}>
+              <h3 className={styles.groupHead}>무드 프리셋</h3>
+              <div className={styles.chips}>
+                {STYLE_PRESETS.map((preset) => (
+                  <Chip
+                    key={preset.id}
+                    selected={activePreset === preset.id}
+                    disabled={loading || downloading}
+                    onClick={() => applyPreset(preset.params)}
+                  >
+                    {preset.label}
+                  </Chip>
+                ))}
+              </div>
+            </div>
+
+            <div className={styles.subGroup}>
+              <h3 className={styles.groupHead}>변주 갤러리</h3>
+              <VariationGallery
+                base={params}
+                script={script}
+                onPick={onChangeParams}
+                disabled={downloading}
+              />
             </div>
           </div>
 
-          {/* 변주 갤러리 — 버튼 트리거로 9가지 변형을 한눈에 */}
-          <div className={styles.group}>
-            <h2 className={styles.groupHead}>변주 갤러리</h2>
-            <VariationGallery
-              base={params}
-              script={script}
-              onPick={onChangeParams}
-              disabled={downloading}
-            />
-          </div>
+          {/* ── ② 세부 조절 — 슬라이더(기본 펼침). ── */}
+          <details className={styles.group} open>
+            <summary className={styles.accSummary}>
+              <span className={styles.accTitle}>세부 조절</span>
+              <span className={styles.accSub}>굵기·기울기·곡률을 손으로</span>
+            </summary>
+            <div className={styles.accBody}>
+              <ParameterPanel
+                value={params}
+                onChange={onChangeParams}
+                script={script}
+                onRandomizeSeed={randomizeSeed}
+                disabled={loading || downloading}
+              />
+            </div>
+          </details>
 
-          {/* 슬라이더 */}
-          <div className={styles.group}>
-            <h2 className={styles.groupHead}>세부 조절</h2>
-            <ParameterPanel
-              value={params}
-              onChange={onChangeParams}
-              script={script}
-              onRandomizeSeed={randomizeSeed}
-              disabled={loading || downloading}
-            />
-          </div>
+          {/* ── ③ 고급/실험 — 스케치(준비 중)·PNG 효과는 접어 둔다. ── */}
+          <details className={styles.group}>
+            <summary className={styles.accSummary}>
+              <span className={styles.accTitle}>이미지 효과 (PNG 전용)</span>
+              <span className={styles.accSub}>견본 이미지에만 적용 · 폰트엔 미반영</span>
+            </summary>
+            <div className={styles.accBody}>
+              <PreviewStylePanel
+                value={previewStyle}
+                onChange={setPreviewStyle}
+                disabled={downloading}
+              />
+            </div>
+          </details>
 
-          {/* 스케치(준비 중) */}
-          <div className={styles.group}>
-            <h2 className={styles.groupHead}>스케치 (미반영 · 준비 중)</h2>
-            <DrawingCanvas ref={canvasRef} />
-          </div>
-
-          {/* 이미지 전용 효과 — 엔진 미전송, 프리뷰/PNG에만 적용 */}
-          <div className={styles.group}>
-            <h2 className={styles.groupHead}>이미지 효과 (PNG 전용)</h2>
-            <PreviewStylePanel
-              value={previewStyle}
-              onChange={setPreviewStyle}
-              disabled={downloading}
-            />
-          </div>
+          <details className={styles.group}>
+            <summary className={styles.accSummary}>
+              <span className={styles.accTitle}>스케치</span>
+              <span className={styles.accSub}>미반영 · 준비 중</span>
+            </summary>
+            <div className={styles.accBody}>
+              <DrawingCanvas ref={canvasRef} />
+            </div>
+          </details>
 
           {/* 받아 가기 */}
           <div className={styles.group}>
@@ -341,9 +365,18 @@ export default function FontStudio() {
             script={script}
             loading={loading}
             previewStyle={previewStyle}
+            fileTag={fileTag}
           />
         </section>
       </div>
+
+      {/* 다운로드 성공 축하 — 너굴이(love) 토스트. 잠시 떴다 사라짐. */}
+      {justDownloaded && (
+        <div className={styles.toast} role="status" aria-live="polite">
+          <Mascot mood="love" size={56} label="" />
+          <span>받았어요! 멋진 글씨가 손에 들어왔네요.</span>
+        </div>
+      )}
 
       {/* 정직성 라벨 — 무엇이 진짜 내 글씨인지 고지 */}
       <p className={styles.honesty}>

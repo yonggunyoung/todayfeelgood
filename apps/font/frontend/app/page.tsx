@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { buildMeta, webApplicationJsonLd } from "@webapp/seo";
-import { Mascot } from "@webapp/ui";
+import { BrushDivider, BrushUnderline, Mascot, Sticker } from "@webapp/ui";
 import { SiteHeader, SiteFooter } from "../components/SiteChrome";
 import InteractiveSpecimen from "../components/InteractiveSpecimen";
 import styles from "./landing.module.css";
@@ -46,7 +46,9 @@ export default function HomePage() {
               <span>슬라이더로 노는 글자체</span>
             </p>
             <h1 className={`display ${styles.headline}`}>
-              내 손으로 만드는 글씨체
+              내 손으로 만드는 <span className={styles.brushWord}>글씨체
+                <BrushUnderline className={styles.brushUnderline} />
+              </span>
             </h1>
             <p className={styles.lede}>
               굵기를 누르고, 기울기를 밀고, 괴상함도 한 스푼. 슬라이더를 움직이면
@@ -69,7 +71,10 @@ export default function HomePage() {
 
         {/* 견본 — 색지 배경 섹션으로 면 분리(선 구획 아님) */}
         <section className={styles.band} aria-label="글자 견본">
-          <div className="container">
+          <div className={`container ${styles.bandInner}`}>
+            <Sticker variant="sticker" rotate={-3} color="var(--candy-coral)" className={styles.bandSticker}>
+              한 벌 견본
+            </Sticker>
             <div className={styles.bandRow}>
               <span className={styles.bandHeavy}>Aa Bb Cc</span>
               <span className={styles.bandLabel}>가늘게부터 두껍게까지</span>
@@ -81,10 +86,15 @@ export default function HomePage() {
           </div>
         </section>
 
+        {/* 붓획 디바이더 */}
+        <div className={`container ${styles.dividerWrap}`} aria-hidden>
+          <BrushDivider />
+        </div>
+
         {/* 만드는 법 — 01/02/03 균등 스텝 폐기, 하나의 다정한 설명 카드 */}
         <section id="how" className={`container ${styles.how}`}>
           <div className={styles.howCard}>
-            <Mascot mood="focused" size={72} className={styles.howMascot} label="" />
+            <Mascot mood="focused" size={96} className={styles.howMascot} label="" />
             <div>
               <h2 className={`display ${styles.howTitle}`}>만드는 법은 간단해요</h2>
               <p className={styles.howBody}>

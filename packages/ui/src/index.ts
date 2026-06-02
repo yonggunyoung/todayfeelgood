@@ -11,3 +11,6 @@ export type { SegmentedOption } from "./Segmented";
 export { Chip, default as ChipDefault } from "./Chip";
 export { Mascot, default as MascotDefault } from "./Mascot";
 export type { MascotMood } from "./Mascot";
+export { BrushDivider, BrushUnderline, default as BrushStrokeDefault } from "./BrushStroke";
+export { Sticker, default as StickerDefault } from "./Sticker";
+export { LiveText, default as LiveTextDefault } from "./LiveText";

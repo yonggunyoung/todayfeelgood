@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { buildMeta, webApplicationJsonLd } from "@webapp/seo";
-import { Card, Mascot } from "@webapp/ui";
+import { BrushDivider, Card, Mascot, Sticker } from "@webapp/ui";
 import styles from "./home.module.css";
 
 // 홈은 "도구 허브" 포지셔닝으로 키워드를 일반화한다.
@@ -22,10 +22,10 @@ const jsonLd = webApplicationJsonLd({
 
 // 스타일 샘플 — 같은 글자가 분위기마다 다른 표정을 짓는다는 걸 보여 준다(시스템 글꼴 흉내).
 const SAMPLES = [
-  { word: "차분", weight: 420, slant: 0, label: "차분 단정" },
-  { word: "발랄", weight: 700, slant: -8, label: "발랄 장난기" },
-  { word: "우아", weight: 350, slant: -12, label: "우아한 필기" },
-  { word: "거침", weight: 760, slant: -3, label: "거친 손글씨" },
+  { word: "차분", weight: 420, slant: 0, label: "차분 단정", paper: "var(--candy-butter)" },
+  { word: "발랄", weight: 700, slant: -8, label: "발랄 장난기", paper: "var(--candy-coral)" },
+  { word: "우아", weight: 350, slant: -12, label: "우아한 필기", paper: "var(--candy-mint)" },
+  { word: "거침", weight: 760, slant: -3, label: "거친 손글씨", paper: "var(--candy-plum)" },
 ];
 
 export default function HomePage() {
@@ -53,11 +53,19 @@ export default function HomePage() {
             </a>
           </div>
 
-          {/* 스타일 샘플 카드 — 같은 도구로 다양한 표정을 낼 수 있음을 미리 보여 줌 */}
+          {/* 스타일 샘플 카드 — 같은 도구로 다양한 표정을 낼 수 있음을 미리 보여 줌.
+              모서리에 마스킹테이프를 붙인 견본 노트 느낌으로 "문방구" 시그널. */}
           <div className={styles.sampleCard} aria-label="글자체 스타일 미리보기 (시스템 글꼴 흉내)">
+            <Sticker variant="tape" rotate={-4} color="var(--candy-butter)" className={styles.sampleTape}>
+              견본 노트
+            </Sticker>
             <div className={styles.sampleGrid}>
               {SAMPLES.map((s) => (
-                <div key={s.label} className={styles.sample}>
+                <div
+                  key={s.label}
+                  className={styles.sample}
+                  style={{ ["--paper" as string]: s.paper }}
+                >
                   <span
                     className={styles.sampleWord}
                     style={{ fontWeight: s.weight, transform: `skewX(${s.slant}deg)` }}
@@ -73,10 +81,15 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* 너굴이 소개 — 색지 배경 면 분리(보더 없음) */}
+        {/* 붓획 디바이더 — 섹션 사이를 직선 1px 대신 한 획으로 */}
+        <div className={`container ${styles.dividerWrap}`} aria-hidden>
+          <BrushDivider />
+        </div>
+
+        {/* 너굴이 소개 — 색지 배경 면 분리(보더 없음), 큰 너굴이 + 하트눈 */}
         <section className={styles.meet} aria-label="마스코트 소개">
           <div className={`container ${styles.meetInner}`}>
-            <Mascot mood="happy" size={104} className={styles.meetMascot} label="너굴이 마스코트" />
+            <Mascot mood="love" size={132} className={styles.meetMascot} label="너굴이 마스코트" />
             <div>
               <h2 className={`display ${styles.meetTitle}`}>안녕, 너굴이예요</h2>
               <p className={styles.meetBody}>
@@ -103,11 +116,15 @@ export default function HomePage() {
               </a>
             </Card>
             <div className={styles.next}>
+              <Sticker variant="sticker" rotate={3} color="var(--candy-mint)" className={styles.nextSticker}>
+                준비 중
+              </Sticker>
               <p className={styles.nextLabel}>다음 작업대</p>
               <p className={styles.nextBody}>
                 글자에서 시작해 차근차근 손을 넓혀 갑니다. 다음 도구를 다듬는
                 중이에요.
               </p>
+              <Mascot mood="focused" size={64} className={styles.nextMascot} label="" />
             </div>
           </div>
         </section>

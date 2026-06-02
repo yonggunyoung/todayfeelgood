@@ -2,6 +2,41 @@
 
 작업 영역: `apps/font/engine/` (Python 3.11 + FastAPI). 비용 0, 비AI "전통" 방식.
 
+---
+
+## [업데이트 v2] 계약 v2 반영 + 검토/보안 견고화
+
+**한 줄 결론:** 계약 v2 응답(`fontBase64`/`format`)·TTF 다운로드·startup 캐시(다운로드 블로킹 제거)·보안 가드(CORS 화이트리스트·동시성·입력검증·에러살균·다운로드 안전화)를 모두 반영. pytest **14건 전부 통과** + uvicorn 실측으로 woff/ttf 매직바이트 확인.
+
+### 반영한 항목
+- **계약 v2 (`main.py`)**: 응답 `{ fontBase64, format, fontFamily, generatedBy:"traditional", appliedParams }`. 구 `fontWoffBase64` 폐기. 요청에 `format`(`"woff"`|`"ttf"`, 기본 woff) 추가.
+- **TTF 지원 (`generator.py`)**: `generate_font`/`generate_font_base64`로 통합. ttf=플레인 sfnt(flavor 없음), woff=WOFF. 둘 다 라틴 서브셋 유지.
+- **Blocker B2 — 다운로드 블로킹 제거**: 폰트는 FastAPI **lifespan startup**에서 1회 로드/캐시. `/generate`는 다운로드 안 함. startup 실패 시 `/health.font_loaded=false`, `/generate`는 **즉시 503**.
+- **보안(High/Med 반영)**:
+  - 입력검증: pydantic `ge/le`(weight 100~900, slant -15~0, curvature 0~1) + format enum(422), NaN/Inf 거부. 서버 clamp(Inf 방어)도 유지.
+  - imagePng 상한 `MAX_IMAGE_PNG_BYTES=2_000_000` 초과 시 **413**.
+  - CORS `["*"]` 제거 → `ALLOWED_ORIGINS` 환경변수 화이트리스트, 메서드 `GET/POST`, 헤더 `Content-Type`만.
+  - 동시성: `run_in_executor` 스레드풀 + `asyncio.Semaphore(3)`, 포화 시 503.
+  - 에러 살균: 전역 exception handler가 내부 예외/스택/경로 숨김.
+  - `font_loader.py` 다운로드 안전화: HTTPS만, 리다이렉트 ≤3, 스트리밍 + 10MB 상한, content-type 확인, sfnt 매직+크기 검증, 선택 SHA-256 핀(`EXPECTED_SHA256`).
+  - `/health` 전체 파일 read 금지(캐시 boolean).
+  - `requirements.txt` `==` 핀.
+
+### 검증 결과 (직접)
+- `pytest -q` → **14 passed** (clamp 범위/NaN/Inf, woff/ttf 매직+서브셋+재오픈, v2 응답형태, 422(format/범위밖/문자열), 413(imagePng), /health).
+- uvicorn 실측(종료 완료): `/health`=`font_loaded:true`; woff→`wOFF`(15032B); ttf→`\x00\x01\x00\x00`(23716B); 잘못된 format→422; imagePng 초과→413.
+
+### 남은 한계 / 후속(타 에이전트)
+- `EXPECTED_SHA256` 기본 None(매직+크기만) — 운영 전 1.085 해시 핀 권장.
+- 동시성 거절은 즉시 503(대기 큐 없음).
+- 엔진 외부 비노출(loopback) + nginx `/font/engine/` 차단 = **Infra-Agent** (security H2).
+- 파라미터 단일 출처화(core↔engine, review W4) = **Shared-Agent** 경유.
+- BFF 타임아웃/Abort + 자동호출 imagePng 미전송(B2/B3 프론트측) = **FE-Agent**.
+
+> 아래는 v1 작업 기록(참고용). 응답 필드 `fontWoffBase64`는 v2에서 `fontBase64`로 대체됨.
+
+---
+
 ## 완료한 것
 
 - **기본 가변폰트 = Recursive VF** 를 런타임에 다운로드/캐시 (`apps/font/engine/assets/Recursive_VF.ttf`, 약 2.3MB, `.gitignore`로 git 제외).

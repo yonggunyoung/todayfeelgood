@@ -39,8 +39,17 @@
 
 @media (max-width: 900px) {
   .grid {
-    grid-template-columns: 1fr;
-    gap: var(--sp-6);
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-5);
+  }
+  /* 모바일: 프리뷰를 컨트롤 위로 올려 상단 고정(축소 sticky). */
+  .preview {
+    order: -1;
+  }
+  /* 하단 고정 바가 컨트롤 마지막을 가리지 않도록 여백 확보. */
+  .tools {
+    padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px));
   }
 }
 
@@ -156,6 +165,19 @@ details[open] > .accSummary .accTitle::after {
   margin-top: var(--sp-4);
 }
 
+/* 트렌드 그룹 라벨 옆 "요즘" 배지 — 시의성 신호 */
+.trendTag {
+  display: inline-block;
+  margin-left: var(--sp-1);
+  font-size: 0.62rem;
+  font-weight: var(--weight-bold);
+  color: var(--accent-ink);
+  background: var(--accent);
+  padding: 1px var(--sp-2);
+  border-radius: var(--r-pill);
+  vertical-align: middle;
+}
+
 .chips {
   display: flex;
   flex-wrap: wrap;
@@ -183,15 +205,90 @@ details[open] > .accSummary .accTitle::after {
   color: var(--danger);
 }
 
+/* 데스크톱: 프리뷰 + 받기 패널을 한 묶음으로 우측 sticky. */
 .preview {
   position: sticky;
   top: 84px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+/* 데스크톱 받기 패널 — 프리뷰 바로 아래, sticky 안에 포함되어 항상 보인다. */
+.desktopActions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  background: var(--surface);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-sm);
+  padding: var(--sp-5);
+}
+
+.actionsHead {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semi);
+  color: var(--ink-soft);
+}
+
+.actionsPanel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
 }
 
 @media (max-width: 900px) {
+  /* 모바일: 프리뷰를 상단 축소 sticky로. 화면 절반 이내로 제한해 컨트롤이 보이게.
+     내부는 스크롤 가능(긴 견본 시트도 접근). */
   .preview {
-    position: static;
+    position: sticky;
+    top: var(--sp-3);
+    z-index: 20;
+    max-height: 46vh;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-md);
   }
+  /* 데스크톱 받기 패널은 모바일에서 숨김(하단 고정 바가 대체). */
+  .desktopActions {
+    display: none;
+  }
+}
+
+/* ── 모바일 하단 고정 액션 바(데스크톱 숨김) ── */
+.mobileActionBar {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .mobileActionBar {
+    display: block;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 40;
+    padding: var(--sp-3) var(--sp-4)
+      calc(var(--sp-3) + env(safe-area-inset-bottom, 0px));
+    background: color-mix(in srgb, var(--surface) 92%, transparent);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 -6px 20px -12px rgba(0, 0, 0, 0.35);
+  }
+}
+
+.actionBarInner {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+.actionBarInner .formatSeg {
+  flex: 0 0 auto;
+  width: auto;
+}
+.actionBarInner .downloadBtn {
+  flex: 1 1 auto;
+  width: auto;
 }
 
 /* 다운로드 성공 토스트 — 하단 중앙에 너굴이(love)와 함께 잠깐 등장 */
@@ -222,6 +319,13 @@ details[open] > .accSummary .accTitle::after {
   to {
     opacity: 1;
     transform: translateX(-50%) translateY(0) scale(1);
+  }
+}
+
+/* 모바일: 하단 고정 바 위로 토스트를 띄운다(겹침 방지). */
+@media (max-width: 900px) {
+  .toast {
+    bottom: calc(84px + env(safe-area-inset-bottom, 0px));
   }
 }
 

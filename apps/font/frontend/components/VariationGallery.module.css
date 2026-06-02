@@ -49,6 +49,28 @@
   opacity: 0.55;
 }
 
+/* 로딩 스켈레톤 — 자동 생성 전/굽는 중 칸. 은은한 셔머. */
+.skeleton {
+  cursor: default;
+  background: linear-gradient(
+    100deg,
+    var(--surface-2) 30%,
+    var(--surface) 50%,
+    var(--surface-2) 70%
+  );
+  background-size: 220% 100%;
+  animation: vg-shimmer 1.3s var(--ease-out) infinite;
+}
+
+@keyframes vg-shimmer {
+  from {
+    background-position: 180% 0;
+  }
+  to {
+    background-position: -80% 0;
+  }
+}
+
 .glyph {
   font-size: clamp(1.6rem, 7vw, 2.4rem);
   font-weight: 600;
@@ -78,5 +100,9 @@
   .cell:hover:not(:disabled),
   .cell:active:not(:disabled) {
     transform: none;
+  }
+  .skeleton {
+    animation: none;
+    background: var(--surface-2);
   }
 }

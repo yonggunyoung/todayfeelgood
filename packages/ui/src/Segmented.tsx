@@ -39,14 +39,16 @@ export function Segmented<T extends string>({
     <div className={cls} role="radiogroup" aria-label={ariaLabel}>
       {/* 슬라이드하는 흰 알약 인디케이터.
           thumb 폭 = (트랙폭 - 좌우 4px) / n = 각 세그먼트 폭과 동일.
-          이동 거리는 "트랙 폭" 기준 절대값(idx/n)으로 계산해야 옵션 3개 이상에서도
-          누적 오차가 없다. (thumb 자기 폭 100%씩 옮기면 left:4px 시작점 때문에 어긋남.) */}
+          이동 거리는 "thumb 자기 폭"의 idx배(translateX 100% = thumb 폭)로 계산.
+          thumb 폭이 곧 한 칸 폭이므로 idx칸만큼 옮기면 정확히 맞는다 →
+          옵션 2/3/4+ 어디서도 누적 오차 없음. (예전 calc((100%-8px)/n*idx)는
+          translateX의 100%가 트랙이 아닌 thumb 자기 폭이라 3옵션부터 어긋났다.) */}
       <span
         className={styles.thumb}
         aria-hidden
         style={{
           width: `calc((100% - 8px) / ${n})`,
-          transform: `translateX(calc((100% - 8px) / ${n} * ${idx}))`,
+          transform: `translateX(${idx * 100}%)`,
         }}
       />
       {options.map((o) => (

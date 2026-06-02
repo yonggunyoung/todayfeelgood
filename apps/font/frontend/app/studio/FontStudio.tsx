@@ -19,6 +19,7 @@ import {
 } from "@webapp/core";
 import { BrushUnderline, Button, Chip, Mascot, Segmented } from "@webapp/ui";
 import { apiPath } from "../../lib/paths";
+import { TREND_PRESETS } from "../../lib/trendPresets";
 import DrawingCanvas, {
   type DrawingCanvasHandle,
 } from "../../components/DrawingCanvas";
@@ -63,9 +64,12 @@ const FORMAT_OPTIONS: { value: FontFormat; label: string; full: boolean }[] =
     full: !FREE_FORMATS.includes(f),
   }));
 
-/** 현재 params가 어떤 프리셋과 정확히 일치하는지(겹친 키만 비교) 찾는다. */
-function matchedPreset(p: FontParams): string | null {
-  for (const preset of STYLE_PRESETS) {
+/** params가 어떤 부분 프리셋과 정확히 일치하는지(겹친 키만 비교) 찾는 공통 매처. */
+function matchPreset(
+  p: FontParams,
+  presets: ReadonlyArray<{ id: string; params: Partial<FontParams> }>
+): string | null {
+  for (const preset of presets) {
     const keys = Object.keys(preset.params) as (keyof FontParams)[];
     if (keys.every((k) => p[k] === preset.params[k])) return preset.id;
   }
@@ -96,7 +100,8 @@ export default function FontStudio() {
   // 응답 경합(race) 방지: 마지막 요청만 반영
   const reqIdRef = useRef(0);
 
-  const activePreset = useMemo(() => matchedPreset(params), [params]);
+  const activePreset = useMemo(() => matchPreset(params, STYLE_PRESETS), [params]);
+  const activeTrend = useMemo(() => matchPreset(params, TREND_PRESETS), [params]);
 
   // 프리뷰 생성: 항상 woff, imagePng는 보내지 않는다(엔진 미사용 + 페이로드 절약)
   const generatePreview = useCallback(
@@ -215,6 +220,35 @@ export default function FontStudio() {
   // 다운로드 파일명에 쓰는 짧은 식별 태그(PNG에도 동일하게 전달).
   const fileTag = useMemo(() => shortHash(params), [params]);
 
+  // 포맷 선택 + 받기 — 데스크톱 sticky 프리뷰 컬럼과 모바일 하단 고정 바에서 공유.
+  // variant로 라벨/배치만 살짝 달리한다(동작/핸들러 동일 = 두 폼팩터 동등 도달).
+  const renderActions = (variant: "panel" | "bar") => (
+    <div
+      className={
+        variant === "bar" ? styles.actionBarInner : styles.actionsPanel
+      }
+    >
+      <Segmented<FontFormat>
+        ariaLabel="파일 형식"
+        value={format}
+        onChange={setFormat}
+        options={[
+          { value: "woff", label: "WOFF" },
+          { value: "ttf", label: "TTF" },
+        ]}
+        className={styles.formatSeg}
+      />
+      <Button
+        variant="clay"
+        onClick={handleDownload}
+        disabled={downloading || loading}
+        className={styles.downloadBtn}
+      >
+        {downloading ? "내려받는 중…" : `${format.toUpperCase()}로 받기`}
+      </Button>
+    </div>
+  );
+
   return (
     <main className={`container ${styles.studio}`}>
       <header className={styles.header}>
@@ -262,6 +296,25 @@ export default function FontStudio() {
                     selected={activePreset === preset.id}
                     disabled={loading || downloading}
                     onClick={() => applyPreset(preset.params)}
+                  >
+                    {preset.label}
+                  </Chip>
+                ))}
+              </div>
+            </div>
+
+            <div className={styles.subGroup}>
+              <h3 className={styles.groupHead}>
+                트렌드 <span className={styles.trendTag}>요즘</span>
+              </h3>
+              <div className={styles.chips}>
+                {TREND_PRESETS.map((preset) => (
+                  <Chip
+                    key={preset.id}
+                    selected={activeTrend === preset.id}
+                    disabled={loading || downloading}
+                    onClick={() => applyPreset(preset.params)}
+                    title={preset.hint}
                   >
                     {preset.label}
                   </Chip>
@@ -322,42 +375,18 @@ export default function FontStudio() {
             </div>
           </details>
 
-          {/* 받아 가기 */}
-          <div className={styles.group}>
-            <h2 className={styles.groupHead}>폰트 받아 가기</h2>
-            <Segmented<FontFormat>
-              ariaLabel="파일 형식"
-              value={format}
-              onChange={setFormat}
-              options={[
-                { value: "woff", label: "WOFF" },
-                { value: "ttf", label: "TTF" },
-              ]}
-              className={styles.formatSeg}
-            />
-            <Button
-              variant="clay"
-              onClick={handleDownload}
-              disabled={downloading || loading}
-              className={styles.downloadBtn}
-            >
-              {downloading
-                ? "내려받는 중…"
-                : `${format.toUpperCase()}로 내려받기`}
-            </Button>
-
-            <div className={styles.statusRow} aria-live="polite">
-              {loading && <span className={styles.status}>견본 갱신 중…</span>}
-              {error && (
-                <span className={styles.error} role="alert">
-                  {error}
-                </span>
-              )}
-            </div>
+          {/* 상태 줄 — 받기 액션은 sticky 컬럼/하단 바로 이동. 여기엔 갱신/오류만. */}
+          <div className={styles.statusRow} aria-live="polite">
+            {loading && <span className={styles.status}>견본 갱신 중…</span>}
+            {error && (
+              <span className={styles.error} role="alert">
+                {error}
+              </span>
+            )}
           </div>
         </section>
 
-        {/* 견본 */}
+        {/* 견본 + 받기 — 데스크톱: 우측 sticky 컬럼(스크롤해도 프리뷰·받기 항상 보임). */}
         <section className={styles.preview}>
           <FontPreview
             fontBase64={previewFont}
@@ -367,7 +396,17 @@ export default function FontStudio() {
             previewStyle={previewStyle}
             fileTag={fileTag}
           />
+          {/* 데스크톱 전용: 프리뷰 바로 아래 받기 패널(sticky 안에 포함). */}
+          <div className={styles.desktopActions}>
+            <h2 className={styles.actionsHead}>폰트 받아 가기</h2>
+            {renderActions("panel")}
+          </div>
         </section>
+      </div>
+
+      {/* 모바일 전용: 하단 고정 액션 바 — 받기·포맷이 한 손에 항상 도달. */}
+      <div className={styles.mobileActionBar} role="region" aria-label="폰트 받기">
+        {renderActions("bar")}
       </div>
 
       {/* 다운로드 성공 축하 — 너굴이(love) 토스트. 잠시 떴다 사라짐. */}

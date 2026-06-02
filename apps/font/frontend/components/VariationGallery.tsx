@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   clampParams,
   PARAM_RANGES,
@@ -179,7 +179,33 @@ export default function VariationGallery({ base, script, onPick, disabled }: Pro
     if (myseq === seqRef.current) setGenerating(false);
   }, [base, script, cleanupFaces]);
 
+  // 자동 1회 생성 — 갤러리가 처음 화면에 나타나면(아코디언 열림/마운트) 바로 9종을 굽는다.
+  // 첫인상 강화(W3). 이후엔 "다시 뽑기" 버튼으로만 재생성(슬라이더마다 재생성 방지).
+  // generate를 의존성에 넣으면 base 변경마다 재실행되므로 ref로 1회만 고정한다.
+  const didAuto = useRef(false);
+  const generateRef = useRef(generate);
+  generateRef.current = generate;
+  useEffect(() => {
+    if (didAuto.current) return;
+    didAuto.current = true;
+    void generateRef.current();
+  }, []);
+
+  // script 전환 시엔 새로 굽는다(라틴↔한글 견본/직렬화 정책이 다름).
+  const lastScript = useRef(script);
+  useEffect(() => {
+    if (lastScript.current === script) return;
+    lastScript.current = script;
+    if (didAuto.current) void generateRef.current();
+  }, [script]);
+
   const sample = script === "hangul" ? "가나" : "Aa";
+
+  // 자동 생성 직전(variants 아직 null)에도 빈 칸 9개 스켈레톤을 보여 레이아웃을 잡는다.
+  const placeholder = useMemo(
+    () => Array.from({ length: 9 }, () => null),
+    []
+  );
 
   return (
     <div className={styles.wrap}>
@@ -189,19 +215,29 @@ export default function VariationGallery({ base, script, onPick, disabled }: Pro
         disabled={disabled || generating}
         className={styles.trigger}
       >
-        {generating ? "변형 굽는 중…" : variants ? "다시 9가지 뽑기" : "9가지 변형 뽑아보기"}
+        {generating ? "변형 굽는 중…" : variants ? "다시 9가지 뽑기" : "9가지 변형 뽑는 중…"}
       </Button>
+
+      {/* 첫 자동 생성 전: 스켈레톤 9칸(레이아웃 안정 + 로딩 신호) */}
+      {!variants && (
+        <div className={styles.grid} aria-hidden>
+          {placeholder.map((_, i) => (
+            <span key={i} className={`${styles.cell} ${styles.skeleton}`} />
+          ))}
+        </div>
+      )}
 
       {variants && (
         <div className={styles.grid} role="list" aria-label="글자체 변형 9종">
           {variants.map((v, i) => {
             const ready = v.status === "ready" && v.family;
+            const pending = v.status === "pending";
             return (
               <button
                 key={i}
                 type="button"
                 role="listitem"
-                className={styles.cell}
+                className={`${styles.cell} ${pending ? styles.skeleton : ""}`}
                 disabled={!ready || disabled}
                 onClick={() => onPick(v.params)}
                 aria-label={`변형 ${i + 1}${i === 0 ? " (지금 설정)" : ""} 적용`}

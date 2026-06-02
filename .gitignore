@@ -1,0 +1,32 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# next.js
+.next/
+out/
+build/
+dist/
+
+# env / secrets
+.env
+.env.local
+.env.*.local
+
+# generated font artifacts
+*.woff
+*.woff2
+*.ttf
+*.otf
+!packages/**/assets/**
+
+# logs / os
+*.log
+.DS_Store

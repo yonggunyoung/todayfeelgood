@@ -1,0 +1,15 @@
+{
+  "name": "webapp",
+  "private": true,
+  "version": "0.1.0",
+  "description": "웹앱 모노레포 허브 — 첫 번째 앱은 폰트 생성 서비스(font)",
+  "scripts": {
+    "dev:font": "pnpm --filter @webapp/font-frontend dev",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "pnpm@10.33.0"
+}

@@ -3,7 +3,8 @@
  * 엔진(Python)과 프론트(TS)가 같은 파라미터 스펙을 쓰도록 단일 출처로 둔다.
  * Python 쪽은 이 파일을 직접 import하지 않으므로, 값이 바뀌면 양쪽을 함께 갱신할 것.
  *
- * v3: 스타일 다양화(mono/cursive/weirdness/seed/letterSpacing) + 한글(script) 추가.
+ * v4: 심화 컨트롤 — waviness/waveFreq/contrast/roundness([REAL] 폰트에 구워짐),
+ *     감성 프리셋 확장, [PREVIEW] 전용 효과(PreviewStyle, 엔진에 보내지 않음) 분리.
  */
 
 /** 생성 대상 문자 체계. latin=Recursive 변형, hangul=OFL 한글 가변폰트 변형. */
@@ -13,17 +14,21 @@ export type FontScript = "latin" | "hangul";
 export const TARGET_CHARSET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 
 /**
- * 폰트 생성 파라미터 (전통/비AI 방식 = 기본 가변폰트 변형 + 절차적 펜 디스토션).
+ * 폰트 생성 파라미터 (전통/비AI = 기본 가변폰트 변형 + 절차적 glyf 좌표 변형).
+ * 전부 [REAL] — 실제 출력 폰트 파일(WOFF/TTF)에 반영된다.
  *
- * - weight:     굵기. UI는 100~900(친숙한 CSS 스케일)로 받고, **엔진이 베이스 폰트의
- *               실제 wght 축 범위(예: Recursive 300~1000)로 선형 매핑**한다. (v2 버그 정정)
- * - slant:      기울기(deg, 음수=오른쪽). 축이 있으면 축으로, 없으면(한글 등) 합성 shear.
- * - curvature:  곡률/둥글기 0~1. (라틴/Recursive CASL 전용 — 한글에선 무시/숨김)
- * - mono:       모노스페이스 정도 0~1. (라틴/Recursive MONO 전용)
- * - cursive:    필기체 전환 0~1. (라틴/Recursive CRSV 전용 — a/g/l 형태 변화)
- * - weirdness:  괴상함 0~100. 시드 기반 펜 디스토션(지터+베이스라인 흔들림). 0=단정.
- * - seed:       weirdness 재현용 정수(>=0). 같은 seed=같은 결과(주사위 버튼이 갱신).
- * - letterSpacing: 자간(em). 음수=좁게.
+ * - weight:        굵기. UI 100~900 → 엔진이 베이스 폰트 wght 축 범위로 선형 매핑.
+ * - slant:         기울기(deg). 축이 있으면 축, 없으면 합성 shear.
+ * - curvature:     곡률/둥글기 0~1. (라틴/Recursive CASL 전용)
+ * - mono:          모노스페이스 0~1. (라틴/Recursive MONO 전용)
+ * - cursive:       필기체 0~1. (라틴/Recursive CRSV 전용)
+ * - weirdness:     괴상함 0~100. 시드 기반 불규칙 손떨림(지터+베이스라인).
+ * - seed:          weirdness 재현용 정수.
+ * - letterSpacing: 자간(em).
+ * - waviness:      구불구불 0~1. 규칙적 사인 물결(weirdness의 랜덤과 직교).
+ * - waveFreq:      물결 주파수 0.5~6.
+ * - contrast:      획 대비 0~1. 가로획↔세로획 굵기차 근사.
+ * - roundness:     끝/모서리 둥글기 0~1.
  */
 export interface FontParams {
   weight: number;
@@ -34,6 +39,10 @@ export interface FontParams {
   weirdness: number;
   seed: number;
   letterSpacing: number;
+  waviness: number;
+  waveFreq: number;
+  contrast: number;
+  roundness: number;
 }
 
 /** 각 파라미터의 허용 범위 + 기본값 (슬라이더 UI와 엔진 검증이 공유) */
@@ -46,18 +55,16 @@ export const PARAM_RANGES = {
   weirdness: { min: 0, max: 100, step: 1, default: 0 },
   seed: { min: 0, max: 999999, step: 1, default: 1 },
   letterSpacing: { min: -0.05, max: 0.6, step: 0.01, default: 0 },
+  waviness: { min: 0, max: 1, step: 0.05, default: 0 },
+  waveFreq: { min: 0.5, max: 6, step: 0.5, default: 2 },
+  contrast: { min: 0, max: 1, step: 0.05, default: 0 },
+  roundness: { min: 0, max: 1, step: 0.05, default: 0 },
 } as const;
 
-export const DEFAULT_PARAMS: FontParams = {
-  weight: PARAM_RANGES.weight.default,
-  slant: PARAM_RANGES.slant.default,
-  curvature: PARAM_RANGES.curvature.default,
-  mono: PARAM_RANGES.mono.default,
-  cursive: PARAM_RANGES.cursive.default,
-  weirdness: PARAM_RANGES.weirdness.default,
-  seed: PARAM_RANGES.seed.default,
-  letterSpacing: PARAM_RANGES.letterSpacing.default,
-};
+/** 기본 파라미터 (각 범위의 default에서 유도) */
+export const DEFAULT_PARAMS: FontParams = Object.fromEntries(
+  (Object.keys(PARAM_RANGES) as Array<keyof FontParams>).map((k) => [k, PARAM_RANGES[k].default]),
+) as unknown as FontParams;
 
 /** 한글 script에서 의미 없는(숨길) 라틴/Recursive 전용 축 */
 export const LATIN_ONLY_PARAMS: ReadonlyArray<keyof FontParams> = ["curvature", "mono", "cursive"];
@@ -75,7 +82,7 @@ export function clampParams(p: Partial<FontParams>): FontParams {
 }
 
 /**
- * 무드 프리셋 — 여러 축을 묶은 큐레이션(프론트에서 적용 → params로 펼침).
+ * 무드/감성 프리셋 — 여러 축을 묶은 큐레이션(프론트에서 적용 → params로 펼침).
  * 정형화(클린)는 "calm" + weirdness 0으로 충족.
  */
 export interface StylePreset {
@@ -85,12 +92,15 @@ export interface StylePreset {
 }
 
 export const STYLE_PRESETS: StylePreset[] = [
-  { id: "calm", label: "차분 단정", params: { weight: 420, slant: 0, curvature: 0.15, weirdness: 0, cursive: 0, mono: 0 } },
-  { id: "playful", label: "장난기", params: { weight: 620, slant: -6, curvature: 0.85, weirdness: 22, letterSpacing: 0.04 } },
-  { id: "typewriter", label: "타자기", params: { weight: 460, slant: 0, curvature: 0, mono: 1, weirdness: 10 } },
-  { id: "geometric", label: "기하학", params: { weight: 560, slant: 0, curvature: 0, cursive: 0, letterSpacing: 0.06 } },
-  { id: "rough", label: "거친 손글씨", params: { weight: 540, slant: -10, curvature: 0.6, weirdness: 68 } },
-  { id: "elegant", label: "우아한 필기", params: { weight: 360, slant: -12, curvature: 0.5, cursive: 1 } },
+  { id: "calm", label: "차분 단정", params: { weight: 420, slant: 0, curvature: 0.15, weirdness: 0, waviness: 0, contrast: 0.1, cursive: 0, mono: 0 } },
+  { id: "playful", label: "발랄 장난기", params: { weight: 620, slant: -6, curvature: 0.85, weirdness: 22, waviness: 0.25, letterSpacing: 0.04 } },
+  { id: "typewriter", label: "타자기", params: { weight: 460, slant: 0, curvature: 0, mono: 1, weirdness: 10, contrast: 0 } },
+  { id: "geometric", label: "기하학", params: { weight: 560, slant: 0, curvature: 0, cursive: 0, roundness: 0.1, letterSpacing: 0.06 } },
+  { id: "rough", label: "거친 손글씨", params: { weight: 540, slant: -10, curvature: 0.6, weirdness: 68, waviness: 0.15 } },
+  { id: "elegant", label: "우아한 필기", params: { weight: 360, slant: -12, curvature: 0.5, cursive: 1, contrast: 0.5 } },
+  { id: "bouncy", label: "통통 물결", params: { weight: 580, slant: 0, curvature: 0.7, waviness: 0.7, waveFreq: 3, roundness: 0.6 } },
+  { id: "dreamy", label: "몽환", params: { weight: 320, slant: -8, curvature: 0.9, waviness: 0.45, waveFreq: 1.5, contrast: 0.3 } },
+  { id: "sharp", label: "날카로움", params: { weight: 680, slant: -4, curvature: 0, contrast: 0.6, roundness: 0, letterSpacing: -0.02 } },
 ];
 
 /** 출력 폰트 포맷. 프리뷰는 woff, 다운로드는 woff/ttf 선택. */
@@ -103,17 +113,36 @@ export const FONT_FORMATS: Record<FontFormat, { mime: string; ext: string }> = {
 };
 
 /**
- * imagePng 업로드 상한(바이트). 프론트 BFF와 엔진 양쪽에서 동일하게 검증해
- * 거대 페이로드로 인한 메모리 고갈(무료 티어)을 막는다.
+ * [PREVIEW] 전용 스타일 — 벡터 폰트 파일에는 구울 수 없는 표면 효과.
+ * 프리뷰 렌더와 PNG/이미지(스티커) 내보내기에만 적용하며 **엔진(/generate)에는 보내지 않는다.**
+ * 사용자에게 "이미지 전용 효과 · 폰트 파일 미포함"으로 정직하게 고지할 것.
  */
-export const MAX_IMAGE_PNG_BYTES = 2_000_000; // 2MB
+export type PreviewTexture = "none" | "grain" | "paper" | "rough";
+export type PreviewPattern = "none" | "stripe" | "dots" | "grid";
+
+export interface PreviewStyle {
+  texture: PreviewTexture;
+  pattern: PreviewPattern;
+  /** 글자 색 / 배경 색 (CSS color) */
+  inkColor: string;
+  bgColor: string;
+}
+
+export const DEFAULT_PREVIEW_STYLE: PreviewStyle = {
+  texture: "none",
+  pattern: "none",
+  inkColor: "#2b2a33",
+  bgColor: "transparent",
+};
+
+export const PREVIEW_TEXTURES: PreviewTexture[] = ["none", "grain", "paper", "rough"];
+export const PREVIEW_PATTERNS: PreviewPattern[] = ["none", "stripe", "dots", "grid"];
 
 /**
- * POST /generate 요청 바디.
- * - script: 대상 문자체계(기본 latin). hangul이면 엔진이 한글 베이스폰트 사용.
+ * POST /generate 요청 바디. (PreviewStyle은 포함하지 않음 — 프리뷰/이미지 전용)
+ * - script: 대상 문자체계(기본 latin).
  * - format: 출력 포맷(기본 woff).
- * - imagePng: 사용자가 그린 글씨(선택). Phase 1~2 변형 방식에서는 미사용(스케치).
- *   슬라이더 자동 프리뷰 호출에는 보내지 말 것.
+ * - imagePng: 사용자가 그린 글씨(선택, 현재 변형 방식에서는 미사용 스케치).
  */
 export interface GenerateRequest {
   params: FontParams;
@@ -122,10 +151,7 @@ export interface GenerateRequest {
   imagePng?: string | null;
 }
 
-/**
- * 엔진 /generate 응답.
- * generatedBy: 결과물 출처(정직성). 현재는 공개 가변폰트 변형.
- */
+/** 엔진 /generate 응답. generatedBy=출처(정직성): 공개 가변폰트 변형. */
 export interface GenerateResponse {
   fontBase64: string;
   format: FontFormat;

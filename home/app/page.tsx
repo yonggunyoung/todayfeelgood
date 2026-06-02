@@ -115,17 +115,16 @@ export default function HomePage() {
                 공방 들어가기 →
               </a>
             </Card>
-            <div className={styles.next}>
-              <Sticker variant="sticker" rotate={3} color="var(--candy-mint)" className={styles.nextSticker}>
-                준비 중
-              </Sticker>
-              <p className={styles.nextLabel}>다음 작업대</p>
-              <p className={styles.nextBody}>
-                글자에서 시작해 차근차근 손을 넓혀 갑니다. 다음 도구를 다듬는
-                중이에요.
+            <Card tag="스티커" interactive className={styles.appCard}>
+              <h3 className={`display ${styles.appName}`}>스티커공방</h3>
+              <p className={styles.appDesc}>
+                캐릭터 하나만 그리면 표정·색·테두리 변주 12종을 자동으로. 투명
+                PNG 스티커 팩으로 받아 카톡·인스타·디스코드에 바로 써요(비AI).
               </p>
-              <Mascot mood="focused" size={64} className={styles.nextMascot} label="" />
-            </div>
+              <a className={styles.appCta} href="/sticker">
+                공방 들어가기 →
+              </a>
+            </Card>
           </div>
         </section>
 

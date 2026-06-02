@@ -1,0 +1,97 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.canvas {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1 / 1;
+  background: #fff;
+  border-radius: var(--r-md);
+  box-shadow: var(--inset);
+  touch-action: none;
+  cursor: crosshair;
+}
+
+.tools {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.colors {
+  display: flex;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+
+.swatch {
+  width: var(--touch-min);
+  height: 32px;
+  min-width: 32px;
+  border-radius: var(--r-pill);
+  border: 2px solid var(--surface);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  padding: 0;
+  transition: transform var(--dur-fast) var(--ease-spring);
+}
+.swatch:hover {
+  transform: scale(1.08);
+}
+.swatchOn {
+  outline: 3px solid var(--accent-weak);
+  outline-offset: 1px;
+  transform: scale(1.08);
+}
+
+.sizeRow {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+}
+
+.sizeLabel {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-med);
+  color: var(--ink-soft);
+}
+
+.range {
+  flex: 1;
+  min-width: 80px;
+  accent-color: var(--accent);
+}
+
+.toolBtn {
+  background: var(--surface-2);
+  color: var(--ink-soft);
+  border: none;
+  padding: var(--sp-2) var(--sp-4);
+  border-radius: var(--r-pill);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-med);
+  cursor: pointer;
+  min-height: var(--touch-min);
+  transition: background-color var(--dur-fast) var(--ease-out);
+}
+.toolBtn:hover {
+  background: var(--surface-sunken);
+  color: var(--ink);
+}
+.toolBtn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--accent-weak);
+}
+.toolBtnOn {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.toolBtnOn:hover {
+  background: var(--accent-press);
+  color: var(--accent-ink);
+}

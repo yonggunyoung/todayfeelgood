@@ -1,6 +1,8 @@
 import type { CSSProperties } from "react";
 import styles from "./Mascot.module.css";
 
+/* 너구리 털 색(갈색) — 회색 대신 갈색+검정(마스크/줄무늬는 --ink) 으로 통일 */
+
 /**
  * 표정 변주. 같은 몸체(너구리)에 눈/입 SVG만 교체하는 구조라 경량(이미지 에셋 0).
  * 기존 키(happy/surprised/focused/sleepy/love/worried)를 그대로 유지한다.
@@ -174,7 +176,7 @@ export function Mascot({
 
       {/* ===== 줄무늬 꼬리 (몸 왼쪽 뒤) ===== */}
       <g>
-        <path d="M15 46 C7 46 6 54 11 58 C15 61 21 58 21 52 C21 49 19 46 15 46z" fill="#9aa3ad" />
+        <path d="M15 46 C7 46 6 54 11 58 C15 61 21 58 21 52 C21 49 19 46 15 46z" fill="#946541" />
         <path d="M11.5 49 q4 -1 7 1" stroke="var(--ink)" strokeWidth="2.4" strokeLinecap="round" fill="none" opacity="0.85" />
         <path d="M10 54 q5 -1 9 1" stroke="var(--ink)" strokeWidth="2.4" strokeLinecap="round" fill="none" opacity="0.85" />
       </g>
@@ -182,7 +184,7 @@ export function Mascot({
       {/* ===== 통통한 몸(배 볼록) ===== */}
       <path
         d="M22 40 C16 42 13 49 15 55 C17 60 24 61 32 61 C40 61 47 60 49 55 C51 49 48 42 42 40z"
-        fill="#aab2bc"
+        fill="#a07350"
       />
       {/* 밝은 배 */}
       <path
@@ -194,31 +196,31 @@ export function Mascot({
       {pose === "thumbsUp" ? (
         <g>
           {/* 왼팔(편안히) */}
-          <path d="M22 44 q-4 3 -3 8" stroke="#aab2bc" strokeWidth="5" strokeLinecap="round" fill="none" />
+          <path d="M22 44 q-4 3 -3 8" stroke="#a07350" strokeWidth="5" strokeLinecap="round" fill="none" />
           {/* 오른팔 들어올림 */}
-          <path d="M42 44 q6 -2 7 -9" stroke="#aab2bc" strokeWidth="5" strokeLinecap="round" fill="none" />
+          <path d="M42 44 q6 -2 7 -9" stroke="#a07350" strokeWidth="5" strokeLinecap="round" fill="none" />
           {/* 따봉 주먹 */}
-          <circle cx="50" cy="33" r="4.4" fill="#f3ede2" stroke="#aab2bc" strokeWidth="1.2" />
+          <circle cx="50" cy="33" r="4.4" fill="#f3ede2" stroke="#a07350" strokeWidth="1.2" />
           {/* 엄지 */}
-          <rect x="48.6" y="25.5" width="2.8" height="6" rx="1.4" fill="#f3ede2" stroke="#aab2bc" strokeWidth="1.2" />
+          <rect x="48.6" y="25.5" width="2.8" height="6" rx="1.4" fill="#f3ede2" stroke="#a07350" strokeWidth="1.2" />
         </g>
       ) : (
         <g>
-          <path d="M22 44 q-4 3 -3 8" stroke="#aab2bc" strokeWidth="5" strokeLinecap="round" fill="none" />
-          <path d="M42 44 q4 3 3 8" stroke="#aab2bc" strokeWidth="5" strokeLinecap="round" fill="none" />
+          <path d="M22 44 q-4 3 -3 8" stroke="#a07350" strokeWidth="5" strokeLinecap="round" fill="none" />
+          <path d="M42 44 q4 3 3 8" stroke="#a07350" strokeWidth="5" strokeLinecap="round" fill="none" />
         </g>
       )}
 
       {/* ===== 머리 ===== */}
       {/* 둥근 귀 */}
-      <circle cx="18.5" cy="20" r="6.5" fill="#aab2bc" />
-      <circle cx="45.5" cy="20" r="6.5" fill="#aab2bc" />
-      <circle cx="18.5" cy="20.5" r="3.4" fill="#7f8893" />
-      <circle cx="45.5" cy="20.5" r="3.4" fill="#7f8893" />
+      <circle cx="18.5" cy="20" r="6.5" fill="#a07350" />
+      <circle cx="45.5" cy="20" r="6.5" fill="#a07350" />
+      <circle cx="18.5" cy="20.5" r="3.4" fill="#5f3f28" />
+      <circle cx="45.5" cy="20.5" r="3.4" fill="#5f3f28" />
       {/* 얼굴 */}
       <path
         d="M32 17 C22 17 15 24 15 33 C15 42 22 48 32 48 C42 48 49 42 49 33 C49 24 42 17 32 17z"
-        fill="#c2c9d1"
+        fill="#ad7a52"
       />
       {/* 흰 얼굴판(이마~볼) */}
       <path d="M32 22 C25 22 21 27 21 33 C21 40 26 44 32 44 C38 44 43 40 43 33 C43 27 39 22 32 22z" fill="#f3ede2" />

@@ -48,6 +48,43 @@ importers:
         specifier: ^5.5.3
         version: 5.9.3
 
+  apps/sticker/frontend:
+    dependencies:
+      '@webapp/seo':
+        specifier: workspace:*
+        version: link:../../../packages/seo
+      '@webapp/ui':
+        specifier: workspace:*
+        version: link:../../../packages/ui
+      next:
+        specifier: ^14.2.5
+        version: 14.2.35(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      react:
+        specifier: ^18.3.1
+        version: 18.3.1
+      react-dom:
+        specifier: ^18.3.1
+        version: 18.3.1(react@18.3.1)
+    devDependencies:
+      '@types/node':
+        specifier: ^20.14.0
+        version: 20.19.41
+      '@types/react':
+        specifier: ^18.3.3
+        version: 18.3.30
+      '@types/react-dom':
+        specifier: ^18.3.0
+        version: 18.3.7(@types/react@18.3.30)
+      eslint:
+        specifier: ^8.57.0
+        version: 8.57.1
+      eslint-config-next:
+        specifier: ^14.2.5
+        version: 14.2.35(eslint@8.57.1)(typescript@5.9.3)
+      typescript:
+        specifier: ^5.5.3
+        version: 5.9.3
+
   home:
     dependencies:
       '@webapp/seo':

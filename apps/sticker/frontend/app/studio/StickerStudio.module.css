@@ -1,0 +1,323 @@
+/* 한 시야 처리: 데스크톱 = 2열(좌 그리기/컨트롤, 우 sticky 갤러리). 모바일 = 세로 적층. */
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 22rem) minmax(0, 1fr);
+  gap: var(--sp-6);
+  padding-top: var(--sp-8);
+  padding-bottom: var(--sp-12);
+  align-items: start;
+}
+
+@media (max-width: 880px) {
+  .layout {
+    grid-template-columns: 1fr;
+    gap: var(--sp-5);
+  }
+}
+
+.left {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-5);
+}
+
+.panel {
+  background: var(--surface);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-md);
+  padding: var(--sp-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+.panelTitle {
+  font-size: var(--text-lg);
+  margin: 0;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.fieldLabel {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semi);
+  color: var(--ink-soft);
+}
+
+.hint {
+  font-size: var(--text-caption);
+  color: var(--ink-faint);
+}
+
+/* 세그먼티드 컨트롤 */
+.segmented {
+  display: inline-flex;
+  background: var(--surface-2);
+  border-radius: var(--r-pill);
+  padding: 3px;
+  gap: 3px;
+  align-self: flex-start;
+}
+.seg,
+.segOn {
+  border: none;
+  background: transparent;
+  color: var(--ink-soft);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-med);
+  padding: var(--sp-2) var(--sp-4);
+  border-radius: var(--r-pill);
+  cursor: pointer;
+  min-height: 36px;
+}
+.segOn {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow-sm);
+  font-weight: var(--weight-semi);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+.chip,
+.chipOn {
+  border: none;
+  background: var(--surface-2);
+  color: var(--ink-soft);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-med);
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--r-pill);
+  cursor: pointer;
+  min-height: 36px;
+}
+.chipOn {
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: var(--weight-semi);
+}
+.chip:hover {
+  background: var(--surface-sunken);
+}
+
+.swatches {
+  display: flex;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+.swatch {
+  width: 36px;
+  height: 32px;
+  border-radius: var(--r-pill);
+  border: 2px solid var(--surface);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  padding: 0;
+}
+.swatchOn {
+  outline: 3px solid var(--accent-weak);
+  outline-offset: 1px;
+}
+
+.text {
+  font: inherit;
+  font-size: var(--text-body);
+  padding: var(--sp-3);
+  border-radius: var(--r-sm);
+  border: none;
+  background: var(--surface-2);
+  color: var(--ink);
+  box-shadow: var(--inset);
+}
+.text:focus-visible {
+  outline: none;
+  box-shadow: var(--inset), 0 0 0 3px var(--accent-weak);
+}
+
+.range {
+  width: 100%;
+  accent-color: var(--accent);
+}
+
+/* ── 오른쪽 패널 ── */
+.right {
+  position: sticky;
+  top: 84px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+@media (max-width: 880px) {
+  .right {
+    position: static;
+  }
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+  align-items: center;
+}
+
+.primary {
+  background: var(--accent);
+  color: var(--accent-ink);
+  border: none;
+  font: inherit;
+  font-size: var(--text-body);
+  font-weight: var(--weight-semi);
+  padding: var(--sp-3) var(--sp-6);
+  border-radius: var(--r-pill);
+  cursor: pointer;
+  min-height: var(--touch-min);
+  box-shadow: var(--shadow-md);
+  transition: transform var(--dur-fast) var(--ease-spring), background-color var(--dur-fast);
+}
+.primary:hover:not(:disabled) {
+  background: var(--accent-press);
+  transform: translateY(-1px);
+}
+.primary:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.dice {
+  background: var(--surface);
+  color: var(--ink);
+  border: none;
+  font: inherit;
+  font-weight: var(--weight-med);
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: var(--r-pill);
+  cursor: pointer;
+  min-height: var(--touch-min);
+  box-shadow: var(--shadow-sm);
+}
+.dice:hover:not(:disabled) {
+  background: var(--surface-2);
+}
+.dice:disabled {
+  opacity: 0.6;
+}
+
+.secondary {
+  background: var(--candy-mint);
+  color: #08372d;
+  border: none;
+  font: inherit;
+  font-weight: var(--weight-semi);
+  padding: var(--sp-3) var(--sp-5);
+  border-radius: var(--r-pill);
+  cursor: pointer;
+  min-height: var(--touch-min);
+  box-shadow: var(--shadow-sm);
+}
+.secondary:hover {
+  filter: brightness(0.96);
+}
+
+.error {
+  background: var(--accent-weak);
+  color: var(--accent-press);
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: var(--r-md);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-med);
+}
+
+/* 빈 상태 */
+.empty {
+  background: var(--surface-2);
+  border-radius: var(--r-lg);
+  padding: var(--sp-10) var(--sp-6);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-3);
+}
+.emptyText {
+  color: var(--ink-soft);
+  max-width: 26rem;
+  line-height: 1.7;
+}
+.honesty {
+  font-size: var(--text-caption);
+  color: var(--ink-faint);
+}
+
+/* 변주 갤러리 — 3~4열 그리드 */
+.gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr));
+  gap: var(--sp-3);
+}
+
+.cell {
+  margin: 0;
+  background: var(--surface);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-sm);
+  padding: var(--sp-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  align-items: center;
+}
+
+/* 투명 확인용 체커보드 */
+.cellImgWrap {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: var(--r-sm);
+  background-color: #fff;
+  background-image:
+    linear-gradient(45deg, #eceae6 25%, transparent 25%),
+    linear-gradient(-45deg, #eceae6 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #eceae6 75%),
+    linear-gradient(-45deg, transparent 75%, #eceae6 75%);
+  background-size: 16px 16px;
+  background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+  overflow: hidden;
+  display: flex;
+}
+.cellImg {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.cellCap {
+  font-size: var(--text-caption);
+  font-weight: var(--weight-semi);
+  color: var(--ink-soft);
+}
+
+.cellDl {
+  width: 100%;
+  background: var(--surface-2);
+  color: var(--ink-soft);
+  border: none;
+  font: inherit;
+  font-size: var(--text-caption);
+  font-weight: var(--weight-med);
+  padding: var(--sp-2);
+  border-radius: var(--r-pill);
+  cursor: pointer;
+}
+.cellDl:hover {
+  background: var(--accent-weak);
+  color: var(--accent-press);
+}

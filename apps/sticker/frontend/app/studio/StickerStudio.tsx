@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useRef, useState } from "react";
-import { Mascot } from "@webapp/ui";
+import { Chip, Mascot, Segmented } from "@webapp/ui";
 import SketchCanvas, { type SketchCanvasHandle } from "../../components/SketchCanvas";
 import {
   COLOR_PALETTES,
@@ -98,7 +98,33 @@ export default function StickerStudio() {
     downloadBlob(zip, `sticker-pack-seed${seed}.zip`);
   };
 
+  // 액션 버튼(만들기·주사위·ZIP) — 데스크톱 컬럼과 모바일 하단 고정 바에서 공유.
+  // 동일 핸들러로 두 폼팩터의 받기 도달성을 동등하게 보장(폰트앱 패턴).
+  const renderActions = () => (
+    <>
+      <button type="button" className={styles.primary} onClick={onGenerate} disabled={busy}>
+        {busy ? "만드는 중…" : `표정 ${MAX_STICKER_SET_SIZE}종 만들기`}
+      </button>
+      <button
+        type="button"
+        className={styles.dice}
+        onClick={onReroll}
+        disabled={busy}
+        aria-label="주사위 — 다른 색/템플릿 조합으로 다시"
+        title="다른 조합으로 다시 (시드 바꿈)"
+      >
+        🎲 다른 조합
+      </button>
+      {items.length > 0 && (
+        <button type="button" className={styles.secondary} onClick={downloadAll}>
+          전체 ZIP 챙기기
+        </button>
+      )}
+    </>
+  );
+
   return (
+    <>
     <div className={`container ${styles.layout}`}>
       {/* ── 왼쪽: 그리기 + 컨트롤 ── */}
       <section className={styles.left} aria-label="그리기와 변주 설정">
@@ -112,24 +138,15 @@ export default function StickerStudio() {
 
           <div className={styles.field}>
             <span className={styles.fieldLabel}>색 변주</span>
-            <div className={styles.segmented} role="group" aria-label="색 변주 방식">
-              <button
-                type="button"
-                className={varyColor ? styles.segOn : styles.seg}
-                aria-pressed={varyColor}
-                onClick={() => setVaryColor(true)}
-              >
-                여러 색 섞기
-              </button>
-              <button
-                type="button"
-                className={!varyColor ? styles.segOn : styles.seg}
-                aria-pressed={!varyColor}
-                onClick={() => setVaryColor(false)}
-              >
-                한 색 통일
-              </button>
-            </div>
+            <Segmented<"mix" | "one">
+              ariaLabel="색 변주 방식"
+              value={varyColor ? "mix" : "one"}
+              onChange={(v) => setVaryColor(v === "mix")}
+              options={[
+                { value: "mix", label: "여러 색 섞기" },
+                { value: "one", label: "한 색 통일" },
+              ]}
+            />
             {!varyColor && (
               <div className={styles.swatches} role="group" aria-label="고정 색 팔레트">
                 {COLOR_PALETTES.map((p) => (
@@ -149,37 +166,26 @@ export default function StickerStudio() {
 
           <div className={styles.field}>
             <span className={styles.fieldLabel}>밈·템플릿</span>
-            <div className={styles.segmented} role="group" aria-label="템플릿 방식">
-              <button
-                type="button"
-                className={varyTemplate ? styles.segOn : styles.seg}
-                aria-pressed={varyTemplate}
-                onClick={() => setVaryTemplate(true)}
-              >
-                섞기
-              </button>
-              <button
-                type="button"
-                className={!varyTemplate ? styles.segOn : styles.seg}
-                aria-pressed={!varyTemplate}
-                onClick={() => setVaryTemplate(false)}
-              >
-                하나로
-              </button>
-            </div>
+            <Segmented<"mix" | "one">
+              ariaLabel="템플릿 방식"
+              value={varyTemplate ? "mix" : "one"}
+              onChange={(v) => setVaryTemplate(v === "mix")}
+              options={[
+                { value: "mix", label: "섞기" },
+                { value: "one", label: "하나로" },
+              ]}
+            />
             {!varyTemplate && (
               <div className={styles.chips} role="group" aria-label="고정 템플릿">
                 {MEME_TEMPLATES.map((t) => (
-                  <button
+                  <Chip
                     key={t.id}
-                    type="button"
-                    className={`${styles.chip} ${fixedTemplateId === t.id ? styles.chipOn : ""}`}
-                    aria-pressed={fixedTemplateId === t.id}
+                    selected={fixedTemplateId === t.id}
                     onClick={() => setFixedTemplateId(t.id)}
                     title={t.desc}
                   >
                     {t.label}
-                  </button>
+                  </Chip>
                 ))}
               </div>
             )}
@@ -235,16 +241,14 @@ export default function StickerStudio() {
             <span className={styles.fieldLabel}>내보내기 크기</span>
             <div className={styles.chips} role="group" aria-label="내보내기 크기">
               {SHARE_PRESETS.map((p) => (
-                <button
+                <Chip
                   key={p.id}
-                  type="button"
-                  className={`${styles.chip} ${presetId === p.id ? styles.chipOn : ""}`}
-                  aria-pressed={presetId === p.id}
+                  selected={presetId === p.id}
                   onClick={() => setPresetId(p.id)}
                   title={p.note}
                 >
                   {p.label}
-                </button>
+                </Chip>
               ))}
             </div>
           </div>
@@ -253,30 +257,12 @@ export default function StickerStudio() {
 
       {/* ── 오른쪽: 액션 + 변주 갤러리 ── */}
       <section className={styles.right} aria-label="변주 결과">
-        <div className={styles.actions}>
-          <button type="button" className={styles.primary} onClick={onGenerate} disabled={busy}>
-            {busy ? "만드는 중…" : `표정 ${MAX_STICKER_SET_SIZE}종 만들기`}
-          </button>
-          <button
-            type="button"
-            className={styles.dice}
-            onClick={onReroll}
-            disabled={busy}
-            aria-label="주사위 — 다른 색/템플릿 조합으로 다시"
-            title="다른 조합으로 다시 (시드 바꿈)"
-          >
-            🎲 다른 조합
-          </button>
-          {items.length > 0 && (
-            <button type="button" className={styles.secondary} onClick={downloadAll}>
-              전체 ZIP 챙기기
-            </button>
-          )}
-        </div>
+        {/* 데스크톱: 컬럼 안 액션 행. 모바일: 숨김(하단 고정 바가 대체). */}
+        <div className={styles.actions}>{renderActions()}</div>
 
         {error && (
           <p className={styles.error} role="alert">
-            {error}
+            <Mascot mood="worried" size={28} still label="" /> {error}
           </p>
         )}
 
@@ -322,5 +308,11 @@ export default function StickerStudio() {
         )}
       </section>
     </div>
+
+    {/* 모바일 전용: 하단 고정 액션 바 — 만들기·ZIP이 한 손에 항상 도달. */}
+    <div className={styles.mobileActionBar} role="region" aria-label="스티커 만들기·받기">
+      <div className={styles.actionBarInner}>{renderActions()}</div>
+    </div>
+    </>
   );
 }

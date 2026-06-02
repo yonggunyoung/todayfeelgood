@@ -7,8 +7,14 @@
  *
  * 정직성: 글자는 "공개 가변폰트 변형", 장식은 "절차적 합성"이며 실제 자필이 아님.
  */
+import { sanitizeColor } from "@webapp/ui";
 import { buildOverlay, type OverlayBox } from "./overlay";
 import { BG_FILL, type SignParams } from "./signParams";
+
+/** SVG 속성 탈출 방지: 폰트 패밀리명에서 따옴표/꺾쇠 등 위험 문자를 제거. */
+function safeFontFamily(name: string): string {
+  return (name || "GeneratedFont").replace(/[^\w\s-]/g, "").slice(0, 64) || "GeneratedFont";
+}
 
 export interface SignViewBox {
   width: number;
@@ -40,8 +46,12 @@ export function buildSignSvg(
   opts: { watermark?: boolean } = {}
 ): string {
   const text = (p.text || "이름").trim();
-  const ink = p.inkColor || "#2b2a33";
-  const bg = BG_FILL[p.bgMode];
+  // 색 입력 살균(SVG 속성 raw 보간 방어) — 컬러 피커 확장 대비.
+  const ink = sanitizeColor(p.inkColor, "#2b2a33");
+  // bgMode는 키 화이트리스트(BG_FILL)라 안전하나, 미정의 키 폴백을 둔다.
+  const bg = BG_FILL[p.bgMode] ?? "none";
+  // 폰트 패밀리명도 속성에 들어가므로 살균.
+  const family = safeFontFamily(fontFamily);
 
   // 글자 폭은 정확히 알 수 없으므로(서버 측 측정 없음) 글자수 기반 근사로 box를 잡는다.
   // 오버레이 앵커가 글자 영역과 대략 맞으면 충분(근사 장식이므로).
@@ -61,7 +71,7 @@ export function buildSignSvg(
   const overlay = buildOverlay(p, box);
 
   const fontFaceCss = fontBase64
-    ? `@font-face{font-family:'${fontFamily}';src:url(data:font/woff;base64,${fontBase64}) format('woff');font-display:block;}`
+    ? `@font-face{font-family:'${family}';src:url(data:font/woff;base64,${fontBase64}) format('woff');font-display:block;}`
     : "";
 
   const overlayPaths = overlay
@@ -85,7 +95,7 @@ export function buildSignSvg(
     `<style>${fontFaceCss}</style>`,
     bgRect,
     overlayPaths,
-    `<text x="${cx}" y="${BASELINE_Y}" text-anchor="middle" font-family="'${fontFamily}', cursive, sans-serif" font-size="${FONT_PX}" fill="${ink}" letter-spacing="${(
+    `<text x="${cx}" y="${BASELINE_Y}" text-anchor="middle" font-family="'${family}', cursive, sans-serif" font-size="${FONT_PX}" fill="${ink}" letter-spacing="${(
       p.body.letterSpacing * FONT_PX
     ).toFixed(1)}">${escapeXml(text)}</text>`,
     wm,

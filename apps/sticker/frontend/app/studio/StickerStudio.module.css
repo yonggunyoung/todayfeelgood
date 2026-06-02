@@ -12,6 +12,8 @@
   .layout {
     grid-template-columns: 1fr;
     gap: var(--sp-5);
+    /* 하단 고정 액션바가 마지막 갤러리/문구를 가리지 않게 여백 확보(액션바 높이 + safe-area). */
+    padding-bottom: calc(84px + var(--safe-bottom));
   }
 }
 
@@ -53,60 +55,11 @@
   color: var(--ink-faint);
 }
 
-/* 세그먼티드 컨트롤 */
-.segmented {
-  display: inline-flex;
-  background: var(--surface-2);
-  border-radius: var(--r-pill);
-  padding: 3px;
-  gap: 3px;
-  align-self: flex-start;
-}
-.seg,
-.segOn {
-  border: none;
-  background: transparent;
-  color: var(--ink-soft);
-  font: inherit;
-  font-size: var(--text-sm);
-  font-weight: var(--weight-med);
-  padding: var(--sp-2) var(--sp-4);
-  border-radius: var(--r-pill);
-  cursor: pointer;
-  min-height: 36px;
-}
-.segOn {
-  background: var(--surface);
-  color: var(--ink);
-  box-shadow: var(--shadow-sm);
-  font-weight: var(--weight-semi);
-}
-
+/* 세그먼티드/칩은 공용 @webapp/ui 컴포넌트(Segmented·Chip)를 사용한다(인라인 재구현 제거). */
 .chips {
   display: flex;
   flex-wrap: wrap;
   gap: var(--sp-2);
-}
-.chip,
-.chipOn {
-  border: none;
-  background: var(--surface-2);
-  color: var(--ink-soft);
-  font: inherit;
-  font-size: var(--text-sm);
-  font-weight: var(--weight-med);
-  padding: var(--sp-2) var(--sp-3);
-  border-radius: var(--r-pill);
-  cursor: pointer;
-  min-height: 36px;
-}
-.chipOn {
-  background: var(--accent);
-  color: var(--accent-ink);
-  font-weight: var(--weight-semi);
-}
-.chip:hover {
-  background: var(--surface-sunken);
 }
 
 .swatches {
@@ -161,6 +114,10 @@
   .right {
     position: static;
   }
+  /* 데스크톱 액션 행은 모바일에서 숨김 — 하단 고정 바가 대체(받기 버튼 항상 도달). */
+  .actions {
+    display: none;
+  }
 }
 
 .actions {
@@ -168,6 +125,35 @@
   flex-wrap: wrap;
   gap: var(--sp-3);
   align-items: center;
+}
+
+/* ── 모바일 하단 고정 액션 바(데스크톱 숨김) — 폰트앱과 동일 패턴 ── */
+.mobileActionBar {
+  display: none;
+}
+
+@media (max-width: 880px) {
+  .mobileActionBar {
+    display: block;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 40;
+    padding: var(--sp-3) var(--sp-4) calc(var(--sp-3) + var(--safe-bottom));
+    background: color-mix(in srgb, var(--surface) 92%, transparent);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 -6px 20px -12px rgba(0, 0, 0, 0.35);
+  }
+}
+
+.actionBarInner {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+.actionBarInner .primary {
+  flex: 1 1 auto;
 }
 
 .primary {
@@ -229,6 +215,9 @@
 }
 
 .error {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
   background: var(--accent-weak);
   color: var(--accent-press);
   padding: var(--sp-3) var(--sp-4);

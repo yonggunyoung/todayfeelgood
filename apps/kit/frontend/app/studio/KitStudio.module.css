@@ -12,6 +12,8 @@
   .layout {
     grid-template-columns: 1fr;
     gap: var(--sp-6);
+    /* 하단 고정 받기 바가 마지막 내용 가리지 않게 여백 확보. */
+    padding-bottom: calc(84px + var(--safe-bottom));
   }
 }
 
@@ -63,56 +65,11 @@
   line-height: 1.5;
 }
 
-/* 세그먼티드 */
-.segmented {
-  display: inline-flex;
-  background: var(--surface-2);
-  border-radius: var(--r-pill);
-  padding: 3px;
-  gap: 3px;
-}
-.seg,
-.segOn {
-  border: none;
-  background: transparent;
-  padding: var(--sp-2) var(--sp-4);
-  border-radius: var(--r-pill);
-  font-size: var(--text-sm);
-  font-weight: var(--weight-med);
-  color: var(--ink-soft);
-  cursor: pointer;
-}
-.segOn {
-  background: var(--surface);
-  color: var(--accent-ink-weak);
-  font-weight: var(--weight-semi);
-  box-shadow: var(--shadow-sm);
-}
-
-/* 칩 */
+/* 세그먼티드/칩은 공용 @webapp/ui 컴포넌트(Segmented·Chip)를 쓴다(인라인 재구현 제거). */
 .chips {
   display: flex;
   flex-wrap: wrap;
   gap: var(--sp-2);
-}
-.chip,
-.chipOn {
-  border: none;
-  background: var(--surface-2);
-  color: var(--ink-soft);
-  padding: var(--sp-2) var(--sp-4);
-  border-radius: var(--r-pill);
-  font-size: var(--text-sm);
-  font-weight: var(--weight-med);
-  cursor: pointer;
-}
-.chip:hover {
-  background: var(--accent-weak);
-}
-.chipOn {
-  background: var(--accent);
-  color: var(--accent-ink);
-  font-weight: var(--weight-semi);
 }
 
 /* 색 스와치 */
@@ -264,7 +221,36 @@
   cursor: progress;
 }
 
+/* ── 모바일 하단 고정 받기 바(폰트앱 패턴) ── */
+.mobileActionBar {
+  display: none;
+}
+@media (max-width: 880px) {
+  /* 데스크톱 받기 버튼은 모바일에서 숨김 — 하단 고정 바가 대체. */
+  .desktopGet {
+    display: none;
+  }
+  .mobileActionBar {
+    display: block;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 40;
+    padding: var(--sp-3) var(--sp-4) calc(var(--sp-3) + var(--safe-bottom));
+    background: color-mix(in srgb, var(--surface) 92%, transparent);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 -6px 20px -12px rgba(0, 0, 0, 0.35);
+  }
+  .barGet {
+    width: 100%;
+  }
+}
+
 .error {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
   font-size: var(--text-sm);
   color: var(--danger);
   background: var(--surface);

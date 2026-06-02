@@ -3,6 +3,7 @@ import Link from "next/link";
 import { buildMeta, webApplicationJsonLd } from "@webapp/seo";
 import { BrushDivider, Mascot, Sticker } from "@webapp/ui";
 import { SiteHeader, SiteFooter } from "../components/SiteChrome";
+import { MAX_STICKER_SET_SIZE } from "../lib/presets";
 import styles from "./landing.module.css";
 
 export const metadata: Metadata = buildMeta({
@@ -59,7 +60,7 @@ export default function LandingPage() {
             <h1 className={`display ${styles.headline}`}>내 캐릭터로 만드는 스티커 팩</h1>
             <p className={styles.lede}>
               동그라미 하나만 그려도 좋아요. 기쁨·슬픔·윙크·하트… 표정과 색을 자동으로
-              변주해 투명 PNG 12종 세트로 만들어 드려요. 카톡·인스타·디스코드에 바로.
+              변주해 투명 PNG {MAX_STICKER_SET_SIZE}종 세트로 만들어 드려요. 카톡·인스타·디스코드에 바로.
             </p>
             <div className={styles.heroActions}>
               <Link href="/studio" className={styles.primary}>
@@ -106,7 +107,7 @@ export default function LandingPage() {
               </div>
               <div className={styles.step}>
                 <span className={styles.stepNum}>변주</span>
-                <h3 className={`display ${styles.stepTitle}`}>② 표정 12종 자동</h3>
+                <h3 className={`display ${styles.stepTitle}`}>② 표정 {MAX_STICKER_SET_SIZE}종 자동</h3>
                 <p className={styles.stepBody}>
                   표정·색·테두리·짤 캡션을 절차적으로 변주. 주사위로 다른 조합도 즉시.
                 </p>

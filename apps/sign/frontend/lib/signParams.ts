@@ -11,6 +11,7 @@ import {
   type FontParams,
   type FontScript,
 } from "@webapp/core";
+import { sanitizeColor } from "@webapp/ui";
 
 export type { FontScript };
 
@@ -204,6 +205,9 @@ export function clampSign(p: SignParams): SignParams {
     ...p,
     text: (p.text ?? "").slice(0, 32),
     script: p.script === "hangul" ? "hangul" : "latin",
+    // 잉크색 살균(SVG 속성 raw 보간 방어). 비허용 형식이면 기본 잉크.
+    inkColor: sanitizeColor(p.inkColor, "#2b2a33"),
+    bgMode: ["transparent", "white", "paper"].includes(p.bgMode) ? p.bgMode : "transparent",
     body: clampParams(p.body),
     connect: clamp01(p.connect),
     flourish: {

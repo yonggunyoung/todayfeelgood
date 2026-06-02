@@ -88,7 +88,13 @@ export interface HarmonyPalette {
  * 규칙: 악센트 + 유사색(±30°) 2개 + 보색 포인트 1개 + 명도 변주(어두운/밝은 톤).
  * 명도 대비를 벌려 칩이 서로 구분되게 한다.
  */
-export function buildHarmony(accentHex: string): HarmonyPalette {
+export function buildHarmony(accentHexInput: string): HarmonyPalette {
+  // 색 입력 살균: #rgb/#rrggbb만 신뢰(피커 외 외부 주입 대비). 그 외 = 기본 테라코타.
+  const accentHex = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(
+    (accentHexInput ?? "").trim()
+  )
+    ? accentHexInput.trim()
+    : "#c0492b";
   const base = hexToHsl(accentHex);
   const colors: string[] = [];
 

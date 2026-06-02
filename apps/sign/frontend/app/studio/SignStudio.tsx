@@ -357,7 +357,7 @@ export default function SignStudio() {
             {loading && <span className={styles.status}>서명 글자 빚는 중…</span>}
             {error && (
               <span className={styles.error} role="alert">
-                {error}
+                <Mascot mood="worried" size={24} still label="" /> {error}
               </span>
             )}
           </div>

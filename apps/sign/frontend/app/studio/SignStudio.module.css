@@ -169,6 +169,9 @@
   font-size: var(--text-sm);
 }
 .error {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
   color: var(--danger);
   font-size: var(--text-sm);
 }
@@ -287,5 +290,14 @@
     backdrop-filter: var(--blur);
     -webkit-backdrop-filter: var(--blur);
     z-index: 10;
+    /* 상단 sticky 블록 전체(프리뷰+받기)가 화면을 넘지 않게 제한해
+       받기 버튼이 항상 한 시야에 도달하도록. 프리뷰만 축소·스크롤. */
+    max-height: 92vh;
+  }
+  /* 프리뷰는 화면 절반 이내로 — 받기 패널이 sticky 블록 안에서 늘 보이게. */
+  .previewBox {
+    max-height: 44vh;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
   }
 }

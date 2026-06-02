@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Mascot } from "@webapp/ui";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Chip, Mascot, Segmented } from "@webapp/ui";
 import {
   FONT_FORMATS,
   FREE_FORMATS,
@@ -199,7 +199,14 @@ export default function KitStudio() {
     }
   }, [brand, description, moodId, script, palette, previewFont, commercial]);
 
+  const getButtonLabel = exporting
+    ? "키트 묶는 중…"
+    : commercial
+      ? "상업용 키트 ZIP 받기"
+      : "키트 ZIP 받기 (무료)";
+
   return (
+    <>
     <div className={`container ${styles.layout}`}>
       {/* ── 좌: 컨트롤 ── */}
       <section className={styles.controls} aria-label="키트 설정">
@@ -208,15 +215,9 @@ export default function KitStudio() {
           <h2 className={`display ${styles.panelTitle}`}>빠른 시작 — 프리셋 키트</h2>
           <div className={styles.chips} role="group" aria-label="프리셋 키트 템플릿">
             {KIT_TEMPLATES.map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                className={styles.chip}
-                onClick={() => applyTemplate(t.id)}
-                title={t.desc}
-              >
+              <Chip key={t.id} onClick={() => applyTemplate(t.id)} title={t.desc}>
                 {t.label}
-              </button>
+              </Chip>
             ))}
           </div>
         </div>
@@ -252,36 +253,25 @@ export default function KitStudio() {
         <div className={styles.panel}>
           <h2 className={`display ${styles.panelTitle}`}>② 글씨체</h2>
           <span className={styles.fieldLabel}>문자체계</span>
-          <div className={styles.segmented} role="group" aria-label="문자체계">
-            <button
-              type="button"
-              className={script === "latin" ? styles.segOn : styles.seg}
-              aria-pressed={script === "latin"}
-              onClick={() => setScript("latin")}
-            >
-              라틴 A–Z
-            </button>
-            <button
-              type="button"
-              className={script === "hangul" ? styles.segOn : styles.seg}
-              aria-pressed={script === "hangul"}
-              onClick={() => setScript("hangul")}
-            >
-              한글 가나다
-            </button>
-          </div>
+          <Segmented<FontScript>
+            ariaLabel="문자체계"
+            value={script}
+            onChange={setScript}
+            options={[
+              { value: "latin", label: "라틴 A–Z" },
+              { value: "hangul", label: "한글 가나다" },
+            ]}
+          />
           <span className={styles.fieldLabel}>무드 프리셋</span>
           <div className={styles.chips} role="group" aria-label="무드 프리셋">
             {MOOD_PRESETS.map((m) => (
-              <button
+              <Chip
                 key={m.id}
-                type="button"
-                className={`${styles.chip} ${moodId === m.id ? styles.chipOn : ""}`}
-                aria-pressed={moodId === m.id}
+                selected={moodId === m.id}
                 onClick={() => setMoodId(m.id)}
               >
                 {m.label}
-              </button>
+              </Chip>
             ))}
           </div>
         </div>
@@ -357,18 +347,19 @@ export default function KitStudio() {
             <span className={styles.liveDot}>{busyPreview ? "갱신 중" : "라이브"}</span>
           </div>
 
+          {/* 데스크톱 받기 버튼(모바일에선 하단 고정 바가 대체). */}
           <button
             type="button"
-            className={styles.getBtn}
+            className={`${styles.getBtn} ${styles.desktopGet}`}
             onClick={exportKit}
             disabled={exporting}
           >
-            {exporting ? "키트 묶는 중…" : commercial ? "상업용 키트 ZIP 받기" : "키트 ZIP 받기 (무료)"}
+            {getButtonLabel}
           </button>
 
           {error && (
             <p className={styles.error} role="alert">
-              {error}
+              <Mascot mood="worried" size={28} still label="" /> {error}
             </p>
           )}
 
@@ -379,5 +370,18 @@ export default function KitStudio() {
         </div>
       </section>
     </div>
+
+    {/* 모바일 전용: 하단 고정 받기 바 — 받기 버튼이 스크롤 밖으로 사라지지 않게. */}
+    <div className={styles.mobileActionBar} role="region" aria-label="키트 받기">
+      <button
+        type="button"
+        className={`${styles.getBtn} ${styles.barGet}`}
+        onClick={exportKit}
+        disabled={exporting}
+      >
+        {getButtonLabel}
+      </button>
+    </div>
+    </>
   );
 }

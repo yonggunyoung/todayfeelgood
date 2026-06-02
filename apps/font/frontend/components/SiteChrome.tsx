@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { Mascot } from "@webapp/ui";
 import styles from "./SiteChrome.module.css";
 
-/** 워드마크 "획이" + 공방 부제. 사이트 상단 공통 헤더(블러 머티리얼). */
+/** 워드마크 "획" + 공방 부제. 사이트 상단 공통 헤더(블러 머티리얼). */
 export function SiteHeader({ right }: { right?: ReactNode }) {
   return (
     <header className={styles.header}>

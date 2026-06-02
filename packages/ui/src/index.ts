@@ -14,3 +14,4 @@ export type { MascotMood } from "./Mascot";
 export { BrushDivider, BrushUnderline, default as BrushStrokeDefault } from "./BrushStroke";
 export { Sticker, default as StickerDefault } from "./Sticker";
 export { LiveText, default as LiveTextDefault } from "./LiveText";
+export { sanitizeColor } from "./color";

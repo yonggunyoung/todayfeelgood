@@ -6,6 +6,8 @@ import {
   DEFAULT_PARAMS,
   DEFAULT_PREVIEW_STYLE,
   FONT_FORMATS,
+  FREE_FORMATS,
+  FULL_FORMATS,
   PARAM_RANGES,
   STYLE_PRESETS,
   type FontFormat,
@@ -38,13 +40,28 @@ function base64ToBlob(b64: string, mime: string): Blob {
   return new Blob([bytes], { type: mime });
 }
 
-/** 파라미터로 짧은 파일명 해시를 만든다(앞부분만). */
+/**
+ * 파라미터 전체로 짧은 파일명 해시를 만든다(앞부분만).
+ * v4 신규 축(waviness/waveFreq/contrast/roundness/mono/cursive/letterSpacing)까지
+ * 반영해, 값이 다르면 파일명도 달라지도록(다운로드 폴더 덮어쓰기 혼동 방지).
+ */
 function shortHash(p: FontParams): string {
-  const s = `${p.weight}-${p.slant}-${p.curvature}-${p.weirdness}-${p.seed}`;
+  const s = (Object.keys(p) as (keyof FontParams)[])
+    .sort()
+    .map((k) => `${k}:${p[k]}`)
+    .join("|");
   let h = 0;
   for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
   return (h >>> 0).toString(36).slice(0, 6);
 }
+
+/** 다운로드 포맷 셀렉터 옵션. FREE는 즉시, 추가 풀포맷(woff2/otf)은 "풀포맷" 라벨. */
+const FORMAT_OPTIONS: { value: FontFormat; label: string; full: boolean }[] =
+  FULL_FORMATS.map((f) => ({
+    value: f,
+    label: f.toUpperCase(),
+    full: !FREE_FORMATS.includes(f),
+  }));
 
 /** 현재 params가 어떤 프리셋과 정확히 일치하는지(겹친 키만 비교) 찾는다. */
 function matchedPreset(p: FontParams): string | null {
@@ -69,6 +86,8 @@ export default function FontStudio() {
   const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [format, setFormat] = useState<FontFormat>("woff");
+  // 다운로드 성공 순간 — 너굴이(love) 축하 토스트를 잠깐 띄운다.
+  const [justDownloaded, setJustDownloaded] = useState(false);
   // [PREVIEW] 이미지 전용 스타일 — 엔진에 보내지 않음(프리뷰/PNG 전용)
   const [previewStyle, setPreviewStyle] = useState<PreviewStyle>(DEFAULT_PREVIEW_STYLE);
 
@@ -181,6 +200,9 @@ export default function FontStudio() {
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
+      // 성공 축하 — 너굴이 love 토스트(잠시 후 사라짐)
+      setJustDownloaded(true);
+      window.setTimeout(() => setJustDownloaded(false), 3200);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "다운로드 중 오류가 발생했습니다."
@@ -189,6 +211,9 @@ export default function FontStudio() {
       setDownloading(false);
     }
   }, [params, script, format]);
+
+  // 다운로드 파일명에 쓰는 짧은 식별 태그(PNG에도 동일하게 전달).
+  const fileTag = useMemo(() => shortHash(params), [params]);
 
   return (
     <main className={`container ${styles.studio}`}>

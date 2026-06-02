@@ -160,11 +160,38 @@ def test_generate_hangul_ttf(client, hangul_ready):
 # ---------------- 검증(422/413/잘못된 값) ----------------
 
 def test_invalid_format_422(client):
+    # eot는 미지원 → 422 (woff/woff2/ttf/otf만 허용).
     r = client.post(
         "/generate",
-        json={"params": {"weight": 400, "slant": 0, "curvature": 0}, "format": "otf"},
+        json={"params": {"weight": 400, "slant": 0, "curvature": 0}, "format": "eot"},
     )
     assert r.status_code == 422
+
+
+def test_generate_woff2(client, font_ready):
+    """woff2 포맷 생성 + 매직(wOF2)."""
+    r = client.post(
+        "/generate",
+        json={"params": {"weight": 500, "slant": 0}, "format": "woff2"},
+    )
+    assert r.status_code == 200
+    body = r.json()
+    assert body["format"] == "woff2"
+    assert base64.b64decode(body["fontBase64"])[:4] == b"wOF2"
+
+
+def test_generate_otf(client, font_ready):
+    """otf 포맷 생성 + sfnt 매직."""
+    r = client.post(
+        "/generate",
+        json={"params": {"weight": 600, "slant": -4}, "format": "otf"},
+    )
+    assert r.status_code == 200
+    body = r.json()
+    assert body["format"] == "otf"
+    assert base64.b64decode(body["fontBase64"])[:4] in (
+        b"\x00\x01\x00\x00", b"true", b"OTTO",
+    )
 
 
 def test_invalid_script_422(client):

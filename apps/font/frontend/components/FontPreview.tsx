@@ -19,6 +19,8 @@ interface Props {
   loading?: boolean;
   /** [PREVIEW] 이미지 전용 스타일(질감/무늬/색). 엔진 미전송. */
   previewStyle?: PreviewStyle;
+  /** 다운로드 파일명에 붙일 파라미터 식별 태그(충돌 방지). */
+  fileTag?: string;
 }
 
 // base64 → ArrayBuffer (FontFace에 넘기기 위함)
@@ -50,6 +52,25 @@ function patternSize(pattern: PreviewStyle["pattern"]): string | undefined {
   return undefined;
 }
 
+/** 시드 기반 결정적 의사난수(0~1). 같은 입력 → 같은 PNG 질감(재현성). */
+function makeRng(seed: number) {
+  let s = (seed >>> 0) || 1;
+  return () => {
+    s = (s * 1664525 + 1013904569) >>> 0;
+    return s / 0xffffffff;
+  };
+}
+
+/** 문자열을 32비트 정수 시드로 해시(질감 결정화용). */
+function hashSeed(str: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
 /**
  * 받은 폰트(base64)를 FontFace API로 등록하고, 스페시먼을 그 폰트로 렌더.
  * [PREVIEW] 스타일(질감/무늬/색)은 화면 견본과 PNG 내보내기에만 적용(폰트 파일엔 미반영).
@@ -60,15 +81,19 @@ export default function FontPreview({
   script = "latin",
   loading,
   previewStyle = DEFAULT_PREVIEW_STYLE,
+  fileTag,
 }: Props) {
   const [activeFamily, setActiveFamily] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
   const seqRef = useRef(0);
   const sheetRef = useRef<HTMLDivElement>(null);
+  // 현재 활성 폰트의 FontFace 핸들 — PNG에서 전역 fonts.ready 대신 이것만 await한다.
+  const activeFaceRef = useRef<FontFace | null>(null);
 
   useEffect(() => {
     if (!fontBase64) {
       setActiveFamily(null);
+      activeFaceRef.current = null;
       return;
     }
     const family = `${fontFamily || "GeneratedFont"}-${++seqRef.current}`;
@@ -84,6 +109,7 @@ export default function FontPreview({
           if (cancelled) return;
           (document.fonts as FontFaceSet).add(loaded);
           registered = loaded;
+          activeFaceRef.current = loaded;
           setActiveFamily(family);
         })
         .catch(() => {
@@ -96,6 +122,7 @@ export default function FontPreview({
     return () => {
       cancelled = true;
       if (registered) {
+        if (activeFaceRef.current === registered) activeFaceRef.current = null;
         try {
           (document.fonts as FontFaceSet).delete(registered);
         } catch {
@@ -193,8 +220,16 @@ export default function FontPreview({
       }
       ctx.restore();
 
-      // 글자(등록된 생성 폰트로)
-      await (document as Document & { fonts: FontFaceSet }).fonts.ready;
+      // 글자(등록된 생성 폰트로). 전역 fonts.ready(갤러리 9개까지 대기) 대신
+      // 활성 FontFace만 await해 레이스·불필요한 대기를 막는다.
+      const face = activeFaceRef.current;
+      if (face) {
+        try {
+          await face.loaded;
+        } catch {
+          /* 로드 실패 시 폴백 폰트로 진행 */
+        }
+      }
       ctx.fillStyle = ink;
       ctx.textBaseline = "alphabetic";
       const fam = `"${activeFamily}", system-ui, sans-serif`;
@@ -205,14 +240,18 @@ export default function FontPreview({
       ctx.font = `500 52px ${fam}`;
       ctx.fillText(hangul ? "0 1 2 3 4 5 6 7 8 9" : "0123456789 . , ! ?", 66, 520);
 
-      // 질감(그레인/거친 잉크) — 미세 노이즈 점을 살짝 얹는다
+      // 질감(그레인/거친 잉크) — 시드 기반 결정적 노이즈(매번 같은 결과 + 프리즈 방지).
+      // 점 수 상한을 두고, 시드는 파라미터 태그+질감에서 유도해 재현성을 확보한다.
       if (previewStyle.texture !== "none") {
-        const density = previewStyle.texture === "rough" ? 26000 : 14000;
+        // 상한 9000(과거 26000 → 저사양 프리즈 방지). rough만 약간 더 촘촘.
+        const density = previewStyle.texture === "rough" ? 9000 : 6000;
+        const maxAlpha = previewStyle.texture === "rough" ? 0.1 : 0.05;
+        const rng = makeRng(hashSeed(`${fileTag ?? ""}-${previewStyle.texture}-${ink}`));
         ctx.save();
         ctx.fillStyle = previewStyle.texture === "paper" ? "#000" : ink;
         for (let i = 0; i < density; i++) {
-          ctx.globalAlpha = Math.random() * (previewStyle.texture === "rough" ? 0.1 : 0.05);
-          ctx.fillRect(Math.random() * W, Math.random() * H, 1.3, 1.3);
+          ctx.globalAlpha = rng() * maxAlpha;
+          ctx.fillRect(rng() * W, rng() * H, 1.3, 1.3);
         }
         ctx.restore();
       }
@@ -220,14 +259,15 @@ export default function FontPreview({
       const url = canvas.toDataURL("image/png");
       const a = document.createElement("a");
       a.href = url;
-      a.download = `hwoek-specimen-${script}.png`;
+      const tag = fileTag ? `-${fileTag}` : "";
+      a.download = `hwoek-specimen-${script}${tag}.png`;
       document.body.appendChild(a);
       a.click();
       a.remove();
     } finally {
       setExporting(false);
     }
-  }, [activeFamily, bg, ink, hangul, script, previewStyle]);
+  }, [activeFamily, bg, ink, hangul, script, previewStyle, fileTag]);
 
   return (
     <div className={styles.preview} aria-label="글자 견본">

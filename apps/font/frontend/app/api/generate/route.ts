@@ -33,7 +33,8 @@ function engineUrl(): string {
 }
 
 function normalizeFormat(f: unknown): FontFormat {
-  return f === "ttf" ? "ttf" : "woff";
+  // 풀포맷(woff2/otf)까지 그대로 엔진에 전달. 알 수 없으면 woff로 폴백.
+  return f === "ttf" || f === "woff2" || f === "otf" ? f : "woff";
 }
 
 function normalizeScript(s: unknown): FontScript {

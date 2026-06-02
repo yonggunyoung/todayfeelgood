@@ -27,8 +27,15 @@ interface Variant {
   status: "pending" | "ready" | "error";
 }
 
-// 동시 요청 throttle — 오라클 무료 티어/엔진 부담 의식(한 번에 3개씩).
-const CONCURRENCY = 3;
+// 동시 요청 throttle — 오라클 무료 티어/엔진 부담 의식.
+// 라틴은 3개씩, 한글은 1개로 직렬화(엔진 한글 세마포어 MAX_CONCURRENT_HANGUL=1과 일치 → 자기 충돌 503 방지).
+const CONCURRENCY_LATIN = 3;
+const CONCURRENCY_HANGUL = 1;
+// 503(엔진 동시성 한도) 시 백오프 후 재시도 횟수/지연.
+const MAX_RETRIES = 2;
+const BACKOFF_MS = 450;
+
+const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 /** 시드 기반 결정적 의사난수(0~1). 갤러리 재현성 확보. */
 function rng(seed: number) {
@@ -105,30 +112,33 @@ export default function VariationGallery({ base, script, onPick, disabled }: Pro
     const built = buildVariants(base);
     setVariants(built.map((p) => ({ params: p, fontBase64: null, family: null, status: "pending" })));
 
-    // throttle: CONCURRENCY개씩 순차 처리
+    // throttle: 한글은 1개(직렬), 라틴은 3개씩 처리
+    const concurrency = script === "hangul" ? CONCURRENCY_HANGUL : CONCURRENCY_LATIN;
     const indices = built.map((_, i) => i);
     let cursor = 0;
-    const worker = async () => {
-      while (cursor < indices.length) {
-        const i = indices[cursor++]!;
-        const payload: GenerateRequest = {
-          params: built[i]!,
-          script,
-          format: "woff",
-        };
-        try {
-          const res = await fetch(apiPath("/api/generate"), {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-          });
-          if (myseq !== seqRef.current) return; // 새 요청이 시작됨
-          if (!res.ok) throw new Error(String(res.status));
+
+    // 한 칸을 굽는다. 엔진 동시성 한도(503)면 백오프 후 재시도해 "—" 깨짐을 줄인다.
+    const bake = async (i: number) => {
+      const payload: GenerateRequest = {
+        params: built[i]!,
+        script,
+        format: "woff",
+      };
+      for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+        if (myseq !== seqRef.current) return; // 새 요청이 시작됨 → 중단
+        const res = await fetch(apiPath("/api/generate"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (myseq !== seqRef.current) return;
+        if (res.ok) {
           const data = (await res.json()) as GenerateResponse;
           const family = `vary-${myseq}-${i}`;
           const face = new FontFace(family, b64ToBuf(data.fontBase64));
           const loaded = await face.load();
           if (myseq !== seqRef.current) return;
+          // add 직후 즉시 추적(early-return 누수 방지)
           (document.fonts as FontFaceSet).add(loaded);
           facesRef.current.push(loaded);
           setVariants((prev) => {
@@ -137,6 +147,23 @@ export default function VariationGallery({ base, script, onPick, disabled }: Pro
             copy[i] = { ...copy[i]!, fontBase64: data.fontBase64, family, status: "ready" };
             return copy;
           });
+          return;
+        }
+        // 503/504(동시성·일시 과부하)면 백오프 후 재시도, 그 외/재시도 소진은 에러
+        const retriable = res.status === 503 || res.status === 504;
+        if (retriable && attempt < MAX_RETRIES) {
+          await sleep(BACKOFF_MS * (attempt + 1));
+          continue;
+        }
+        throw new Error(String(res.status));
+      }
+    };
+
+    const worker = async () => {
+      while (cursor < indices.length) {
+        const i = indices[cursor++]!;
+        try {
+          await bake(i);
         } catch {
           if (myseq !== seqRef.current) return;
           setVariants((prev) => {
@@ -148,7 +175,7 @@ export default function VariationGallery({ base, script, onPick, disabled }: Pro
         }
       }
     };
-    await Promise.all(Array.from({ length: CONCURRENCY }, worker));
+    await Promise.all(Array.from({ length: concurrency }, worker));
     if (myseq === seqRef.current) setGenerating(false);
   }, [base, script, cleanupFaces]);
 

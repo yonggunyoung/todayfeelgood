@@ -71,6 +71,15 @@ async def lifespan(app: FastAPI):
             loop.run_in_executor(None, font_loader.ensure_font),
             loop.run_in_executor(None, font_loader.ensure_hangul_font),
         )
+        # 베이스 폰트 bytes를 메모리에 미리 적재(Dev B2): 첫 요청 디스크 I/O 제거.
+        # 가용한 폰트만 워밍(미준비 폰트는 첫 사용 시 다시 시도).
+        warm_paths = []
+        if font_loader.font_is_available():
+            warm_paths.append(font_loader.FONT_PATH.as_posix())
+        if font_loader.hangul_font_is_available():
+            warm_paths.append(font_loader.HANGUL_FONT_PATH.as_posix())
+        if warm_paths:
+            await loop.run_in_executor(None, lambda: generator.warm_font_cache(*warm_paths))
     except Exception:
         logger.exception("startup: 기본 폰트 로드 중 예외")
     yield
@@ -122,15 +131,15 @@ class GenerateRequest(BaseModel):
     params: FontParamsModel
     # 대상 문자체계(기본 latin). 잘못된 값이면 422.
     script: Literal["latin", "hangul"] = "latin"
-    # 출력 포맷(기본 woff). 잘못된 값이면 422.
-    format: Literal["woff", "ttf"] = "woff"
+    # 출력 포맷(기본 woff). 계약 FULL_FORMATS와 동일. 잘못된 값이면 422.
+    format: Literal["woff", "woff2", "ttf", "otf"] = "woff"
     # 선택: 변형 방식에서는 미사용. 크기 가드는 둔다(엔드포인트에서 413).
     imagePng: Optional[str] = None
 
 
 class GenerateResponse(BaseModel):
     fontBase64: str
-    format: Literal["woff", "ttf"]
+    format: Literal["woff", "woff2", "ttf", "otf"]
     script: Literal["latin", "hangul"]
     fontFamily: str
     generatedBy: Literal["baseFontVariation"]

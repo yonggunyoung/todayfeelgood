@@ -1,0 +1,28 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  align-items: stretch;
+}
+
+.btn {
+  width: 100%;
+}
+
+.ok {
+  font-size: var(--text-caption);
+  color: var(--accent, #c0492b);
+  font-weight: 600;
+}
+
+.warn {
+  font-size: var(--text-caption);
+  color: #b4231a;
+  line-height: 1.45;
+}
+
+.note {
+  font-size: var(--text-caption);
+  color: var(--ink-faint);
+  line-height: 1.45;
+}

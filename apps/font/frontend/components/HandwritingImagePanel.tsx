@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button, Mascot, Segmented, sanitizeColor } from "@webapp/ui";
+import { DEFAULT_REFINE, type DrawnGlyph, type RefineParams } from "@webapp/core";
 import {
   BG_OPTIONS,
   MEME_TEMPLATES,
@@ -9,6 +10,8 @@ import {
   type Align,
   type BgKind,
 } from "../lib/imageTemplates";
+import type { SharePayload } from "../lib/shareCodec";
+import ShareButton from "./ShareButton";
 import styles from "./HandwritingImagePanel.module.css";
 
 interface Props {
@@ -17,6 +20,10 @@ interface Props {
   fontFamily?: string;
   /** 내가 그린(=폰트가 커버하는) 문자 집합(소문자 기준) */
   drawnChars: string[];
+  /** 그린 글자의 획(공유 링크 인코딩용). 없으면 공유 버튼 비활성. */
+  glyphs?: DrawnGlyph[];
+  /** 다듬기 파라미터(공유 링크 인코딩용). */
+  refine?: RefineParams;
 }
 
 function base64ToArrayBuffer(b64: string): ArrayBuffer {
@@ -67,6 +74,8 @@ export default function HandwritingImagePanel({
   fontBase64,
   fontFamily,
   drawnChars,
+  glyphs = [],
+  refine = DEFAULT_REFINE,
 }: Props) {
   const [phrase, setPhrase] = useState("hello");
   const [sizeId, setSizeId] = useState(SIZE_PRESETS[0]!.id);
@@ -260,6 +269,30 @@ export default function HandwritingImagePanel({
 
   const disabled = !activeFamily || !fontReady;
 
+  // 공유 페이로드: 문구에 실제로 쓰이는 글자의 획만 담아 URL을 가볍게.
+  const buildSharePayload = useCallback((): SharePayload | null => {
+    const usedChars = new Set(
+      [...textToDraw].map((c) => c.toLowerCase()).filter((c) => /[a-z]/.test(c)),
+    );
+    const usedGlyphs = glyphs.filter((g) => usedChars.has(g.char.toLowerCase()));
+    if (usedGlyphs.length === 0) return null;
+    return {
+      script: "latin",
+      text: textToDraw,
+      refine,
+      style: {
+        bg,
+        template: template.id,
+        size: size.id,
+        align,
+        ink: safeInk,
+        bgColor: safeBg,
+        accent: safeAccent,
+      },
+      glyphs: usedGlyphs,
+    };
+  }, [textToDraw, glyphs, refine, bg, template.id, size.id, align, safeInk, safeBg, safeAccent]);
+
   return (
     <section className={styles.panel} aria-label="내 손글씨로 이미지 만들기">
       <header className={styles.head}>
@@ -424,6 +457,8 @@ export default function HandwritingImagePanel({
       >
         PNG로 내보내기{bg === "transparent" ? " (투명)" : ""}
       </Button>
+
+      <ShareButton buildPayload={buildSharePayload} disabled={disabled} />
 
       <p className={styles.honesty}>
         <Mascot mood="happy" size={18} still label="" />

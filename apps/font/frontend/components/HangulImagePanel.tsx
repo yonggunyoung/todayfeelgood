@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button, Mascot, Segmented, sanitizeColor } from "@webapp/ui";
 import {
   DEFAULT_REFINE,
@@ -18,6 +18,8 @@ import {
   type Align,
   type BgKind,
 } from "../lib/imageTemplates";
+import type { SharePayload } from "../lib/shareCodec";
+import ShareButton from "./ShareButton";
 import styles from "./HandwritingImagePanel.module.css";
 
 interface Props {
@@ -283,6 +285,29 @@ export default function HangulImagePanel({ jamo, drawnJamo, refine = DEFAULT_REF
 
   const ready = !!activeFamily && fontReady && !!textToDraw;
 
+  // 공유 페이로드: 합성 문구에 실제 필요한 기본 자모의 획만 담아 URL을 가볍게.
+  const buildSharePayload = useCallback((): SharePayload | null => {
+    if (!textToDraw) return null;
+    const needed = new Set(requiredJamo(textToDraw));
+    const usedJamo = jamo.filter((g) => needed.has(g.char));
+    if (usedJamo.length === 0) return null;
+    return {
+      script: "hangul",
+      text: textToDraw,
+      refine,
+      style: {
+        bg,
+        template: template.id,
+        size: size.id,
+        align,
+        ink: safeInk,
+        bgColor: safeBg,
+        accent: safeAccent,
+      },
+      glyphs: usedJamo,
+    };
+  }, [textToDraw, jamo, refine, bg, template.id, size.id, align, safeInk, safeBg, safeAccent]);
+
   return (
     <section className={styles.panel} aria-label="내 자모로 한글 문구 이미지 만들기">
       <header className={styles.head}>
@@ -450,6 +475,8 @@ export default function HangulImagePanel({ jamo, drawnJamo, refine = DEFAULT_REF
       >
         PNG로 내보내기{bg === "transparent" ? " (투명)" : ""}
       </Button>
+
+      <ShareButton buildPayload={buildSharePayload} disabled={!ready} />
 
       <p className={styles.honesty}>
         <Mascot mood="happy" size={18} still label="" />

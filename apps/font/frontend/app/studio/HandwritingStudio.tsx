@@ -406,6 +406,8 @@ export default function HandwritingStudio() {
                   fontBase64={previewFont}
                   fontFamily={fontFamily}
                   drawnChars={drawnChars}
+                  glyphs={glyphs}
+                  refine={refine}
                 />
 
                 {/* 폰트 파일 받기는 "고급/무한 재사용" 경로로 강등 (라틴 전용) */}

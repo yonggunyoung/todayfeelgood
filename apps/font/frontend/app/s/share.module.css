@@ -1,0 +1,107 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-5);
+  padding: var(--sp-7) 0 var(--sp-9);
+  max-width: 720px;
+}
+
+.head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--text-h1, 2rem);
+}
+
+.sub {
+  margin: 0;
+  color: var(--ink-soft, #6b6358);
+  line-height: 1.5;
+}
+
+.stage {
+  position: relative;
+  width: 100%;
+  border-radius: var(--r-lg, 18px);
+  overflow: hidden;
+  background: var(--surface, #fff);
+  box-shadow: var(--shadow-soft, 0 4px 24px rgba(0, 0, 0, 0.08));
+  min-height: 320px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 투명 배경 미리보기용 체커보드 */
+.checker {
+  background-image:
+    linear-gradient(45deg, #e9e2d8 25%, transparent 25%),
+    linear-gradient(-45deg, #e9e2d8 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #e9e2d8 75%),
+    linear-gradient(-45deg, transparent 75%, #e9e2d8 75%);
+  background-size: 24px 24px;
+  background-position: 0 0, 0 12px, 12px -12px, -12px 0;
+}
+
+.canvas {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.stageEmpty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-6);
+  text-align: center;
+  color: var(--ink-soft, #6b6358);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+  align-items: center;
+}
+
+.action {
+  flex: 1 1 auto;
+}
+
+.remix {
+  flex: 1 1 auto;
+  text-align: center;
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: var(--r-md, 14px);
+  border: 1.5px solid var(--accent, #c0492b);
+  color: var(--accent, #c0492b);
+  font-weight: 600;
+  text-decoration: none;
+  transition: background var(--dur-base, 0.18s) ease;
+}
+
+.remix:hover {
+  background: rgba(192, 73, 43, 0.08);
+}
+
+.honesty {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-2);
+  margin: 0;
+  font-size: var(--text-caption);
+  color: var(--ink-faint, #9a9085);
+  line-height: 1.45;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .remix {
+    transition: none;
+  }
+}

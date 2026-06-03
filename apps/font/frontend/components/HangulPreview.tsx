@@ -12,6 +12,7 @@ import {
 } from "@webapp/core";
 import { apiPath } from "../lib/paths";
 import { requiredJamo } from "../lib/hangul";
+import type { Dictionary } from "../lib/i18n";
 import styles from "./HandwritingPreview.module.css";
 
 interface Props {
@@ -23,6 +24,7 @@ interface Props {
   refine?: RefineParams;
   /** 안 그린 자모를 내 스타일로 자동 채움(엔진 병행 — 미지원이면 무시). */
   autofill?: boolean;
+  t: Dictionary["studio"]["hangulPreview"];
 }
 
 const DEBOUNCE_MS = 800;
@@ -43,7 +45,7 @@ function base64ToArrayBuffer(b64: string): ArrayBuffer {
  * 그린 자모로 완성 가능한 한글 견본 단어만 골라, 엔진에서 조합 합성한 폰트로 렌더한다.
  * 24 자모 칸 표시: 그린 자모는 진하게, 안 그린 자모는 흐리게(시스템 폰트 폴백).
  */
-export default function HangulPreview({ jamo, drawnJamo, refine = DEFAULT_REFINE, autofill = false }: Props) {
+export default function HangulPreview({ jamo, drawnJamo, refine = DEFAULT_REFINE, autofill = false, t }: Props) {
   const drawnSet = new Set(drawnJamo);
 
   // 그린 자모로 완성 가능한 견본 단어만(폴백 글자 노출 방지).
@@ -143,11 +145,11 @@ export default function HangulPreview({ jamo, drawnJamo, refine = DEFAULT_REFINE
   const hasDrawn = drawnJamo.length > 0;
 
   return (
-    <div className={styles.preview} aria-label="내 자모 한글 견본">
+    <div className={styles.preview} aria-label={t.ariaLabel}>
       <div className={styles.tab}>
-        <span className={styles.tabName}>내 자모 한글 견본</span>
+        <span className={styles.tabName}>{t.tabName}</span>
         <span className={`${styles.dot} ${activeFamily ? styles.live : ""}`}>
-          {loading ? "조합 중" : activeFamily ? "라이브" : "대기"}
+          {loading ? t.composing : activeFamily ? t.live : t.idle}
         </span>
       </div>
 
@@ -175,22 +177,20 @@ export default function HangulPreview({ jamo, drawnJamo, refine = DEFAULT_REFINE
             </div>
           ) : (
             <p className={styles.fewNote}>
-              {loading
-                ? "그린 자모로 음절을 조합하는 중… 너굴."
-                : "조금 더 그리면 음절이 만들어져요. (예: ㅇ·ㅏ·ㄴ·ㄴ·ㅕ·ㅇ → 안녕)"}
+              {loading ? t.composingNote : t.fewNote}
             </p>
           )}
         </div>
       ) : (
         <div className={styles.empty}>
           <Mascot mood="sleepy" size={88} />
-          <p className={styles.emptyText}>왼쪽 칸에 기본 자모를 그려 봐 너굴.</p>
+          <p className={styles.emptyText}>{t.emptyIdle}</p>
         </div>
       )}
 
       <p className={styles.honesty}>
         <Mascot mood="happy" size={20} still label="" />
-        기본 자모를 그려 음절을 조합한 글씨예요(조합 티가 있을 수 있어요).
+        {t.honesty}
       </p>
     </div>
   );

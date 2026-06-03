@@ -4,6 +4,7 @@ import { useState } from "react";
 import { type GlyphStroke } from "@webapp/core";
 import GlyphCanvas from "./GlyphCanvas";
 import GlyphZoomModal from "./GlyphZoomModal";
+import type { Dictionary } from "../lib/i18n";
 import styles from "./GlyphCell.module.css";
 
 interface Props {
@@ -22,6 +23,9 @@ interface Props {
   script?: "latin" | "hangul";
   /** 라벨 접근성 표현(예: "기역", "아"). 없으면 char 그대로. */
   labelName?: string;
+  /** 셀/확대 모달 사전. */
+  t: Dictionary["studio"]["cell"];
+  zoomT: Dictionary["studio"]["zoom"];
 }
 
 /**
@@ -37,6 +41,8 @@ export default function GlyphCell({
   disabled,
   script = "latin",
   labelName,
+  t,
+  zoomT,
 }: Props) {
   const [zoom, setZoom] = useState(false);
   const filled = strokes.length > 0;
@@ -55,8 +61,8 @@ export default function GlyphCell({
         className={styles.zoomBtn}
         disabled={disabled}
         onClick={() => setZoom(true)}
-        aria-label={`'${name}' 칸 크게 그리기`}
-        title="크게 그리기"
+        aria-label={t.zoomLabel.replace("{name}", name)}
+        title={t.zoomTitle}
       >
         ⤢
       </button>
@@ -68,6 +74,8 @@ export default function GlyphCell({
         script={script}
         labelName={labelName}
         className={styles.canvas}
+        ariaFilled={t.drawAriaFilled}
+        ariaEmpty={t.drawAriaEmpty}
       />
       <div className={styles.cellActions}>
         <button
@@ -75,18 +83,18 @@ export default function GlyphCell({
           className={styles.cellBtn}
           disabled={disabled || strokes.length === 0}
           onClick={() => onChange(char, strokes.slice(0, -1))}
-          aria-label={`'${name}' 마지막 획 되돌리기`}
+          aria-label={t.undoLabel.replace("{name}", name)}
         >
-          되돌리기
+          {t.undo}
         </button>
         <button
           type="button"
           className={styles.cellBtn}
           disabled={disabled || strokes.length === 0}
           onClick={() => onChange(char, [])}
-          aria-label={`'${name}' 칸 지우기`}
+          aria-label={t.clearLabel.replace("{name}", name)}
         >
-          지우기
+          {t.clear}
         </button>
       </div>
 
@@ -98,6 +106,8 @@ export default function GlyphCell({
           strokes={strokes}
           onChange={(s) => onChange(char, s)}
           onClose={() => setZoom(false)}
+          t={zoomT}
+          cellT={t}
         />
       )}
     </div>

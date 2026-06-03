@@ -20,6 +20,7 @@ import {
 } from "../lib/imageTemplates";
 import type { SharePayload } from "../lib/shareCodec";
 import ShareButton from "./ShareButton";
+import type { Dictionary } from "../lib/i18n";
 import styles from "./HandwritingImagePanel.module.css";
 
 interface Props {
@@ -31,6 +32,8 @@ interface Props {
   refine?: RefineParams;
   /** 안 그린 자모를 내 스타일로 자동 채움(엔진 병행 — 미지원이면 무시). */
   autofill?: boolean;
+  /** 스튜디오 사전. */
+  t: Dictionary["studio"];
 }
 
 // 문구가 바뀐 뒤 엔진 합성까지 디바운스(ms). 문구 타이핑이 잦으므로 넉넉히.
@@ -67,7 +70,11 @@ function paintPaper(ctx: CanvasRenderingContext2D, W: number, H: number, base: s
  * 엔진 `/api/hangul-compose`에 그린 자모 + text를 보내 합성 폰트를 받아 렌더한다.
  * 안 그린 필요 자모를 안내해 "적은 입력 → 결과"를 유도한다. 색은 sanitizeColor로 살균.
  */
-export default function HangulImagePanel({ jamo, drawnJamo, refine = DEFAULT_REFINE, autofill = false }: Props) {
+export default function HangulImagePanel({ jamo, drawnJamo, refine = DEFAULT_REFINE, autofill = false, t }: Props) {
+  const o = t.imgOptions;
+  const tplLabel = (id: string) => (t.templates as Record<string, string>)[id] ?? id;
+  const sizeLabel = (id: string) => (t.sizes as Record<string, string>)[id] ?? id;
+  const bgLabel = (id: string) => (t.bgKinds as Record<string, string>)[id] ?? id;
   const [phrase, setPhrase] = useState("안녕");
   const [sizeId, setSizeId] = useState(SIZE_PRESETS[0]!.id);
   const [templateId, setTemplateId] = useState(MEME_TEMPLATES[0]!.id);
@@ -156,7 +163,7 @@ export default function HangulImagePanel({ jamo, drawnJamo, refine = DEFAULT_REF
         })
         .catch((err: unknown) => {
           if (myId !== reqIdRef.current) return;
-          setError(err instanceof Error ? err.message : "글씨 합성 중 오류가 발생했습니다.");
+          setError(err instanceof Error ? err.message : t.hangulImage.composeError);
           setFontBase64(null);
         })
         .finally(() => {
@@ -166,7 +173,7 @@ export default function HangulImagePanel({ jamo, drawnJamo, refine = DEFAULT_REF
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [jamo, textToDraw, refine, autofill]);
+  }, [jamo, textToDraw, refine, autofill, t.hangulImage.composeError]);
 
   // 받은 폰트를 FontFace로 등록.
   useEffect(() => {
@@ -312,18 +319,15 @@ export default function HangulImagePanel({ jamo, drawnJamo, refine = DEFAULT_REF
   }, [textToDraw, jamo, refine, bg, template.id, size.id, align, safeInk, safeBg, safeAccent]);
 
   return (
-    <section className={styles.panel} aria-label="내 자모로 한글 문구 이미지 만들기">
+    <section className={styles.panel} aria-label={t.hangulImage.ariaLabel}>
       <header className={styles.head}>
-        <h2 className={styles.title}>내 자모로 한글 문구 이미지 만들기</h2>
-        <p className={styles.sub}>
-          그린 기본 자모로 문구의 음절을 조합해 이미지를 만들어요. 카톡·인스타에 바로
-          붙여 넣을 수 있어요. (조합이라 글자마다 티가 조금 날 수 있어요.)
-        </p>
+        <h2 className={styles.title}>{t.hangulImage.title}</h2>
+        <p className={styles.sub}>{t.hangulImage.sub}</p>
       </header>
 
       <div className={styles.field}>
         <label className={styles.label} htmlFor="hangul-phrase">
-          문구
+          {t.hangulImage.phraseLabel}
         </label>
         <textarea
           id="hangul-phrase"
@@ -331,21 +335,20 @@ export default function HangulImagePanel({ jamo, drawnJamo, refine = DEFAULT_REF
           value={phrase}
           onChange={(e) => setPhrase(e.target.value)}
           rows={2}
-          placeholder="쓰고 싶은 한글을 적어요 (예: 오늘도 좋은 하루)"
+          placeholder={t.hangulImage.phrasePlaceholder}
           spellCheck={false}
         />
         {missingJamo.length > 0 ? (
           <p className={styles.missing} aria-live="polite">
             <Mascot mood="focused" size={18} still label="" />
             <span>
-              <strong>{missingJamo.join(" · ")}</strong> 자모를 더 그리면 완성돼요. 못
-              만든 음절은 이미지에서 빠져요.
+              <strong>{missingJamo.join(" · ")}</strong> {t.hangulImage.missingPre}
             </span>
           </p>
         ) : (
           <p className={styles.ok} aria-live="polite">
             <Mascot mood="love" size={18} still label="" />
-            <span>필요한 자모가 다 준비됐어요. 기본 자모만으로 충분해요 너굴.</span>
+            <span>{t.hangulImage.ok}</span>
           </p>
         )}
       </div>
@@ -356,17 +359,17 @@ export default function HangulImagePanel({ jamo, drawnJamo, refine = DEFAULT_REF
             ref={canvasRef}
             className={styles.canvas}
             role="img"
-            aria-label={`한글 손글씨 이미지 미리보기: ${textToDraw}`}
+            aria-label={t.hangulImage.previewAria.replace("{text}", textToDraw)}
           />
         ) : (
           <div className={styles.stageEmpty}>
             <Mascot mood={loading ? "focused" : "sleepy"} size={72} />
             <p>
               {loading
-                ? "그린 자모로 음절을 조합하는 중… 너굴."
+                ? t.hangulImage.composing
                 : error
                   ? error
-                  : "왼쪽에서 자모를 그리고 문구를 적으면, 여기서 이미지로 만들 수 있어요."}
+                  : t.hangulImage.stageEmpty}
             </p>
           </div>
         )}
@@ -374,8 +377,8 @@ export default function HangulImagePanel({ jamo, drawnJamo, refine = DEFAULT_REF
 
       <div className={styles.options}>
         <div className={styles.optRow}>
-          <span className={styles.optLabel}>크기</span>
-          <div className={styles.chips} role="group" aria-label="이미지 크기 프리셋">
+          <span className={styles.optLabel}>{o.size}</span>
+          <div className={styles.chips} role="group" aria-label={o.sizeAria}>
             {SIZE_PRESETS.map((s) => (
               <button
                 key={s.id}
@@ -386,84 +389,84 @@ export default function HangulImagePanel({ jamo, drawnJamo, refine = DEFAULT_REF
                 title={s.hint}
                 onClick={() => setSizeId(s.id)}
               >
-                {s.label}
+                {sizeLabel(s.id)}
               </button>
             ))}
           </div>
         </div>
 
         <div className={styles.optRow}>
-          <span className={styles.optLabel}>템플릿</span>
-          <div className={styles.chips} role="group" aria-label="짤·스티커 템플릿">
-            {MEME_TEMPLATES.map((t) => (
+          <span className={styles.optLabel}>{o.template}</span>
+          <div className={styles.chips} role="group" aria-label={o.templateAria}>
+            {MEME_TEMPLATES.map((tpl) => (
               <button
-                key={t.id}
+                key={tpl.id}
                 type="button"
                 className={styles.chip}
-                aria-pressed={templateId === t.id}
-                data-on={templateId === t.id}
-                title={t.hint}
-                onClick={() => setTemplateId(t.id)}
+                aria-pressed={templateId === tpl.id}
+                data-on={templateId === tpl.id}
+                title={tpl.hint}
+                onClick={() => setTemplateId(tpl.id)}
               >
-                {t.label}
+                {tplLabel(tpl.id)}
               </button>
             ))}
           </div>
         </div>
 
         <div className={styles.optRow}>
-          <span className={styles.optLabel}>배경</span>
+          <span className={styles.optLabel}>{o.bg}</span>
           <Segmented<BgKind>
-            ariaLabel="배경 종류"
+            ariaLabel={o.bgAria}
             value={bg}
             onChange={setBg}
-            options={BG_OPTIONS.map((b) => ({ value: b.id, label: b.label }))}
+            options={BG_OPTIONS.map((b) => ({ value: b.id, label: bgLabel(b.id) }))}
           />
         </div>
 
         <div className={styles.optRow}>
-          <span className={styles.optLabel}>정렬</span>
+          <span className={styles.optLabel}>{o.align}</span>
           <Segmented<Align>
-            ariaLabel="문구 정렬"
+            ariaLabel={o.alignAria}
             value={align}
             onChange={setAlign}
             options={[
-              { value: "left", label: "왼쪽" },
-              { value: "center", label: "가운데" },
-              { value: "right", label: "오른쪽" },
+              { value: "left", label: o.alignLeft },
+              { value: "center", label: o.alignCenter },
+              { value: "right", label: o.alignRight },
             ]}
           />
         </div>
 
         <div className={styles.colorRow}>
           <label className={styles.colorField}>
-            <span>글자색</span>
+            <span>{o.ink}</span>
             <input
               type="color"
               value={safeInk.length === 7 ? safeInk : "#2b2a33"}
               onChange={(e) => setInkInput(e.target.value)}
-              aria-label="글자색"
+              aria-label={o.ink}
             />
           </label>
           {bg !== "transparent" && (
             <label className={styles.colorField}>
-              <span>배경색</span>
+              <span>{o.bgColor}</span>
               <input
                 type="color"
                 value={safeBg.length === 7 ? safeBg : "#fef3e2"}
                 onChange={(e) => setBgInput(e.target.value)}
-                aria-label="배경색"
+                aria-label={o.bgColor}
               />
             </label>
           )}
           {template.id !== "plain" && (
             <label className={styles.colorField}>
-              <span>장식색</span>
+              <span>{o.accent}</span>
               <input
                 type="color"
                 value={safeAccent.length === 7 ? safeAccent : "#ffd66b"}
                 onChange={(e) => setAccentInput(e.target.value)}
-                aria-label="장식색"
+                aria-label={o.accent}
               />
             </label>
           )}
@@ -476,15 +479,14 @@ export default function HangulImagePanel({ jamo, drawnJamo, refine = DEFAULT_REF
         disabled={!ready}
         className={styles.exportBtn}
       >
-        PNG로 내보내기{bg === "transparent" ? " (투명)" : ""}
+        {o.exportPng}{bg === "transparent" ? o.exportTransparent : ""}
       </Button>
 
-      <ShareButton buildPayload={buildSharePayload} disabled={!ready} />
+      <ShareButton buildPayload={buildSharePayload} disabled={!ready} t={t.share} />
 
       <p className={styles.honesty}>
         <Mascot mood="happy" size={18} still label="" />
-        기본 자모를 그려 음절을 조합한 글씨예요(조합 티가 있을 수 있어요). 색지결은
-        이미지 전용 효과(폰트 파일엔 안 들어가요).
+        {t.hangulImage.honesty}
       </p>
     </section>
   );

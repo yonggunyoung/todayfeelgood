@@ -24,9 +24,19 @@ export function landingRoute(locale: Locale): string {
   return locale === "ko" ? "/" : `/${locale}`;
 }
 
-/** 스튜디오 내부 라우트(basePath 제외). 랜딩 CTA 연결용. */
-export function studioRoute(): string {
-  return "/studio";
+/** 스튜디오 내부 라우트(basePath 제외). 랜딩 CTA 연결용. ko=`/studio`, en=`/en/studio`. */
+export function studioRoute(locale: Locale = "ko"): string {
+  return locale === "ko" ? "/studio" : `/${locale}/studio`;
+}
+
+/** 스튜디오 SEO 절대경로(basePath /font 포함). canonical/alternates용. */
+export function studioPath(locale: Locale): string {
+  return locale === "ko" ? "/font/studio" : `/font/${locale}/studio`;
+}
+
+/** 스튜디오 hreflang alternates 맵(ko↔en, basePath 포함). */
+export function studioAlternates(): Record<Locale, string> {
+  return { ko: studioPath("ko"), en: studioPath("en") };
 }
 
 /** SEO 절대경로(basePath /font 포함). canonical/sitemap/hreflang에 사용. */

@@ -7,6 +7,7 @@ import {
   useRef,
   forwardRef,
 } from "react";
+import type { Dictionary } from "../lib/i18n";
 import styles from "./DrawingCanvas.module.css";
 
 export interface DrawingCanvasHandle {
@@ -18,6 +19,7 @@ export interface DrawingCanvasHandle {
 interface Props {
   width?: number;
   height?: number;
+  t: Dictionary["studio"]["sketch"];
 }
 
 /**
@@ -26,7 +28,7 @@ interface Props {
  * PNG는 상위에서 요청에 선택적으로 실어 보낸다.
  */
 const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCanvas(
-  { width = 600, height = 240 },
+  { width = 600, height = 240, t },
   ref
 ) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -121,7 +123,7 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
         height={height}
         className={styles.canvas}
         role="img"
-        aria-label="손글씨 스케치 영역(마우스·터치 전용, 키보드 미지원). 이 그림은 폰트에 반영되지 않습니다."
+        aria-label={t.canvasAria}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={endStroke}
@@ -129,11 +131,9 @@ const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(function DrawingCan
         onPointerCancel={endStroke}
       />
       <div className={styles.toolbar}>
-        <span className={styles.hint}>
-          손풀기용 스케치입니다. 지금은 폰트에 반영되지 않습니다(손글씨 반영은 다음 단계).
-        </span>
+        <span className={styles.hint}>{t.hint}</span>
         <button type="button" onClick={clear} className={styles.clearBtn}>
-          지우기
+          {t.clear}
         </button>
       </div>
     </div>

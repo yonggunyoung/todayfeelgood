@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@webapp/ui";
 import { type GlyphStroke } from "@webapp/core";
 import GlyphCanvas from "./GlyphCanvas";
+import type { Dictionary } from "../lib/i18n";
 import styles from "./GlyphZoomModal.module.css";
 
 interface Props {
@@ -14,6 +15,9 @@ interface Props {
   strokes: GlyphStroke[];
   onChange: (strokes: GlyphStroke[]) => void;
   onClose: () => void;
+  /** 확대 모달 사전 + 셀 그리기 칸 aria 사전. */
+  t: Dictionary["studio"]["zoom"];
+  cellT: Dictionary["studio"]["cell"];
 }
 
 /**
@@ -29,6 +33,8 @@ export default function GlyphZoomModal({
   strokes,
   onChange,
   onClose,
+  t,
+  cellT,
 }: Props) {
   // 모달은 자체 로컬 상태로 편집하고, 변경 시마다 부모로 올린다(셀과 동기).
   const [local, setLocal] = useState<GlyphStroke[]>(strokes);
@@ -73,7 +79,7 @@ export default function GlyphZoomModal({
         className={styles.dialog}
         role="dialog"
         aria-modal="true"
-        aria-label={`'${name}' 크게 그리기`}
+        aria-label={t.dialogLabel.replace("{name}", name)}
         tabIndex={-1}
       >
         <header className={styles.head}>
@@ -81,22 +87,20 @@ export default function GlyphZoomModal({
             <span className={styles.bigChar} aria-hidden>
               {char}
             </span>
-            <span className={styles.titleText}>크게 그리기</span>
+            <span className={styles.titleText}>{t.title}</span>
           </h2>
           <button
             type="button"
             className={styles.closeBtn}
             onClick={onClose}
-            aria-label="닫기"
+            aria-label={t.close}
           >
             ✕
           </button>
         </header>
 
         <p className={styles.hint}>
-          {script === "hangul"
-            ? "중앙 십자선에 맞춰 균형 있게. 손가락으로도 천천히 정밀하게 그려요."
-            : "가이드선(어센더·x높이·베이스라인)에 맞춰 천천히. 손가락으로도 정밀하게 그려요."}
+          {script === "hangul" ? t.hintHangul : t.hintLatin}
         </p>
 
         <div className={styles.stage} data-script={script}>
@@ -108,6 +112,8 @@ export default function GlyphZoomModal({
             labelName={labelName}
             resolution={script === "hangul" ? 560 : 520}
             className={styles.canvas}
+            ariaFilled={cellT.drawAriaFilled}
+            ariaEmpty={cellT.drawAriaEmpty}
           />
         </div>
 
@@ -118,7 +124,7 @@ export default function GlyphZoomModal({
             disabled={local.length === 0}
             onClick={() => apply(local.slice(0, -1))}
           >
-            되돌리기
+            {t.undo}
           </button>
           <button
             type="button"
@@ -126,10 +132,10 @@ export default function GlyphZoomModal({
             disabled={local.length === 0}
             onClick={() => apply([])}
           >
-            지우기
+            {t.clear}
           </button>
           <Button variant="clay" className={styles.doneBtn} onClick={onClose}>
-            완료
+            {t.done}
           </Button>
         </div>
       </div>

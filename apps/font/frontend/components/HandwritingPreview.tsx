@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Mascot } from "@webapp/ui";
+import type { Dictionary } from "../lib/i18n";
 import styles from "./HandwritingPreview.module.css";
 
 interface Props {
@@ -18,6 +19,7 @@ interface Props {
   loading?: boolean;
   /** 엔진 응답의 출처 라벨(정직성). 보통 "handwriting" */
   generatedBy?: string;
+  t: Dictionary["studio"]["hwPreview"];
 }
 
 function base64ToArrayBuffer(b64: string): ArrayBuffer {
@@ -43,6 +45,7 @@ export default function HandwritingPreview({
   autofill = false,
   loading,
   generatedBy = "handwriting",
+  t,
 }: Props) {
   const [activeFamily, setActiveFamily] = useState<string | null>(null);
   const seqRef = useRef(0);
@@ -101,11 +104,11 @@ export default function HandwritingPreview({
   const alphabet = "abcdefghijklmnopqrstuvwxyz".split("");
 
   return (
-    <div className={styles.preview} aria-label="내 손글씨 견본">
+    <div className={styles.preview} aria-label={t.ariaLabel}>
       <div className={styles.tab}>
-        <span className={styles.tabName}>내 손글씨 견본</span>
+        <span className={styles.tabName}>{t.tabName}</span>
         <span className={`${styles.dot} ${activeFamily ? styles.live : ""}`}>
-          {loading ? "굽는 중" : activeFamily ? "라이브" : "대기"}
+          {loading ? t.baking : activeFamily ? t.live : t.idle}
         </span>
       </div>
 
@@ -123,18 +126,14 @@ export default function HandwritingPreview({
                     isDrawn ? styles.inkChar : isFilled ? styles.filledChar : styles.dimChar
                   }
                   style={isDrawn || isFilled ? fontStyle : undefined}
-                  title={isFilled ? "자동 채움(내 글씨 아님)" : undefined}
+                  title={isFilled ? t.filledTitle : undefined}
                 >
                   {ch}
                 </span>
               );
             })}
           </p>
-          {hasFilled && (
-            <p className={styles.fillNote}>
-              점선 글자는 <strong>자동 채움</strong>이에요(내 글씨 아님).
-            </p>
-          )}
+          {hasFilled && <p className={styles.fillNote}>{t.fillNote}</p>}
 
           {/* 그린 글자만으로 만들 수 있는 예문 */}
           {renderableWords.length > 0 ? (
@@ -146,16 +145,14 @@ export default function HandwritingPreview({
               ))}
             </div>
           ) : (
-            <p className={styles.fewNote}>
-              조금 더 그리면 내 글씨로 단어가 만들어져요. (예: h·e·l·l·o)
-            </p>
+            <p className={styles.fewNote}>{t.fewNote}</p>
           )}
         </div>
       ) : (
         <div className={styles.empty}>
           <Mascot mood={loading ? "focused" : "sleepy"} size={88} />
           <p className={styles.emptyText}>
-            {loading ? "네 글씨를 굽는 중… 너굴." : "왼쪽 칸에 글자를 그려 봐 너굴."}
+            {loading ? t.emptyLoading : t.emptyIdle}
           </p>
         </div>
       )}
@@ -163,12 +160,12 @@ export default function HandwritingPreview({
       <p className={styles.honesty}>
         <Mascot mood="happy" size={20} still label="" />
         {hasFilled
-          ? "진짜 내가 그린 글씨 + 안 그린 글자는 내 스타일로 자동 채웠어요(자동 채운 글자는 내 글씨 아님)."
+          ? t.honestyFilled
           : autofill
-            ? "자동 채우기를 켰어요. 글자를 그리면 안 그린 글자는 내 스타일로 채워 드려요."
+            ? t.honestyAutofill
             : generatedBy === "handwriting"
-              ? "진짜 내가 그린 글씨로 만든 폰트예요."
-              : "내가 그린 획에서 만든 폰트예요."}
+              ? t.honestyHand
+              : t.honestyStrokes}
       </p>
     </div>
   );

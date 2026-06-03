@@ -8,6 +8,7 @@ import {
   encodeShare,
   type SharePayload,
 } from "../lib/shareCodec";
+import type { Dictionary } from "../lib/i18n";
 import styles from "./ShareButton.module.css";
 
 interface Props {
@@ -15,6 +16,7 @@ interface Props {
   buildPayload: () => SharePayload | null;
   /** 비활성(폰트 미생성/문구 없음 등). */
   disabled?: boolean;
+  t: Dictionary["studio"]["share"];
 }
 
 type State =
@@ -28,7 +30,7 @@ type State =
  * 현재 상태 → encodeShare → `/font/s?d=<코드>` URL을 클립보드 복사 + 토스트.
  * 코드가 너무 크면(>SHARE_MAX_CODE_LEN) "문구/글자 수를 줄이세요"로 정직하게 안내한다(저장소 0).
  */
-export default function ShareButton({ buildPayload, disabled }: Props) {
+export default function ShareButton({ buildPayload, disabled, t }: Props) {
   const [state, setState] = useState<State>({ kind: "idle" });
 
   const onClick = useCallback(async () => {
@@ -87,25 +89,25 @@ export default function ShareButton({ buildPayload, disabled }: Props) {
         disabled={disabled}
         className={styles.btn}
       >
-        공유 링크 복사
+        {t.copy}
       </Button>
       {state.kind === "ok" && (
         <span className={styles.ok} role="status" aria-live="polite">
-          링크 복사됐다 너굴.
+          {t.ok}
         </span>
       )}
       {state.kind === "toobig" && (
         <span className={styles.warn} role="alert">
-          문구가 너무 길어요. 문구를 줄이거나 글자 수를 줄여 주세요.
+          {t.tooBig}
         </span>
       )}
       {state.kind === "error" && (
         <span className={styles.warn} role="alert">
-          복사하지 못했어요. 다시 시도해 주세요.
+          {t.error}
         </span>
       )}
       <span className={styles.note}>
-        링크 하나로 공유 — 받는 사람은 설치 없이 바로 봐요. (URL 한도 {Math.round(SHARE_MAX_CODE_LEN / 1000)}KB)
+        {t.note.replace("{kb}", String(Math.round(SHARE_MAX_CODE_LEN / 1000)))}
       </span>
     </div>
   );

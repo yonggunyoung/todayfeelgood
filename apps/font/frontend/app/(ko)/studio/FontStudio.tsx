@@ -27,6 +27,7 @@ import ParameterPanel from "../../../components/ParameterPanel";
 import FontPreview from "../../../components/FontPreview";
 import VariationGallery from "../../../components/VariationGallery";
 import PreviewStylePanel from "../../../components/PreviewStylePanel";
+import type { Dictionary } from "../../../lib/i18n";
 import styles from "./FontStudio.module.css";
 
 // 슬라이더 조작 후 프리뷰 호출까지의 디바운스(ms)
@@ -84,7 +85,14 @@ function matchPreset(
  * 흐름: script/슬라이더 → 디바운스 → /api/generate(format:"woff", imagePng 미전송) → fontBase64 → 프리뷰.
  * 다운로드: 선택 포맷으로 1회 요청 → fontBase64 디코드 → 브라우저 저장(앱 내 완결).
  */
-export default function FontStudio({ embedded = false }: { embedded?: boolean } = {}) {
+export default function FontStudio({
+  embedded = false,
+  t,
+}: {
+  embedded?: boolean;
+  t: Dictionary["studio"];
+}) {
+  const s = t.sample;
   const [params, setParams] = useState<FontParams>(DEFAULT_PARAMS);
   const [script, setScript] = useState<FontScript>("latin");
   const [previewFont, setPreviewFont] = useState<string | null>(null);
@@ -130,7 +138,7 @@ export default function FontStudio({ embedded = false }: { embedded?: boolean } 
           const data = (await res.json().catch(() => null)) as
             | { error?: string }
             | null;
-          throw new Error(data?.error || `요청 실패 (${res.status})`);
+          throw new Error(data?.error || `${t.status.reqFail} (${res.status})`);
         }
 
         const data = (await res.json()) as GenerateResponse;
@@ -140,13 +148,13 @@ export default function FontStudio({ embedded = false }: { embedded?: boolean } 
       } catch (err) {
         if (myId !== reqIdRef.current) return;
         setError(
-          err instanceof Error ? err.message : "폰트 생성 중 오류가 발생했습니다."
+          err instanceof Error ? err.message : t.status.genError
         );
       } finally {
         if (myId === reqIdRef.current) setLoading(false);
       }
     },
-    []
+    [t.status.reqFail, t.status.genError]
   );
 
   // params/script 변경 시 디바운스 후 프리뷰 호출
@@ -195,7 +203,7 @@ export default function FontStudio({ embedded = false }: { embedded?: boolean } 
         const data = (await res.json().catch(() => null)) as
           | { error?: string }
           | null;
-        throw new Error(data?.error || `요청 실패 (${res.status})`);
+        throw new Error(data?.error || `${t.status.reqFail} (${res.status})`);
       }
       const data = (await res.json()) as GenerateResponse;
       const meta = FONT_FORMATS[data.format] ?? FONT_FORMATS[format];
@@ -213,12 +221,12 @@ export default function FontStudio({ embedded = false }: { embedded?: boolean } 
       window.setTimeout(() => setJustDownloaded(false), 3200);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "다운로드 중 오류가 발생했습니다."
+        err instanceof Error ? err.message : t.status.dlError
       );
     } finally {
       setDownloading(false);
     }
-  }, [params, script, format]);
+  }, [params, script, format, t.status.reqFail, t.status.dlError]);
 
   // 다운로드 파일명에 쓰는 짧은 식별 태그(PNG에도 동일하게 전달).
   const fileTag = useMemo(() => shortHash(params), [params]);
@@ -232,7 +240,7 @@ export default function FontStudio({ embedded = false }: { embedded?: boolean } 
       }
     >
       <Segmented<FontFormat>
-        ariaLabel="파일 형식"
+        ariaLabel={t.actions.formatAria}
         value={format}
         onChange={setFormat}
         options={[
@@ -247,7 +255,7 @@ export default function FontStudio({ embedded = false }: { embedded?: boolean } 
         disabled={downloading || loading}
         className={styles.downloadBtn}
       >
-        {downloading ? "내려받는 중…" : `${format.toUpperCase()}로 받기`}
+        {downloading ? t.actions.downloading : t.actions.download.replace("{fmt}", format.toUpperCase())}
       </Button>
     </div>
   );
@@ -257,22 +265,16 @@ export default function FontStudio({ embedded = false }: { embedded?: boolean } 
   return (
     <Root className={embedded ? styles.studioEmbedded : `container ${styles.studio}`}>
       {embedded ? (
-        <p className={styles.embeddedLead}>
-          기성 공개 가변폰트를 슬라이더로 변형하는 <strong>빠른 시작 샘플</strong>이에요.
-          진짜 내 글씨로 만들려면 위에서 “직접 그리기”를 골라 주세요.
-        </p>
+        <p className={styles.embeddedLead}>{s.embeddedLead}</p>
       ) : (
         <header className={styles.header}>
           <h1 className={`display ${styles.title}`}>
             <span className={styles.titleWord}>
-              글씨체를 빚는 작업대
+              {s.headTitle}
               <BrushUnderline className={styles.titleUnderline} />
             </span>
           </h1>
-          <p className={styles.lead}>
-            슬라이더를 움직이면 오른쪽 견본이 바로 표정을 바꿔요. 마음에 든 순간을
-            그대로 받아 가세요.
-          </p>
+          <p className={styles.lead}>{s.headLead}</p>
         </header>
       )}
 
@@ -282,25 +284,25 @@ export default function FontStudio({ embedded = false }: { embedded?: boolean } 
           {/* ── ① 빠른 시작 — 누르면 끝(프리셋·변주·문자체계). 강조 표면. ── */}
           <div className={`${styles.group} ${styles.quickStart}`}>
             <div className={styles.stageHead}>
-              <span className={styles.stageBadge}>빠른 시작</span>
-              <span className={styles.stageHint}>눌러서 분위기부터 골라요</span>
+              <span className={styles.stageBadge}>{s.quickStartBadge}</span>
+              <span className={styles.stageHint}>{s.quickStartHint}</span>
             </div>
 
             <div className={styles.subGroup}>
-              <h3 className={styles.groupHead}>문자체계</h3>
+              <h3 className={styles.groupHead}>{s.scriptHead}</h3>
               <Segmented<FontScript>
-                ariaLabel="문자체계 선택"
+                ariaLabel={s.scriptAria}
                 value={script}
                 onChange={setScript}
                 options={[
-                  { value: "latin", label: "라틴 Aa" },
-                  { value: "hangul", label: "한글 가" },
+                  { value: "latin", label: s.scriptLatin },
+                  { value: "hangul", label: s.scriptHangul },
                 ]}
               />
             </div>
 
             <div className={styles.subGroup}>
-              <h3 className={styles.groupHead}>무드 프리셋</h3>
+              <h3 className={styles.groupHead}>{s.moodHead}</h3>
               <div className={styles.chips}>
                 {STYLE_PRESETS.map((preset) => (
                   <Chip
@@ -317,7 +319,7 @@ export default function FontStudio({ embedded = false }: { embedded?: boolean } 
 
             <div className={styles.subGroup}>
               <h3 className={styles.groupHead}>
-                트렌드 <span className={styles.trendTag}>요즘</span>
+                {s.trendHead} <span className={styles.trendTag}>{s.trendTag}</span>
               </h3>
               <div className={styles.chips}>
                 {TREND_PRESETS.map((preset) => (
@@ -335,12 +337,13 @@ export default function FontStudio({ embedded = false }: { embedded?: boolean } 
             </div>
 
             <div className={styles.subGroup}>
-              <h3 className={styles.groupHead}>변주 갤러리</h3>
+              <h3 className={styles.groupHead}>{s.varyHead}</h3>
               <VariationGallery
                 base={params}
                 script={script}
                 onPick={onChangeParams}
                 disabled={downloading}
+                t={t.variation}
               />
             </div>
           </div>
@@ -348,8 +351,8 @@ export default function FontStudio({ embedded = false }: { embedded?: boolean } 
           {/* ── ② 세부 조절 — 슬라이더(기본 펼침). ── */}
           <details className={styles.group} open>
             <summary className={styles.accSummary}>
-              <span className={styles.accTitle}>세부 조절</span>
-              <span className={styles.accSub}>굵기·기울기·곡률을 손으로</span>
+              <span className={styles.accTitle}>{s.detailSummary}</span>
+              <span className={styles.accSub}>{s.detailSub}</span>
             </summary>
             <div className={styles.accBody}>
               <ParameterPanel
@@ -358,6 +361,7 @@ export default function FontStudio({ embedded = false }: { embedded?: boolean } 
                 script={script}
                 onRandomizeSeed={randomizeSeed}
                 disabled={loading || downloading}
+                t={t.params}
               />
             </div>
           </details>
@@ -365,31 +369,32 @@ export default function FontStudio({ embedded = false }: { embedded?: boolean } 
           {/* ── ③ 고급/실험 — 스케치(준비 중)·PNG 효과는 접어 둔다. ── */}
           <details className={styles.group}>
             <summary className={styles.accSummary}>
-              <span className={styles.accTitle}>이미지 효과 (PNG 전용)</span>
-              <span className={styles.accSub}>견본 이미지에만 적용 · 폰트엔 미반영</span>
+              <span className={styles.accTitle}>{s.imgEffectSummary}</span>
+              <span className={styles.accSub}>{s.imgEffectSub}</span>
             </summary>
             <div className={styles.accBody}>
               <PreviewStylePanel
                 value={previewStyle}
                 onChange={setPreviewStyle}
                 disabled={downloading}
+                t={t.previewStyle}
               />
             </div>
           </details>
 
           <details className={styles.group}>
             <summary className={styles.accSummary}>
-              <span className={styles.accTitle}>스케치</span>
-              <span className={styles.accSub}>미반영 · 준비 중</span>
+              <span className={styles.accTitle}>{s.sketchSummary}</span>
+              <span className={styles.accSub}>{s.sketchSub}</span>
             </summary>
             <div className={styles.accBody}>
-              <DrawingCanvas ref={canvasRef} />
+              <DrawingCanvas ref={canvasRef} t={t.sketch} />
             </div>
           </details>
 
           {/* 상태 줄 — 받기 액션은 sticky 컬럼/하단 바로 이동. 여기엔 갱신/오류만. */}
           <div className={styles.statusRow} aria-live="polite">
-            {loading && <span className={styles.status}>견본 갱신 중…</span>}
+            {loading && <span className={styles.status}>{s.statusUpdating}</span>}
             {error && (
               <span className={styles.error} role="alert">
                 {error}
@@ -407,17 +412,18 @@ export default function FontStudio({ embedded = false }: { embedded?: boolean } 
             loading={loading}
             previewStyle={previewStyle}
             fileTag={fileTag}
+            t={t.fontPreview}
           />
           {/* 데스크톱 전용: 프리뷰 바로 아래 받기 패널(sticky 안에 포함). */}
           <div className={styles.desktopActions}>
-            <h2 className={styles.actionsHead}>폰트 받아 가기</h2>
+            <h2 className={styles.actionsHead}>{s.actionsHead}</h2>
             {renderActions("panel")}
           </div>
         </section>
       </div>
 
       {/* 모바일 전용: 하단 고정 액션 바 — 받기·포맷이 한 손에 항상 도달. */}
-      <div className={styles.mobileActionBar} role="region" aria-label="폰트 받기">
+      <div className={styles.mobileActionBar} role="region" aria-label={t.actions.barAria}>
         {renderActions("bar")}
       </div>
 
@@ -425,15 +431,14 @@ export default function FontStudio({ embedded = false }: { embedded?: boolean } 
       {justDownloaded && (
         <div className={styles.toast} role="status" aria-live="polite">
           <Mascot mood="love" size={56} label="" />
-          <span>받았다 너굴.</span>
+          <span>{t.toast}</span>
         </div>
       )}
 
       {/* 정직성 라벨 — 무엇이 진짜 내 글씨인지 고지 */}
       <p className={styles.honesty}>
         <Mascot mood="happy" size={22} still label="" />
-        공개 폰트 변형 — 내가 그린 글씨가 아닙니다. 공개 가변폰트를 슬라이더로
-        다듬어 만든 결과예요.
+        {s.honesty}
       </p>
     </Root>
   );

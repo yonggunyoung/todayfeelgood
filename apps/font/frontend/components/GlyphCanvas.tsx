@@ -17,6 +17,9 @@ interface Props {
   /** 내부 캔버스 해상도(px). 큰 모달은 큰 값을 준다. */
   resolution?: number;
   className?: string;
+  /** 접근성 라벨 사전(셀 그리기 칸). {name} 치환. */
+  ariaFilled?: string;
+  ariaEmpty?: string;
 }
 
 // 같은 점 사이 최소 거리(정규화). 과샘플 솎기로 MAX_STROKE_POINTS_PER_GLYPH 보호.
@@ -46,6 +49,8 @@ export default function GlyphCanvas({
   labelName,
   resolution,
   className,
+  ariaFilled,
+  ariaEmpty,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const drawing = useRef(false);
@@ -175,6 +180,10 @@ export default function GlyphCanvas({
 
   const filled = strokes.length > 0;
   const name = labelName || char;
+  const ariaLabel = (filled
+    ? ariaFilled ?? "'{name}' 글자 그리기 칸 (그려짐)"
+    : ariaEmpty ?? "'{name}' 글자 그리기 칸 (비어 있음)"
+  ).replace("{name}", name);
 
   return (
     <canvas
@@ -183,7 +192,7 @@ export default function GlyphCanvas({
       height={H}
       className={className}
       role="img"
-      aria-label={`'${name}' 글자 그리기 칸${filled ? " (그려짐)" : " (비어 있음)"}`}
+      aria-label={ariaLabel}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={endStroke}

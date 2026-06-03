@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button, Mascot, Segmented, sanitizeColor } from "@webapp/ui";
+import type { Dictionary } from "../lib/i18n";
 import styles from "./LetterPanel.module.css";
 
 interface Props {
@@ -11,6 +12,7 @@ interface Props {
   coveredChars: string[];
   /** 자동 채우기 켜짐 — 켜져 있으면 모든 글자가 채워졌다고 보고 그대로 렌더. */
   autofill?: boolean;
+  t: Dictionary["studio"]["letter"];
 }
 
 function base64ToArrayBuffer(b64: string): ArrayBuffer {
@@ -21,20 +23,21 @@ function base64ToArrayBuffer(b64: string): ArrayBuffer {
   return bytes.buffer;
 }
 
-// 편지지 종류 — 색지/줄/여백.
+// 편지지 종류 — 색지/줄/여백. 라벨은 사전에서.
 type PaperId = "cream" | "white" | "mint" | "pink" | "grid";
-const PAPERS: { id: PaperId; label: string; bg: string; line: string; ruled: "line" | "grid" | "none" }[] = [
-  { id: "cream", label: "크림", bg: "#fdf6e8", line: "#e6d9bd", ruled: "line" },
-  { id: "white", label: "흰 종이", bg: "#ffffff", line: "#e6e3ef", ruled: "line" },
-  { id: "mint", label: "민트", bg: "#eaf6f0", line: "#cfe6da", ruled: "line" },
-  { id: "pink", label: "핑크", bg: "#fdeef0", line: "#f1d4da", ruled: "line" },
-  { id: "grid", label: "모눈", bg: "#fbfbfd", line: "#e4e7ef", ruled: "grid" },
+const PAPERS: { id: PaperId; bg: string; line: string; ruled: "line" | "grid" | "none" }[] = [
+  { id: "cream", bg: "#fdf6e8", line: "#e6d9bd", ruled: "line" },
+  { id: "white", bg: "#ffffff", line: "#e6e3ef", ruled: "line" },
+  { id: "mint", bg: "#eaf6f0", line: "#cfe6da", ruled: "line" },
+  { id: "pink", bg: "#fdeef0", line: "#f1d4da", ruled: "line" },
+  { id: "grid", bg: "#fbfbfd", line: "#e4e7ef", ruled: "grid" },
 ];
 
-const SIZES: { id: string; label: string; w: number; h: number }[] = [
-  { id: "a4", label: "세로(A4)", w: 1240, h: 1754 },
-  { id: "square", label: "정사각", w: 1240, h: 1240 },
-  { id: "card", label: "엽서(가로)", w: 1748, h: 1240 },
+type SizeId = "a4" | "square" | "card";
+const SIZES: { id: SizeId; w: number; h: number }[] = [
+  { id: "a4", w: 1240, h: 1754 },
+  { id: "square", w: 1240, h: 1240 },
+  { id: "card", w: 1748, h: 1240 },
 ];
 
 /**
@@ -42,10 +45,10 @@ const SIZES: { id: string; label: string; w: number; h: number }[] = [
  * 기존 이미지 렌더 파이프라인과 동일한 Canvas + FontFace 방식(무거운 라이브러리 없음).
  * 폰트가 커버하지 못하는 글자는 자연스럽게 빠진다(폴백 오해 방지) — 자동 채우기 켜면 모두 렌더.
  */
-export default function LetterPanel({ fontBase64, coveredChars, autofill = false }: Props) {
-  const [text, setText] = useState("dear friend,\nthank you for being\nthere for me.\n\nlove always");
+export default function LetterPanel({ fontBase64, coveredChars, autofill = false, t }: Props) {
+  const [text, setText] = useState(t.defaultText);
   const [paperId, setPaperId] = useState<PaperId>("cream");
-  const [sizeId, setSizeId] = useState(SIZES[0]!.id);
+  const [sizeId, setSizeId] = useState<SizeId>(SIZES[0]!.id);
   const [inkInput, setInkInput] = useState("#3a3550");
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -214,18 +217,15 @@ export default function LetterPanel({ fontBase64, coveredChars, autofill = false
   const disabled = !activeFamily || !fontReady;
 
   return (
-    <section className={styles.panel} aria-label="내 손글씨로 편지 쓰기">
+    <section className={styles.panel} aria-label={t.ariaLabel}>
       <header className={styles.head}>
-        <h2 className={styles.title}>내 폰트로 편지 쓰기</h2>
-        <p className={styles.sub}>
-          편지지에 긴 글을 적으면 내 손글씨로 써 줘요. 이미지(PNG)로 받아 보내거나
-          인쇄할 수 있어요.
-        </p>
+        <h2 className={styles.title}>{t.title}</h2>
+        <p className={styles.sub}>{t.sub}</p>
       </header>
 
       <div className={styles.field}>
         <label className={styles.label} htmlFor="letter-text">
-          편지 내용
+          {t.contentLabel}
         </label>
         <textarea
           id="letter-text"
@@ -233,13 +233,13 @@ export default function LetterPanel({ fontBase64, coveredChars, autofill = false
           value={text}
           onChange={(e) => setText(e.target.value)}
           rows={6}
-          placeholder="전하고 싶은 말을 길게 적어요."
+          placeholder={t.placeholder}
           spellCheck={false}
         />
         {!autofill && (
           <p className={styles.note} aria-live="polite">
             <Mascot mood="focused" size={16} still label="" />
-            <span>안 그린 글자는 편지에서 빠져요. 자동 채우기를 켜면 다 채워져요.</span>
+            <span>{t.note}</span>
           </p>
         )}
       </div>
@@ -248,22 +248,22 @@ export default function LetterPanel({ fontBase64, coveredChars, autofill = false
         {disabled ? (
           <div className={styles.stageEmpty}>
             <Mascot mood="sleepy" size={72} />
-            <p>왼쪽에서 글자를 먼저 그리면, 여기서 편지를 쓸 수 있어요.</p>
+            <p>{t.stageEmpty}</p>
           </div>
         ) : (
           <canvas
             ref={canvasRef}
             className={styles.canvas}
             role="img"
-            aria-label="손글씨 편지 미리보기"
+            aria-label={t.previewAria}
           />
         )}
       </div>
 
       <div className={styles.options}>
         <div className={styles.optRow}>
-          <span className={styles.optLabel}>편지지</span>
-          <div className={styles.chips} role="group" aria-label="편지지 종류">
+          <span className={styles.optLabel}>{t.paper}</span>
+          <div className={styles.chips} role="group" aria-label={t.paperAria}>
             {PAPERS.map((p) => (
               <button
                 key={p.id}
@@ -273,30 +273,30 @@ export default function LetterPanel({ fontBase64, coveredChars, autofill = false
                 data-on={paperId === p.id}
                 onClick={() => setPaperId(p.id)}
               >
-                {p.label}
+                {t.papers[p.id]}
               </button>
             ))}
           </div>
         </div>
 
         <div className={styles.optRow}>
-          <span className={styles.optLabel}>크기</span>
-          <Segmented<string>
-            ariaLabel="편지지 크기"
+          <span className={styles.optLabel}>{t.size}</span>
+          <Segmented<SizeId>
+            ariaLabel={t.sizeAria}
             value={sizeId}
             onChange={setSizeId}
-            options={SIZES.map((s) => ({ value: s.id, label: s.label }))}
+            options={SIZES.map((s) => ({ value: s.id, label: t.sizes[s.id] }))}
           />
         </div>
 
         <div className={styles.colorRow}>
           <label className={styles.colorField}>
-            <span>글자색</span>
+            <span>{t.ink}</span>
             <input
               type="color"
               value={safeInk.length === 7 ? safeInk : "#3a3550"}
               onChange={(e) => setInkInput(e.target.value)}
-              aria-label="글자색"
+              aria-label={t.ink}
             />
           </label>
         </div>
@@ -308,12 +308,12 @@ export default function LetterPanel({ fontBase64, coveredChars, autofill = false
         disabled={disabled}
         className={styles.exportBtn}
       >
-        편지 PNG로 받기
+        {t.export}
       </Button>
 
       <p className={styles.honesty}>
         <Mascot mood="happy" size={18} still label="" />
-        진짜 내가 그린 글씨로 쓴 편지예요. 편지지 무늬는 이미지 전용 효과예요.
+        {t.honesty}
       </p>
     </section>
   );

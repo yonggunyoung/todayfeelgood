@@ -11,6 +11,7 @@ import {
 } from "@webapp/core";
 import { Button } from "@webapp/ui";
 import { apiPath } from "../lib/paths";
+import type { Dictionary } from "../lib/i18n";
 import styles from "./VariationGallery.module.css";
 
 interface Props {
@@ -18,6 +19,7 @@ interface Props {
   script: FontScript;
   onPick: (params: FontParams) => void;
   disabled?: boolean;
+  t: Dictionary["studio"]["variation"];
 }
 
 interface Variant {
@@ -77,7 +79,7 @@ function buildVariants(base: FontParams): FontParams[] {
 }
 
 /** 변주 갤러리 — 3×3 라이브 프리뷰. 칸을 누르면 그 설정을 스튜디오에 적용. */
-export default function VariationGallery({ base, script, onPick, disabled }: Props) {
+export default function VariationGallery({ base, script, onPick, disabled, t }: Props) {
   const [variants, setVariants] = useState<Variant[] | null>(null);
   const [generating, setGenerating] = useState(false);
   const seqRef = useRef(0);
@@ -215,7 +217,7 @@ export default function VariationGallery({ base, script, onPick, disabled }: Pro
         disabled={disabled || generating}
         className={styles.trigger}
       >
-        {generating ? "변형 굽는 중…" : variants ? "다시 9가지 뽑기" : "9가지 변형 뽑는 중…"}
+        {generating ? t.baking : variants ? t.regen : t.firstGen}
       </Button>
 
       {/* 첫 자동 생성 전: 스켈레톤 9칸(레이아웃 안정 + 로딩 신호) */}
@@ -228,10 +230,11 @@ export default function VariationGallery({ base, script, onPick, disabled }: Pro
       )}
 
       {variants && (
-        <div className={styles.grid} role="list" aria-label="글자체 변형 9종">
+        <div className={styles.grid} role="list" aria-label={t.gridAria}>
           {variants.map((v, i) => {
             const ready = v.status === "ready" && v.family;
             const pending = v.status === "pending";
+            const n = String(i + 1);
             return (
               <button
                 key={i}
@@ -240,8 +243,8 @@ export default function VariationGallery({ base, script, onPick, disabled }: Pro
                 className={`${styles.cell} ${pending ? styles.skeleton : ""}`}
                 disabled={!ready || disabled}
                 onClick={() => onPick(v.params)}
-                aria-label={`변형 ${i + 1}${i === 0 ? " (지금 설정)" : ""} 적용`}
-                title={i === 0 ? "지금 설정" : `변형 ${i + 1} 적용`}
+                aria-label={(i === 0 ? t.applyNowLabel : t.applyLabel).replace("{n}", n)}
+                title={i === 0 ? t.nowTitle : t.applyTitle.replace("{n}", n)}
               >
                 <span
                   className={styles.glyph}
@@ -250,15 +253,13 @@ export default function VariationGallery({ base, script, onPick, disabled }: Pro
                 >
                   {v.status === "error" ? "—" : sample}
                 </span>
-                {i === 0 && <span className={styles.badge}>지금</span>}
+                {i === 0 && <span className={styles.badge}>{t.nowBadge}</span>}
               </button>
             );
           })}
         </div>
       )}
-      <p className={styles.hint}>
-        마음에 드는 칸을 누르면 그 설정으로 바꿔 드려요. 모두 진짜 폰트로 적용돼요.
-      </p>
+      <p className={styles.hint}>{t.hint}</p>
     </div>
   );
 }

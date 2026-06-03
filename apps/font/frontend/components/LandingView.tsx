@@ -50,7 +50,7 @@ export function LandingView({ locale }: { locale: Locale }) {
               koLabel={t.langToggle.ko}
               enLabel={t.langToggle.en}
             />
-            <Link href={studioRoute()} className={styles.headerCta}>
+            <Link href={studioRoute(locale)} className={styles.headerCta}>
               {t.header.cta}
             </Link>
           </>
@@ -74,7 +74,7 @@ export function LandingView({ locale }: { locale: Locale }) {
             </h1>
             <p className={styles.lede}>{t.hero.lede}</p>
             <div className={styles.heroActions}>
-              <Link href={studioRoute()} className={styles.primary}>
+              <Link href={studioRoute(locale)} className={styles.primary}>
                 {t.hero.primary}
               </Link>
               <a href={`#${t.how.id}`} className={styles.secondary}>
@@ -130,7 +130,7 @@ export function LandingView({ locale }: { locale: Locale }) {
             <div>
               <h2 className={`display ${styles.howTitle}`}>{t.how.title}</h2>
               <p className={styles.howBody}>{t.how.body}</p>
-              <Link href={studioRoute()} className={styles.howCta}>
+              <Link href={studioRoute(locale)} className={styles.howCta}>
                 {t.how.cta}
               </Link>
             </div>

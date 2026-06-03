@@ -7,6 +7,7 @@ import {
   type FontScript,
   type PreviewStyle,
 } from "@webapp/core";
+import type { Dictionary } from "../lib/i18n";
 import styles from "./FontPreview.module.css";
 
 interface Props {
@@ -21,6 +22,7 @@ interface Props {
   previewStyle?: PreviewStyle;
   /** 다운로드 파일명에 붙일 파라미터 식별 태그(충돌 방지). */
   fileTag?: string;
+  t: Dictionary["studio"]["fontPreview"];
 }
 
 // base64 → ArrayBuffer (FontFace에 넘기기 위함)
@@ -82,6 +84,7 @@ export default function FontPreview({
   loading,
   previewStyle = DEFAULT_PREVIEW_STYLE,
   fileTag,
+  t,
 }: Props) {
   const [activeFamily, setActiveFamily] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
@@ -270,11 +273,11 @@ export default function FontPreview({
   }, [activeFamily, bg, ink, hangul, script, previewStyle, fileTag]);
 
   return (
-    <div className={styles.preview} aria-label="글자 견본">
+    <div className={styles.preview} aria-label={t.ariaLabel}>
       <div className={styles.tab}>
-        <span className={styles.tabName}>견본 시트</span>
+        <span className={styles.tabName}>{t.tabName}</span>
         <span className={`${styles.dot} ${activeFamily ? styles.live : ""}`}>
-          {loading ? "갱신 중" : activeFamily ? "라이브" : "대기"}
+          {loading ? t.updating : activeFamily ? t.live : t.idle}
         </span>
       </div>
 
@@ -314,9 +317,7 @@ export default function FontPreview({
         <div className={styles.empty}>
           <Mascot mood={loading ? "surprised" : "sleepy"} size={88} />
           <p className={styles.emptyText}>
-            {loading
-              ? "굽는 중… 너굴."
-              : "슬라이더 움직여봐 너굴."}
+            {loading ? t.emptyLoading : t.emptyIdle}
           </p>
         </div>
       )}
@@ -330,16 +331,14 @@ export default function FontPreview({
             onClick={exportPng}
             disabled={exporting}
           >
-            {exporting ? "이미지 만드는 중…" : "이미지로 저장 (PNG)"}
+            {exporting ? t.exporting : t.exportPng}
           </button>
-          <span className={styles.exportNote}>스타일 적용 · 폰트 파일과 별도</span>
+          <span className={styles.exportNote}>{t.exportNote}</span>
         </div>
       )}
 
       <p className={styles.note}>
-        {hangul
-          ? "한글 견본입니다. 공개 한글 가변폰트를 변형한 결과예요."
-          : "라틴 A–Z·a–z·0–9 견본입니다. 한글은 위 문자체계에서 전환하세요."}
+        {hangul ? t.noteHangul : t.noteLatin}
       </p>
     </div>
   );

@@ -42,6 +42,137 @@
   color: var(--ink-faint);
 }
 
+/* ── 진입 "만드는 방법" 3갈래 ── */
+.entry {
+  margin-top: var(--sp-5);
+  border: 0;
+  padding: 0;
+  min-width: 0;
+}
+.entryLegend {
+  font-size: var(--text-body);
+  font-weight: var(--weight-semi);
+  color: var(--ink);
+  padding: 0;
+  margin-bottom: var(--sp-3);
+}
+.entryCards {
+  display: grid;
+  grid-template-columns: 1.25fr 1fr 1fr;
+  gap: var(--sp-3);
+}
+@media (max-width: 720px) {
+  .entryCards {
+    grid-template-columns: 1fr;
+  }
+}
+.entryCard {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  text-align: left;
+  padding: var(--sp-4);
+  padding-right: calc(var(--sp-4) + 1.4rem);
+  border-radius: var(--r-lg);
+  border: 1.5px solid var(--hairline);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition: border-color var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out);
+}
+.entryCard:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+.entryCard:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--accent-weak);
+}
+.entryCardOn {
+  border-color: var(--accent);
+  background: var(--accent-weak, var(--surface));
+}
+.entryCardHero {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--hairline));
+}
+.entryCardHero.entryCardOn {
+  border-color: var(--accent);
+}
+.entryBadge {
+  position: absolute;
+  top: calc(-1 * var(--sp-2));
+  left: var(--sp-4);
+  font-size: var(--text-caption);
+  font-weight: var(--weight-bold);
+  color: var(--accent-ink);
+  background: var(--accent);
+  padding: 2px var(--sp-3);
+  border-radius: var(--r-pill);
+  box-shadow: var(--shadow-sm);
+}
+.entryEmoji {
+  font-size: 1.6rem;
+  line-height: 1;
+  flex: 0 0 auto;
+}
+.entryCardBody {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.entryTitle {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  font-size: var(--text-body);
+  font-weight: var(--weight-semi);
+  color: var(--ink);
+}
+.entryBadgeInline {
+  font-size: var(--text-caption);
+  font-weight: var(--weight-med);
+  color: var(--ink-faint);
+  background: var(--surface-2);
+  padding: 1px var(--sp-2);
+  border-radius: var(--r-pill);
+}
+.entryDesc {
+  font-size: var(--text-caption);
+  color: var(--ink-soft);
+  line-height: 1.45;
+}
+.entryHelp {
+  position: absolute;
+  top: var(--sp-3);
+  right: var(--sp-2);
+}
+.entryHint {
+  font-size: var(--text-caption);
+  color: var(--ink-faint);
+  margin-top: var(--sp-3);
+}
+.entryHonesty {
+  font-size: var(--text-caption);
+  color: var(--accent-ink, var(--ink-soft));
+  background: var(--accent-weak, var(--surface-2));
+  border-radius: var(--r-md);
+  padding: var(--sp-2) var(--sp-3);
+  margin-top: var(--sp-2);
+}
+
+.autofillTag {
+  margin-right: auto;
+  align-self: center;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-med);
+  color: var(--accent-ink);
+}
+
 .sampleWrap {
   margin-top: var(--sp-2);
 }

@@ -81,4 +81,33 @@ export const en: typeof ko = {
     body: "Draw your letters in the a–z cells, smooth out just the hand jitter with refine, then download as WOFF & TTF. No AI — a font built from strokes you really drew. Want a quick look first? There's a 'quick-start sample' (slider variations on a ready-made font) too.",
     cta: "Open the drawing board →",
   },
+  /** Studio entry: a single-step "how do you want to make it?" with three paths. Changeable anytime up top. */
+  studioEntry: {
+    legend: "How do you want to make it?",
+    hint: "Pick one and start right away. You can switch up top anytime.",
+    quick: {
+      emoji: "🪄",
+      badge: "Recommended · easy",
+      title: "Draw just a few",
+      desc: "Draw a few characters with personality; the rest is auto-filled in your style.",
+      help: "Draw just the few letters you like. The ones you skip get auto-filled to match your strokes (weight, slant). Auto-filled letters are honestly marked — they're not your real hand.",
+      honesty: "Letters you skip are auto-filled (not your real hand). They're marked honestly in the preview.",
+    },
+    full: {
+      emoji: "✍️",
+      badge: "All by hand",
+      title: "Draw them all",
+      desc: "Every letter by your own hand. No auto-fill — only your real handwriting.",
+      help: "Draw every letter yourself. Auto-fill stays off — everything on screen is 100% strokes you drew.",
+      honesty: "",
+    },
+    sample: {
+      emoji: "🎚️",
+      badge: "Don't want to draw",
+      title: "Skip drawing, go fast",
+      desc: "No drawing — vary a ready-made font with sliders for a quick look.",
+      help: "No drawing — vary an open font with sliders (weight, slant, and more). Not your real hand, but the fastest way.",
+      honesty: "",
+    },
+  },
 };

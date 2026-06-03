@@ -1,0 +1,86 @@
+# ── 공용 Next.js 앱 Dockerfile (모노레포 워크스페이스 1개를 빌드) ──
+#
+# 어떤 워크스페이스를 빌드할지는 build-arg 로 지정한다.
+#   WORKSPACE   : pnpm 워크스페이스 이름 (예: @webapp/font-frontend, @webapp/home)
+#   APP_DIR     : 해당 워크스페이스의 경로 (예: apps/font/frontend, home)
+#   BASE_PATH   : Next basePath (예: /font). 홈은 "" (루트).
+#   PORT        : next start 포트 (예: 3001).
+#
+# 무료티어 메모리 의식:
+#   - 멀티스테이지(deps → build → runner)로 최종 이미지에서 dev 의존성/소스 캐시 분리.
+#   - next.config 에 output:"standalone" 설정이 없어(앱 소스 미수정 원칙) standalone
+#     번들은 쓰지 않는다. 대신 빌드 산출물 + 프로덕션용 node_modules 만 런너로 옮긴다.
+#   - 빌드는 메모리를 많이 먹으므로 한 번에 한 이미지씩 빌드 권장(docs/deploy.md 참고).
+
+# ---------- 1) 의존성 설치 (전체 워크스페이스) ----------
+FROM node:20-slim AS deps
+ENV PNPM_HOME=/pnpm
+ENV PATH="$PNPM_HOME:$PATH"
+RUN corepack enable
+WORKDIR /repo
+
+# 워크스페이스/락파일/매니페스트만 먼저 복사 → install 레이어 캐시.
+# (소스만 바뀌면 install을 다시 하지 않는다.)
+COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
+COPY packages ./packages
+COPY home/package.json ./home/package.json
+COPY apps/font/frontend/package.json ./apps/font/frontend/package.json
+COPY apps/sticker/frontend/package.json ./apps/sticker/frontend/package.json
+COPY apps/sign/frontend/package.json ./apps/sign/frontend/package.json
+COPY apps/kit/frontend/package.json ./apps/kit/frontend/package.json
+COPY apps/textmoji/frontend/package.json ./apps/textmoji/frontend/package.json
+
+RUN pnpm install --frozen-lockfile
+
+# ---------- 2) 빌드 (지정 워크스페이스만) ----------
+FROM node:20-slim AS build
+ENV PNPM_HOME=/pnpm
+ENV PATH="$PNPM_HOME:$PATH"
+RUN corepack enable
+WORKDIR /repo
+
+ARG WORKSPACE
+ARG BASE_PATH=""
+ENV BASE_PATH=${BASE_PATH}
+# 빌드 메모리 상한(무료티어 OOM 방지). 필요 시 compose/CI에서 조정.
+ENV NODE_OPTIONS=--max-old-space-size=1024
+
+# deps 스테이지의 node_modules(루트+워크스페이스 심볼릭릭) 재사용.
+COPY --from=deps /repo /repo
+# 전체 소스 복사(.dockerignore가 .next/node_modules/.venv 제외).
+COPY . /repo
+
+RUN pnpm --filter "${WORKSPACE}" build
+
+# ---------- 3) 런너 (next start) ----------
+FROM node:20-slim AS runner
+ENV PNPM_HOME=/pnpm
+ENV PATH="$PNPM_HOME:$PATH"
+RUN corepack enable
+WORKDIR /repo
+ENV NODE_ENV=production
+
+ARG WORKSPACE
+ARG APP_DIR
+ARG BASE_PATH=""
+ARG PORT=3000
+ENV WORKSPACE=${WORKSPACE}
+ENV APP_DIR=${APP_DIR}
+ENV BASE_PATH=${BASE_PATH}
+ENV PORT=${PORT}
+ENV HOSTNAME=0.0.0.0
+
+# 빌드 결과 전체(소스 + .next + node_modules)를 그대로 가져온다.
+# standalone 미사용이므로 워크스페이스 심볼릭릭/공용 패키지 의존을 위해 전체가 필요.
+COPY --from=build /repo /repo
+
+# 비루트 사용자로 구동.
+RUN useradd --create-home --uid 10001 appuser \
+    && chown -R appuser:appuser /repo
+USER appuser
+
+EXPOSE ${PORT}
+
+# next start 를 워크스페이스 디렉터리에서 실행. PORT/BASE_PATH 는 env로 주입됨.
+# (각 앱 next.config 가 process.env.BASE_PATH 를 읽어 basePath 결정)
+CMD ["sh", "-c", "cd \"$APP_DIR\" && exec pnpm exec next start -p \"$PORT\""]

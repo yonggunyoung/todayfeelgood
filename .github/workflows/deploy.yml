@@ -1,0 +1,43 @@
+# ── (선택) 배포: 수동 트리거 SSH 스켈레톤 ──
+# 실제 시크릿은 아직 없음. 오라클 호스트/키를 GitHub Secrets 에 넣은 뒤 활성화.
+#   필요한 Secrets:
+#     - ORACLE_HOST   : 오라클 인스턴스 공개 IP/도메인 ← 여기에 넣기
+#     - ORACLE_USER   : SSH 사용자(예: ubuntu)        ← 여기에 넣기
+#     - ORACLE_SSH_KEY: SSH 개인키(PEM 전체 내용)     ← 여기에 넣기
+#     - DEPLOY_PATH   : 서버상 레포 경로(예: /home/ubuntu/webapp)
+#
+# 동작: 서버 SSH 접속 → git pull → docker compose up -d --build.
+# 시크릿이 비어 있으면 잡이 스킵되도록 가드.
+name: Deploy
+
+on:
+  workflow_dispatch:   # 수동 실행 전용(자동 배포 아님 — 무료티어 보호).
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Guard — secrets 설정 확인
+        run: |
+          if [ -z "${{ secrets.ORACLE_HOST }}" ]; then
+            echo "::warning::ORACLE_* 시크릿 미설정 — 배포 스킵. (deploy.yml 주석 참고)"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+        id: guard
+
+      # 아래 단계들은 시크릿이 채워진 뒤 활성화. (placeholder)
+      - name: SSH 배포 (docker compose)
+        if: steps.guard.outputs.skip != 'true'
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.ORACLE_HOST }}
+          username: ${{ secrets.ORACLE_USER }}
+          key: ${{ secrets.ORACLE_SSH_KEY }}
+          script: |
+            set -euo pipefail
+            cd "${{ secrets.DEPLOY_PATH }}"
+            git pull --ff-only
+            # 무료티어 OOM 방지: 한 번에 모두 빌드하지 말고 필요 시 서비스별로 나눠 빌드.
+            docker compose pull || true
+            docker compose up -d --build
+            docker compose ps

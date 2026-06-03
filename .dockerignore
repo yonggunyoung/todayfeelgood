@@ -1,0 +1,41 @@
+# ── docker 빌드 컨텍스트 제외 (이미지 비대화/캐시 오염 방지) ──
+# 의존성·빌드 산출물은 컨테이너 내부에서 새로 설치/빌드한다.
+
+# node
+**/node_modules
+.pnpm-store
+
+# next 빌드 산출물(컨테이너에서 다시 build)
+**/.next
+**/out
+**/build
+**/dist
+
+# python
+**/__pycache__
+**/*.py[cod]
+**/.venv
+**/venv
+**/*.egg-info
+**/.pytest_cache
+
+# env / secrets (이미지에 비밀값 넣지 않음)
+.env
+.env.local
+.env.*.local
+
+# vcs / agents / docs (런타임 불필요)
+.git
+.github
+.agents
+docs
+
+# 생성 폰트 산출물
+**/*.woff
+**/*.woff2
+**/*.ttf
+**/*.otf
+
+# logs / os
+**/*.log
+.DS_Store

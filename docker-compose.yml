@@ -10,6 +10,16 @@
 # 무료티어 메모리: 6개 Next 빌드를 동시에 하면 OOM 위험.
 #   docs/deploy.md 의 "빌드 분리/스왑" 팁 참고(예: --build 대신 순차 build).
 
+# 모든 Next 앱이 공유하는 NEXT_PUBLIC_* 빌드 인자(.env 에서 주입).
+# NEXT_PUBLIC_* 는 빌드 시점에 정적 산출물로 구워지므로 environment(런타임)가 아니라 build.args 로 넘긴다.
+x-next-public-args: &next-public-args
+  NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-http://localhost}
+  NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION: ${NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION:-}
+  NEXT_PUBLIC_NAVER_SITE_VERIFICATION: ${NEXT_PUBLIC_NAVER_SITE_VERIFICATION:-}
+  NEXT_PUBLIC_BING_SITE_VERIFICATION: ${NEXT_PUBLIC_BING_SITE_VERIFICATION:-}
+  NEXT_PUBLIC_ADSENSE_CLIENT: ${NEXT_PUBLIC_ADSENSE_CLIENT:-}
+  NEXT_PUBLIC_GA_ID: ${NEXT_PUBLIC_GA_ID:-}
+
 services:
   # ── 폰트 엔진 (FastAPI) — 내부 전용, 호스트로 포트 노출하지 않음 ──
   engine:
@@ -38,6 +48,7 @@ services:
       context: .
       dockerfile: Dockerfile.next
       args:
+        <<: *next-public-args
         WORKSPACE: "@webapp/home"
         APP_DIR: home
         BASE_PATH: ""
@@ -56,6 +67,7 @@ services:
       context: .
       dockerfile: Dockerfile.next
       args:
+        <<: *next-public-args
         WORKSPACE: "@webapp/font-frontend"
         APP_DIR: apps/font/frontend
         BASE_PATH: /font
@@ -81,6 +93,7 @@ services:
       context: .
       dockerfile: Dockerfile.next
       args:
+        <<: *next-public-args
         WORKSPACE: "@webapp/sticker-frontend"
         APP_DIR: apps/sticker/frontend
         BASE_PATH: /sticker
@@ -105,6 +118,7 @@ services:
       context: .
       dockerfile: Dockerfile.next
       args:
+        <<: *next-public-args
         WORKSPACE: "@webapp/sign-frontend"
         APP_DIR: apps/sign/frontend
         BASE_PATH: /sign
@@ -129,6 +143,7 @@ services:
       context: .
       dockerfile: Dockerfile.next
       args:
+        <<: *next-public-args
         WORKSPACE: "@webapp/kit-frontend"
         APP_DIR: apps/kit/frontend
         BASE_PATH: /kit
@@ -155,6 +170,7 @@ services:
       context: .
       dockerfile: Dockerfile.next
       args:
+        <<: *next-public-args
         WORKSPACE: "@webapp/textmoji-frontend"
         APP_DIR: apps/textmoji/frontend
         BASE_PATH: /textmoji

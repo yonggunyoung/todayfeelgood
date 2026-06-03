@@ -2,6 +2,7 @@
 
 > 헷갈리지 않게 **사람만 할 수 있는 것**과 **자동화된 것**을 갈라 둔다.
 > 결제·계정·콘솔 클릭·서버 명령은 마스터 몫(AI가 계정 접근 불가). 코드/스크립트/설정은 이미 준비됨.
+> **처음부터 끝까지 순서대로 따라 하는 안내는 `docs/deploy-walkthrough.md`** (콘솔 클릭·검색등록·애드센스 포함).
 
 ## A. 마스터가 직접 (콘솔/결제, 한 번만)
 - [ ] **1. 도메인 구매** — 등록업체에서 결제 (Cloudflare Registrar 권장: 저렴 + DNS·SSL·CDN 무료).
@@ -23,8 +24,12 @@
 - ✅ `Dockerfile.next` / 엔진 Dockerfile, `.dockerignore`
 - ✅ `infra/scripts/bootstrap.sh` (도커·방화벽·스왑·클론·.env·기동 원샷)
 - ✅ `infra/nginx/webapp.conf` (서브경로 라우팅 /font /sticker /sign /kit /textmoji)
-- ✅ `.env.example` (변수 설명), `docs/deploy.md` (상세), 헬스체크 스크립트
+- ✅ `.env.example` (변수 설명), `docs/deploy.md` (상세), 헬스체크 스크립트(허브/nginx 점검 포함)
 - ✅ GitHub Actions CI(빌드/린트/테스트), deploy.yml 스켈레톤
+- ✅ **개인정보처리방침·이용약관**(한/영, 푸터·sitemap 연결) — 애드센스 심사 요건
+- ✅ **검색 소유확인·애드센스·GA4 골격** — `.env` 에 토큰만 넣고 재배포하면 자동 활성(기본 OFF).
+      값: `NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION`/`NEXT_PUBLIC_NAVER_SITE_VERIFICATION`/
+      `NEXT_PUBLIC_ADSENSE_CLIENT`(→ `/ads.txt` 자동)/`NEXT_PUBLIC_GA_ID`.
 
 ## C. 도메인 정해지면 AI가 해줄 것
 - `NEXT_PUBLIC_SITE_URL`, `ALLOWED_ORIGINS`, nginx `server_name`, sitemap/hreflang 절대URL을 **그 도메인으로 박아** 커밋 → 부트스트랩 시 바로 운영값.

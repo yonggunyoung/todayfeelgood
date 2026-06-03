@@ -135,7 +135,7 @@ export const ko = {
         {
           heading: "9. 문의처",
           body: [
-            "개인정보 처리에 관한 문의·불만·권리 행사는 다음으로 연락해 주세요: yonggunyoung@gmail.com",
+            "개인정보 처리에 관한 문의·불만·권리 행사는 다음으로 연락해 주세요: contact@ddukkit.com",
           ],
         },
       ],
@@ -212,7 +212,7 @@ export const ko = {
           heading: "제10조 (준거법 및 문의)",
           body: [
             "본 약관은 대한민국 법령에 따라 해석되며, 서비스 이용과 관련한 분쟁은 관련 법령이 정한 절차를 따릅니다.",
-            "약관에 관한 문의: yonggunyoung@gmail.com",
+            "약관에 관한 문의: contact@ddukkit.com",
           ],
         },
       ],

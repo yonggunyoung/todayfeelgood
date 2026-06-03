@@ -146,7 +146,7 @@ export const en: typeof ko = {
         {
           heading: "9. Contact",
           body: [
-            "For questions, complaints, or requests regarding the handling of personal information, please contact: yonggunyoung@gmail.com",
+            "For questions, complaints, or requests regarding the handling of personal information, please contact: contact@ddukkit.com",
           ],
         },
       ],
@@ -223,7 +223,7 @@ export const en: typeof ko = {
           heading: "10. Governing law and contact",
           body: [
             "These Terms are interpreted under the laws of the Republic of Korea, and disputes related to the Service follow the procedures set by applicable law.",
-            "Questions about these Terms: yonggunyoung@gmail.com",
+            "Questions about these Terms: contact@ddukkit.com",
           ],
         },
       ],

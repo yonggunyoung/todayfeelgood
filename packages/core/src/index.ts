@@ -227,6 +227,8 @@ export interface HandwritingRequest {
   glyphs: DrawnGlyph[];
   refine: RefineParams;
   format?: FontFormat;
+  /** 안 그린 글자를 내 획 스타일(굵기/기울기)에 맞춰 베이스 폰트로 자동 채움 */
+  autofill?: boolean;
 }
 
 /** 손글씨 폰트 생성 응답 — generatedBy:"handwriting"(진짜 내 글씨) */
@@ -256,4 +258,6 @@ export interface HangulComposeRequest {
   text: string;
   refine: RefineParams;
   format?: FontFormat;
+  /** 안 그린 자모를 내 획 스타일에 맞춰 베이스 한글폰트로 자동 채움(음절 완성) */
+  autofill?: boolean;
 }

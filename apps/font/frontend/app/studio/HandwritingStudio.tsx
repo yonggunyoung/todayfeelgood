@@ -15,13 +15,14 @@ import {
   type HandwritingResponse,
   type RefineParams,
 } from "@webapp/core";
-import { BrushUnderline, Button, Mascot, Segmented } from "@webapp/ui";
+import { BrushUnderline, Button, HelpTip, Mascot, Segmented } from "@webapp/ui";
 import { apiPath } from "../../lib/paths";
 import { JAMO_NAMES } from "../../lib/hangul";
 import GlyphCell from "../../components/GlyphCell";
 import RefinePanel from "../../components/RefinePanel";
 import HandwritingPreview from "../../components/HandwritingPreview";
 import HandwritingImagePanel from "../../components/HandwritingImagePanel";
+import LetterPanel from "../../components/LetterPanel";
 import HangulPreview from "../../components/HangulPreview";
 import HangulImagePanel from "../../components/HangulImagePanel";
 import FontStudio from "./FontStudio";
@@ -66,7 +67,11 @@ export default function HandwritingStudio() {
   // 한글 자모 char → strokes 맵
   const [jamoMap, setJamoMap] = useState<Record<string, GlyphStroke[]>>({});
   const [refine, setRefine] = useState<RefineParams>(DEFAULT_REFINE);
+  // 자동 채우기: 안 그린 글자를 내 스타일로 베이스 폰트가 채움(엔진 병행 — 미지원이면 무시).
+  const [autofill, setAutofill] = useState(false);
   const [previewFont, setPreviewFont] = useState<string | null>(null);
+  // 엔진이 자동 채운 글자 목록(정직성 라벨용). 응답에 필드 없으면 빈 배열.
+  const [filledChars, setFilledChars] = useState<string[]>([]);
   const [fontFamily, setFontFamily] = useState("MyHandwriting");
   const [generatedBy, setGeneratedBy] = useState<string>("handwriting");
   const [loading, setLoading] = useState(false);
@@ -74,6 +79,8 @@ export default function HandwritingStudio() {
   const [error, setError] = useState<string | null>(null);
   const [format, setFormat] = useState<FontFormat>("woff");
   const [justDownloaded, setJustDownloaded] = useState(false);
+  // 라틴 결과물 형태: 이미지/짤 ↔ 편지
+  const [latinResult, setLatinResult] = useState<"image" | "letter">("image");
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reqIdRef = useRef(0);
@@ -87,6 +94,12 @@ export default function HandwritingStudio() {
   const glyphs: DrawnGlyph[] = useMemo(
     () => drawnChars.map((ch) => ({ char: ch, strokes: glyphMap[ch]! })),
     [drawnChars, glyphMap]
+  );
+
+  // 폰트가 실제로 커버하는 글자(내가 그린 것 + 엔진이 자동 채운 것). 편지/이미지 렌더 가드용.
+  const coveredChars = useMemo(
+    () => Array.from(new Set([...drawnChars, ...filledChars.map((c) => c.toLowerCase())])),
+    [drawnChars, filledChars]
   );
 
   const onCellChange = useCallback((char: string, strokes: GlyphStroke[]) => {
@@ -121,15 +134,16 @@ export default function HandwritingStudio() {
 
   // 손글씨 폰트 생성(프리뷰). 항상 woff로 가볍게.
   const generate = useCallback(
-    async (gs: DrawnGlyph[], rf: RefineParams) => {
+    async (gs: DrawnGlyph[], rf: RefineParams, fill: boolean) => {
       if (gs.length === 0) {
         setPreviewFont(null);
+        setFilledChars([]);
         return;
       }
       const myId = ++reqIdRef.current;
       setLoading(true);
       setError(null);
-      const payload: HandwritingRequest = { glyphs: gs, refine: rf, format: "woff" };
+      const payload: HandwritingRequest = { glyphs: gs, refine: rf, format: "woff", autofill: fill };
       try {
         const res = await fetch(apiPath("/api/handwriting"), {
           method: "POST",
@@ -140,11 +154,13 @@ export default function HandwritingStudio() {
           const data = (await res.json().catch(() => null)) as { error?: string } | null;
           throw new Error(data?.error || `요청 실패 (${res.status})`);
         }
-        const data = (await res.json()) as HandwritingResponse;
+        const data = (await res.json()) as HandwritingResponse & { filledChars?: string[] };
         if (myId !== reqIdRef.current) return;
         setPreviewFont(data.fontBase64);
         setFontFamily(data.fontFamily || "MyHandwriting");
         setGeneratedBy(data.generatedBy || "handwriting");
+        // 엔진이 자동 채움 목록을 주면 정직 표기, 아니면 빈 배열(graceful).
+        setFilledChars(Array.isArray(data.filledChars) ? data.filledChars : []);
       } catch (err) {
         if (myId !== reqIdRef.current) return;
         setError(err instanceof Error ? err.message : "폰트 생성 중 오류가 발생했습니다.");
@@ -161,19 +177,19 @@ export default function HandwritingStudio() {
     if (mode !== "draw" || script !== "latin") return;
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
-      void generate(glyphs, refine);
+      void generate(glyphs, refine, autofill);
     }, DEBOUNCE_MS);
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [glyphs, refine, mode, script, generate]);
+  }, [glyphs, refine, autofill, mode, script, generate]);
 
   const handleDownload = useCallback(async () => {
     if (glyphs.length === 0) return;
     setDownloading(true);
     setError(null);
     try {
-      const payload: HandwritingRequest = { glyphs, refine, format };
+      const payload: HandwritingRequest = { glyphs, refine, format, autofill };
       const res = await fetch(apiPath("/api/handwriting"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -201,7 +217,7 @@ export default function HandwritingStudio() {
     } finally {
       setDownloading(false);
     }
-  }, [glyphs, refine, format, drawnChars.length]);
+  }, [glyphs, refine, format, autofill, drawnChars.length]);
 
   const progress = drawnChars.length;
   const jamoProgress = drawnJamoChars.length;
@@ -292,6 +308,11 @@ export default function HandwritingStudio() {
               <div className={styles.groupHead}>
                 <h2 className={styles.groupTitle}>
                   {script === "hangul" ? "기본 자모 그리기" : "글자 그리기"}
+                  <HelpTip label="글자 그리기" align="start">
+                    칸마다 마우스·손가락으로 글자를 그려요. 칸 오른쪽 위 <strong>⤢</strong>를
+                    누르면 <strong>크게</strong> 펼쳐 세밀하게 그릴 수 있어요. 원하는 글자만
+                    그려도 돼요 너굴.
+                  </HelpTip>
                 </h2>
                 <span className={styles.progress} aria-live="polite">
                   {script === "hangul" ? `${jamoProgress} / 24` : `${progress} / 26`}
@@ -350,6 +371,28 @@ export default function HandwritingStudio() {
                   전체 지우기
                 </button>
               </div>
+
+              {/* 자동 채우기 토글 — 안 그린 글자를 내 스타일로 채움 */}
+              <div className={styles.toggleRow}>
+                <label className={styles.toggle}>
+                  <input
+                    type="checkbox"
+                    className={styles.toggleInput}
+                    checked={autofill}
+                    onChange={(e) => setAutofill(e.target.checked)}
+                    disabled={downloading}
+                  />
+                  <span className={styles.toggleTrack} aria-hidden>
+                    <span className={styles.toggleThumb} />
+                  </span>
+                  <span className={styles.toggleText}>안 그린 글자 자동 채우기</span>
+                </label>
+                <HelpTip label="자동 채우기" align="end">
+                  안 그린 글자를 <strong>내 획 느낌(굵기·기울기)에 맞춰</strong> 자동으로
+                  채워 줘요. 다 안 그려도 문장이 완성돼요. 자동 채운 글자는 <strong>내
+                  글씨가 아니라</strong> 정직하게 표시해요 너굴.
+                </HelpTip>
+              </div>
             </div>
 
             {/* ── 다듬기 ── */}
@@ -383,12 +426,14 @@ export default function HandwritingStudio() {
                   jamo={jamoGlyphs}
                   drawnJamo={drawnJamoChars}
                   refine={refine}
+                  autofill={autofill}
                 />
                 {/* 한글 결과물 = 그린 자모로 음절을 조합한 문구 이미지 */}
                 <HangulImagePanel
                   jamo={jamoGlyphs}
                   drawnJamo={drawnJamoChars}
                   refine={refine}
+                  autofill={autofill}
                 />
               </>
             ) : (
@@ -397,18 +442,43 @@ export default function HandwritingStudio() {
                   fontBase64={previewFont}
                   fontFamily={fontFamily}
                   drawnChars={drawnChars}
+                  filledChars={filledChars}
+                  autofill={autofill}
                   loading={loading}
                   generatedBy={generatedBy}
                 />
 
-                {/* 주력 결과물 = 바로 쓰는 이미지(카톡/인스타). 폰트는 엔진. */}
-                <HandwritingImagePanel
-                  fontBase64={previewFont}
-                  fontFamily={fontFamily}
-                  drawnChars={drawnChars}
-                  glyphs={glyphs}
-                  refine={refine}
-                />
+                {/* 결과물 형태 선택: 이미지/짤 ↔ 편지 */}
+                <div className={styles.resultTabs}>
+                  <Segmented<"image" | "letter">
+                    ariaLabel="결과물 형태"
+                    value={latinResult}
+                    onChange={setLatinResult}
+                    options={[
+                      { value: "image", label: "이미지·짤" },
+                      { value: "letter", label: "편지 쓰기" },
+                    ]}
+                  />
+                </div>
+
+                {latinResult === "image" ? (
+                  // 주력 결과물 = 바로 쓰는 이미지(카톡/인스타). 폰트는 엔진.
+                  <HandwritingImagePanel
+                    fontBase64={previewFont}
+                    fontFamily={fontFamily}
+                    drawnChars={coveredChars}
+                    glyphs={glyphs}
+                    refine={refine}
+                    autofill={autofill}
+                  />
+                ) : (
+                  // 내 폰트로 편지쓰기 — 편지지에 긴 글 → PNG.
+                  <LetterPanel
+                    fontBase64={previewFont}
+                    coveredChars={coveredChars}
+                    autofill={autofill}
+                  />
+                )}
 
                 {/* 폰트 파일 받기는 "고급/무한 재사용" 경로로 강등 (라틴 전용) */}
                 <details className={styles.desktopActions}>

@@ -21,6 +21,8 @@ interface Props {
   drawnJamo: string[];
   /** 다듬기 파라미터. */
   refine?: RefineParams;
+  /** 안 그린 자모를 내 스타일로 자동 채움(엔진 병행 — 미지원이면 무시). */
+  autofill?: boolean;
 }
 
 const DEBOUNCE_MS = 800;
@@ -41,7 +43,7 @@ function base64ToArrayBuffer(b64: string): ArrayBuffer {
  * 그린 자모로 완성 가능한 한글 견본 단어만 골라, 엔진에서 조합 합성한 폰트로 렌더한다.
  * 24 자모 칸 표시: 그린 자모는 진하게, 안 그린 자모는 흐리게(시스템 폰트 폴백).
  */
-export default function HangulPreview({ jamo, drawnJamo, refine = DEFAULT_REFINE }: Props) {
+export default function HangulPreview({ jamo, drawnJamo, refine = DEFAULT_REFINE, autofill = false }: Props) {
   const drawnSet = new Set(drawnJamo);
 
   // 그린 자모로 완성 가능한 견본 단어만(폴백 글자 노출 방지).
@@ -72,6 +74,7 @@ export default function HangulPreview({ jamo, drawnJamo, refine = DEFAULT_REFINE
         text: sampleText,
         refine,
         format: "woff",
+        autofill,
       };
       fetch(apiPath("/api/hangul-compose"), {
         method: "POST",
@@ -96,7 +99,7 @@ export default function HangulPreview({ jamo, drawnJamo, refine = DEFAULT_REFINE
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [jamo, sampleText, refine]);
+  }, [jamo, sampleText, refine, autofill]);
 
   useEffect(() => {
     if (!fontBase64) {

@@ -178,6 +178,8 @@ export async function POST(req: Request) {
     text,
     refine: clampRefine(body.refine),
     format: normalizeFormat(body.format),
+    // 안 그린 자모를 내 스타일로 자동 채워 음절을 완성(엔진 병행 작업 — 미지원이면 무시됨)
+    autofill: body.autofill === true,
   };
 
   const target = `${engineUrl().replace(/\/$/, "")}/hangul-compose`;

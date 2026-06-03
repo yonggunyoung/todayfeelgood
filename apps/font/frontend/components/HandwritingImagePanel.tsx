@@ -24,6 +24,8 @@ interface Props {
   glyphs?: DrawnGlyph[];
   /** 다듬기 파라미터(공유 링크 인코딩용). */
   refine?: RefineParams;
+  /** 자동 채우기 켜짐 — 정직성 표기용(채운 글자는 내 글씨 아님). */
+  autofill?: boolean;
 }
 
 function base64ToArrayBuffer(b64: string): ArrayBuffer {
@@ -76,6 +78,7 @@ export default function HandwritingImagePanel({
   drawnChars,
   glyphs = [],
   refine = DEFAULT_REFINE,
+  autofill = false,
 }: Props) {
   const [phrase, setPhrase] = useState("hello");
   const [sizeId, setSizeId] = useState(SIZE_PRESETS[0]!.id);
@@ -462,8 +465,9 @@ export default function HandwritingImagePanel({
 
       <p className={styles.honesty}>
         <Mascot mood="happy" size={18} still label="" />
-        진짜 내가 그린 글씨로 만든 이미지예요. 색지결은 이미지 전용 효과(폰트 파일엔
-        안 들어가요).
+        {autofill
+          ? "내가 그린 글씨 + 안 그린 글자는 자동 채움(내 글씨 아님)으로 만든 이미지예요. 색지결은 이미지 전용 효과(폰트 파일엔 안 들어가요)."
+          : "진짜 내가 그린 글씨로 만든 이미지예요. 색지결은 이미지 전용 효과(폰트 파일엔 안 들어가요)."}
       </p>
     </section>
   );

@@ -29,6 +29,8 @@ interface Props {
   drawnJamo: string[];
   /** 다듬기 파라미터(스튜디오와 공유). */
   refine?: RefineParams;
+  /** 안 그린 자모를 내 스타일로 자동 채움(엔진 병행 — 미지원이면 무시). */
+  autofill?: boolean;
 }
 
 // 문구가 바뀐 뒤 엔진 합성까지 디바운스(ms). 문구 타이핑이 잦으므로 넉넉히.
@@ -65,7 +67,7 @@ function paintPaper(ctx: CanvasRenderingContext2D, W: number, H: number, base: s
  * 엔진 `/api/hangul-compose`에 그린 자모 + text를 보내 합성 폰트를 받아 렌더한다.
  * 안 그린 필요 자모를 안내해 "적은 입력 → 결과"를 유도한다. 색은 sanitizeColor로 살균.
  */
-export default function HangulImagePanel({ jamo, drawnJamo, refine = DEFAULT_REFINE }: Props) {
+export default function HangulImagePanel({ jamo, drawnJamo, refine = DEFAULT_REFINE, autofill = false }: Props) {
   const [phrase, setPhrase] = useState("안녕");
   const [sizeId, setSizeId] = useState(SIZE_PRESETS[0]!.id);
   const [templateId, setTemplateId] = useState(MEME_TEMPLATES[0]!.id);
@@ -134,6 +136,7 @@ export default function HangulImagePanel({ jamo, drawnJamo, refine = DEFAULT_REF
         text: textToDraw,
         refine,
         format: "woff",
+        autofill,
       };
       fetch(apiPath("/api/hangul-compose"), {
         method: "POST",
@@ -163,7 +166,7 @@ export default function HangulImagePanel({ jamo, drawnJamo, refine = DEFAULT_REF
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [jamo, textToDraw, refine]);
+  }, [jamo, textToDraw, refine, autofill]);
 
   // 받은 폰트를 FontFace로 등록.
   useEffect(() => {

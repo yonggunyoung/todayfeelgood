@@ -10,6 +10,10 @@ interface Props {
   fontFamily?: string;
   /** 그린(=폰트가 커버하는) 문자 집합 */
   drawnChars: string[];
+  /** 엔진이 자동 채운 글자(정직성 표기용). 없으면 [] */
+  filledChars?: string[];
+  /** 자동 채우기 토글 상태(엔진 미지원 graceful 안내용) */
+  autofill?: boolean;
   /** 생성 중 표시 */
   loading?: boolean;
   /** 엔진 응답의 출처 라벨(정직성). 보통 "handwriting" */
@@ -35,6 +39,8 @@ export default function HandwritingPreview({
   fontBase64,
   fontFamily,
   drawnChars,
+  filledChars = [],
+  autofill = false,
   loading,
   generatedBy = "handwriting",
 }: Props) {
@@ -78,13 +84,17 @@ export default function HandwritingPreview({
   }, [fontBase64, fontFamily]);
 
   const drawnSet = new Set(drawnChars);
+  const filledSet = new Set(filledChars.map((c) => c.toLowerCase()));
+  // 폰트가 실제로 커버하는 글자(내가 그린 것 + 엔진이 자동 채운 것).
+  const coveredSet = new Set<string>([...drawnSet, ...filledSet]);
+  const hasFilled = filledSet.size > 0;
   const fontStyle = activeFamily
     ? { fontFamily: `"${activeFamily}", system-ui, sans-serif` }
     : undefined;
 
-  // 그린 글자만 포함하는 예문만 보여 준다(폴백 글자 노출 방지).
+  // 폰트가 커버하는 글자만 포함하는 예문만 보여 준다(폴백 글자 노출 방지).
   const renderableWords = SAMPLE_WORDS.filter((w) =>
-    [...w].every((ch) => ch === " " || drawnSet.has(ch.toLowerCase()))
+    [...w].every((ch) => ch === " " || coveredSet.has(ch.toLowerCase()))
   );
 
   // a–z 중 무엇이 채워졌는지 한눈에. 안 그린 글자는 흐리게.
@@ -101,18 +111,30 @@ export default function HandwritingPreview({
 
       {activeFamily ? (
         <div className={styles.sheet} style={fontStyle}>
-          {/* 그린 알파벳 견본 — 안 그린 글자는 흐리게(시스템 폰트 폴백) */}
+          {/* 그린 알파벳 견본 — 그린 글자는 진하게, 자동 채운 글자는 점선 강조, 안 그린 글자는 흐리게 */}
           <p className={styles.alphabet}>
-            {alphabet.map((ch) => (
-              <span
-                key={ch}
-                className={drawnSet.has(ch) ? styles.inkChar : styles.dimChar}
-                style={drawnSet.has(ch) ? fontStyle : undefined}
-              >
-                {ch}
-              </span>
-            ))}
+            {alphabet.map((ch) => {
+              const isDrawn = drawnSet.has(ch);
+              const isFilled = !isDrawn && filledSet.has(ch);
+              return (
+                <span
+                  key={ch}
+                  className={
+                    isDrawn ? styles.inkChar : isFilled ? styles.filledChar : styles.dimChar
+                  }
+                  style={isDrawn || isFilled ? fontStyle : undefined}
+                  title={isFilled ? "자동 채움(내 글씨 아님)" : undefined}
+                >
+                  {ch}
+                </span>
+              );
+            })}
           </p>
+          {hasFilled && (
+            <p className={styles.fillNote}>
+              점선 글자는 <strong>자동 채움</strong>이에요(내 글씨 아님).
+            </p>
+          )}
 
           {/* 그린 글자만으로 만들 수 있는 예문 */}
           {renderableWords.length > 0 ? (
@@ -140,9 +162,13 @@ export default function HandwritingPreview({
 
       <p className={styles.honesty}>
         <Mascot mood="happy" size={20} still label="" />
-        {generatedBy === "handwriting"
-          ? "진짜 내가 그린 글씨로 만든 폰트예요."
-          : "내가 그린 획에서 만든 폰트예요."}
+        {hasFilled
+          ? "진짜 내가 그린 글씨 + 안 그린 글자는 내 스타일로 자동 채웠어요(자동 채운 글자는 내 글씨 아님)."
+          : autofill
+            ? "자동 채우기를 켰어요. 글자를 그리면 안 그린 글자는 내 스타일로 채워 드려요."
+            : generatedBy === "handwriting"
+              ? "진짜 내가 그린 글씨로 만든 폰트예요."
+              : "내가 그린 획에서 만든 폰트예요."}
       </p>
     </div>
   );

@@ -30,6 +30,38 @@
   color: var(--accent, #7c6cf0);
 }
 
+.zoomBtn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r-sm, 10px);
+  border: 1px solid var(--line, #e7e3f0);
+  background: color-mix(in srgb, var(--surface, #fff) 88%, transparent);
+  color: var(--muted, #8b86a3);
+  font-size: 0.82rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.zoomBtn:hover:not(:disabled) {
+  background: var(--surface-2, #f3f0ff);
+  color: var(--accent, #7c6cf0);
+}
+.zoomBtn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--accent-weak, #efeaff);
+}
+.zoomBtn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
 .cell[data-script="hangul"] .canvas {
   /* 한글 자모는 정사각 칸(상하·좌우 균형). */
   aspect-ratio: 1 / 1;

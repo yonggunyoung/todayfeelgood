@@ -1,0 +1,106 @@
+.wrap {
+  position: relative;
+  display: inline-flex;
+  vertical-align: middle;
+  line-height: 0;
+}
+
+.trigger {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+  border-radius: var(--r-pill, 999px);
+  border: 1.5px solid color-mix(in srgb, var(--accent) 40%, var(--hairline, #e7e3f0));
+  background: var(--surface, #fff);
+  color: var(--accent-ink, #5b4bd0);
+  font-size: 0.72rem;
+  font-weight: var(--weight-bold, 700);
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: background var(--dur-fast, 0.12s) var(--ease-out, ease),
+    transform var(--dur-fast, 0.12s) var(--ease-out, ease);
+}
+.trigger:hover {
+  background: var(--accent-weak, #efeaff);
+}
+.trigger:active {
+  transform: scale(0.92);
+}
+.trigger:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--accent-weak, #efeaff);
+}
+.trigger[aria-expanded="true"] {
+  background: var(--accent, #7c6cf0);
+  color: var(--accent-ink-weak, #fff);
+  border-color: var(--accent, #7c6cf0);
+}
+
+.pop {
+  position: absolute;
+  top: calc(100% + 8px);
+  z-index: 60;
+  width: max-content;
+  max-width: min(16rem, 78vw);
+  padding: var(--sp-3, 12px) var(--sp-4, 16px);
+  border-radius: var(--r-md, 16px);
+  background: var(--surface, #fff);
+  color: var(--ink-soft, #4a4660);
+  box-shadow: var(--shadow-lg, 0 12px 32px -10px rgba(40, 30, 70, 0.3));
+  border: 1px solid var(--hairline, #e7e3f0);
+  font-size: var(--text-sm, 0.85rem);
+  font-weight: var(--weight-reg, 400);
+  line-height: 1.5;
+  text-align: left;
+  white-space: normal;
+  animation: helptip-pop var(--dur-fast, 0.12s) var(--ease-out, ease);
+}
+.pop:focus {
+  outline: none;
+}
+
+.align-start {
+  left: 0;
+}
+.align-center {
+  left: 50%;
+  transform: translateX(-50%);
+}
+.align-end {
+  right: 0;
+}
+
+@keyframes helptip-pop {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+  }
+}
+.align-center {
+  animation-name: helptip-pop-center;
+}
+@keyframes helptip-pop-center {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pop,
+  .trigger {
+    animation: none;
+    transition: none;
+  }
+}

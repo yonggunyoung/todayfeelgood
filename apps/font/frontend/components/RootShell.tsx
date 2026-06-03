@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import type { Metadata } from "next";
 import { Noto_Sans_KR, Quicksand } from "next/font/google";
 import { siteUrl, htmlLang } from "@webapp/seo";
+import { SiteScripts } from "@webapp/ui";
 import type { Locale } from "../lib/i18n";
 import { getDictionary } from "../lib/i18n";
 import "../app/globals.css";
@@ -45,7 +46,10 @@ export function rootMetadata(locale: Locale): Metadata {
 export function RootShell({ locale, children }: { locale: Locale; children: ReactNode }) {
   return (
     <html lang={htmlLang(locale)} className={`${sansKr.variable} ${display.variable}`}>
-      <body>{children}</body>
+      <body>
+        <SiteScripts />
+        {children}
+      </body>
     </html>
   );
 }

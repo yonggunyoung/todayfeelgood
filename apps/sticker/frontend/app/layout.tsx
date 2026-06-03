@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import type { Metadata } from "next";
 import { Noto_Sans_KR, Quicksand } from "next/font/google";
 import { siteUrl } from "@webapp/seo";
+import { SiteScripts } from "@webapp/ui";
 import "./globals.css";
 
 // 폰트앱과 동일한 "소프트 iOS 문방구" 타이포: 본문/UI = Noto Sans KR, 디스플레이 = Quicksand.
@@ -44,7 +45,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="ko" className={`${sansKr.variable} ${display.variable}`}>
-      <body>{children}</body>
+      <body>
+        <SiteScripts />
+        {children}
+      </body>
     </html>
   );
 }

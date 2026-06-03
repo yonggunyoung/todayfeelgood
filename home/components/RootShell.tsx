@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
 import type { Metadata } from "next";
 import { Noto_Sans_KR, Quicksand } from "next/font/google";
-import { siteUrl, htmlLang } from "@webapp/seo";
+import { siteUrl, htmlLang, siteVerification } from "@webapp/seo";
+import { SiteScripts } from "@webapp/ui";
 import type { Locale } from "../lib/i18n";
 import { getDictionary } from "../lib/i18n";
 import "../app/globals.css";
@@ -28,6 +29,8 @@ export function rootMetadata(locale: Locale): Metadata {
     metadataBase: new URL(siteUrl()),
     title: { default: t.seo.title, template },
     description: t.seo.description,
+    // 검색엔진 소유확인 메타(환경변수 있을 때만 출력). 메인 도메인=홈이 대표로 싣는다.
+    verification: siteVerification(),
   };
 }
 
@@ -35,7 +38,11 @@ export function rootMetadata(locale: Locale): Metadata {
 export function RootShell({ locale, children }: { locale: Locale; children: ReactNode }) {
   return (
     <html lang={htmlLang(locale)} className={`${sansKr.variable} ${display.variable}`}>
-      <body>{children}</body>
+      <body>
+        {/* 광고·분석 스크립트(env on/off, 기본 OFF). 토스 미니앱 빌드에선 env 비워 자동 비활성. */}
+        <SiteScripts />
+        {children}
+      </body>
     </html>
   );
 }

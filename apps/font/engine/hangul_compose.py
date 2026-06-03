@@ -225,10 +225,30 @@ def _prepare_jamo_inks(
     return out
 
 
-def _place_ink(ink: _JamoInk, box: _Box, fill: float = 0.86) -> List[List[Point]]:
+# 자모를 박스에 넣을 때 채우는 비율(여백 = 1-fill). 일관성 위해 고정.
+PLACE_FILL = 0.84
+# 균일 스케일에서 한쪽 변이 너무 작아지지 않게 하는 최소 변 비율.
+# 예: ㅡ(가로로 길고 세로로 납작)는 uniform scale 때 세로변이 박스 대비 매우
+# 작아진다. 이때 잉크가 시각적으로 너무 작아 보이지 않도록 단변 길이에
+# 최소 크기를 보장(박스 단변의 MIN_SHORT_FILL 이상)한다 → '글' 같은 글자가
+# 유독 작아지던 문제 완화. (과도 확대는 막아 손맛/형태는 유지.)
+MIN_SHORT_FILL = 0.34
+# 형태 왜곡(개성 손상) 방지를 위한 비균일 스케일 상한(장변/단변 비).
+MAX_ANISO = 1.6
+
+
+def _place_ink(ink: _JamoInk, box: _Box, fill: float = PLACE_FILL) -> List[List[Point]]:
     """
-    자모 잉크(폴리곤들)를 box 안에 affine(scale+translate)으로 맞춘다.
-    종횡비 보존(uniform scale), fill 비율만큼 박스를 채우고 가운데 정렬.
+    자모 잉크(폴리곤들)를 box 안에 affine(scale+translate)으로 맞춰 가운데 정렬.
+
+    기본은 종횡비 보존(uniform scale)이되, **특정 자모만 유독 작아지는 문제**를
+    막기 위해 단변(짧은 쪽)에 최소 크기를 보장한다:
+      - uniform scale s = min(sx, sy) 로 장변을 박스에 맞춘다(여백 fill).
+      - 그 결과 단변이 박스 단변의 MIN_SHORT_FILL 미만으로 쪼그라들면,
+        단변 방향만 살짝 더 키워(비균일) 최소 크기를 확보한다.
+        단, 형태 왜곡을 막으려 종횡비 변형은 MAX_ANISO 배 이내로 클램프.
+    이렇게 하면 ㅡ/ㅣ 같은 가늘고 긴 자모도 칸 안에서 일정 크기 이상으로
+    안정 배치되어 음절 간 크기 들쭉날쭉이 줄어든다(개성/형태는 보존).
     """
     iw = ink.x1 - ink.x0
     ih = ink.y1 - ink.y0
@@ -236,40 +256,70 @@ def _place_ink(ink: _JamoInk, box: _Box, fill: float = 0.86) -> List[List[Point]
     bh = box.y1 - box.y0
     if iw < 1e-6 or ih < 1e-6 or bw < 1e-6 or bh < 1e-6:
         return [list(p) for p in ink.polys]
+
+    # 1) 균일 스케일: 장변을 박스(여백 fill)에 맞춘다.
     sx = (bw * fill) / iw
     sy = (bh * fill) / ih
     s = min(sx, sy)
-    # 스케일 후 잉크 크기.
-    nw = iw * s
-    nh = ih * s
-    # box 중앙 정렬.
+    scale_x = s
+    scale_y = s
+
+    # 2) 단변 최소 크기 보장: 균일 스케일 후 각 변이 박스 단변 대비 너무 작으면
+    #    그 축만 살짝 더 키운다(비균일). 종횡비 왜곡은 MAX_ANISO 배 이내로 클램프.
+    min_w = bw * MIN_SHORT_FILL
+    min_h = bh * MIN_SHORT_FILL
+    if iw * scale_x < min_w:
+        want = min_w / iw
+        # 박스 폭(fill)을 넘지 않게, 왜곡 상한 이내로.
+        scale_x = min(want, sx, s * MAX_ANISO)
+    if ih * scale_y < min_h:
+        want = min_h / ih
+        scale_y = min(want, sy, s * MAX_ANISO)
+
+    # box 중앙 정렬: 잉크 중심을 box 중심으로.
     cx = (box.x0 + box.x1) / 2.0
     cy = (box.y0 + box.y1) / 2.0
-    # 잉크 중심을 box 중심으로.
     icx = (ink.x0 + ink.x1) / 2.0
     icy = (ink.y0 + ink.y1) / 2.0
     out: List[List[Point]] = []
     for poly in ink.polys:
-        np = [((px - icx) * s + cx, (py - icy) * s + cy) for px, py in poly]
+        np = [((px - icx) * scale_x + cx, (py - icy) * scale_y + cy) for px, py in poly]
         out.append(np)
     return out
 
 
 # ---------------- 모아쓰기(박스 분할) ----------------
+# ---- 모아쓰기 비율(전 모임유형 공통, 일관성 핵심) ----
+# 받침 있을 때 초+중(윗블록)이 차지하는 세로 비율. 나머지가 종성.
+# 모든 모임유형에서 동일하게 적용해 "받침 있는 글자"의 윗블록 크기를 통일한다.
+JONG_SPLIT_RATIO = 0.62      # baseline 위 (top - base) 중 윗블록 하한 위치 비율
+# 세로모음(ㅏ류): 초성 좌, 중성 우 — 좌우 분할선 위치.
+VJUNG_SPLIT_X = 0.62
+# 가로모음(ㅗ류): 초성 위, 중성 아래 — 상하 분할선 위치(윗블록 내).
+HJUNG_SPLIT_Y = 0.56
+# 곁(ㅣ) 칸 폭 비율(겹모음 ㅐ/ㅚ 등의 세로 ㅣ).
+ITAIL_W = 0.16
+
+
 def _layout_boxes(jung: str, has_jong: bool) -> Tuple[List[_Box], List[_Box], List[_Box]]:
     """
     중성 모임유형 + 받침 유무 → (초성 박스들, 중성 박스들, 종성 박스들).
     여러 박스인 경우 expand_jamo 로 펼친 낱자들을 순서대로 채운다.
     좌표는 폰트 유닛.
+
+    [일관성 개선] 모임유형(세로/가로/복합)·받침 유무와 무관하게 동일한
+    분할 비율(JONG_SPLIT_RATIO 등)을 써서 음절마다 초/중/종 크기가 들쭉날쭉
+    하지 않게 한다. 또 칸들이 서로 겹치지 않게 경계를 명확히 나눠
+    ('최' 등 복합모음+초성 겹침 방지) 읽힘을 높인다.
     """
     L, R = float(SYL_LEFT), float(SYL_RIGHT)
     T, B = float(SYL_TOP), float(SYL_BOTTOM)
     BASE = 0.0  # baseline
 
-    # 받침 있으면 위쪽(초+중) 영역을 압축, 하단 전폭에 종성.
+    # 받침 있으면 윗블록(초+중)을 baseline 위 일정 비율로 통일 압축, 하단에 종성.
     if has_jong:
         top_b = T
-        mid_b = BASE + 0.20 * (T - BASE)  # 초/중 영역 아래선(받침 위)
+        mid_b = BASE + JONG_SPLIT_RATIO * (T - BASE)  # 윗블록 아래선(받침 위)
         jong_top = mid_b
         jong_bot = B
     else:
@@ -284,30 +334,32 @@ def _layout_boxes(jung: str, has_jong: bool) -> Tuple[List[_Box], List[_Box], Li
     is_complex = jung in COMPLEX_VOWELS
 
     if is_complex:
-        # 복합: 초성 좌상, 가로요소 우상~중, 세로요소 우측 전체(근사).
-        # 초성 = 상단 좌측. 중성 = 상단 우측(가로) + 우측 세로.
-        midx = L + 0.55 * (R - L)
-        cho_boxes.append(_Box(L, mid_b + 0.45 * (top_b - mid_b), midx, top_b))
-        # 중성 칸: expand_jamo 로 보통 2~3개(가로+세로[+ㅣ]).
-        # 가로요소: 좌하(초성 아래), 세로요소: 우측.
-        jung_boxes.append(_Box(L, mid_b, midx, mid_b + 0.45 * (top_b - mid_b)))  # 가로(ㅗ/ㅜ)
-        jung_boxes.append(_Box(midx, mid_b, R, top_b))                          # 세로(ㅏ/ㅓ)
-        jung_boxes.append(_Box(R - 0.12 * (R - L), mid_b, R, top_b))            # 추가 ㅣ(있으면)
+        # 복합모음(ㅘ/ㅚ/ㅝ 등 = 가로요소 + 세로요소[+ㅣ]).
+        # 윗블록을 상/하로 나눠: 위=초성+세로요소(좌우), 아래=가로요소(전폭).
+        # 이렇게 칸을 겹치지 않게 분리해 초성과 모음이 포개지지 않게 한다('최' 수정).
+        h_split = mid_b + 0.46 * (top_b - mid_b)   # 가로요소(아래) ↔ 위 블록 경계
+        v_split_x = L + 0.58 * (R - L)             # 위 블록 좌(초성) ↔ 우(세로요소)
+        # 초성: 위 블록 좌측.
+        cho_boxes.append(_Box(L, h_split, v_split_x, top_b))
+        # 중성 칸 순서 = expand_jamo 순서(가로요소, 세로요소[, ㅣ]).
+        jung_boxes.append(_Box(L, mid_b, R, h_split))                  # 가로요소(ㅗ/ㅜ/ㅡ) 전폭 하단
+        jung_boxes.append(_Box(v_split_x, h_split, R, top_b))          # 세로요소(ㅏ/ㅓ/ㅣ) 우상
+        jung_boxes.append(_Box(R - ITAIL_W * (R - L), h_split, R, top_b))  # 추가 ㅣ(있으면)
     elif is_horizontal:
-        # 가로모음: 초성 상단(전폭), 중성 하단(전폭).
-        split = mid_b + 0.58 * (top_b - mid_b)
+        # 가로모음(ㅗ/ㅛ/ㅜ/ㅠ/ㅡ): 초성 위(전폭), 중성 아래(전폭).
+        split = mid_b + HJUNG_SPLIT_Y * (top_b - mid_b)
         cho_boxes.append(_Box(L, split, R, top_b))
         jung_boxes.append(_Box(L, mid_b, R, split))
         # 가로모음이 expand 되면(거의 없음) 같은 칸 재사용.
         jung_boxes.append(_Box(L, mid_b, R, split))
     else:
-        # 세로모음: 초성 좌(약 0..0.62), 중성 우.
-        split = L + 0.60 * (R - L)
+        # 세로모음(ㅏ/ㅑ/ㅓ/ㅕ/ㅣ): 초성 좌, 중성 우.
+        split = L + VJUNG_SPLIT_X * (R - L)
         cho_boxes.append(_Box(L, mid_b, split, top_b))
         jung_boxes.append(_Box(split, mid_b, R, top_b))
         # 세로모음 expand(ㅐ=ㅏ+ㅣ 등): ㅏ 우측 본체 + ㅣ 더 우측.
-        jung_boxes.append(_Box(split, mid_b, R, top_b))
-        jung_boxes.append(_Box(R - 0.12 * (R - L), mid_b, R, top_b))
+        jung_boxes.append(_Box(split, mid_b, split + 0.72 * (R - split), top_b))
+        jung_boxes.append(_Box(R - ITAIL_W * (R - L), mid_b, R, top_b))
 
     if has_jong:
         # 종성 전폭 하단. 겹받침이면 좌우로 분할.
@@ -392,10 +444,19 @@ def build_hangul_font(
     text: str,
     refine: RefineParams,
     fmt: FontFormat = "woff",
-) -> Tuple[bytes, str, int]:
+    autofill: bool = False,
+    base_font_path: str | None = None,
+) -> Tuple[bytes, str, int, list, list]:
     """
     그린 기본 자모 + text → text에 등장하는 한글 음절만 합성한 폰트 bytes.
-    반환: (font_bytes, font_family, syllable_count).
+
+    autofill=True 이고 base_font_path 가 주어지면, text 합성에 필요한데 사용자가
+    안 그린 기본 자모를, 그린 자모에서 추출한 스타일(굵기)에 맞춘 베이스 한글폰트
+    (Pretendard)에서 가져와 조합에 사용한다 → 더 많은 음절을 완성.
+    사용자가 그린 자모는 그대로 우선한다.
+
+    [정직성] 반환의 drawn_jamo/filled_jamo 로 "내가 그림" vs "자동 채움"을 구분.
+    반환: (font_bytes, font_family, syllable_count, drawn_jamo, filled_jamo).
     """
     if fmt not in ALLOWED_FORMATS:
         fmt = "woff"
@@ -407,6 +468,33 @@ def build_hangul_font(
     inks = _prepare_jamo_inks(jamo, refine)
     if not inks:
         raise ValueError("유효한 기본 자모 글리프가 없습니다.")
+
+    drawn_jamo = sorted(inks.keys())
+    filled_jamo: list[str] = []
+
+    # ── 자동 채우기: text 합성에 필요한데 안 그린 기본 자모를 베이스 폰트에서 채움 ──
+    # [정직성] 채운 자모는 "내 글씨"가 아니라 "내 굵기에 맞춘 공개 폰트 자모".
+    if autofill and base_font_path:
+        try:
+            import autofill as _af
+
+            style = _af.extract_style(jamo, refine.nib)
+            needed = required_basic_jamo(text)
+            fill_strokes = _af.hangul_fill_jamo_strokes(
+                base_font_path, style, needed, skip_jamo=set(inks.keys())
+            )
+            if fill_strokes:
+                fill_inks = _prepare_jamo_inks(
+                    list(fill_strokes.items()), refine
+                )
+                for ch, ink in fill_inks.items():
+                    if ch in inks:  # 사용자 자모 우선(안전).
+                        continue
+                    inks[ch] = ink
+                    filled_jamo.append(ch)
+                filled_jamo.sort()
+        except Exception:
+            filled_jamo = []
 
     # text에서 합성할 음절 수집(중복 제거, 등장 순서 보존). 무료티어 가드: 상한.
     syllables: List[str] = []
@@ -503,7 +591,7 @@ def build_hangul_font(
     font.flavor = _flavor_for_format(fmt)
     buf = io.BytesIO()
     font.save(buf)
-    return buf.getvalue(), family, count
+    return buf.getvalue(), family, count, drawn_jamo, filled_jamo
 
 
 def _short_id(
@@ -528,7 +616,11 @@ def build_hangul_font_base64(
     text: str,
     refine: RefineParams,
     fmt: FontFormat = "woff",
-) -> Tuple[str, str, int]:
-    """build_hangul_font 결과를 base64로."""
-    font_bytes, family, count = build_hangul_font(jamo, text, refine, fmt)
-    return base64.b64encode(font_bytes).decode("ascii"), family, count
+    autofill: bool = False,
+    base_font_path: str | None = None,
+) -> Tuple[str, str, int, list, list]:
+    """build_hangul_font 결과를 base64로. (b64, family, count, drawn, filled)"""
+    font_bytes, family, count, drawn, filled = build_hangul_font(
+        jamo, text, refine, fmt, autofill, base_font_path
+    )
+    return base64.b64encode(font_bytes).decode("ascii"), family, count, drawn, filled

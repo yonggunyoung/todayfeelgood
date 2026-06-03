@@ -546,11 +546,19 @@ def build_handwriting_font(
     glyphs: Sequence[Tuple[str, Sequence[Sequence[Point]]]],
     refine: RefineParams,
     fmt: FontFormat = "woff",
-) -> Tuple[bytes, str, int]:
+    autofill: bool = False,
+    base_font_path: str | None = None,
+) -> Tuple[bytes, str, int, list, list]:
     """
     그린 글자들 → 진짜 폰트 bytes.
     glyphs: [(char, [stroke, ...]), ...]  stroke=[(x,y) 0..1, ...]
-    반환: (font_bytes, font_family, glyph_count)
+
+    autofill=True 이고 base_font_path 가 주어지면, 안 그린 라틴 글자(a-z,A-Z,0-9)를
+    그린 획에서 추출한 스타일(굵기/기울기)에 맞춘 베이스 폰트(Recursive)로 자동
+    채운다. 사용자 글리프는 그대로 우선한다(절대 덮어쓰지 않음).
+
+    [정직성] 반환의 drawn_chars/filled_chars 로 "내가 그림" vs "자동 채움"을 구분.
+    반환: (font_bytes, font_family, glyph_count, drawn_chars, filled_chars)
     """
     if fmt not in ALLOWED_FORMATS:
         fmt = "woff"
@@ -581,6 +589,7 @@ def build_handwriting_font(
     lsbs["space"] = 0
 
     seen: set[str] = set()
+    drawn_chars: list[str] = []
     count = 0
     for ch, strokes in glyphs:
         if not ch or len(ch) != 1:
@@ -616,10 +625,42 @@ def build_handwriting_font(
             adv = space_adv
         advances[gname] = max(adv, 1)
         lsbs[gname] = lsb
+        drawn_chars.append(ch)
         count += 1
 
     if count == 0:
         raise ValueError("유효한 글자가 없습니다.")
+
+    # ── 자동 채우기: 안 그린 라틴 글자를 추출 스타일로 베이스 폰트에서 채움 ──
+    # [정직성] 채운 글자는 "내 글씨"가 아니라 "내 톤에 맞춘 공개 폰트 글리프".
+    filled_chars: list[str] = []
+    if autofill and base_font_path:
+        try:
+            import autofill as _af
+
+            style = _af.extract_style(glyphs, refine.nib)
+            fills = _af.latin_fill_glyphs(
+                base_font_path, style, set(seen), spacing_units=max(0, spacing_units)
+            )
+            for fg in fills:
+                if ord(fg.char) in char_map:  # 사용자 글리프 우선(안전).
+                    continue
+                gname = _glyph_name(fg.char)
+                base_name = gname
+                k = 1
+                while gname in glyf:
+                    gname = f"{base_name}.{k}"
+                    k += 1
+                glyf[gname] = fg.glyph
+                glyph_order.append(gname)
+                char_map[ord(fg.char)] = gname
+                advances[gname] = max(1, fg.advance)
+                lsbs[gname] = fg.lsb
+                filled_chars.append(fg.char)
+                count += 1
+        except Exception:
+            # 자동 채우기는 부가 기능: 실패해도 그린 글자만으로 폰트는 완성.
+            filled_chars = []
 
     fb = FontBuilder(UPM, isTTF=True)
     fb.setupGlyphOrder(glyph_order)
@@ -659,7 +700,7 @@ def build_handwriting_font(
     font.flavor = _flavor_for_format(fmt)
     buf = io.BytesIO()
     font.save(buf)
-    return buf.getvalue(), family, count
+    return buf.getvalue(), family, count, drawn_chars, filled_chars
 
 
 def _flavor_for_format(fmt: FontFormat) -> str | None:
@@ -686,10 +727,14 @@ def build_handwriting_font_base64(
     glyphs: Sequence[Tuple[str, Sequence[Sequence[Point]]]],
     refine: RefineParams,
     fmt: FontFormat = "woff",
-) -> Tuple[str, str, int]:
-    """build_handwriting_font 결과를 base64로."""
-    font_bytes, family, count = build_handwriting_font(glyphs, refine, fmt)
-    return base64.b64encode(font_bytes).decode("ascii"), family, count
+    autofill: bool = False,
+    base_font_path: str | None = None,
+) -> Tuple[str, str, int, list, list]:
+    """build_handwriting_font 결과를 base64로. (b64, family, count, drawn, filled)"""
+    font_bytes, family, count, drawn, filled = build_handwriting_font(
+        glyphs, refine, fmt, autofill, base_font_path
+    )
+    return base64.b64encode(font_bytes).decode("ascii"), family, count, drawn, filled
 
 
 def reopen_ok(font_bytes: bytes) -> bool:

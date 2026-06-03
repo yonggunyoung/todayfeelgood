@@ -64,7 +64,7 @@ def test_build_basic_ttf_reopen():
         ("b", [[(0.3, 0.1), (0.3, 0.9)], [(0.3, 0.9), (0.7, 0.9)]]),
     ]
     refine = handwriting.RefineParams()
-    raw, family, count = handwriting.build_handwriting_font(glyphs, refine, "ttf")
+    raw, family, count, _drawn, _filled = handwriting.build_handwriting_font(glyphs, refine, "ttf")
     assert raw[:4] in (b"\x00\x01\x00\x00", b"true")
     assert count == 2
     assert family.startswith("MyHand-")
@@ -77,10 +77,10 @@ def test_build_basic_ttf_reopen():
 
 def test_refine_changes_output():
     glyphs = [("a", [[(0.2, 0.2), (0.4, 0.5), (0.3, 0.8), (0.6, 0.6)]])]
-    raw0, _, _ = handwriting.build_handwriting_font(
+    raw0, _, _, _d, _f = handwriting.build_handwriting_font(
         glyphs, handwriting.RefineParams(smoothing=0, nib=0.2, taper=0), "ttf"
     )
-    raw1, _, _ = handwriting.build_handwriting_font(
+    raw1, _, _, _d, _f = handwriting.build_handwriting_font(
         glyphs, handwriting.RefineParams(smoothing=1, nib=1, taper=1), "ttf"
     )
     assert raw0 != raw1  # refine 0 vs 1 결과 상이
@@ -89,15 +89,15 @@ def test_refine_changes_output():
 def test_reproducible_same_input():
     glyphs = [("a", [[(0.5, 0.1), (0.5, 0.9)]])]
     r = handwriting.RefineParams()
-    a, _, _ = handwriting.build_handwriting_font(glyphs, r, "ttf")
-    b, _, _ = handwriting.build_handwriting_font(glyphs, r, "ttf")
+    a, _, _, _d, _f = handwriting.build_handwriting_font(glyphs, r, "ttf")
+    b, _, _, _d, _f = handwriting.build_handwriting_font(glyphs, r, "ttf")
     assert a == b  # head.modified 고정 → 동일 바이트
 
 
 def test_single_point_dot_glyph():
     # 점 하나 → 도트(원형) 글리프로라도 유효 폰트.
     glyphs = [("a", [[(0.5, 0.5)]])]
-    raw, _, count = handwriting.build_handwriting_font(glyphs, handwriting.RefineParams(), "ttf")
+    raw, _, count, _d, _f = handwriting.build_handwriting_font(glyphs, handwriting.RefineParams(), "ttf")
     assert count == 1
     assert handwriting.reopen_ok(raw)
 
@@ -106,7 +106,7 @@ def test_single_point_dot_glyph():
 def test_outline_uses_quadratic_curves():
     """외곽선이 직선 폴리라인이 아니라 2차 베지어(qCurveTo) — off-curve 점이 존재."""
     glyphs = [("o", [_circle()])]
-    raw, _, _ = handwriting.build_handwriting_font(glyphs, handwriting.RefineParams(), "ttf")
+    raw, _, _, _d, _f = handwriting.build_handwriting_font(glyphs, handwriting.RefineParams(), "ttf")
     g = _glyf_for(raw, "o")
     assert _off_curve_count(g) > 0  # 곡선화 증거(직선만이면 0)
 
@@ -121,7 +121,7 @@ def test_synthetic_o_l_e_valid_no_explosion():
     ]
     for sm in (0.0, 1.0):
         refine = handwriting.RefineParams(smoothing=sm, nib=0.5, taper=0.3)
-        raw, _, count = handwriting.build_handwriting_font(glyphs, refine, "ttf")
+        raw, _, count, _d, _f = handwriting.build_handwriting_font(glyphs, refine, "ttf")
         assert count == 3
         assert handwriting.reopen_ok(raw)
         for ch in "ole":
@@ -137,18 +137,18 @@ def test_smoothing_zero_vs_one_differ():
     glyphs = [("e", [_circle(r=0.28)])]
     r0 = handwriting.RefineParams(smoothing=0, nib=0.5)
     r1 = handwriting.RefineParams(smoothing=1, nib=0.5)
-    a, _, _ = handwriting.build_handwriting_font(glyphs, r0, "ttf")
-    b, _, _ = handwriting.build_handwriting_font(glyphs, r1, "ttf")
+    a, _, _, _d, _f = handwriting.build_handwriting_font(glyphs, r0, "ttf")
+    b, _, _, _d, _f = handwriting.build_handwriting_font(glyphs, r1, "ttf")
     assert a != b
 
 
 def test_metric_alignment_bands():
     """가이드 정렬: 'l'(어센더 글자)은 높이, 'o'(x-height)는 낮게, 'g'는 디센더로 내려감."""
     refine = handwriting.RefineParams(straighten=0.5)
-    raw_l, _, _ = handwriting.build_handwriting_font(
+    raw_l, _, _, _d, _f = handwriting.build_handwriting_font(
         [("l", [[(0.5, 0.05), (0.5, 0.95)]])], refine, "ttf")
-    raw_o, _, _ = handwriting.build_handwriting_font([("o", [_circle()])], refine, "ttf")
-    raw_g, _, _ = handwriting.build_handwriting_font(
+    raw_o, _, _, _d, _f = handwriting.build_handwriting_font([("o", [_circle()])], refine, "ttf")
+    raw_g, _, _, _d, _f = handwriting.build_handwriting_font(
         [("g", [_circle(0.5, 0.55, 0.2), [(0.7, 0.4), (0.72, 0.95), (0.45, 0.99), (0.3, 0.9)]])],
         refine, "ttf")
     yl = _glyf_for(raw_l, "l").yMax
@@ -160,7 +160,7 @@ def test_metric_alignment_bands():
 
 def test_single_glyph_stable():
     """글자 수가 적어도(1개) 안정적으로 유효 폰트."""
-    raw, _, count = handwriting.build_handwriting_font(
+    raw, _, count, _d, _f = handwriting.build_handwriting_font(
         [("a", [_circle(r=0.25)])], handwriting.RefineParams(), "woff")
     assert count == 1 and raw[:4] == b"wOFF" and handwriting.reopen_ok(raw)
 
@@ -266,3 +266,108 @@ def test_handwriting_bad_point_422(client):
         "glyphs": [{"char": "a", "strokes": [{"points": [[0.5]]}]}],
     })
     assert r.status_code == 422
+
+
+# ---------------- autofill(자동 채우기) 테스트 ----------------
+import autofill  # noqa: E402
+import font_loader  # noqa: E402
+
+
+def test_extract_style_basic():
+    """스타일 추출: 기울인 세로획에서 slant(기울기) 신호, nib/높이 통계."""
+    # 위(0.4)→아래(0.6)로 오른쪽으로 기운 세로획 → 오른쪽 기울임(음수 slant).
+    glyphs = [("a", [[(0.4, 0.1), (0.6, 0.9)]])]
+    st = autofill.extract_style(glyphs, nib=0.7)
+    assert st.glyph_count == 1
+    assert st.nib == 0.7
+    assert st.slant_deg < 0  # 오른쪽 기울임 → 음수(라틴 slnt 규약)
+    assert st.avg_ink_height > 0
+
+
+def test_autofill_module_skips_drawn_chars():
+    """latin_fill_glyphs는 skip_chars(그린 글자)를 채우지 않는다."""
+    path = font_loader.ensure_font()
+    if path is None:
+        pytest.skip("라틴 베이스 폰트 없음(오프라인).")
+    st = autofill.DrawnStyle(slant_deg=0.0, nib=0.5, avg_ink_height=700.0, glyph_count=2)
+    fills = autofill.latin_fill_glyphs(str(path), st, skip_chars={"a", "b"})
+    chars = {f.char for f in fills}
+    assert "a" not in chars and "b" not in chars
+    assert "z" in chars and "Q" in chars  # 안 그린 글자는 채워짐
+    # 채운 글리프는 유효(컨투어 있음).
+    for f in fills:
+        assert getattr(f.glyph, "numberOfContours", 0) > 0
+
+
+def test_build_handwriting_autofill_adds_missing_to_cmap():
+    """autofill=True: 안 그린 a-z가 cmap에 추가되고 drawn/filled로 구분 반환."""
+    path = font_loader.ensure_font()
+    if path is None:
+        pytest.skip("라틴 베이스 폰트 없음(오프라인).")
+    glyphs = [("a", [[(0.5, 0.1), (0.5, 0.9)]]), ("b", [_circle(r=0.25)])]
+    raw, fam, count, drawn, filled = handwriting.build_handwriting_font(
+        glyphs, handwriting.RefineParams(), "ttf", autofill=True, base_font_path=str(path)
+    )
+    assert handwriting.reopen_ok(raw)
+    cmap = TTFont(io.BytesIO(raw)).getBestCmap()
+    # 그린 글자.
+    assert set(drawn) == {"a", "b"}
+    # 자동 채움(내 글씨 아님)에 그린 글자는 안 들어감.
+    assert "a" not in filled and "b" not in filled
+    assert len(filled) > 0
+    # 안 그린 글자(예: z, c)가 cmap에 추가됨.
+    assert ord("z") in cmap and ord("c") in cmap
+    assert count == 2 + len(filled)
+
+
+def test_build_handwriting_autofill_false_unchanged():
+    """autofill=False(기본): 그린 것만, filled 비고 cmap에 미작성 글자 없음."""
+    glyphs = [("a", [[(0.5, 0.1), (0.5, 0.9)]])]
+    raw, _, count, drawn, filled = handwriting.build_handwriting_font(
+        glyphs, handwriting.RefineParams(), "ttf", autofill=False
+    )
+    assert filled == []
+    assert drawn == ["a"]
+    assert count == 1
+    cmap = TTFont(io.BytesIO(raw)).getBestCmap()
+    assert ord("a") in cmap
+    assert ord("z") not in cmap  # 안 그린 글자는 없음
+
+
+def test_build_handwriting_autofill_no_basepath_graceful():
+    """autofill=True인데 base_font_path 없음: 그린 것만(실패하지 않음)."""
+    glyphs = [("a", [[(0.5, 0.1), (0.5, 0.9)]])]
+    raw, _, count, drawn, filled = handwriting.build_handwriting_font(
+        glyphs, handwriting.RefineParams(), "ttf", autofill=True, base_font_path=None
+    )
+    assert filled == [] and count == 1 and drawn == ["a"]
+    assert handwriting.reopen_ok(raw)
+
+
+def test_api_handwriting_autofill(client):
+    """API: autofill=True면 응답에 drawnChars/filledChars 구분 + 미작성 글자 cmap 추가."""
+    if not font_loader.font_is_available():
+        pytest.skip("라틴 베이스 폰트 없음(오프라인).")
+    r = client.post("/handwriting", json={
+        "glyphs": [{"char": "a", "strokes": [VERTICAL_STROKE]}],
+        "autofill": True,
+        "format": "ttf",
+    })
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["drawnChars"] == ["a"]
+    assert len(body["filledChars"]) > 0
+    assert "a" not in body["filledChars"]
+    cmap = _open(body["fontBase64"]).getBestCmap()
+    assert ord("z") in cmap
+
+
+def test_api_handwriting_autofill_default_false(client):
+    """API: autofill 기본 False — filledChars 비어있음."""
+    r = client.post("/handwriting", json={
+        "glyphs": [{"char": "a", "strokes": [VERTICAL_STROKE]}],
+        "format": "ttf",
+    })
+    assert r.status_code == 200
+    assert r.json()["filledChars"] == []
+    assert r.json()["drawnChars"] == ["a"]

@@ -210,6 +210,8 @@ class HandwritingRequest(BaseModel):
     glyphs: List[DrawnGlyphModel]
     refine: RefineParamsModel = RefineParamsModel()
     format: Literal["woff", "woff2", "ttf", "otf"] = "woff"
+    # 안 그린 a-z 등을 내 획 스타일에 맞춘 베이스 폰트(Recursive)로 자동 채움.
+    autofill: bool = False
 
     @model_validator(mode="after")
     def _glyph_budget(self) -> "HandwritingRequest":
@@ -228,6 +230,9 @@ class HandwritingResponse(BaseModel):
     fontFamily: str
     generatedBy: Literal["handwriting"]
     glyphCount: int
+    # 정직성: "내가 그림" vs "자동 채움(내 글씨 아님)" 구분.
+    drawnChars: List[str] = []
+    filledChars: List[str] = []
 
 
 # ---- 한글 자모 조합 계약(packages/core: HangulComposeRequest) ----
@@ -243,6 +248,8 @@ class HangulComposeRequest(BaseModel):
     text: str = Field(min_length=1, max_length=MAX_HANGUL_TEXT_LEN)
     refine: RefineParamsModel = RefineParamsModel()
     format: Literal["woff", "woff2", "ttf", "otf"] = "woff"
+    # 안 그린 자모를 내 굵기에 맞춘 베이스 한글폰트(Pretendard)에서 채워 음절 완성.
+    autofill: bool = False
 
     @model_validator(mode="after")
     def _validate(self) -> "HangulComposeRequest":
@@ -267,6 +274,9 @@ class HangulComposeResponse(BaseModel):
     fontFamily: str
     generatedBy: Literal["handwriting"]
     glyphCount: int
+    # 정직성: "내가 그린 자모" vs "자동 채움 자모(내 글씨 아님)" 구분.
+    drawnChars: List[str] = []
+    filledChars: List[str] = []
 
 
 @app.exception_handler(Exception)
@@ -401,7 +411,13 @@ def _handwriting_blocking(req: HandwritingRequest):
         straighten=req.refine.straighten,
         spacing=req.refine.spacing,
     )
-    return handwriting.build_handwriting_font_base64(glyphs, refine, req.format)
+    # autofill: 라틴 베이스 폰트가 로드돼 있을 때만 채운다(없으면 그린 것만).
+    base_path = None
+    if req.autofill and font_loader.font_is_available():
+        base_path = font_loader.FONT_PATH.as_posix()
+    return handwriting.build_handwriting_font_base64(
+        glyphs, refine, req.format, autofill=req.autofill, base_font_path=base_path
+    )
 
 
 @app.post("/handwriting", response_model=HandwritingResponse)
@@ -416,7 +432,7 @@ async def handwriting_endpoint(req: HandwritingRequest) -> HandwritingResponse:
     async with _handwriting_semaphore:
         loop = asyncio.get_running_loop()
         try:
-            b64, family, count = await loop.run_in_executor(
+            b64, family, count, drawn, filled = await loop.run_in_executor(
                 None, _handwriting_blocking, req
             )
         except ValueError as e:
@@ -434,6 +450,8 @@ async def handwriting_endpoint(req: HandwritingRequest) -> HandwritingResponse:
         fontFamily=family,
         generatedBy="handwriting",
         glyphCount=count,
+        drawnChars=drawn,
+        filledChars=filled,
     )
 
 
@@ -455,7 +473,13 @@ def _hangul_compose_blocking(req: HangulComposeRequest):
         straighten=req.refine.straighten,
         spacing=req.refine.spacing,
     )
-    return hangul_compose.build_hangul_font_base64(jamo, req.text, refine, req.format)
+    # autofill: 한글 베이스 폰트(Pretendard)가 로드돼 있을 때만 채운다.
+    base_path = None
+    if req.autofill and font_loader.hangul_font_is_available():
+        base_path = font_loader.HANGUL_FONT_PATH.as_posix()
+    return hangul_compose.build_hangul_font_base64(
+        jamo, req.text, refine, req.format, autofill=req.autofill, base_font_path=base_path
+    )
 
 
 @app.post("/hangul-compose", response_model=HangulComposeResponse)
@@ -470,7 +494,7 @@ async def hangul_compose_endpoint(req: HangulComposeRequest) -> HangulComposeRes
     async with _hangul_compose_semaphore:
         loop = asyncio.get_running_loop()
         try:
-            b64, family, count = await loop.run_in_executor(
+            b64, family, count, drawn, filled = await loop.run_in_executor(
                 None, _hangul_compose_blocking, req
             )
         except ValueError as e:
@@ -488,4 +512,6 @@ async def hangul_compose_endpoint(req: HangulComposeRequest) -> HangulComposeRes
         fontFamily=family,
         generatedBy="handwriting",
         glyphCount=count,
+        drawnChars=drawn,
+        filledChars=filled,
     )

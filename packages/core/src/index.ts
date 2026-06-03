@@ -238,6 +238,10 @@ export interface HandwritingResponse {
   fontFamily: string;
   generatedBy: "handwriting";
   glyphCount: number;
+  /** 내가 직접 그린 글자(자모) */
+  drawnChars?: string[];
+  /** autofill로 베이스폰트에서 자동 채운 글자(자모) — "내 글씨 아님" 고지용 */
+  filledChars?: string[];
 }
 
 /* ──────────────────────────────────────────────────────────────

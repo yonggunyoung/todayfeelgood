@@ -371,3 +371,73 @@ def test_api_handwriting_autofill_default_false(client):
     assert r.status_code == 200
     assert r.json()["filledChars"] == []
     assert r.json()["drawnChars"] == ["a"]
+
+
+# ---------------- 굵기 매칭(실제 획 굵기 기반 weight 추정) ----------------
+def test_estimate_weight_thin_lighter_than_thick():
+    """가는 nib로 그린 글자 → 굵은 nib보다 낮은 weight 추정(상대 순서 보장)."""
+    h = 500.0  # 같은 잉크 높이(x-height 본체)
+    w_thin = autofill._estimate_weight(0.22, [h])
+    w_thick = autofill._estimate_weight(0.95, [h])
+    assert w_thin < w_thick
+    # 합리적 클램프 안.
+    assert autofill._WEIGHT_MIN <= w_thin <= autofill._WEIGHT_MAX
+    assert autofill._WEIGHT_MIN <= w_thick <= autofill._WEIGHT_MAX
+
+
+def test_estimate_weight_same_nib_bigger_glyph_is_lighter():
+    """같은 nib라도 글자를 크게 그리면(획이 상대적으로 가늘어 보임) 더 가벼운 weight."""
+    small = autofill._estimate_weight(0.5, [350.0])
+    big = autofill._estimate_weight(0.5, [750.0])
+    assert big < small  # 크게 그릴수록 상대 굵기↓ → 가벼운 weight
+
+
+def test_estimate_weight_fallback_no_heights():
+    """잉크 높이 추정 불가(가로획만 등) → nib 단독 폴백(가는<굵은)."""
+    w_thin = autofill._estimate_weight(0.2, [])
+    w_thick = autofill._estimate_weight(1.0, [])
+    assert w_thin < w_thick
+
+
+def test_extract_style_thin_input_low_weight():
+    """가는 a·e·o(작은 nib, x-height 본체) → 낮은 추정 weight."""
+    eo = [("a", [_circle(r=0.22)]), ("e", [_circle(r=0.22)]), ("o", [_circle(r=0.22)])]
+    st_thin = autofill.extract_style(eo, nib=0.22)
+    st_thick = autofill.extract_style(eo, nib=0.95)
+    assert st_thin.weight < st_thick.weight
+    assert st_thin.weight < 400.0  # 가늘게 그렸으면 Regular보다 가볍게
+
+
+def test_autofill_thin_vs_thick_fill_width():
+    """가는 입력 vs 굵은 입력 → 채운 글리프의 폭/잉크 굵기가 달라진다(추정 반영).
+
+    같은 글자(예: 'm')를 가는 weight와 굵은 weight로 인스턴싱하면 잉크 면적/
+    bbox 폭이 굵은 쪽이 더 크다. weight가 글리프에 실제 반영됨을 확인.
+    """
+    path = font_loader.ensure_font()
+    if path is None:
+        pytest.skip("라틴 베이스 폰트 없음(오프라인).")
+    st_thin = autofill.DrawnStyle(slant_deg=0.0, nib=0.2, avg_ink_height=500.0,
+                                  glyph_count=1, weight=autofill._WEIGHT_MIN)
+    st_thick = autofill.DrawnStyle(slant_deg=0.0, nib=1.0, avg_ink_height=500.0,
+                                   glyph_count=1, weight=autofill._WEIGHT_MAX)
+    fills_thin = {f.char: f for f in autofill.latin_fill_glyphs(str(path), st_thin, skip_chars=set())}
+    fills_thick = {f.char: f for f in autofill.latin_fill_glyphs(str(path), st_thick, skip_chars=set())}
+
+    def _xspan(g):
+        g2 = g
+        if getattr(g2, "numberOfContours", 0) <= 0 or not getattr(g2, "coordinates", None):
+            return 0.0
+        xs = [p[0] for p in g2.coordinates]
+        return max(xs) - min(xs)
+
+    # 여러 글자에서 굵은 쪽이 잉크 가로폭(획 두께 반영)이 더 넓은 경향.
+    wider = 0
+    total = 0
+    for ch in "mnoebh":
+        if ch in fills_thin and ch in fills_thick:
+            total += 1
+            if _xspan(fills_thick[ch].glyph) >= _xspan(fills_thin[ch].glyph):
+                wider += 1
+    assert total > 0
+    assert wider >= total - 1  # 거의 모든 글자에서 굵은 쪽이 더 굵음

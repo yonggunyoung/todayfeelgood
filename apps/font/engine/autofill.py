@@ -32,10 +32,31 @@ from fontTools.ttLib import TTFont
 from fontTools.varLib.instancer import instantiateVariableFont
 
 import handwriting as hw
-from handwriting import ASCENDER, CAP_HEIGHT, DESCENDER, Point, X_HEIGHT, _cell_to_font
+from handwriting import (
+    ASCENDER,
+    CAP_HEIGHT,
+    DESCENDER,
+    NIB_HALF_MAX,
+    NIB_HALF_MIN,
+    Point,
+    X_HEIGHT,
+    _cell_to_font,
+    _nib_half_width,
+)
 
 # 채울 수 있는 라틴 글자(계약 TARGET_CHARSET + 핵심 구두점은 제외, 글자만).
 LATIN_FILL_CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+
+# 굵기 추정용 기준 상수.
+# 사람이 "보통 굵기"로 느끼는 획폭/잉크높이 비율(대략). 이 비율을 UI weight 400
+# (Regular)에 대응시킨다. 그린 글자의 실제 비율이 이보다 작으면(가늘면) 가벼운
+# weight, 크면 무거운 weight로 매핑한다.
+_REF_THICKNESS_RATIO = 0.085   # half-width / ink-height ≈ 이 값을 Regular(400)로
+# 비율→weight 매핑 시 1 단위 비율 변화에 대한 민감도(스케일). 경험적.
+_THICKNESS_RATIO_SPAN = 0.085  # ±이 폭이면 weight 100..900 양끝에 도달
+# 추정 weight 합리적 클램프(과도하게 가늘/굵지 않게).
+_WEIGHT_MIN = 130.0
+_WEIGHT_MAX = 820.0
 
 
 @dataclass
@@ -45,6 +66,7 @@ class DrawnStyle:
     nib: float                # 펜 굵기(refine.nib, 0.2~1).
     avg_ink_height: float     # 평균 잉크 높이(폰트 유닛). 베이스 글리프 스케일 기준.
     glyph_count: int          # 통계에 쓰인 글리프 수.
+    weight: float = 400.0     # 추정 UI weight(100~900). 실제 획 굵기 기반(아래 참고).
 
 
 # ---------------- 스타일 추출 ----------------
@@ -80,14 +102,67 @@ def _segment_slant_deg(strokes: Sequence[Sequence[Point]]) -> Optional[float]:
     return -math.degrees(math.atan2(dxs, dys))
 
 
+def _glyph_ink_height(strokes: Sequence[Sequence[Point]]) -> Optional[float]:
+    """한 글리프의 잉크(중심선) 세로 범위를 폰트 유닛으로 반환(점이 2개 미만이면 None)."""
+    ys = [
+        _cell_to_font((float(x), float(y)))[1]
+        for s in strokes
+        for (x, y) in s
+    ]
+    if len(ys) < 2:
+        return None
+    return max(ys) - min(ys)
+
+
+def _ratio_to_weight(ratio: float) -> float:
+    """
+    실제 획폭/잉크높이 비율 → UI weight(100~900) 추정.
+    기준 비율(_REF_THICKNESS_RATIO)을 Regular(400)에 대응시키고, 비율이
+    ±_THICKNESS_RATIO_SPAN 만큼 벗어나면 양끝(100/900)에 가깝게 선형 매핑.
+    가는 획(작은 비율) → 가벼운 weight, 굵은 획 → 무거운 weight.
+    """
+    if _THICKNESS_RATIO_SPAN <= 1e-9:
+        return 400.0
+    # 기준 대비 정규화(-1..+1 근방)를 400±400로 매핑.
+    norm = (ratio - _REF_THICKNESS_RATIO) / _THICKNESS_RATIO_SPAN
+    return 400.0 + norm * 400.0
+
+
+def _estimate_weight(nib: float, heights: Sequence[float]) -> float:
+    """
+    그린 글자의 **실제 획 굵기**를 추정해 UI weight(100~900)로 매핑.
+
+    획폭(half-width)은 nib(펜 굵기)에서 오고, 사람이 느끼는 굵기는 그
+    획폭을 글자 크기(잉크 높이)로 나눈 *상대 비율*이다. 같은 nib라도 글자를
+    크게 그리면 가늘어 보이고 작게 그리면 굵어 보인다. 그래서 단순 nib→weight
+    대신 (half-width / ink-height) 비율을 weight로 매핑해, 가는 a·e·o를
+    그렸을 때 채움 글자도 비슷하게 가늘어지도록 한다.
+
+    글자가 없거나 높이를 못 구하면(가로획만 등) nib 단독 매핑으로 폴백.
+    drawn 글자가 1~3자로 적어도 비율 평균이라 안정적이다.
+    """
+    half = _nib_half_width(nib)  # 폰트 유닛(NIB_HALF_MIN..MAX)
+    valid = [h for h in heights if h and h > 1e-3]
+    if not valid:
+        # 잉크 높이 추정 불가 → nib 단독(기존 동작) 매핑.
+        t = (max(0.2, min(1.0, nib)) - 0.2) / 0.8
+        return 100.0 + t * 800.0
+    avg_h = sum(valid) / len(valid)
+    ratio = half / avg_h
+    w = _ratio_to_weight(ratio)
+    return max(_WEIGHT_MIN, min(_WEIGHT_MAX, w))
+
+
 def extract_style(
     glyphs: Sequence[Tuple[str, Sequence[Sequence[Point]]]],
     nib: float,
 ) -> DrawnStyle:
     """
-    그린 글리프들 → DrawnStyle(slant/nib/size). 비AI 통계.
+    그린 글리프들 → DrawnStyle(slant/nib/size/weight). 비AI 통계.
     slant: 글리프별 세로획 기울기의 평균(이상치 영향 줄이려 글리프 단위 평균).
     avg_ink_height: 셀→폰트 유닛 변환 후 글리프 잉크 높이의 평균.
+    weight: **실제 획 굵기**(펜 반폭/잉크높이 비율) 기반 추정 UI weight.
+            → 가늘게 그렸으면 가는 weight로 채움 베이스 폰트를 인스턴싱한다.
     """
     slants: List[float] = []
     heights: List[float] = []
@@ -101,21 +176,20 @@ def extract_style(
             # 과도한 값은 제한(±20도). 손떨림 이상치 완화.
             slants.append(max(-20.0, min(20.0, sd)))
         # 잉크 높이(폰트 유닛).
-        ys = [
-            _cell_to_font((float(x), float(y)))[1]
-            for s in strokes
-            for (x, y) in s
-        ]
-        if len(ys) >= 2:
-            heights.append(max(ys) - min(ys))
+        h = _glyph_ink_height(strokes)
+        if h is not None:
+            heights.append(h)
 
     slant_deg = sum(slants) / len(slants) if slants else 0.0
     avg_h = sum(heights) / len(heights) if heights else float(CAP_HEIGHT)
+    nib_c = max(0.2, min(1.0, nib))
+    weight = _estimate_weight(nib_c, heights)
     return DrawnStyle(
         slant_deg=slant_deg,
-        nib=max(0.2, min(1.0, nib)),
+        nib=nib_c,
         avg_ink_height=avg_h,
         glyph_count=used,
+        weight=weight,
     )
 
 
@@ -123,6 +197,14 @@ def _nib_to_weight(nib: float) -> float:
     """refine.nib(0.2~1) → UI weight(100~900). 굵기를 베이스 폰트 굵기로 정직 매핑."""
     t = (max(0.2, min(1.0, nib)) - 0.2) / 0.8  # 0..1
     return 100.0 + t * 800.0
+
+
+def _style_weight(style: DrawnStyle) -> float:
+    """DrawnStyle의 추정 weight(없으면 nib 폴백)를 합리적 범위로 클램프."""
+    w = getattr(style, "weight", None)
+    if w is None or not math.isfinite(w):
+        w = _nib_to_weight(style.nib)
+    return max(_WEIGHT_MIN, min(_WEIGHT_MAX, float(w)))
 
 
 # ---------------- 베이스 폰트 인스턴싱 + 글리프 추출 ----------------
@@ -143,7 +225,7 @@ def _instance_latin(base_font_path: str, style: DrawnStyle) -> TTFont:
 
     if "wght" in available:
         lo, hi = available["wght"]
-        ui_w = _nib_to_weight(style.nib)
+        ui_w = _style_weight(style)
         t = (ui_w - 100.0) / 800.0
         axis_values["wght"] = lo + max(0.0, min(1.0, t)) * (hi - lo)
     if "slnt" in available:
@@ -323,7 +405,7 @@ def hangul_fill_jamo_strokes(
         axis_values = dict(defaults)
         if "wght" in available:
             lo, hi = available["wght"]
-            ui_w = _nib_to_weight(style.nib)
+            ui_w = _style_weight(style)
             t = (ui_w - 100.0) / 800.0
             axis_values["wght"] = lo + max(0.0, min(1.0, t)) * (hi - lo)
         instantiateVariableFont(font, axis_values, inplace=True)

@@ -104,6 +104,16 @@
   color: var(--ink);
 }
 
+/* 텍스트 이모티콘 조합 미리보기 — 색지 칸 안의 카오모지 */
+.sampleMoji {
+  font-size: 1.4rem;
+  line-height: 1.2;
+  color: var(--ink);
+  word-break: break-all;
+  text-align: center;
+  font-family: "Noto Sans KR", system-ui, "Segoe UI Symbol", sans-serif;
+}
+
 .sampleLabel {
   font-size: var(--text-caption);
   color: var(--ink-faint);
@@ -204,6 +214,68 @@
 }
 .appCta:hover {
   color: var(--accent-press);
+}
+
+/* 1순위 — 텍스트 이모티콘 전면 카드(무대 중앙). 다른 카드보다 크고 강조. */
+.featureCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  margin-bottom: var(--sp-6);
+  border: 2px solid var(--accent-weak-strong);
+  background: color-mix(in srgb, var(--accent-weak) 40%, var(--surface));
+}
+
+.featureCard .appName {
+  font-size: var(--text-title2);
+}
+
+/* 다른 공방 — 접힘 구석(싸인 등 강등) */
+.otherTools {
+  margin-top: var(--sp-6);
+}
+
+.otherSummary {
+  cursor: pointer;
+  list-style: none;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-med);
+  color: var(--ink-faint);
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--r-pill);
+  background: var(--surface-2);
+}
+.otherSummary::-webkit-details-marker {
+  display: none;
+}
+.otherSummary::before {
+  content: "▸";
+  transition: transform 0.15s ease;
+}
+.otherTools[open] .otherSummary::before {
+  transform: rotate(90deg);
+}
+
+.otherInner {
+  margin-top: var(--sp-4);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--sp-5);
+}
+
+@media (max-width: 720px) {
+  .otherInner {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .otherSummary::before {
+    transition: none;
+  }
 }
 
 /* 섹션 사이 붓획 디바이더 */

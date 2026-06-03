@@ -1,0 +1,302 @@
+/* 모바일 단일 화면 집중 — 상단 고정(검색·감정칩·스타일), 큰 그리드, 하단 탭바. */
+.app {
+  max-width: 56rem;
+  margin: 0 auto;
+  padding: 0 var(--sp-4) calc(var(--sp-16) + env(safe-area-inset-bottom, 0px));
+  min-height: 100dvh;
+}
+
+/* ── 상단 고정 영역 ── */
+.sticky {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--material-bg);
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+  padding: var(--sp-3) 0 var(--sp-2);
+  margin: 0 calc(-1 * var(--sp-4));
+  padding-left: var(--sp-4);
+  padding-right: var(--sp-4);
+}
+
+.searchRow {
+  display: flex;
+  gap: var(--sp-2);
+  align-items: center;
+}
+
+.search {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  font-size: var(--text-body);
+  padding: var(--sp-3) var(--sp-4);
+  border: 1.5px solid var(--surface-sunken);
+  border-radius: var(--r-pill);
+  background: var(--surface);
+  color: var(--ink);
+}
+.search:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-weak);
+}
+
+.dice {
+  flex: none;
+  width: 3rem;
+  height: 3rem;
+  font-size: 1.4rem;
+  border: none;
+  border-radius: var(--r-pill);
+  background: var(--accent);
+  color: var(--accent-ink);
+  cursor: pointer;
+  transition: transform 0.12s ease;
+}
+.dice:active {
+  transform: rotate(-18deg) scale(0.92);
+}
+
+/* 감정칩 — 가로 스크롤 */
+.chips {
+  display: flex;
+  gap: var(--sp-2);
+  overflow-x: auto;
+  padding: var(--sp-3) 0 var(--sp-2);
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.chips::-webkit-scrollbar {
+  display: none;
+}
+.chip {
+  flex: none;
+  white-space: nowrap;
+}
+.trendDot {
+  font-size: 0.7em;
+  font-weight: var(--weight-bold);
+  color: var(--candy-coral);
+}
+
+.styleRow {
+  display: flex;
+  gap: var(--sp-2);
+  overflow-x: auto;
+  padding-bottom: var(--sp-1);
+  scrollbar-width: none;
+}
+.styleRow::-webkit-scrollbar {
+  display: none;
+}
+.styleChip {
+  flex: none;
+  white-space: nowrap;
+  font-size: var(--text-sm);
+}
+
+/* ── 그리드 ── */
+.gridScroll {
+  padding-top: var(--sp-4);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr));
+  gap: var(--sp-3);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.08));
+  border: 1px solid var(--surface-sunken);
+  overflow: hidden;
+}
+
+/* 원탭 복사 = 카드 본문 전체가 큰 터치 타깃 */
+.copyBtn {
+  flex: 1;
+  min-height: 4.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--sp-4) var(--sp-2);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  width: 100%;
+}
+.copyBtn:active {
+  background: var(--accent-weak);
+}
+.moji {
+  font-size: 1.35rem;
+  line-height: 1.3;
+  color: var(--ink);
+  word-break: break-all;
+  text-align: center;
+  /* 모노 계열이 카오모지 정렬에 유리 */
+  font-family: "Noto Sans KR", system-ui, "Segoe UI Symbol", sans-serif;
+}
+
+.cardMeta {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  padding: var(--sp-2);
+  border-top: 1px solid var(--surface-sunken);
+  background: var(--surface-2);
+}
+
+.badge {
+  font-size: var(--text-caption);
+  font-weight: var(--weight-semi);
+  white-space: nowrap;
+}
+.badge[data-tier="safe"] {
+  color: var(--candy-mint);
+}
+.badge[data-tier="ok"] {
+  color: var(--accent-ink-weak);
+}
+.badge[data-tier="fancy"] {
+  color: var(--candy-plum);
+}
+
+.src {
+  font-size: var(--text-caption);
+  color: var(--ink-faint);
+  background: var(--accent-weak);
+  border-radius: var(--r-xs);
+  padding: 0 var(--sp-1);
+}
+
+.star {
+  margin-left: auto;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 1.1rem;
+  line-height: 1;
+  color: var(--ink-faint);
+  padding: var(--sp-1);
+}
+.starOn {
+  color: var(--candy-butter);
+}
+
+.empty {
+  text-align: center;
+  color: var(--ink-soft);
+  padding: var(--sp-12) var(--sp-4);
+  font-size: var(--text-body);
+}
+
+.moreBtn {
+  display: block;
+  width: 100%;
+  margin: var(--sp-5) 0 var(--sp-3);
+  padding: var(--sp-4);
+  font: inherit;
+  font-weight: var(--weight-semi);
+  font-size: var(--text-body);
+  color: var(--accent-ink);
+  background: var(--accent);
+  border: none;
+  border-radius: var(--r-md);
+  cursor: pointer;
+}
+.moreBtn:active {
+  transform: scale(0.99);
+}
+
+.honest {
+  font-size: var(--text-caption);
+  color: var(--ink-faint);
+  line-height: 1.6;
+  text-align: center;
+  margin: var(--sp-4) auto var(--sp-8);
+  max-width: 34rem;
+}
+
+/* ── 하단 탭바 ── */
+.tabbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 15;
+  display: flex;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-4) calc(var(--sp-2) + env(safe-area-inset-bottom, 0px));
+  background: var(--material-bg);
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+  border-top: 1px solid var(--surface-sunken);
+}
+.tab {
+  flex: 1;
+  padding: var(--sp-3);
+  font: inherit;
+  font-weight: var(--weight-med);
+  border: none;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+.tabOn {
+  background: var(--accent-weak);
+  color: var(--accent-ink-weak);
+  font-weight: var(--weight-semi);
+}
+
+/* ── 토스트 ── */
+.toastWrap {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
+  z-index: 30;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+  padding: 0 var(--sp-4);
+}
+.toast {
+  background: var(--ink);
+  color: var(--surface);
+  font-size: var(--text-sm);
+  padding: var(--sp-3) var(--sp-5);
+  border-radius: var(--r-pill);
+  box-shadow: var(--shadow-lg);
+  max-width: 30rem;
+  text-align: center;
+  animation: pop 0.18s ease;
+}
+
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dice:active,
+  .moreBtn:active {
+    transform: none;
+  }
+  .toast {
+    animation: none;
+  }
+}

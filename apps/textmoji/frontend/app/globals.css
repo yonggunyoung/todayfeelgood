@@ -1,0 +1,6 @@
+/*
+ * 텍스트 이모티콘공방 전역 스타일.
+ * 디자인 토큰/베이스 스타일은 단일 출처 packages/ui/tokens.css 에서 @import 한다.
+ * (값/다크모드는 그쪽에서 관리 — 여기엔 textmoji 고유 규칙만 추가)
+ */
+@import "@webapp/ui/tokens.css";

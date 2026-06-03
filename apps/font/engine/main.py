@@ -39,6 +39,7 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 import font_loader
 import generator
 import handwriting
+import hangul_compose
 
 logger = logging.getLogger("font_engine")
 
@@ -58,6 +59,8 @@ MAX_CONCURRENT_HANGUL = 1
 _generate_semaphore = asyncio.Semaphore(MAX_CONCURRENT_GENERATES)
 _hangul_semaphore = asyncio.Semaphore(MAX_CONCURRENT_HANGUL)
 _handwriting_semaphore = asyncio.Semaphore(MAX_CONCURRENT_HANDWRITING)
+# 한글 조합도 음절마다 다중 자모 affine 합성 → CPU 집약. 별도 세마포어로 제한.
+_hangul_compose_semaphore = asyncio.Semaphore(MAX_CONCURRENT_HANDWRITING)
 
 
 def _allowed_origins() -> list[str]:
@@ -227,6 +230,45 @@ class HandwritingResponse(BaseModel):
     glyphCount: int
 
 
+# ---- 한글 자모 조합 계약(packages/core: HangulComposeRequest) ----
+# 그릴 수 있는 기본 자모 24자(자음 14 + 모음 10).
+BASIC_JAMO_SET = set(hangul_compose.BASIC_JAMO)
+# 합성할 text 길이 상한(무료티어 메모리 가드: 음절 수 폭주 방지).
+MAX_HANGUL_TEXT_LEN = 2000
+
+
+class HangulComposeRequest(BaseModel):
+    # 그린 기본 자모(char ∈ BASIC_JAMO). 손글씨와 동일한 점/글자 수 가드 재사용.
+    jamo: List[DrawnGlyphModel]
+    text: str = Field(min_length=1, max_length=MAX_HANGUL_TEXT_LEN)
+    refine: RefineParamsModel = RefineParamsModel()
+    format: Literal["woff", "woff2", "ttf", "otf"] = "woff"
+
+    @model_validator(mode="after")
+    def _validate(self) -> "HangulComposeRequest":
+        if len(self.jamo) == 0:
+            raise ValueError("그린 자모가 최소 1개 필요합니다.")
+        if len(self.jamo) > MAX_TOTAL_GLYPHS:
+            raise ValueError(
+                f"자모 수({len(self.jamo)})가 상한({MAX_TOTAL_GLYPHS})을 초과했습니다."
+            )
+        # 그린 자모는 기본 자모 24자 안에서만 허용(겹자모는 엔진이 근사 합성).
+        for g in self.jamo:
+            if g.char not in BASIC_JAMO_SET:
+                raise ValueError(
+                    f"'{g.char}'는 기본 자모가 아닙니다(허용: 자음 14 + 모음 10)."
+                )
+        return self
+
+
+class HangulComposeResponse(BaseModel):
+    fontBase64: str
+    format: Literal["woff", "woff2", "ttf", "otf"]
+    fontFamily: str
+    generatedBy: Literal["handwriting"]
+    glyphCount: int
+
+
 @app.exception_handler(Exception)
 async def _unhandled_exception_handler(request: Request, exc: Exception):
     """에러 살균: 내부 예외/스택/경로를 노출하지 않고 일반 메시지만 반환(security M2)."""
@@ -387,6 +429,60 @@ async def handwriting_endpoint(req: HandwritingRequest) -> HandwritingResponse:
             raise HTTPException(status_code=500, detail="폰트 생성에 실패했습니다.")
 
     return HandwritingResponse(
+        fontBase64=b64,
+        format=req.format,
+        fontFamily=family,
+        generatedBy="handwriting",
+        glyphCount=count,
+    )
+
+
+# ──────────────────────────────────────────────────────────────
+# 한글 자모 조합(모아쓰기): 기본 자모 24자를 그려 음절을 "조합".
+# [정직성] 결과는 "조합 글씨"(획은 내 것, 모아쓰기는 규칙 합성)다. 비AI.
+# [비용 가드] 로컬 fontTools + 표준 math만. 외부 유료 API 호출 없음(비용 0).
+# ──────────────────────────────────────────────────────────────
+def _hangul_compose_blocking(req: HangulComposeRequest):
+    """스레드풀에서 실행되는 CPU 집약 한글 조합(이벤트루프 비블로킹)."""
+    jamo = [
+        (g.char, [[(p[0], p[1]) for p in s.points] for s in g.strokes])
+        for g in req.jamo
+    ]
+    refine = handwriting.RefineParams(
+        smoothing=req.refine.smoothing,
+        nib=req.refine.nib,
+        taper=req.refine.taper,
+        straighten=req.refine.straighten,
+        spacing=req.refine.spacing,
+    )
+    return hangul_compose.build_hangul_font_base64(jamo, req.text, refine, req.format)
+
+
+@app.post("/hangul-compose", response_model=HangulComposeResponse)
+async def hangul_compose_endpoint(req: HangulComposeRequest) -> HangulComposeResponse:
+    # 동시성 제한: 포화 시 즉시 503(저비용 DoS 방어).
+    if _hangul_compose_semaphore.locked():
+        raise HTTPException(
+            status_code=503,
+            detail="요청이 많아 일시적으로 처리할 수 없습니다. 잠시 후 다시 시도하세요.",
+        )
+
+    async with _hangul_compose_semaphore:
+        loop = asyncio.get_running_loop()
+        try:
+            b64, family, count = await loop.run_in_executor(
+                None, _hangul_compose_blocking, req
+            )
+        except ValueError as e:
+            # 빈 입력/그린 자모로 만들 수 없는 음절 등 → 422.
+            raise HTTPException(status_code=422, detail=str(e))
+        except HTTPException:
+            raise
+        except Exception:
+            logger.exception("한글 조합 폰트 생성 실패")
+            raise HTTPException(status_code=500, detail="폰트 생성에 실패했습니다.")
+
+    return HangulComposeResponse(
         fontBase64=b64,
         format=req.format,
         fontFamily=family,

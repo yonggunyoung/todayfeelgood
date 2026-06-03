@@ -230,6 +230,19 @@
   font-size: var(--text-title2);
 }
 
+/* 강한 보조 — 이모티콘 카드(눈에 잘 띄게, 단 대표 카드보다는 한 단계 아래) */
+.secondaryCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  margin-bottom: var(--sp-6);
+  border: 1.5px solid var(--accent-weak-strong);
+}
+
+.secondaryCard .appName {
+  font-size: var(--text-title3);
+}
+
 /* 다른 공방 — 접힘 구석(싸인 등 강등) */
 .otherTools {
   margin-top: var(--sp-6);

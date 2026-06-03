@@ -173,6 +173,47 @@
   white-space: nowrap;
 }
 
+/* ── 왜 여기서 — 4가지 승부처(제네릭 AI 폰트 생성기와 구분) ── */
+.why {
+  padding-top: var(--sp-10);
+  padding-bottom: var(--sp-6);
+}
+
+.whyTitle {
+  font-size: var(--text-title2);
+  margin-bottom: var(--sp-6);
+}
+
+.whyGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--sp-6);
+}
+
+@media (max-width: 620px) {
+  .whyGrid {
+    grid-template-columns: 1fr;
+    gap: var(--sp-5);
+  }
+}
+
+.whyItem {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.whyName {
+  font-size: var(--text-title3);
+  font-weight: var(--weight-semi);
+}
+
+.whyBody {
+  color: var(--ink-soft);
+  font-size: var(--text-body);
+  line-height: 1.65;
+}
+
 /* 섹션 사이 붓획 디바이더 */
 .dividerWrap {
   padding-top: var(--sp-6);

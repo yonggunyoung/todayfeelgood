@@ -5,7 +5,7 @@ import { MAX_STROKE_POINTS_PER_GLYPH, type GlyphStroke } from "@webapp/core";
 import styles from "./GlyphCell.module.css";
 
 interface Props {
-  /** 이 셀이 담당하는 문자 (예: "a") */
+  /** 이 셀이 담당하는 문자 (예: "a", "ㄱ") */
   char: string;
   /** 셀 정규화 좌표(0..1) 폴리라인 획들 */
   strokes: GlyphStroke[];
@@ -14,6 +14,13 @@ interface Props {
   disabled?: boolean;
   /** reduced-motion 등 외부 환경에서 모션 끄기용(현재 미사용 자리표) */
   size?: number;
+  /**
+   * 가이드라인 프리셋. latin=어센더/x높이/베이스라인(소문자 기준),
+   * hangul=정사각 칸 중앙 십자선(자모는 위/아래·좌/우 균형이 중요).
+   */
+  script?: "latin" | "hangul";
+  /** 라벨 접근성 표현(예: "기역", "아"). 없으면 char 그대로. */
+  labelName?: string;
 }
 
 // 같은 점 사이 최소 거리(정규화). 과샘플 솎기로 MAX_STROKE_POINTS_PER_GLYPH 보호.
@@ -27,7 +34,14 @@ const MIN_DIST = 0.012;
  *
  * 좌표계: (0,0)=좌상단, (1,1)=우하단. 엔진 계약(GlyphStroke)과 동일.
  */
-export default function GlyphCell({ char, strokes, onChange, disabled }: Props) {
+export default function GlyphCell({
+  char,
+  strokes,
+  onChange,
+  disabled,
+  script = "latin",
+  labelName,
+}: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const drawing = useRef(false);
   // 진행 중인 획(아직 commit 전). 정규화 좌표.
@@ -35,7 +49,7 @@ export default function GlyphCell({ char, strokes, onChange, disabled }: Props) 
   // 이 셀에 누적된 총 점 수(상한 가드)
   const totalPoints = useRef(0);
 
-  // 가이드라인 위치(정규화 y). 디센더 영역까지 포함한 메트릭.
+  // 가이드라인 위치(정규화 y). 디센더 영역까지 포함한 메트릭(라틴 전용).
   const GUIDES = {
     ascender: 0.12,
     cap: 0.2,
@@ -56,7 +70,7 @@ export default function GlyphCell({ char, strokes, onChange, disabled }: Props) 
 
       // 가이드라인
       ctx.lineWidth = 1;
-      const line = (y: number, dashed: boolean, strong: boolean) => {
+      const hLine = (y: number, dashed: boolean, strong: boolean) => {
         ctx.beginPath();
         ctx.setLineDash(dashed ? [4, 5] : []);
         ctx.strokeStyle = strong
@@ -66,11 +80,30 @@ export default function GlyphCell({ char, strokes, onChange, disabled }: Props) 
         ctx.lineTo(W, y * H);
         ctx.stroke();
       };
-      line(GUIDES.ascender, true, false);
-      line(GUIDES.cap, true, false);
-      line(GUIDES.xHeight, true, true);
-      line(GUIDES.baseline, false, true);
-      line(GUIDES.descender, true, false);
+      const vLine = (x: number) => {
+        ctx.beginPath();
+        ctx.setLineDash([4, 5]);
+        ctx.strokeStyle = "rgba(150,144,180,0.32)";
+        ctx.moveTo(x * W, 0);
+        ctx.lineTo(x * W, H);
+        ctx.stroke();
+      };
+      if (script === "hangul") {
+        // 한글 자모: 정사각 칸 안 중앙 십자선(상하·좌우 균형 잡기용)
+        const pad = 0.12;
+        hLine(pad, true, false);
+        hLine(0.5, true, true);
+        hLine(1 - pad, true, false);
+        vLine(pad);
+        vLine(0.5);
+        vLine(1 - pad);
+      } else {
+        hLine(GUIDES.ascender, true, false);
+        hLine(GUIDES.cap, true, false);
+        hLine(GUIDES.xHeight, true, true);
+        hLine(GUIDES.baseline, false, true);
+        hLine(GUIDES.descender, true, false);
+      }
       ctx.setLineDash([]);
 
       // 잉크 획
@@ -95,7 +128,7 @@ export default function GlyphCell({ char, strokes, onChange, disabled }: Props) 
       for (const s of strokes) paintStroke(s.points);
       if (live && live.length > 0) paintStroke(live);
     },
-    [strokes, GUIDES.ascender, GUIDES.cap, GUIDES.xHeight, GUIDES.baseline, GUIDES.descender]
+    [strokes, script, GUIDES.ascender, GUIDES.cap, GUIDES.xHeight, GUIDES.baseline, GUIDES.descender]
   );
 
   // strokes 변경/리사이즈 시 다시 그림. 총 점 수 재계산.
@@ -148,19 +181,23 @@ export default function GlyphCell({ char, strokes, onChange, disabled }: Props) 
   };
 
   const filled = strokes.length > 0;
+  const name = labelName || char;
 
   return (
-    <div className={`${styles.cell} ${filled ? styles.filled : ""}`}>
+    <div
+      className={`${styles.cell} ${filled ? styles.filled : ""}`}
+      data-script={script}
+    >
       <span className={styles.glyphLabel} aria-hidden>
         {char}
       </span>
       <canvas
         ref={canvasRef}
-        width={150}
-        height={180}
+        width={script === "hangul" ? 165 : 150}
+        height={script === "hangul" ? 165 : 180}
         className={styles.canvas}
         role="img"
-        aria-label={`'${char}' 글자 그리기 칸${filled ? " (그려짐)" : " (비어 있음)"}`}
+        aria-label={`'${name}' 글자 그리기 칸${filled ? " (그려짐)" : " (비어 있음)"}`}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={endStroke}
@@ -173,7 +210,7 @@ export default function GlyphCell({ char, strokes, onChange, disabled }: Props) 
           className={styles.cellBtn}
           disabled={disabled || strokes.length === 0}
           onClick={() => onChange(char, strokes.slice(0, -1))}
-          aria-label={`'${char}' 마지막 획 되돌리기`}
+          aria-label={`'${name}' 마지막 획 되돌리기`}
         >
           되돌리기
         </button>
@@ -182,7 +219,7 @@ export default function GlyphCell({ char, strokes, onChange, disabled }: Props) 
           className={styles.cellBtn}
           disabled={disabled || strokes.length === 0}
           onClick={() => onChange(char, [])}
-          aria-label={`'${char}' 칸 지우기`}
+          aria-label={`'${name}' 칸 지우기`}
         >
           지우기
         </button>

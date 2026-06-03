@@ -30,6 +30,11 @@
   color: var(--accent, #7c6cf0);
 }
 
+.cell[data-script="hangul"] .canvas {
+  /* 한글 자모는 정사각 칸(상하·좌우 균형). */
+  aspect-ratio: 1 / 1;
+}
+
 .canvas {
   width: 100%;
   height: auto;

@@ -2,12 +2,14 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  BASIC_JAMO,
   DEFAULT_REFINE,
   FONT_FORMATS,
   FREE_FORMATS,
   FULL_FORMATS,
   type DrawnGlyph,
   type FontFormat,
+  type FontScript,
   type GlyphStroke,
   type HandwritingRequest,
   type HandwritingResponse,
@@ -15,10 +17,13 @@ import {
 } from "@webapp/core";
 import { BrushUnderline, Button, Mascot, Segmented } from "@webapp/ui";
 import { apiPath } from "../../lib/paths";
+import { JAMO_NAMES } from "../../lib/hangul";
 import GlyphCell from "../../components/GlyphCell";
 import RefinePanel from "../../components/RefinePanel";
 import HandwritingPreview from "../../components/HandwritingPreview";
 import HandwritingImagePanel from "../../components/HandwritingImagePanel";
+import HangulPreview from "../../components/HangulPreview";
+import HangulImagePanel from "../../components/HangulImagePanel";
 import FontStudio from "./FontStudio";
 import styles from "./HandwritingStudio.module.css";
 
@@ -54,8 +59,12 @@ type Mode = "draw" | "sample";
  */
 export default function HandwritingStudio() {
   const [mode, setMode] = useState<Mode>("draw");
+  // 스크립트 전환(라틴 a–z ↔ 한글 기본 자모). 각각 독립 그리드 맵을 둔다.
+  const [script, setScript] = useState<FontScript>("latin");
   // char → strokes 맵(그린 것만 보관)
   const [glyphMap, setGlyphMap] = useState<Record<string, GlyphStroke[]>>({});
+  // 한글 자모 char → strokes 맵
+  const [jamoMap, setJamoMap] = useState<Record<string, GlyphStroke[]>>({});
   const [refine, setRefine] = useState<RefineParams>(DEFAULT_REFINE);
   const [previewFont, setPreviewFont] = useState<string | null>(null);
   const [fontFamily, setFontFamily] = useState("MyHandwriting");
@@ -90,6 +99,25 @@ export default function HandwritingStudio() {
   }, []);
 
   const clearAll = useCallback(() => setGlyphMap({}), []);
+
+  // ── 한글 자모 ──
+  const drawnJamoChars = useMemo(
+    () => BASIC_JAMO.filter((j) => (jamoMap[j]?.length ?? 0) > 0),
+    [jamoMap]
+  );
+  const jamoGlyphs: DrawnGlyph[] = useMemo(
+    () => drawnJamoChars.map((j) => ({ char: j, strokes: jamoMap[j]! })),
+    [drawnJamoChars, jamoMap]
+  );
+  const onJamoChange = useCallback((char: string, strokes: GlyphStroke[]) => {
+    setJamoMap((prev) => {
+      const next = { ...prev };
+      if (strokes.length === 0) delete next[char];
+      else next[char] = strokes;
+      return next;
+    });
+  }, []);
+  const clearAllJamo = useCallback(() => setJamoMap({}), []);
 
   // 손글씨 폰트 생성(프리뷰). 항상 woff로 가볍게.
   const generate = useCallback(
@@ -127,9 +155,10 @@ export default function HandwritingStudio() {
     []
   );
 
-  // 그리드/다듬기 변경 시 디바운스 후 생성(그리기 모드일 때만).
+  // 그리드/다듬기 변경 시 디바운스 후 생성(그리기 모드 + 라틴 스크립트일 때만).
+  // 한글은 문구 의존 합성이라 각 한글 컴포넌트가 자체 호출한다.
   useEffect(() => {
-    if (mode !== "draw") return;
+    if (mode !== "draw" || script !== "latin") return;
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
       void generate(glyphs, refine);
@@ -137,7 +166,7 @@ export default function HandwritingStudio() {
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [glyphs, refine, mode, generate]);
+  }, [glyphs, refine, mode, script, generate]);
 
   const handleDownload = useCallback(async () => {
     if (glyphs.length === 0) return;
@@ -175,6 +204,7 @@ export default function HandwritingStudio() {
   }, [glyphs, refine, format, drawnChars.length]);
 
   const progress = drawnChars.length;
+  const jamoProgress = drawnJamoChars.length;
 
   const renderActions = (variant: "panel" | "bar") => (
     <div className={variant === "bar" ? styles.actionBarInner : styles.actionsPanel}>
@@ -228,6 +258,25 @@ export default function HandwritingStudio() {
               : "기성 폰트를 슬라이더로 변형한 샘플 — 진짜는 직접 그리기."}
           </span>
         </div>
+
+        {mode === "draw" && (
+          <div className={styles.modeTabs}>
+            <Segmented<FontScript>
+              ariaLabel="문자 종류"
+              value={script}
+              onChange={setScript}
+              options={[
+                { value: "latin", label: "영문 a–z" },
+                { value: "hangul", label: "한글 자모" },
+              ]}
+            />
+            <span className={styles.modeHint}>
+              {script === "hangul"
+                ? "기본 자모 24자를 그려 음절을 조합해요(조합 티가 있을 수 있어요)."
+                : "소문자 a–z를 직접 그려요."}
+            </span>
+          </div>
+        )}
       </header>
 
       {mode === "sample" ? (
@@ -238,35 +287,65 @@ export default function HandwritingStudio() {
       ) : (
         <div className={styles.grid}>
           <section className={styles.tools}>
-            {/* ── 글자 그리드 ── */}
+            {/* ── 글자/자모 그리드 ── */}
             <div className={styles.group}>
               <div className={styles.groupHead}>
-                <h2 className={styles.groupTitle}>글자 그리기</h2>
+                <h2 className={styles.groupTitle}>
+                  {script === "hangul" ? "기본 자모 그리기" : "글자 그리기"}
+                </h2>
                 <span className={styles.progress} aria-live="polite">
-                  {progress} / 26
+                  {script === "hangul" ? `${jamoProgress} / 24` : `${progress} / 26`}
                 </span>
               </div>
               <p className={styles.groupSub}>
-                칸마다 마우스·손가락으로 글자를 그려요. 가이드선(어센더·x높이·베이스라인)에
-                맞춰 그리면 더 고르게 나와요. 한 글자에 여러 획 가능.
+                {script === "hangul"
+                  ? "자음 14 + 모음 10, 기본 자모 24자를 칸마다 그려요. 중앙 십자선에 맞춰 균형 있게. 한 자모에 여러 획 가능."
+                  : "칸마다 마우스·손가락으로 글자를 그려요. 가이드선(어센더·x높이·베이스라인)에 맞춰 그리면 더 고르게 나와요. 한 글자에 여러 획 가능."}
               </p>
-              <div className={styles.gridCells} role="group" aria-label="a부터 z까지 글자 그리기 칸">
-                {ALPHABET.map((ch) => (
-                  <GlyphCell
-                    key={ch}
-                    char={ch}
-                    strokes={glyphMap[ch] ?? []}
-                    onChange={onCellChange}
-                    disabled={downloading}
-                  />
-                ))}
-              </div>
+              {script === "hangul" ? (
+                <div
+                  className={styles.gridCells}
+                  role="group"
+                  aria-label="기본 자모 24자 그리기 칸"
+                >
+                  {BASIC_JAMO.map((j) => (
+                    <GlyphCell
+                      key={j}
+                      char={j}
+                      labelName={JAMO_NAMES[j] ?? j}
+                      script="hangul"
+                      strokes={jamoMap[j] ?? []}
+                      onChange={onJamoChange}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div
+                  className={styles.gridCells}
+                  role="group"
+                  aria-label="a부터 z까지 글자 그리기 칸"
+                >
+                  {ALPHABET.map((ch) => (
+                    <GlyphCell
+                      key={ch}
+                      char={ch}
+                      strokes={glyphMap[ch] ?? []}
+                      onChange={onCellChange}
+                      disabled={downloading}
+                    />
+                  ))}
+                </div>
+              )}
               <div className={styles.gridActions}>
                 <button
                   type="button"
                   className={styles.clearAllBtn}
-                  onClick={clearAll}
-                  disabled={progress === 0 || downloading}
+                  onClick={script === "hangul" ? clearAllJamo : clearAll}
+                  disabled={
+                    script === "hangul"
+                      ? jamoProgress === 0
+                      : progress === 0 || downloading
+                  }
                 >
                   전체 지우기
                 </button>
@@ -285,8 +364,10 @@ export default function HandwritingStudio() {
             </details>
 
             <div className={styles.statusRow} aria-live="polite">
-              {loading && <span className={styles.status}>네 글씨 굽는 중…</span>}
-              {error && (
+              {script === "latin" && loading && (
+                <span className={styles.status}>네 글씨 굽는 중…</span>
+              )}
+              {script === "latin" && error && (
                 <span className={styles.error} role="alert">
                   {error}
                 </span>
@@ -294,41 +375,59 @@ export default function HandwritingStudio() {
             </div>
           </section>
 
-          {/* ── 견본 + 받기 ── */}
+          {/* ── 견본 + 결과물 ── */}
           <section className={styles.preview}>
-            <HandwritingPreview
-              fontBase64={previewFont}
-              fontFamily={fontFamily}
-              drawnChars={drawnChars}
-              loading={loading}
-              generatedBy={generatedBy}
-            />
+            {script === "hangul" ? (
+              <>
+                <HangulPreview
+                  jamo={jamoGlyphs}
+                  drawnJamo={drawnJamoChars}
+                  refine={refine}
+                />
+                {/* 한글 결과물 = 그린 자모로 음절을 조합한 문구 이미지 */}
+                <HangulImagePanel
+                  jamo={jamoGlyphs}
+                  drawnJamo={drawnJamoChars}
+                  refine={refine}
+                />
+              </>
+            ) : (
+              <>
+                <HandwritingPreview
+                  fontBase64={previewFont}
+                  fontFamily={fontFamily}
+                  drawnChars={drawnChars}
+                  loading={loading}
+                  generatedBy={generatedBy}
+                />
 
-            {/* 주력 결과물 = 바로 쓰는 이미지(카톡/인스타). 폰트는 엔진. */}
-            <HandwritingImagePanel
-              fontBase64={previewFont}
-              fontFamily={fontFamily}
-              drawnChars={drawnChars}
-            />
+                {/* 주력 결과물 = 바로 쓰는 이미지(카톡/인스타). 폰트는 엔진. */}
+                <HandwritingImagePanel
+                  fontBase64={previewFont}
+                  fontFamily={fontFamily}
+                  drawnChars={drawnChars}
+                />
 
-            {/* 폰트 파일 받기는 "고급/무한 재사용" 경로로 강등 */}
-            <details className={styles.desktopActions}>
-              <summary className={styles.actionsHead}>
-                고급: 폰트 파일로 받기 (무한 재사용)
-              </summary>
-              <p className={styles.formatNote}>
-                이미지는 어디든 바로, 폰트는 한 번 깔면 무한 재사용. 블로그·영상 편집·문서에.
-              </p>
-              {renderActions("panel")}
-              {FORMAT_OPTIONS.some((o) => o.full) && (
-                <p className={styles.formatNote}>WOFF2·OTF 풀포맷은 곧 제공돼요.</p>
-              )}
-            </details>
+                {/* 폰트 파일 받기는 "고급/무한 재사용" 경로로 강등 (라틴 전용) */}
+                <details className={styles.desktopActions}>
+                  <summary className={styles.actionsHead}>
+                    고급: 폰트 파일로 받기 (무한 재사용)
+                  </summary>
+                  <p className={styles.formatNote}>
+                    이미지는 어디든 바로, 폰트는 한 번 깔면 무한 재사용. 블로그·영상 편집·문서에.
+                  </p>
+                  {renderActions("panel")}
+                  {FORMAT_OPTIONS.some((o) => o.full) && (
+                    <p className={styles.formatNote}>WOFF2·OTF 풀포맷은 곧 제공돼요.</p>
+                  )}
+                </details>
+              </>
+            )}
           </section>
         </div>
       )}
 
-      {mode === "draw" && (
+      {mode === "draw" && script === "latin" && (
         <div className={styles.mobileActionBar} role="region" aria-label="폰트 받기">
           {renderActions("bar")}
         </div>

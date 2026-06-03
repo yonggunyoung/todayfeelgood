@@ -9,9 +9,18 @@
 파이프라인(검증된 PoC):
   사용자가 그린 획(중심선 폴리라인, 셀 정규화 0..1)
   → 다듬기(refine: smoothing/nib/taper/straighten/spacing)
-  → 좌우 오프셋 외곽선(stroke outline)
+  → 좌우 오프셋 외곽선(stroke outline) — 2차 베지어 곡선(qCurveTo)으로 매끈하게
   → fontTools FontBuilder + TTGlyphPen으로 glyf 조립
   → 진짜 TTF/WOFF/WOFF2/OTF (base64)
+
+품질 개선(Q판):
+  - 중심선을 약하게라도 자연 곡선화하고, 외곽선을 직선 폴리라인이 아니라
+    2차 베지어(qCurveTo) 로 그려 매끈하게. smoothing=0이어도 약한 곡선,
+    높으면 더 정리(원래 점 근처를 통과 → 형태/개성 보존).
+  - 좌우 오프셋의 날카로운 코너/자기교차 아티팩트를 라운드 조인 + 마이터 클램프로 완화.
+    획 끝은 taper 프로파일 + 둥근 캡.
+  - 가이드(어센더/캡/x-height/베이스라인/디센더) 기준으로 글자 수직 배치를
+    약하게 정규화(과도 금지 — 개성 유지)하고, 일관된 advance/사이드베어링.
 
 좌표 규약(가이드 그리드와 합의):
   - 입력 셀은 0..1 정규화. (0,0)=좌상단, (1,1)=우하단(이미지 y 하향).
@@ -47,6 +56,17 @@ CELL_HEIGHT_UNITS = CELL_TOP_Y - CELL_BOTTOM_Y  # 1000
 # 셀 가로폭(폰트 유닛). x=0..1 → 0..CELL_WIDTH_UNITS.
 CELL_WIDTH_UNITS = 1000
 LINE_GAP = 90
+
+# 읽힘용 가이드(폰트 유닛, y 상향). 메트릭 정렬의 기준선.
+BASELINE_Y = 0
+CAP_HEIGHT = 700        # 대문자/숫자 윗선
+X_HEIGHT = 500          # 소문자 본체 윗선
+# 디센더가 있는 소문자(g,j,p,q,y)는 베이스라인 아래로 내려감.
+DESCENDER_GLYPHS = set("gjpqy")
+# 어센더/캡 영역까지 올라가는 소문자(b,d,f,h,k,l,t).
+ASCENDER_GLYPHS = set("bdfhklt")
+# 메트릭 정렬 강도(0=날것 위치, 1=가이드에 꽉 맞춤). 개성 보존 위해 부분만.
+METRIC_SNAP = 0.55
 
 # refine 계수(REFINE_RANGES 의미와 일치).
 # nib(0.2~1) → 펜 반폭(half-width, 폰트 유닛). 0.2≈얇게, 1≈두껍게.
@@ -146,19 +166,23 @@ def _catmull_rom(points: List[Point], samples_per_seg: int) -> List[Point]:
 
 def _smooth_stroke(points: List[Point], smoothing: float) -> List[Point]:
     """
-    smoothing 0 = 날것(중복점만 제거), 1 = 강한 평활.
-    점 솎기(RDP) + Catmull-Rom 보간. 형태(개성) 보존이 핵심.
+    smoothing 0 = 약한 자연 곡선만(개성 100% 보존), 1 = 강한 평활(더 정리).
+    점 솎기(RDP) + Catmull-Rom 보간. 원래 점 근처를 통과하므로 형태(개성) 보존이 핵심.
+
+    핵심 변경: smoothing 0이어도 곡선 외곽선을 위해 부드러운 중심선을 만든다.
+    (이전엔 0이면 폴리라인 그대로 → 외곽선이 각졌음.)
     """
     pts = _dedupe(points)
     if len(pts) < 2:
         return pts
-    if smoothing <= 0:
-        return pts
-    # RDP epsilon: smoothing 클수록 더 많이 솎음(0.5~8 유닛 상당, 셀 정규화 스케일).
-    eps = 0.0015 + 0.012 * smoothing
+    # RDP epsilon: smoothing 클수록 더 많이 솎음. smoothing 0이면 거의 안 솎음(원형 보존).
+    eps = 0.0008 + 0.012 * smoothing
     simplified = _rdp(pts, eps)
-    # 보간 밀도: smoothing 클수록 부드럽게(세그먼트당 표본 수 ↑).
-    samples = 4 + int(round(8 * smoothing))
+    if len(simplified) < 3:
+        # 점 2개(직선)는 보간 불필요 — 그대로 둔다(원형 보존, 직선은 직선).
+        return simplified
+    # 보간 밀도: smoothing 0이어도 약한 곡선(samples>=3), 클수록 부드럽게.
+    samples = 3 + int(round(9 * smoothing))
     return _catmull_rom(simplified, samples)
 
 
@@ -187,13 +211,75 @@ def _normal(p0: Point, p1: Point) -> Point:
     return (-dy / n, dx / n)
 
 
+def _arc_points(
+    center: Point, radius: float, a0: float, a1: float, max_step: float = 0.6
+) -> List[Point]:
+    """center 중심 반지름 radius 의 호(a0→a1, 라디안)를 폴리라인 점으로.
+    라운드 조인/캡에서 외곽선이 각지지 않게 한다(짧은 호는 점 1~2개로 절약)."""
+    cx, cy = center
+    sweep = a1 - a0
+    if abs(sweep) < 1e-6 or radius < 1e-6:
+        return []
+    steps = max(1, int(math.ceil(abs(sweep) / max_step)))
+    out: List[Point] = []
+    for k in range(1, steps + 1):
+        a = a0 + sweep * (k / steps)
+        out.append((cx + radius * math.cos(a), cy + radius * math.sin(a)))
+    return out
+
+
+def _offset_side(
+    pts: List[Point],
+    normals: List[Point],
+    widths: List[float],
+    sign: float,
+) -> List[Point]:
+    """한쪽(좌/우) 오프셋 외곽선을 라운드 조인으로 생성.
+    볼록한 꺾임(외측)에선 호를 끼워 넣어 날카로운 코너/마이터 폭주를 막는다.
+    오목한 쪽(내측)에선 평균 법선만 써서 미세 자기교차를 무해화한다.
+    sign: +1=좌측, -1=우측."""
+    n = len(pts)
+    out: List[Point] = []
+    for i in range(n):
+        x, y = pts[i]
+        w = widths[i]
+        nx, ny = normals[i][0] * sign, normals[i][1] * sign
+        if 0 < i < n - 1:
+            # 들어오는/나가는 세그먼트의 법선(이 점에서의 꺾임 판정).
+            na = _normal(pts[i - 1], pts[i])
+            nb = _normal(pts[i], pts[i + 1])
+            ax, ay = na[0] * sign, na[1] * sign
+            bx, by = nb[0] * sign, nb[1] * sign
+            # 이 쪽이 외측(볼록)인지: 두 세그먼트 법선이 벌어지면 외측.
+            cross = ax * by - ay * bx  # 부호로 회전 방향 판정
+            dot = ax * bx + ay * by
+            turn = math.atan2(abs(cross), dot)  # 0..pi 꺾임각
+            # 외측(라운드 필요) 판정: sign 방향으로 꺾이면 호를 끼운다.
+            outer = cross > 1e-9
+            if outer and turn > 0.35:
+                a0 = math.atan2(ay, ax)
+                a1 = math.atan2(by, bx)
+                # 짧은 방향으로 보간.
+                if a1 - a0 > math.pi:
+                    a1 -= 2 * math.pi
+                elif a0 - a1 > math.pi:
+                    a1 += 2 * math.pi
+                out.append((x + ax * w, y + ay * w))
+                out.extend(_arc_points((x, y), w, a0, a1))
+                continue
+        out.append((x + nx * w, y + ny * w))
+    return out
+
+
 def _stroke_outline(
     points: List[Point], half_width: float, taper: float
 ) -> List[Point]:
     """
-    중심선 폴리라인 → 좌우 오프셋 외곽선(닫힌 폴리곤).
-    taper>0: 획 끝으로 갈수록 폭 감소(필압 흉내). 양 끝을 가늘게.
+    중심선 폴리라인 → 좌우 오프셋 외곽선(닫힌 폴리곤, on-curve 점 시퀀스).
+    - 좌우 오프셋을 라운드 조인 + 마이터 클램프로 생성(날카로운 코너/자기교차 완화).
+    - 획 끝은 taper 프로파일 + 둥근 캡(반원 호).
     한 점(점/도트)인 경우 작은 원형 폴리곤 반환.
+    반환 점들은 이후 _to_quad_contour 가 2차 베지어로 매끄럽게 그린다.
     """
     pts = _dedupe(points)
     if len(pts) == 0:
@@ -217,7 +303,9 @@ def _stroke_outline(
         factor = (1.0 - taper) + taper * edge
         return half_width * max(0.12, factor)
 
-    # 각 점의 법선(인접 세그먼트 평균).
+    widths = [width_at(i) for i in range(n)]
+
+    # 각 점의 법선(인접 세그먼트 평균 + 마이터 클램프로 폭주 방지).
     normals: List[Point] = []
     for i in range(n):
         if i == 0:
@@ -229,23 +317,39 @@ def _stroke_outline(
             b = _normal(pts[i], pts[i + 1])
             mx, my = a[0] + b[0], a[1] + b[1]
             m = math.hypot(mx, my)
-            nv = (mx / m, my / m) if m > 1e-9 else a
+            if m > 1e-9:
+                # 마이터 길이 = 1/cos(반각). 너무 길면(날카로운 코너) 단순 법선으로 클램프.
+                miter = 2.0 / m  # m = 2*cos(반각)
+                nv = (mx / m, my / m) if miter <= 2.2 else a
+            else:
+                nv = a  # 180도 꺾임(되돌아옴) — 평균 무의미, 한쪽 법선.
         normals.append(nv)
 
-    left: List[Point] = []
-    right: List[Point] = []
-    for i in range(n):
-        w = width_at(i)
-        nx, ny = normals[i]
-        x, y = pts[i]
-        left.append((x + nx * w, y + ny * w))
-        right.append((x - nx * w, y - ny * w))
+    left = _offset_side(pts, normals, widths, +1.0)
+    right = _offset_side(pts, normals, widths, -1.0)
 
-    # 닫힌 폴리곤: 좌측 정방향 + 우측 역방향.
-    return left + right[::-1]
+    # 끝 캡(둥근 반원): 시작 캡은 right끝→left시작, 끝 캡은 left끝→right시작.
+    start_cap = _end_cap(pts[0], normals[0], widths[0], start=True)
+    end_cap = _end_cap(pts[-1], normals[-1], widths[-1], start=False)
+
+    # 닫힌 폴리곤: 좌측 정방향 + 끝캡 + 우측 역방향 + 시작캡.
+    return left + end_cap + right[::-1] + start_cap
 
 
-def _dot_polygon(center: Point, radius: float, segments: int = 12) -> List[Point]:
+def _end_cap(p: Point, normal: Point, w: float, start: bool) -> List[Point]:
+    """획 끝 둥근 캡: 법선 +w 지점에서 -w 지점으로 도는 반원 호."""
+    x, y = p
+    nx, ny = normal
+    base = math.atan2(ny, nx)
+    if start:
+        # 우측끝(-) → 좌측시작(+) 방향으로 도는 반원(중심선 바깥쪽으로 볼록).
+        a0, a1 = base - math.pi, base
+    else:
+        a0, a1 = base, base + math.pi
+    return _arc_points((x, y), max(1.0, w), a0, a1)
+
+
+def _dot_polygon(center: Point, radius: float, segments: int = 16) -> List[Point]:
     """단일 점 → 원형 폴리곤(작은 점/도트)."""
     cx, cy = center
     r = max(8.0, radius)
@@ -253,6 +357,31 @@ def _dot_polygon(center: Point, radius: float, segments: int = 12) -> List[Point
         (cx + r * math.cos(2 * math.pi * k / segments), cy + r * math.sin(2 * math.pi * k / segments))
         for k in range(segments)
     ]
+
+
+# ---------------- 폴리곤 → 2차 베지어 컨투어 ----------------
+def _to_quad_contour(poly: List[Point], pen) -> None:
+    """
+    닫힌 폴리곤(외곽선 점열)을 2차 베지어(qCurveTo) 로 매끄럽게 그린다.
+
+    방법: 각 폴리곤 점을 off-curve(컨트롤) 점으로 두고, 인접 두 점의 중점을
+    on-curve 점으로 삼는 표준 "midpoint" 트릭. 폴리라인의 각 꼭짓점이
+    부드러운 곡선의 정점이 되어, 직선 폴리라인보다 훨씬 매끈한 외곽선이 된다.
+    꼭짓점이 거의 일직선이면 사실상 직선처럼 보여 'l'(직선)도 자연스럽다.
+    """
+    pts = _dedupe(poly)
+    if len(pts) < 3:
+        return
+    n = len(pts)
+    # 시작 on-curve 점: 마지막↔첫 점의 중점.
+    start = ((pts[-1][0] + pts[0][0]) / 2.0, (pts[-1][1] + pts[0][1]) / 2.0)
+    pen.moveTo(start)
+    for i in range(n):
+        ctrl = pts[i]
+        nxt = pts[(i + 1) % n]
+        mid = ((ctrl[0] + nxt[0]) / 2.0, (ctrl[1] + nxt[1]) / 2.0)
+        pen.qCurveTo(ctrl, mid)
+    pen.closePath()
 
 
 # ---------------- 글리프 조립 ----------------
@@ -265,39 +394,93 @@ def _nib_half_width(nib: float) -> float:
 def _build_glyph(
     strokes: Sequence[Sequence[Point]],
     refine: RefineParams,
-) -> Tuple[object, float, float]:
+) -> Tuple[object, float, float, int]:
     """
-    한 글자의 획들 → (TTGlyph, xMin, xMax).
-    좌표는 이미 폰트 유닛(_cell_to_font 적용 후)이어야 한다.
-    반환 xMin/xMax는 사이드베어링/advance 계산용.
+    한 글자의 획들 → (TTGlyph, xMin, xMax, contourCount).
+    좌표는 이미 폰트 유닛(_cell_to_font + 메트릭 정렬 적용 후)이어야 한다.
+    외곽선은 2차 베지어(qCurveTo)로 그려 매끈하다.
+    반환 xMin/xMax는 사이드베어링/advance 계산용, contourCount는 자체 점검 로깅용.
     """
     half = _nib_half_width(refine.nib)
     pen = TTGlyphPen(None)
 
     all_x: List[float] = []
-    drew = False
+    contours = 0
     for stroke in strokes:
         outline = _stroke_outline(list(stroke), half, refine.taper)
         if len(outline) < 3:
             continue
-        pen.moveTo(outline[0])
-        for pt in outline[1:]:
-            pen.lineTo(pt)
-        pen.closePath()
-        drew = True
+        _to_quad_contour(outline, pen)
+        contours += 1
         all_x.extend(px for px, _ in outline)
 
     glyph = pen.glyph()
-    if not drew or not all_x:
-        return glyph, 0.0, 0.0
-    return glyph, min(all_x), max(all_x)
+    if contours == 0 or not all_x:
+        return glyph, 0.0, 0.0, 0
+    return glyph, min(all_x), max(all_x), contours
+
+
+def _target_band(ch: str) -> Tuple[float, float]:
+    """글자별 목표 수직 밴드(베이스라인 기준, 폰트 유닛 y 상향).
+    (bottom, top). 메트릭 정렬에서 글자를 이 밴드로 약하게 끌어온다."""
+    if ch.isdigit() or ("A" <= ch <= "Z"):
+        return (BASELINE_Y, CAP_HEIGHT)
+    if "a" <= ch <= "z":
+        bottom = DESCENDER if ch in DESCENDER_GLYPHS else BASELINE_Y
+        top = CAP_HEIGHT if ch in ASCENDER_GLYPHS else X_HEIGHT
+        return (bottom, top)
+    # 기타(기호/한글 등): 디센더~어센더 전체 높이를 약하게만.
+    return (DESCENDER, CAP_HEIGHT)
+
+
+def _align_to_guides(
+    font_strokes: List[List[Point]], ch: str, strength: float
+) -> List[List[Point]]:
+    """
+    글자의 잉크 세로 범위를 가이드 밴드(목표)로 약하게 이동/스케일(읽힘 정렬).
+    strength(0~1)만큼만 보정해 개성을 보존한다(과도 정규화 금지).
+    """
+    if strength <= 0:
+        return font_strokes
+    ys = [y for s in font_strokes for _, y in s]
+    if len(ys) < 2:
+        return font_strokes
+    cur_bot, cur_top = min(ys), max(ys)
+    cur_h = cur_top - cur_bot
+    if cur_h < 1e-3:
+        return font_strokes
+    tgt_bot, tgt_top = _target_band(ch)
+    tgt_h = tgt_top - tgt_bot
+    if tgt_h < 1e-3:
+        return font_strokes
+
+    # 목표 스케일/오프셋을 strength 비율로 섞는다(1=완전 정렬, 0=원형).
+    full_scale = tgt_h / cur_h
+    # 극단 스케일 방지(0.7~1.4 안에서만): 개성 유지, 폭주 방지.
+    full_scale = max(0.7, min(1.4, full_scale))
+    scale = 1.0 + (full_scale - 1.0) * strength
+
+    # 스케일 후 바닥을 목표 바닥으로 끌어오기(strength 비율).
+    new_bot_if_scaled = cur_bot  # pivot=cur_bot 기준 스케일
+    full_shift = tgt_bot - new_bot_if_scaled
+    shift = full_shift * strength
+
+    out: List[List[Point]] = []
+    for s in font_strokes:
+        ns = []
+        for x, y in s:
+            ny = cur_bot + (y - cur_bot) * scale + shift
+            ns.append((x, ny))
+        out.append(ns)
+    return out
 
 
 def _prepare_strokes_font_units(
     strokes: Sequence[Sequence[Point]],
     refine: RefineParams,
+    ch: str = "",
 ) -> List[List[Point]]:
-    """셀 정규화 획 → (smoothing) → 폰트 유닛 변환 → (straighten)."""
+    """셀 정규화 획 → (smoothing) → 폰트 유닛 변환 → (straighten) → (메트릭 정렬)."""
     # 1) 셀 좌표에서 평활.
     smoothed = [_smooth_stroke([(float(x), float(y)) for x, y in s], refine.smoothing) for s in strokes]
     smoothed = [s for s in smoothed if len(s) >= 1]
@@ -312,6 +495,10 @@ def _prepare_strokes_font_units(
             corr = angle * min(1.0, max(0.0, refine.straighten))
             pivot = _centroid(pts)
             font_strokes = [_straighten_stroke(s, corr, pivot) for s in font_strokes]
+    # 4) 메트릭 정렬: 가이드 밴드로 수직 배치/높이 약하게 정규화(읽힘).
+    #    straighten 슬라이더와 연동해 강도 조절(straighten 높을수록 더 정렬, 단 상한 METRIC_SNAP).
+    snap = METRIC_SNAP * min(1.0, 0.5 + 0.5 * max(0.0, min(1.0, refine.straighten)))
+    font_strokes = _align_to_guides(font_strokes, ch, snap)
     return font_strokes
 
 
@@ -402,8 +589,8 @@ def build_handwriting_font(
             continue
         seen.add(ch)
 
-        font_strokes = _prepare_strokes_font_units(strokes, refine)
-        glyph, xmin, xmax = _build_glyph(font_strokes, refine)
+        font_strokes = _prepare_strokes_font_units(strokes, refine, ch)
+        glyph, xmin, xmax, _contours = _build_glyph(font_strokes, refine)
 
         gname = _glyph_name(ch)
         # 이름 충돌 방어(드물게 동일 이름).

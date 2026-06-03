@@ -16,15 +16,15 @@ import {
   type RefineParams,
 } from "@webapp/core";
 import { BrushUnderline, Button, HelpTip, Mascot, Segmented } from "@webapp/ui";
-import { apiPath } from "../../lib/paths";
-import { JAMO_NAMES } from "../../lib/hangul";
-import GlyphCell from "../../components/GlyphCell";
-import RefinePanel from "../../components/RefinePanel";
-import HandwritingPreview from "../../components/HandwritingPreview";
-import HandwritingImagePanel from "../../components/HandwritingImagePanel";
-import LetterPanel from "../../components/LetterPanel";
-import HangulPreview from "../../components/HangulPreview";
-import HangulImagePanel from "../../components/HangulImagePanel";
+import { apiPath } from "../../../lib/paths";
+import { JAMO_NAMES } from "../../../lib/hangul";
+import GlyphCell from "../../../components/GlyphCell";
+import RefinePanel from "../../../components/RefinePanel";
+import HandwritingPreview from "../../../components/HandwritingPreview";
+import HandwritingImagePanel from "../../../components/HandwritingImagePanel";
+import LetterPanel from "../../../components/LetterPanel";
+import HangulPreview from "../../../components/HangulPreview";
+import HangulImagePanel from "../../../components/HangulImagePanel";
 import FontStudio from "./FontStudio";
 import styles from "./HandwritingStudio.module.css";
 

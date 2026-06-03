@@ -18,15 +18,15 @@ import {
   type PreviewStyle,
 } from "@webapp/core";
 import { BrushUnderline, Button, Chip, Mascot, Segmented } from "@webapp/ui";
-import { apiPath } from "../../lib/paths";
-import { TREND_PRESETS } from "../../lib/trendPresets";
+import { apiPath } from "../../../lib/paths";
+import { TREND_PRESETS } from "../../../lib/trendPresets";
 import DrawingCanvas, {
   type DrawingCanvasHandle,
-} from "../../components/DrawingCanvas";
-import ParameterPanel from "../../components/ParameterPanel";
-import FontPreview from "../../components/FontPreview";
-import VariationGallery from "../../components/VariationGallery";
-import PreviewStylePanel from "../../components/PreviewStylePanel";
+} from "../../../components/DrawingCanvas";
+import ParameterPanel from "../../../components/ParameterPanel";
+import FontPreview from "../../../components/FontPreview";
+import VariationGallery from "../../../components/VariationGallery";
+import PreviewStylePanel from "../../../components/PreviewStylePanel";
 import styles from "./FontStudio.module.css";
 
 // 슬라이더 조작 후 프리뷰 호출까지의 디바운스(ms)

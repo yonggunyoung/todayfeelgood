@@ -7,10 +7,10 @@ import {
   type HangulComposeRequest,
   type HandwritingRequest,
 } from "@webapp/core";
-import { apiPath } from "../../lib/paths";
-import { decodeShare, type SharePayload } from "../../lib/shareCodec";
-import { renderShareCanvas } from "../../lib/shareRender";
-import { SIZE_PRESETS, type Align, type BgKind } from "../../lib/imageTemplates";
+import { apiPath } from "../../../lib/paths";
+import { decodeShare, type SharePayload } from "../../../lib/shareCodec";
+import { renderShareCanvas } from "../../../lib/shareRender";
+import { SIZE_PRESETS, type Align, type BgKind } from "../../../lib/imageTemplates";
 import styles from "./share.module.css";
 
 interface Props {

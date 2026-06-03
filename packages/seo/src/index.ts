@@ -17,13 +17,36 @@ export function siteUrl(): string {
   return raw.replace(/\/+$/, "");
 }
 
+/** 지원 로케일. 한국어가 기본, 영어로 해외 유입을 노린다. */
+export type Locale = "ko" | "en";
+
+/** OG/`og:locale`용 BCP-47 변형 매핑. */
+const OG_LOCALE: Record<Locale, string> = {
+  ko: "ko_KR",
+  en: "en_US",
+};
+
+/** hreflang/JSON-LD inLanguage용 표준 언어 태그. */
+const LANG_TAG: Record<Locale, string> = {
+  ko: "ko-KR",
+  en: "en-US",
+};
+
 export interface PageMeta {
   title: string;
   description: string;
-  keywords?: string[];
+  keywords?: readonly string[];
   /** 사이트 베이스 기준 경로 또는 절대 URL. canonical/OG 절대화에 사용. */
   path?: string;
   ogImage?: string;
+  /** 이 페이지의 로케일. 기본값 "ko"(하위호환). og:locale·언어태그 결정. */
+  locale?: Locale;
+  /**
+   * hreflang 대체 링크. 각 로케일의 경로(또는 절대 URL)를 준다.
+   * 예: { ko: "/", en: "/en" }. x-default는 ko 경로를 사용.
+   * 생략하면 alternates.languages를 만들지 않는다(하위호환).
+   */
+  alternates?: Partial<Record<Locale, string>>;
 }
 
 function absolute(pathOrUrl: string | undefined): string | undefined {
@@ -33,23 +56,44 @@ function absolute(pathOrUrl: string | undefined): string | undefined {
   return `${base}${pathOrUrl.startsWith("/") ? "" : "/"}${pathOrUrl}`;
 }
 
+/** hreflang용 languages 맵을 절대 URL로 만든다. x-default = ko(없으면 en). */
+function buildLanguageAlternates(
+  alternates: Partial<Record<Locale, string>> | undefined
+): Record<string, string> | undefined {
+  if (!alternates) return undefined;
+  const out: Record<string, string> = {};
+  for (const loc of Object.keys(alternates) as Locale[]) {
+    const abs = absolute(alternates[loc]);
+    if (abs) out[LANG_TAG[loc]] = abs;
+  }
+  const xDefault = absolute(alternates.ko ?? alternates.en);
+  if (xDefault) out["x-default"] = xDefault;
+  return Object.keys(out).length ? out : undefined;
+}
+
 /**
  * Next.js App Router용 Metadata 객체를 만든다.
  * title/description/keywords/OG/Twitter/canonical을 일관되게 채운다.
+ * locale·alternates를 주면 다국어 SEO(og:locale·hreflang)를 채운다.
  */
 export function buildMeta(meta: PageMeta): Metadata {
   const url = absolute(meta.path);
   const ogImage = absolute(meta.ogImage);
+  const locale = meta.locale ?? "ko";
+  const languages = buildLanguageAlternates(meta.alternates);
 
   return {
     metadataBase: new URL(siteUrl()),
     title: meta.title,
     description: meta.description,
-    keywords: meta.keywords,
-    alternates: url ? { canonical: url } : undefined,
+    keywords: meta.keywords ? [...meta.keywords] : undefined,
+    alternates:
+      url || languages
+        ? { canonical: url, languages }
+        : undefined,
     openGraph: {
       type: "website",
-      locale: "ko_KR",
+      locale: OG_LOCALE[locale],
       title: meta.title,
       description: meta.description,
       url,
@@ -62,6 +106,11 @@ export function buildMeta(meta: PageMeta): Metadata {
       images: ogImage ? [ogImage] : undefined,
     },
   };
+}
+
+/** `<html lang>`에 쓸 BCP-47 태그. layout에서 사용. */
+export function htmlLang(locale: Locale): string {
+  return LANG_TAG[locale];
 }
 
 export interface WebAppJsonLdInput {
@@ -90,7 +139,7 @@ export function webApplicationJsonLd(input: WebAppJsonLdInput) {
     url,
     applicationCategory: input.category ?? "DesignApplication",
     operatingSystem: "Web",
-    inLanguage: input.inLanguage ?? "ko-KR",
+    inLanguage: input.inLanguage ?? LANG_TAG.ko,
     offers: {
       "@type": "Offer",
       price: input.price ?? "0",

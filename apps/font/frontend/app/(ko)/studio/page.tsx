@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { buildMeta } from "@webapp/seo";
-import { SiteHeader, SiteFooter } from "../../components/SiteChrome";
+import { SiteHeader, SiteFooter } from "../../../components/SiteChrome";
 import HandwritingStudio from "./HandwritingStudio";
 
 export const metadata: Metadata = buildMeta({

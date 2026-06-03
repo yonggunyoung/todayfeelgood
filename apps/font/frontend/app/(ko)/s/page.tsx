@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { buildMeta } from "@webapp/seo";
-import { SiteHeader, SiteFooter } from "../../components/SiteChrome";
-import { decodeShare } from "../../lib/shareCodec";
+import { SiteHeader, SiteFooter } from "../../../components/SiteChrome";
+import { decodeShare } from "../../../lib/shareCodec";
 import ShareView from "./ShareView";
 
 // 공유 코드(?d=)는 매 요청마다 다르므로 동적 렌더.

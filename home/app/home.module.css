@@ -1,3 +1,10 @@
+/* ── 상단 바 — 언어 토글 ── */
+.topbar {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: var(--sp-4);
+}
+
 /* ── 히어로 — 비대칭 2열(소개 + 스타일 샘플 카드) ── */
 .hero {
   display: grid;

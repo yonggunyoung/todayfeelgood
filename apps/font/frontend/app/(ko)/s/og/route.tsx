@@ -5,7 +5,7 @@ import {
   type HandwritingResponse,
 } from "@webapp/core";
 import { sanitizeColor } from "@webapp/ui";
-import { decodeShare } from "../../../lib/shareCodec";
+import { decodeShare } from "../../../../lib/shareCodec";
 
 /**
  * 동적 OG 이미지 (Route Handler).

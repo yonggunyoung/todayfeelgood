@@ -12,7 +12,26 @@ import styles from "./InteractiveSpecimen.module.css";
  */
 const SAMPLE = "Hwoek";
 
-export default function InteractiveSpecimen() {
+export interface SpecimenLabels {
+  /** role="img" 대체 텍스트 */
+  stageAria: string;
+  /** 굵기 슬라이더 라벨 */
+  weight: string;
+  /** 기울기 슬라이더 라벨 */
+  slant: string;
+}
+
+const KO_LABELS: SpecimenLabels = {
+  stageAria: "굵기와 기울기를 조절하는 라틴 글자 데모 (시스템 글꼴 흉내)",
+  weight: "굵기",
+  slant: "기울기",
+};
+
+export default function InteractiveSpecimen({
+  labels = KO_LABELS,
+}: {
+  labels?: SpecimenLabels;
+}) {
   const [weight, setWeight] = useState(620);
   const [slant, setSlant] = useState(-4);
   const draggingRef = useRef(false);
@@ -42,7 +61,7 @@ export default function InteractiveSpecimen() {
       <div
         className={styles.stage}
         role="img"
-        aria-label="굵기와 기울기를 조절하는 라틴 글자 데모 (시스템 글꼴 흉내)"
+        aria-label={labels.stageAria}
       >
         {/* 메인 글자 — 굵기/기울기는 슬라이더로, 미세한 숨쉬기는 LiveText로(살아있는 글자) */}
         <LiveText
@@ -57,7 +76,7 @@ export default function InteractiveSpecimen() {
 
       <div className={styles.controls}>
         <Slider
-          label="굵기"
+          label={labels.weight}
           display={String(weight)}
           value={weight}
           min={PARAM_RANGES.weight.min}
@@ -69,7 +88,7 @@ export default function InteractiveSpecimen() {
           }}
         />
         <Slider
-          label="기울기"
+          label={labels.slant}
           display={`${slant}°`}
           value={slant}
           min={PARAM_RANGES.slant.min}

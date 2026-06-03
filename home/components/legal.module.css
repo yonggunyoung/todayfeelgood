@@ -1,0 +1,61 @@
+/* 법적 문서(개인정보처리방침·이용약관) 레이아웃 — 읽기 편한 단일 칼럼. */
+.page {
+  padding-bottom: var(--sp-16);
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  padding-top: var(--sp-4);
+}
+
+.back {
+  color: var(--ink-soft);
+  text-decoration: none;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semi);
+}
+.back:hover {
+  color: var(--accent-ink);
+}
+
+.doc {
+  max-width: 46rem;
+  padding-top: var(--sp-8);
+}
+
+.title {
+  font-size: var(--text-large);
+  margin-bottom: var(--sp-2);
+}
+
+.updated {
+  color: var(--ink-faint);
+  font-size: var(--text-sm);
+  margin-bottom: var(--sp-6);
+}
+
+.intro {
+  color: var(--ink-soft);
+  line-height: 1.7;
+  margin-bottom: var(--sp-8);
+}
+
+.section {
+  margin-bottom: var(--sp-7);
+}
+
+.heading {
+  font-size: var(--text-md);
+  font-weight: var(--weight-bold);
+  margin-bottom: var(--sp-3);
+}
+
+.body {
+  color: var(--ink-soft);
+  line-height: 1.75;
+  margin-bottom: var(--sp-3);
+  word-break: break-word;
+}

@@ -28,3 +28,17 @@ export function homePath(locale: Locale): string {
 export function homeAlternates(): Record<Locale, string> {
   return { ko: homePath("ko"), en: homePath("en") };
 }
+
+/** 법적 페이지 종류 — 사전 `legal` 키와 일치. */
+export type LegalDoc = "privacy" | "terms";
+
+/** 로케일별 법적 페이지 경로. ko=`/privacy`, en=`/en/privacy`. */
+export function legalPath(locale: Locale, doc: LegalDoc): string {
+  const prefix = locale === "ko" ? "" : `/${locale}`;
+  return `${prefix}/${doc}`;
+}
+
+/** 법적 페이지 hreflang alternates(ko↔en). */
+export function legalAlternates(doc: LegalDoc): Record<Locale, string> {
+  return { ko: legalPath("ko", doc), en: legalPath("en", doc) };
+}

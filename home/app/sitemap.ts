@@ -13,6 +13,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
     en: `${base}/en`,
     "x-default": base,
   };
+  // 법적 페이지(개인정보처리방침·이용약관)도 ko/en 양쪽을 alternates와 함께 노출.
+  const legalLangs = (doc: string) => ({
+    ko: `${base}/${doc}`,
+    en: `${base}/en/${doc}`,
+    "x-default": `${base}/${doc}`,
+  });
   return [
     {
       url: base,
@@ -28,5 +34,21 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.9,
       alternates: { languages },
     },
+    ...["privacy", "terms"].flatMap((doc) => [
+      {
+        url: `${base}/${doc}`,
+        lastModified: now,
+        changeFrequency: "yearly" as const,
+        priority: 0.3,
+        alternates: { languages: legalLangs(doc) },
+      },
+      {
+        url: `${base}/en/${doc}`,
+        lastModified: now,
+        changeFrequency: "yearly" as const,
+        priority: 0.3,
+        alternates: { languages: legalLangs(doc) },
+      },
+    ]),
   ];
 }

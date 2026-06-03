@@ -113,6 +113,31 @@ export function htmlLang(locale: Locale): string {
   return LANG_TAG[locale];
 }
 
+/**
+ * 검색엔진 사이트 소유확인 메타. 환경변수로 토큰을 주입(없으면 미출력 → 기본 OFF).
+ * Metadata.verification 에 그대로 넣으면 `<meta name="...">`가 렌더된다.
+ *   - Google Search Console: NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION
+ *   - 네이버 서치어드바이저: NEXT_PUBLIC_NAVER_SITE_VERIFICATION (naver-site-verification)
+ *   - Bing Webmaster:        NEXT_PUBLIC_BING_SITE_VERIFICATION (msvalidate.01)
+ * 참고: Google은 Cloudflare DNS TXT(도메인 속성)로도 확인 가능 — 그 경우 토큰 불필요.
+ * NEXT_PUBLIC_* 는 빌드 시점에 구워지므로 도커 배포 시 빌드 인자로 넘겨야 한다(Dockerfile.next 참고).
+ */
+export function siteVerification(): Metadata["verification"] {
+  const google = process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION || undefined;
+  const naver = process.env.NEXT_PUBLIC_NAVER_SITE_VERIFICATION || undefined;
+  const bing = process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION || undefined;
+
+  const other: Record<string, string> = {};
+  if (naver) other["naver-site-verification"] = naver;
+  if (bing) other["msvalidate.01"] = bing;
+
+  const verification: NonNullable<Metadata["verification"]> = {};
+  if (google) verification.google = google;
+  if (Object.keys(other).length) verification.other = other;
+
+  return Object.keys(verification).length ? verification : undefined;
+}
+
 export interface WebAppJsonLdInput {
   name: string;
   description: string;

@@ -16,3 +16,4 @@ export { Sticker, default as StickerDefault } from "./Sticker";
 export { LiveText, default as LiveTextDefault } from "./LiveText";
 export { HelpTip, default as HelpTipDefault } from "./HelpTip";
 export { sanitizeColor } from "./color";
+export { SiteScripts, default as SiteScriptsDefault } from "./SiteScripts";

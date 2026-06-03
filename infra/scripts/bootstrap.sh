@@ -58,9 +58,11 @@ say "5) .env 작성"
 if [ ! -f .env ]; then cp .env.example .env; fi
 if [ -n "$DOMAIN" ]; then
   SITE="https://$DOMAIN"
+  # apex + www 둘 다 CORS 화이트리스트에 둔다(nginx server_name·.env.example과 정합).
+  ORIGINS="https://$DOMAIN,https://www.$DOMAIN"
   sed -i "s#^NEXT_PUBLIC_SITE_URL=.*#NEXT_PUBLIC_SITE_URL=$SITE#" .env
-  sed -i "s#^ALLOWED_ORIGINS=.*#ALLOWED_ORIGINS=$SITE#" .env
-  echo "  → NEXT_PUBLIC_SITE_URL / ALLOWED_ORIGINS = $SITE"
+  sed -i "s#^ALLOWED_ORIGINS=.*#ALLOWED_ORIGINS=$ORIGINS#" .env
+  echo "  → NEXT_PUBLIC_SITE_URL = $SITE / ALLOWED_ORIGINS = $ORIGINS"
 else
   echo "  → 도메인 미입력: .env 기본값(localhost)으로 둠. 나중에 수정 권장."
 fi

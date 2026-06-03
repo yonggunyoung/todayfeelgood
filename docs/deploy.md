@@ -129,3 +129,20 @@ bash infra/scripts/healthcheck.sh
   레지스트리로 push → 서버는 `docker compose pull` 만(빌드 생략).
 - **엔진 동시성**: 엔진은 세마포어로 동시 생성 수를 제한(한글은 더 낮게)한다 — 무료티어 메모리 보호.
 - **빌드 메모리 상한**: `Dockerfile.next` 와 CI 는 `NODE_OPTIONS=--max-old-space-size` 로 상한을 둔다.
+
+---
+
+## 6) 헬스체크 / 남용 방지
+
+- **헬스체크**: 기동 후 `infra/scripts/healthcheck.sh` 로 점검.
+  - 도커 배포(앱은 비공개, nginx만 80 공개)는 nginx 경유로 확인:
+    ```bash
+    HUB_URL=http://127.0.0.1 bash infra/scripts/healthcheck.sh
+    ```
+    홈·`/font`·`/privacy`·`/terms` 가 2xx/3xx 면 정상.
+  - 비도커(프로세스) 방식은 엔진(:8000)·폰트 프론트(:3001) 직접 점검도 함께 동작.
+- **Rate limit(선택, 권장)**: 생성 API는 CPU·메모리를 많이 쓴다. Cloudflare 무료플랜 규칙
+  하나로 `/font/api/*`·`/kit/api/*`·`/sign/api/*` 만 가볍게 제한 → 엔진 보호.
+  설정은 `docs/cloudflare-rate-limit.md` 참고.
+- **법적 페이지(애드센스)**: 홈 앱이 `/privacy`·`/terms`(영문 `/en/privacy`·`/en/terms`)를
+  정적 제공하며 푸터·sitemap·hreflang에 연결돼 있다. 애드센스 심사 전 접근 가능 여부만 확인.

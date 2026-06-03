@@ -18,6 +18,7 @@ import { apiPath } from "../../lib/paths";
 import GlyphCell from "../../components/GlyphCell";
 import RefinePanel from "../../components/RefinePanel";
 import HandwritingPreview from "../../components/HandwritingPreview";
+import HandwritingImagePanel from "../../components/HandwritingImagePanel";
 import FontStudio from "./FontStudio";
 import styles from "./HandwritingStudio.module.css";
 
@@ -302,13 +303,27 @@ export default function HandwritingStudio() {
               loading={loading}
               generatedBy={generatedBy}
             />
-            <div className={styles.desktopActions}>
-              <h2 className={styles.actionsHead}>폰트 받아 가기</h2>
+
+            {/* 주력 결과물 = 바로 쓰는 이미지(카톡/인스타). 폰트는 엔진. */}
+            <HandwritingImagePanel
+              fontBase64={previewFont}
+              fontFamily={fontFamily}
+              drawnChars={drawnChars}
+            />
+
+            {/* 폰트 파일 받기는 "고급/무한 재사용" 경로로 강등 */}
+            <details className={styles.desktopActions}>
+              <summary className={styles.actionsHead}>
+                고급: 폰트 파일로 받기 (무한 재사용)
+              </summary>
+              <p className={styles.formatNote}>
+                이미지는 어디든 바로, 폰트는 한 번 깔면 무한 재사용. 블로그·영상 편집·문서에.
+              </p>
               {renderActions("panel")}
               {FORMAT_OPTIONS.some((o) => o.full) && (
                 <p className={styles.formatNote}>WOFF2·OTF 풀포맷은 곧 제공돼요.</p>
               )}
-            </div>
+            </details>
           </section>
         </div>
       )}

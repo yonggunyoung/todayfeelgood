@@ -221,6 +221,16 @@ details[open] > .accSummary .accTitle::after {
   font-size: var(--text-sm);
   font-weight: var(--weight-semi);
   color: var(--ink-soft);
+  cursor: pointer;
+  list-style: none;
+}
+.actionsHead::-webkit-details-marker {
+  display: none;
+}
+.actionsHead:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--accent-weak);
+  border-radius: var(--r-sm);
 }
 .actionsPanel {
   display: flex;

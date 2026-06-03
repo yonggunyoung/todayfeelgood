@@ -237,3 +237,23 @@ export interface HandwritingResponse {
   generatedBy: "handwriting";
   glyphCount: number;
 }
+
+/* ──────────────────────────────────────────────────────────────
+ * 한글 손글씨 — 기본 자모를 그려서 음절을 "조합"한다 (비AI, 정직: 조합 글씨)
+ * 출력은 문구의 음절만 합성(이미지 출력 중심 → 가벼움).
+ * ────────────────────────────────────────────────────────────── */
+
+/** 그려야 할 기본 자음 14 */
+export const BASIC_JAMO_CONSONANTS = ["ㄱ","ㄴ","ㄷ","ㄹ","ㅁ","ㅂ","ㅅ","ㅇ","ㅈ","ㅊ","ㅋ","ㅌ","ㅍ","ㅎ"];
+/** 그려야 할 기본 모음 10 (겹모음/쌍자음은 기본 자모로 근사 합성) */
+export const BASIC_JAMO_VOWELS = ["ㅏ","ㅑ","ㅓ","ㅕ","ㅗ","ㅛ","ㅜ","ㅠ","ㅡ","ㅣ"];
+/** MVP에서 직접 그리는 기본 자모 24 */
+export const BASIC_JAMO: string[] = [...BASIC_JAMO_CONSONANTS, ...BASIC_JAMO_VOWELS];
+
+/** 한글 자모 손글씨 → 음절 조합 요청 (text의 음절만 합성) */
+export interface HangulComposeRequest {
+  jamo: DrawnGlyph[]; // char ∈ BASIC_JAMO
+  text: string;
+  refine: RefineParams;
+  format?: FontFormat;
+}

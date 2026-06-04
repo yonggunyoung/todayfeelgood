@@ -2,9 +2,58 @@
  * 중립 허브 홈 스타일. 공용 토큰(--accent 코랄, --candy-*, --surface, --r-*, --sp-*)에 의존.
  * 보라/파랑/인디고 금지 규칙 준수 — 그라데이션/글로우는 따뜻한 코랄·자두·버터 톤만 사용.
  */
+/* 허브는 "검은색 계열" 프리미엄 다크가 기본. 토큰을 허브 스코프에서 다크로 덮는다(보라/파랑 금지, 코랄 악센트 유지).
+   라이트는 html[data-theme="light"]일 때만(토글로 전환 가능). */
 .hub {
+  --bg: #0b0b0e;
+  --surface: #16161c;
+  --surface-2: #1e1e26;
+  --surface-sunken: #101015;
+  --ink: #f4f4f7;
+  --ink-soft: #b6b6c0;
+  --ink-faint: #83838f;
+  --hairline: rgba(255, 255, 255, 0.1);
+  --accent: #ff8a5f;
+  --accent-press: #ffa884;
+  --accent-weak: rgba(255, 138, 95, 0.16);
+  --accent-weak-strong: rgba(255, 138, 95, 0.26);
+  --accent-ink: #17140f;
+  --accent-ink-weak: #ff8a5f;
+  --candy-coral: #ff9a6f;
+  --candy-plum: #d2829a;
+  --candy-butter: #f5cd6b;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4), 0 6px 16px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.45), 0 14px 30px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.55), 0 30px 70px rgba(0, 0, 0, 0.62);
+  --material-bg: rgba(18, 18, 24, 0.72);
   position: relative;
   overflow-x: hidden;
+  background: #0b0b0e;
+  min-height: 100vh;
+}
+:global(html[data-theme="light"]) .hub {
+  --bg: #f4f4f7;
+  --surface: #ffffff;
+  --surface-2: #f0ece6;
+  --surface-sunken: #ebe5dd;
+  --ink: #16161c;
+  --ink-soft: #5b5966;
+  --ink-faint: #6b6875;
+  --hairline: rgba(0, 0, 0, 0.08);
+  --accent: #c0492b;
+  --accent-press: #993a1e;
+  --accent-weak: rgba(192, 73, 43, 0.14);
+  --accent-weak-strong: rgba(192, 73, 43, 0.2);
+  --accent-ink: #ffffff;
+  --accent-ink-weak: #993a1e;
+  --candy-coral: #ef7a52;
+  --candy-plum: #b65a6e;
+  --candy-butter: #f5c451;
+  --shadow-sm: 0 1px 2px rgba(50, 40, 80, 0.05), 0 6px 16px rgba(50, 40, 80, 0.08);
+  --shadow-md: 0 2px 8px rgba(50, 40, 80, 0.07), 0 14px 30px rgba(50, 40, 80, 0.12);
+  --shadow-lg: 0 10px 30px rgba(50, 40, 80, 0.1), 0 30px 70px rgba(50, 40, 80, 0.16);
+  --material-bg: rgba(255, 255, 255, 0.72);
+  background: #f4f4f7;
 }
 /* 따뜻한 오로라 글로우(은은하게) */
 .hub::before {

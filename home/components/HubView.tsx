@@ -6,17 +6,12 @@ import { ThemeToggle } from "./ThemeToggle";
 import { HubCarousel } from "./HubCarousel";
 import styles from "../app/hub.module.css";
 
-/** 너굴이 대표 아이콘(라쿤 심볼) — 인라인 SVG. 코랄 타일 안에 흰 얼굴. */
-function RaccoonMark() {
+/** 중립 도구 마크(펜촉) — 허브는 마스코트와 엮지 않는다. 코랄 타일 안에 흰 선. */
+function ToolMark() {
   return (
-    <svg viewBox="0 0 48 48" aria-hidden width="30" height="30">
-      <circle cx="14" cy="13" r="6" fill="#e0476a" />
-      <circle cx="34" cy="13" r="6" fill="#e0476a" />
-      <circle cx="24" cy="26" r="15" fill="#fff" />
-      <path d="M10 23c8.5-5.5 19.5-5.5 28 0-2 7.5-7.5 10.5-14 10.5S12 30.5 10 23z" fill="#2b2b33" />
-      <circle cx="17.5" cy="25.5" r="2.4" fill="#fff" />
-      <circle cx="30.5" cy="25.5" r="2.4" fill="#fff" />
-      <circle cx="24" cy="33.5" r="2.8" fill="#2b2b33" />
+    <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden width="26" height="26">
+      <path d="M4 20l3.6-1L17 9.6 14.4 7 5 16.4 4 20z" />
+      <path d="M14 7l3 3" />
     </svg>
   );
 }
@@ -88,7 +83,7 @@ export function HubView({ locale }: { locale: Locale }) {
               <a className={styles.rcard} href={neogul}>
                 <span className={styles.rn}>1</span>
                 <span className={`${styles.rt} ${styles.rtCraft}`}>
-                  <RaccoonMark />
+                  <ToolMark />
                 </span>
                 <b>{h.apps.neogul.name}</b>
               </a>
@@ -131,7 +126,7 @@ export function HubView({ locale }: { locale: Locale }) {
                 </div>
                 <div className={styles.foot}>
                   <span className={styles.appicon}>
-                    <RaccoonMark />
+                    <ToolMark />
                   </span>
                   <span className={styles.meta}>
                     <b>{h.apps.neogul.name}</b>

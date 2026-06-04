@@ -16,8 +16,8 @@ export function ThemeToggle({ labels }: { labels: { toLight: string; toDark: str
   useEffect(() => {
     const el = document.documentElement;
     const stored = el.getAttribute("data-theme") as Mode | null;
-    const resolved: Mode =
-      stored ?? (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    // 허브는 다크가 기본 — 저장값이 없으면 dark로 간주(토글 아이콘 정합).
+    const resolved: Mode = stored === "light" || stored === "dark" ? stored : "dark";
     setMode(resolved);
   }, []);
 

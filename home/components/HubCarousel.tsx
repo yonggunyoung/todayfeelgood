@@ -4,8 +4,10 @@ import { useRef, type ReactNode } from "react";
 import styles from "../app/hub.module.css";
 
 /**
- * 웹앱 카드 가로 캐러셀. 화살표 클릭 + 마우스/터치 드래그로 부드럽게 슬라이드.
- * 카드 마크업(children)은 서버에서 렌더해 넘긴다(접근성·SEO 유지).
+ * 웹앱 카드 가로 캐러셀.
+ * - 화살표: 부드럽게 한 칸 스크롤.
+ * - 마우스 드래그: 끌다 놓으면 ★관성(momentum)★으로 미끄러진다.
+ * - 포인터 캡처를 쓰지 않아 카드(<a>) 클릭이 정상 동작(드래그한 경우에만 클릭 차단).
  */
 export function HubCarousel({
   title,
@@ -20,38 +22,66 @@ export function HubCarousel({
   nextLabel: string;
   children: ReactNode;
 }) {
-  const trackRef = useRef<HTMLDivElement>(null);
-  const drag = useRef({ down: false, sx: 0, sl: 0, moved: false });
+  const track = useRef<HTMLDivElement>(null);
+  const st = useRef({ down: false, moved: false, startX: 0, startLeft: 0, lastX: 0, lastT: 0, v: 0, raf: 0 });
 
   function step() {
-    const el = trackRef.current;
-    if (!el) return 300;
-    const card = el.querySelector<HTMLElement>("[data-card]");
-    return card ? card.offsetWidth + 20 : 300;
+    const el = track.current;
+    if (!el) return 320;
+    const c = el.querySelector<HTMLElement>("[data-card]");
+    return c ? c.offsetWidth + 20 : 320;
   }
-  function scroll(dir: number) {
-    trackRef.current?.scrollBy({ left: dir * step(), behavior: "smooth" });
+  function scrollByDir(dir: number) {
+    cancelAnimationFrame(st.current.raf);
+    track.current?.scrollBy({ left: dir * step(), behavior: "smooth" });
+  }
+
+  function glide() {
+    const el = track.current;
+    const s = st.current;
+    if (!el) return;
+    el.scrollLeft -= s.v * 16; // v: px/ms (오른쪽으로 끌면 왼쪽으로 스크롤)
+    s.v *= 0.94; // 감쇠
+    if (Math.abs(s.v) > 0.02) {
+      s.raf = requestAnimationFrame(glide);
+    }
   }
 
   function onDown(e: React.PointerEvent<HTMLDivElement>) {
-    const el = trackRef.current;
+    const el = track.current;
     if (!el) return;
-    drag.current = { down: true, sx: e.pageX, sl: el.scrollLeft, moved: false };
-    el.setPointerCapture(e.pointerId);
+    cancelAnimationFrame(st.current.raf);
+    const s = st.current;
+    s.down = true;
+    s.moved = false;
+    s.startX = e.clientX;
+    s.startLeft = el.scrollLeft;
+    s.lastX = e.clientX;
+    s.lastT = performance.now();
+    s.v = 0;
   }
   function onMove(e: React.PointerEvent<HTMLDivElement>) {
-    const d = drag.current;
-    if (!d.down || !trackRef.current) return;
-    const dx = e.pageX - d.sx;
-    if (Math.abs(dx) > 4) d.moved = true;
-    trackRef.current.scrollLeft = d.sl - dx;
+    const s = st.current;
+    const el = track.current;
+    if (!s.down || !el) return;
+    const dx = e.clientX - s.startX;
+    if (Math.abs(dx) > 4) s.moved = true;
+    el.scrollLeft = s.startLeft - dx;
+    const now = performance.now();
+    const dt = now - s.lastT || 16;
+    s.v = (e.clientX - s.lastX) / dt;
+    s.lastX = e.clientX;
+    s.lastT = now;
   }
-  function onUp() {
-    drag.current.down = false;
+  function endDrag() {
+    const s = st.current;
+    if (!s.down) return;
+    s.down = false;
+    if (Math.abs(s.v) > 0.04) s.raf = requestAnimationFrame(glide); // 관성 시작
   }
-  // 드래그였으면 카드 클릭(이동)을 막는다.
+  // 실제로 끌었을 때만 카드 클릭(이동)을 막는다. 그냥 클릭은 통과 → 웹앱으로 이동.
   function onClickCapture(e: React.MouseEvent<HTMLDivElement>) {
-    if (drag.current.moved) {
+    if (st.current.moved) {
       e.preventDefault();
       e.stopPropagation();
     }
@@ -65,21 +95,22 @@ export function HubCarousel({
           <div className={styles.secSub}>{sub}</div>
         </div>
         <div className={styles.arrows}>
-          <button type="button" className={styles.arrow} onClick={() => scroll(-1)} aria-label={prevLabel}>
+          <button type="button" className={styles.arrow} onClick={() => scrollByDir(-1)} aria-label={prevLabel}>
             ‹
           </button>
-          <button type="button" className={styles.arrow} onClick={() => scroll(1)} aria-label={nextLabel}>
+          <button type="button" className={styles.arrow} onClick={() => scrollByDir(1)} aria-label={nextLabel}>
             ›
           </button>
         </div>
       </div>
       <div
-        ref={trackRef}
+        ref={track}
         className={styles.track}
         onPointerDown={onDown}
         onPointerMove={onMove}
-        onPointerUp={onUp}
-        onPointerCancel={onUp}
+        onPointerUp={endDrag}
+        onPointerLeave={endDrag}
+        onPointerCancel={endDrag}
         onClickCapture={onClickCapture}
       >
         {children}

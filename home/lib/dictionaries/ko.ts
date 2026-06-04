@@ -42,7 +42,7 @@ export const ko = {
       live: "서비스중",
       soonBadge: "준비중",
       neogul: {
-        eyebrow: "이런 걸 만들어요",
+        eyebrow: "내 글씨체로 편지를 보낸다면?",
         name: "너굴이의 작은 도구 공방",
         desc: "폰트·이모티콘·스티커 · 무료",
         sampleWord: "안녕, 내 글씨",

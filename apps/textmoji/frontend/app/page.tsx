@@ -136,9 +136,9 @@ export default function LandingPage() {
           <div className={styles.howCard}>
             <Mascot mood="love" size={96} className={styles.howMascot} label="" />
             <div>
-              <h2 className={`display ${styles.howTitle}`}>정직하게, 안전등급은 추정치예요</h2>
+              <h2 className={`display ${styles.howTitle}`}>안전등급은 참고용 추정치예요</h2>
               <p className={styles.howBody}>
-                AI 아님 · 부품을 규칙으로 조합하는 절차 생성이에요. 안전등급은
+                부품을 규칙으로 조합해 만들어요. 안전등급은
                 유니코드 휴리스틱으로 추정한 값이라, 같은 글자도 상대 기기·앱·폰트에
                 따라 □로 깨질 수 있어요. 그래서 🟢 안전부터 권하고, 만든 조합은 이
                 브라우저 밖으로 안 나가요. 같은 시드면 같은 조합이 다시 나와요.

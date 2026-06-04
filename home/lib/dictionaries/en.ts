@@ -53,7 +53,7 @@ export const en: typeof ko = {
       live: "LIVE",
       soonBadge: "Soon",
       neogul: {
-        eyebrow: "Make things like this",
+        eyebrow: "A letter in your own handwriting?",
         name: "Neoguri's Tool Workshop",
         desc: "Fonts · Emoji · Stickers · Free",
         sampleWord: "hello, my hand",

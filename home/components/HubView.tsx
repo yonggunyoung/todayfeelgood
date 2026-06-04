@@ -6,12 +6,19 @@ import { ThemeToggle } from "./ThemeToggle";
 import { HubCarousel } from "./HubCarousel";
 import styles from "../app/hub.module.css";
 
-/** 중립 도구 마크(펜촉) — 허브는 마스코트와 엮지 않는다. 코랄 타일 안에 흰 선. */
-function ToolMark() {
+/** 도구공방(너굴이) 대표 캐릭터 아이콘 — 코랄 타일 안 흰 라쿤. 각 웹앱 고유 아이콘 자리. */
+function NeogulMark() {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden width="26" height="26">
-      <path d="M4 20l3.6-1L17 9.6 14.4 7 5 16.4 4 20z" />
-      <path d="M14 7l3 3" />
+    <svg viewBox="0 0 48 48" aria-hidden width="30" height="30">
+      <circle cx="13" cy="13" r="6" fill="#fff" />
+      <circle cx="35" cy="13" r="6" fill="#fff" />
+      <circle cx="13" cy="13" r="2.6" fill="#c2410c" />
+      <circle cx="35" cy="13" r="2.6" fill="#c2410c" />
+      <circle cx="24" cy="26" r="15" fill="#fff" />
+      <path d="M9 22c9-6 21-6 30 0-2.5 8-8 11.5-15 11.5S11.5 30 9 22z" fill="#2b2b33" />
+      <circle cx="17.5" cy="24.5" r="2.6" fill="#fff" />
+      <circle cx="30.5" cy="24.5" r="2.6" fill="#fff" />
+      <circle cx="24" cy="33" r="2.8" fill="#2b2b33" />
     </svg>
   );
 }
@@ -40,10 +47,6 @@ export function HubView({ locale }: { locale: Locale }) {
               <span className={styles.brandMark} aria-hidden />
               {h.brand}
             </a>
-            <div className={styles.menu}>
-              <a href="#apps">{h.nav.apps}</a>
-              <a href="#partner">{h.nav.partner}</a>
-            </div>
             <div className={styles.navright}>
               <LanguageToggle
                 current={locale}
@@ -83,7 +86,7 @@ export function HubView({ locale }: { locale: Locale }) {
               <a className={styles.rcard} href={neogul}>
                 <span className={styles.rn}>1</span>
                 <span className={`${styles.rt} ${styles.rtCraft}`}>
-                  <ToolMark />
+                  <NeogulMark />
                 </span>
                 <b>{h.apps.neogul.name}</b>
               </a>
@@ -126,7 +129,7 @@ export function HubView({ locale }: { locale: Locale }) {
                 </div>
                 <div className={styles.foot}>
                   <span className={styles.appicon}>
-                    <ToolMark />
+                    <NeogulMark />
                   </span>
                   <span className={styles.meta}>
                     <b>{h.apps.neogul.name}</b>

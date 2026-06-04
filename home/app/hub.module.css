@@ -443,9 +443,9 @@
 }
 .specimenWord {
   font-family: var(--font-display), system-ui, sans-serif;
-  font-size: 1.7rem;
+  font-size: 2.1rem;
   font-weight: var(--weight-bold);
-  line-height: 1.1;
+  line-height: 1.05;
   color: #26262c;
 }
 .chips {

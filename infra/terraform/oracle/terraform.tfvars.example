@@ -1,0 +1,19 @@
+# 복사해서 사용:  cp terraform.tfvars.example terraform.tfvars  후 값 채우기.
+# terraform.tfvars 와 .pem 키는 .gitignore 로 커밋 차단됨(절대 커밋 금지).
+
+# ── OCI 인증(콘솔 → My profile → API keys 에서 발급) ──
+tenancy_ocid     = "ocid1.tenancy.oc1..xxxx"
+user_ocid        = "ocid1.user.oc1..xxxx"
+fingerprint      = "aa:bb:cc:...:zz"
+private_key_path = "~/.oci/oci_api_key.pem"   # 다운로드한 API 서명 개인키
+region           = "ap-chuncheon-1"           # ARM 용량 있는 리전(춘천/서울 등)
+compartment_ocid = "ocid1.tenancy.oc1..xxxx"  # 보통 tenancy_ocid 그대로 OK
+
+# ── SSH ──
+ssh_public_key   = "ssh-ed25519 AAAA... you@host"   # 공개키 '내용'(파일 경로 아님)
+ssh_ingress_cidr = "1.2.3.4/32"                      # ★본인 공인 IP/32 권장. 전체개방은 0.0.0.0/0(비권장)
+
+# ── 사양(무료티어 한도: 합산 4 OCPU / 24GB) ──
+instance_ocpus            = 2
+instance_memory_gbs       = 12
+availability_domain_index = 0    # 용량부족이면 1, 2 로 재시도

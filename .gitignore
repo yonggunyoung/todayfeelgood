@@ -20,6 +20,18 @@ dist/
 .env.local
 .env.*.local
 
+# terraform — 상태/비밀/캐시는 절대 커밋 금지(토큰·키 포함)
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+crash.log
+crash.*.log
+.terraform.lock.hcl
+*_oci_api_key.pem
+oci_api_key*.pem
+
 # generated font artifacts
 *.woff
 *.woff2

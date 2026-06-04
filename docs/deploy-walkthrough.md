@@ -6,6 +6,10 @@
 
 소요: 처음이면 1~2시간(대기 시간 포함). 결제는 도메인값(연 1만원대)뿐, 서버는 오라클 무료티어.
 
+> **콘솔 클릭 대신 코드로** 하고 싶다면 `infra/terraform/`(Cloudflare DNS·이메일·SSL·rate limit +
+> 오라클 인스턴스·보안목록)을 쓴다 — 토큰/키만 넣고 `terraform apply`. 사용법은
+> `infra/terraform/README.md`. 이 문서(수동)와 Terraform(코드)는 결과가 같으니 편한 쪽으로.
+
 ---
 
 ## 0. 준비물

@@ -11,7 +11,12 @@
 name: Deploy
 
 on:
-  workflow_dispatch:   # 수동 실행 전용(자동 배포 아님 — 무료티어 보호).
+  workflow_dispatch: # 수동 실행 전용(자동 배포 아님 — 무료티어 보호).
+    inputs:
+      ref:
+        description: "배포할 브랜치/태그 (예: main 또는 claude/great-darwin-1FmUy)"
+        required: true
+        default: "main"
 
 jobs:
   deploy:
@@ -36,7 +41,11 @@ jobs:
           script: |
             set -euo pipefail
             cd "${{ secrets.DEPLOY_PATH }}"
-            git pull --ff-only
+            REF="${{ github.event.inputs.ref }}"
+            echo "Deploying ref: $REF"
+            git fetch origin "$REF"
+            git checkout -f "$REF"
+            git reset --hard "origin/$REF"
             # 무료티어 OOM 방지: 한 번에 모두 빌드하지 말고 필요 시 서비스별로 나눠 빌드.
             docker compose pull || true
             docker compose up -d --build

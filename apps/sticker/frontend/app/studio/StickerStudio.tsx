@@ -16,6 +16,8 @@ import {
   type GeneratedItem,
 } from "../../lib/generate";
 import { downloadBlob, downloadDataUrl, makeZip } from "../../lib/zip";
+import { cropToContent, DEFAULT_ANCHOR, type FaceAnchor } from "../../lib/render";
+import FaceMarker from "../../components/FaceMarker";
 import styles from "./StickerStudio.module.css";
 
 export default function StickerStudio() {
@@ -32,6 +34,10 @@ export default function StickerStudio() {
   const [caption, setCaption] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // 가이드형 표정: 눈·입 위치 마커(본체 정규화 0~1)
+  const [anchor, setAnchor] = useState<FaceAnchor>(DEFAULT_ANCHOR);
+  const [markSrc, setMarkSrc] = useState<string | null>(null);
+  const [markAspect, setMarkAspect] = useState(1);
 
   const size = useMemo(
     () => SHARE_PRESETS.find((p) => p.id === presetId)?.size ?? 512,
@@ -61,6 +67,7 @@ export default function StickerStudio() {
           varyTemplate,
           fixedTemplateId,
           caption: caption.trim() || undefined,
+          anchor,
         };
         const { items: out, isEmpty } = generateSet(cv, cfg);
         if (isEmpty) {
@@ -72,8 +79,25 @@ export default function StickerStudio() {
         setBusy(false);
       }, 16);
     },
-    [size, tintStrength, outlineScale, varyColor, fixedPaletteId, varyTemplate, fixedTemplateId, caption]
+    [size, tintStrength, outlineScale, varyColor, fixedPaletteId, varyTemplate, fixedTemplateId, caption, anchor]
   );
+
+  // 내 그림을 잘라 마커 스테이지로 불러온다(눈·입 위치 지정용).
+  const openMarker = useCallback(() => {
+    const cv = canvasRef.current?.getCanvas();
+    if (!cv || !canvasRef.current?.isDirty()) {
+      setError("먼저 캐릭터를 그려 주세요. 그다음 눈·입 위치를 잡아요!");
+      return;
+    }
+    const { canvas: crop, isEmpty, box } = cropToContent(cv, true);
+    if (isEmpty) {
+      setError("그린 내용이 없어요. 캐릭터를 먼저 그려 주세요.");
+      return;
+    }
+    setError(null);
+    setMarkSrc(crop.toDataURL("image/png"));
+    setMarkAspect(box.w / box.h);
+  }, []);
 
   const onGenerate = () => run(seed);
 
@@ -134,7 +158,20 @@ export default function StickerStudio() {
         </div>
 
         <div className={styles.panel}>
-          <h2 className={`display ${styles.panelTitle}`}>② 변주를 골라요</h2>
+          <h2 className={`display ${styles.panelTitle}`}>② 눈·입 위치를 잡아요</h2>
+          <p className={styles.hint}>
+            그린 그림에서 눈·입이 어디인지 점으로 알려주면, 표정이 <strong>그 자리에 딱</strong> 그려져요.
+          </p>
+          <button type="button" className={styles.secondary} onClick={openMarker}>
+            {markSrc ? "🔄 내 그림 다시 불러오기" : "🎯 내 그림 불러와 위치 잡기"}
+          </button>
+          {markSrc && (
+            <FaceMarker src={markSrc} aspect={markAspect} anchor={anchor} onChange={setAnchor} />
+          )}
+        </div>
+
+        <div className={styles.panel}>
+          <h2 className={`display ${styles.panelTitle}`}>③ 변주를 골라요</h2>
 
           <div className={styles.field}>
             <span className={styles.fieldLabel}>색 변주</span>

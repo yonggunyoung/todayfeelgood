@@ -12,7 +12,7 @@ import {
   type EmotionPreset,
   type MemeTemplate,
 } from "./presets";
-import { cropToContent, renderTile } from "./render";
+import { cropToContent, renderTile, type FaceAnchor } from "./render";
 import { makeRng, pick } from "./rng";
 
 export interface GeneratedItem {
@@ -40,6 +40,8 @@ export interface GenerateConfig {
   caption?: string;
   /** 생성할 감정 id 목록(없으면 전체 12종) */
   emotionIds?: string[];
+  /** 눈·입 위치(본체 정규화 0~1). 없으면 기본 앵커(상단 중앙 가정). */
+  anchor?: FaceAnchor;
 }
 
 export const DEFAULT_CONFIG: GenerateConfig = {
@@ -96,6 +98,7 @@ export function generateSet(
       tintStrength: cfg.tintStrength,
       outlineScale: cfg.outlineScale,
       caption: cfg.caption,
+      anchor: cfg.anchor,
     });
     items.push({
       id: `${emotion.id}-${i}`,

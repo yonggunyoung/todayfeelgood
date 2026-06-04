@@ -2,6 +2,8 @@
  * 절차적 스티커 렌더 엔진(비AI, 브라우저 Canvas 전용).
  *
  * 입력 1장(사용자가 그린 캐릭터, 투명 배경) → 출력 N개.
+ * ★ 가이드형 표정: "상단 중앙 고정"이 아니라, 사용자가 지정한 눈·입 위치(FaceAnchor)에
+ *   표정을 앵커링하고, 원래 그린 눈·입 자리는 본체색으로 덮어 깔끔히 교체한다.
  * 변주 축: 표정(눈/입/데코) × 색 팔레트 × 밈 템플릿(외곽선/배경칩/캡션) × 시드 흔들기.
  * 모든 합성은 캔버스에서 동기적으로 일어나며 서버·외부 호출이 전혀 없다.
  */
@@ -17,11 +19,25 @@ import { makeRng } from "./rng";
 
 const INK = "#2b2a33";
 
-/** 그린 이미지의 실제 내용 바운딩박스(투명/흰 배경 제거)로 잘라 정사각 중앙배치한 캔버스를 만든다. */
+/** 얼굴 앵커 — 잘라낸 본체(content box) 기준 정규화 좌표(0~1). 눈 2개 + 입. */
+export interface FaceAnchor {
+  eyeL: { x: number; y: number };
+  eyeR: { x: number; y: number };
+  mouth: { x: number; y: number };
+}
+
+/** 마커 미지정 시 기본값(중앙 상단 얼굴 가정). */
+export const DEFAULT_ANCHOR: FaceAnchor = {
+  eyeL: { x: 0.37, y: 0.4 },
+  eyeR: { x: 0.63, y: 0.4 },
+  mouth: { x: 0.5, y: 0.62 },
+};
+
+/** 그린 이미지의 실제 내용 바운딩박스(투명/흰 배경 제거)로 잘라 캔버스를 만든다. box(원본 좌표)도 함께 반환. */
 export function cropToContent(
   src: HTMLCanvasElement,
   treatWhiteAsBg = true
-): { canvas: HTMLCanvasElement; isEmpty: boolean } {
+): { canvas: HTMLCanvasElement; isEmpty: boolean; box: { x: number; y: number; w: number; h: number } } {
   const w = src.width;
   const h = src.height;
   const ctx = src.getContext("2d")!;
@@ -37,7 +53,6 @@ export function cropToContent(
       const r = data[i]!;
       const g = data[i + 1]!;
       const b = data[i + 2]!;
-      // 내용 판정: 불투명하고, (흰배경 모드면) 거의 흰색이 아닌 픽셀
       const isWhite = treatWhiteAsBg && r > 244 && g > 244 && b > 244;
       if (a > 24 && !isWhite) {
         if (x < minX) minX = x;
@@ -51,7 +66,7 @@ export function cropToContent(
   if (maxX < minX || maxY < minY) {
     out.width = 1;
     out.height = 1;
-    return { canvas: out, isEmpty: true };
+    return { canvas: out, isEmpty: true, box: { x: 0, y: 0, w: 1, h: 1 } };
   }
   const pad = 8;
   minX = Math.max(0, minX - pad);
@@ -65,7 +80,6 @@ export function cropToContent(
   const octx = out.getContext("2d")!;
   octx.drawImage(src, minX, minY, cw, ch, 0, 0, cw, ch);
 
-  // 흰 배경을 투명으로(스티커는 투명 PNG가 핵심)
   if (treatWhiteAsBg) {
     const od = octx.getImageData(0, 0, cw, ch);
     const p = od.data;
@@ -76,10 +90,10 @@ export function cropToContent(
     }
     octx.putImageData(od, 0, 0);
   }
-  return { canvas: out, isEmpty: false };
+  return { canvas: out, isEmpty: false, box: { x: minX, y: minY, w: cw, h: ch } };
 }
 
-/** 본체에 색조를 입힌다(원본 알파 유지). source-atop으로 그린 선/면 위에 컬러 오버레이. */
+/** 본체에 색조를 입힌다(원본 알파 유지). */
 function tintBody(
   tile: HTMLCanvasElement,
   bodyCanvas: HTMLCanvasElement,
@@ -91,7 +105,6 @@ function tintBody(
   strength: number
 ) {
   const ctx = tile.getContext("2d")!;
-  // 임시 캔버스에 본체를 그리고 그 위에 색을 atop
   const tmp = document.createElement("canvas");
   tmp.width = dw;
   tmp.height = dh;
@@ -108,7 +121,7 @@ function tintBody(
   ctx.drawImage(tmp, dx, dy);
 }
 
-/** 알파 외곽선(스티커화) — 본체 알파를 사방으로 번져 외곽 색을 깐 뒤 본체를 다시 올린다. */
+/** 알파 외곽선(스티커화). */
 function drawWithOutline(
   tile: HTMLCanvasElement,
   content: HTMLCanvasElement,
@@ -124,13 +137,8 @@ function drawWithOutline(
     const steps = 16;
     for (let s = 0; s < steps; s++) {
       const ang = (s / steps) * Math.PI * 2;
-      olctx.drawImage(
-        content,
-        Math.cos(ang) * outlineWidth,
-        Math.sin(ang) * outlineWidth
-      );
+      olctx.drawImage(content, Math.cos(ang) * outlineWidth, Math.sin(ang) * outlineWidth);
     }
-    // 번진 알파를 외곽 색으로 칠함
     olctx.globalCompositeOperation = "source-in";
     olctx.fillStyle = outlineColor;
     olctx.fillRect(0, 0, ol.width, ol.height);
@@ -139,63 +147,75 @@ function drawWithOutline(
   ctx.drawImage(content, 0, 0);
 }
 
-// ───────── 표정 파츠(절차적 SVG path → Canvas) ─────────
-// 좌표계: 얼굴 영역 박스 {fx, fy, fw, fh} 안에서 그린다.
+/** 원래 그린 눈·입 자리를 본체색 부드러운 패치로 덮어 표정 교체용 빈 면을 만든다. */
+function coverFeature(ctx: CanvasRenderingContext2D, x: number, y: number, rad: number, color: string) {
+  const g = ctx.createRadialGradient(x, y, 0, x, y, rad);
+  g.addColorStop(0, color);
+  g.addColorStop(0.7, color);
+  g.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.save();
+  // 본체가 그려진 영역에만(투명 밖으로 안 번지게) atop
+  ctx.globalCompositeOperation = "source-atop";
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.arc(x, y, rad, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+// ───────── 표정 파츠 — 명시적 좌표(cx,cy)에 그린다 ─────────
 
 function drawEyes(
   ctx: CanvasRenderingContext2D,
   style: EyeStyle,
-  fx: number,
-  fy: number,
-  fw: number,
-  fh: number
+  lcx: number,
+  lcy: number,
+  rcx: number,
+  rcy: number,
+  r: number
 ) {
-  const lx = fx + fw * 0.32;
-  const rx = fx + fw * 0.68;
-  const ey = fy + fh * 0.42;
-  const r = fw * 0.09;
   ctx.save();
   ctx.strokeStyle = INK;
   ctx.fillStyle = INK;
-  ctx.lineWidth = Math.max(2, fw * 0.035);
+  ctx.lineWidth = Math.max(2, r * 0.42);
   ctx.lineCap = "round";
 
-  const dot = (cx: number) => {
+  const dot = (cx: number, cy: number) => {
+    ctx.fillStyle = INK;
     ctx.beginPath();
-    ctx.arc(cx, ey, r, 0, Math.PI * 2);
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
     ctx.fill();
-    // 하이라이트
     ctx.save();
     ctx.fillStyle = "#fff";
     ctx.beginPath();
-    ctx.arc(cx + r * 0.3, ey - r * 0.3, r * 0.32, 0, Math.PI * 2);
+    ctx.arc(cx + r * 0.3, cy - r * 0.3, r * 0.32, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
   };
-  const arcUp = (cx: number) => {
+  const arcUp = (cx: number, cy: number) => {
     ctx.beginPath();
-    ctx.moveTo(cx - r, ey + r * 0.4);
-    ctx.quadraticCurveTo(cx, ey - r, cx + r, ey + r * 0.4);
+    ctx.moveTo(cx - r, cy + r * 0.4);
+    ctx.quadraticCurveTo(cx, cy - r, cx + r, cy + r * 0.4);
     ctx.stroke();
   };
-  const arcDown = (cx: number) => {
+  const arcDown = (cx: number, cy: number) => {
     ctx.beginPath();
-    ctx.moveTo(cx - r, ey - r * 0.2);
-    ctx.quadraticCurveTo(cx, ey + r, cx + r, ey - r * 0.2);
+    ctx.moveTo(cx - r, cy - r * 0.2);
+    ctx.quadraticCurveTo(cx, cy + r, cx + r, cy - r * 0.2);
     ctx.stroke();
   };
-  const heart = (cx: number) => {
+  const heart = (cx: number, cy: number) => {
     ctx.save();
     ctx.fillStyle = "#ef5b73";
     ctx.beginPath();
     const s = r * 1.1;
-    ctx.moveTo(cx, ey + s * 0.7);
-    ctx.bezierCurveTo(cx + s, ey - s * 0.2, cx + s * 0.4, ey - s, cx, ey - s * 0.35);
-    ctx.bezierCurveTo(cx - s * 0.4, ey - s, cx - s, ey - s * 0.2, cx, ey + s * 0.7);
+    ctx.moveTo(cx, cy + s * 0.7);
+    ctx.bezierCurveTo(cx + s, cy - s * 0.2, cx + s * 0.4, cy - s, cx, cy - s * 0.35);
+    ctx.bezierCurveTo(cx - s * 0.4, cy - s, cx - s, cy - s * 0.2, cx, cy + s * 0.7);
     ctx.fill();
     ctx.restore();
   };
-  const star = (cx: number) => {
+  const star = (cx: number, cy: number) => {
     ctx.save();
     ctx.fillStyle = "#f5c451";
     const spikes = 5;
@@ -206,7 +226,7 @@ function drawEyes(
       const rad = i % 2 === 0 ? outer : inner;
       const a = (Math.PI / spikes) * i - Math.PI / 2;
       const px = cx + Math.cos(a) * rad;
-      const py = ey + Math.sin(a) * rad;
+      const py = cy + Math.sin(a) * rad;
       if (i === 0) ctx.moveTo(px, py);
       else ctx.lineTo(px, py);
     }
@@ -217,60 +237,60 @@ function drawEyes(
 
   switch (style) {
     case "open":
-      dot(lx);
-      dot(rx);
+      dot(lcx, lcy);
+      dot(rcx, rcy);
       break;
     case "wink":
-      dot(lx);
-      arcUp(rx);
+      dot(lcx, lcy);
+      arcUp(rcx, rcy);
       break;
     case "happy":
-      arcUp(lx);
-      arcUp(rx);
+      arcUp(lcx, lcy);
+      arcUp(rcx, rcy);
       break;
     case "heart":
-      heart(lx);
-      heart(rx);
+      heart(lcx, lcy);
+      heart(rcx, rcy);
       break;
     case "star":
-      star(lx);
-      star(rx);
+      star(lcx, lcy);
+      star(rcx, rcy);
       break;
     case "sad":
-      arcDown(lx);
-      arcDown(rx);
+      arcDown(lcx, lcy);
+      arcDown(rcx, rcy);
       break;
     case "angry":
-      // 치켜뜬 눈 + 눈썹
-      dot(lx);
-      dot(rx);
+      dot(lcx, lcy);
+      dot(rcx, rcy);
       ctx.beginPath();
-      ctx.moveTo(lx - r, ey - r * 1.6);
-      ctx.lineTo(lx + r, ey - r * 0.8);
-      ctx.moveTo(rx + r, ey - r * 1.6);
-      ctx.lineTo(rx - r, ey - r * 0.8);
+      ctx.moveTo(lcx - r, lcy - r * 1.6);
+      ctx.lineTo(lcx + r, lcy - r * 0.8);
+      ctx.moveTo(rcx + r, rcy - r * 1.6);
+      ctx.lineTo(rcx - r, rcy - r * 0.8);
       ctx.stroke();
       break;
     case "surprised":
       ctx.beginPath();
-      ctx.arc(lx, ey, r * 1.4, 0, Math.PI * 2);
-      ctx.arc(rx, ey, r * 1.4, 0, Math.PI * 2);
+      ctx.arc(lcx, lcy, r * 1.4, 0, Math.PI * 2);
+      ctx.moveTo(rcx + r * 1.4, rcy);
+      ctx.arc(rcx, rcy, r * 1.4, 0, Math.PI * 2);
       ctx.stroke();
       break;
     case "sleepy":
       ctx.beginPath();
-      ctx.moveTo(lx - r, ey);
-      ctx.quadraticCurveTo(lx, ey + r * 0.8, lx + r, ey);
-      ctx.moveTo(rx - r, ey);
-      ctx.quadraticCurveTo(rx, ey + r * 0.8, rx + r, ey);
+      ctx.moveTo(lcx - r, lcy);
+      ctx.quadraticCurveTo(lcx, lcy + r * 0.8, lcx + r, lcy);
+      ctx.moveTo(rcx - r, rcy);
+      ctx.quadraticCurveTo(rcx, rcy + r * 0.8, rcx + r, rcy);
       ctx.stroke();
       break;
     case "dizzy":
       ctx.font = `${Math.round(r * 2.4)}px sans-serif`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText("×", lx, ey);
-      ctx.fillText("×", rx, ey);
+      ctx.fillText("×", lcx, lcy);
+      ctx.fillText("×", rcx, rcy);
       break;
   }
   ctx.restore();
@@ -279,18 +299,14 @@ function drawEyes(
 function drawMouth(
   ctx: CanvasRenderingContext2D,
   style: MouthStyle,
-  fx: number,
-  fy: number,
-  fw: number,
-  fh: number
+  cx: number,
+  my: number,
+  w: number
 ) {
-  const cx = fx + fw * 0.5;
-  const my = fy + fh * 0.72;
-  const w = fw * 0.26;
   ctx.save();
   ctx.strokeStyle = INK;
   ctx.fillStyle = INK;
-  ctx.lineWidth = Math.max(2, fw * 0.035);
+  ctx.lineWidth = Math.max(2, w * 0.14);
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
 
@@ -458,27 +474,32 @@ function heartShape(ctx: CanvasRenderingContext2D, x: number, y: number, s: numb
 // ───────── 한 타일 렌더 ─────────
 
 export interface RenderOptions {
-  base: HTMLCanvasElement; // cropToContent 결과(투명, 정사각 아님)
+  base: HTMLCanvasElement;
   emotion: EmotionPreset;
   palette: ColorPalette;
   template: MemeTemplate;
-  size: number; // 출력 정사각 px
+  size: number;
   seed: number;
-  tintStrength: number; // 0~1 색조 강도
-  outlineScale: number; // 외곽선 두께 배율(슬라이더)
-  caption?: string; // 사용자 입력 캡션(없으면 emotion.caption)
+  tintStrength: number;
+  outlineScale: number;
+  caption?: string;
+  /** 눈·입 위치(본체 정규화 0~1). 없으면 DEFAULT_ANCHOR. */
+  anchor?: FaceAnchor;
+  /** 원래 그린 눈·입을 덮어 교체할지. 기본 true. */
+  coverOriginal?: boolean;
 }
 
 /** 한 변주 타일을 렌더해 PNG dataURL을 돌려준다(투명 배경). */
 export function renderTile(opts: RenderOptions): string {
   const { base, emotion, palette, template, size, seed } = opts;
+  const anchor = opts.anchor ?? DEFAULT_ANCHOR;
+  const cover = opts.coverOriginal ?? true;
   const rng = makeRng(seed);
   const tile = document.createElement("canvas");
   tile.width = size;
   tile.height = size;
   const ctx = tile.getContext("2d")!;
 
-  // 배경 칩(둥근 파스텔) — 템플릿이 요구할 때만
   if (template.showBgChip) {
     const m = size * 0.06;
     roundRect(ctx, m, m, size - m * 2, size - m * 2, size * 0.22);
@@ -486,13 +507,11 @@ export function renderTile(opts: RenderOptions): string {
     ctx.fill();
   }
 
-  // 캡션 영역만큼 캐릭터 영역을 줄인다
   const hasCaption = template.caption;
   const capH = hasCaption ? size * 0.2 : 0;
   const charTop = template.captionPos === "top" ? capH : 0;
   const charArea = size - capH;
 
-  // 본체(그린 그림)를 색조 입혀 영역 중앙에 배치
   const bw = base.width;
   const bh = base.height;
   const scale = (charArea * 0.78) / Math.max(bw, bh);
@@ -501,7 +520,6 @@ export function renderTile(opts: RenderOptions): string {
   const dx = (size - dw) / 2 + (rng() - 0.5) * size * 0.02;
   const dy = charTop + (charArea - dh) / 2;
 
-  // 본체 + 표정 + 데코를 한 임시 캔버스에 모아 외곽선을 함께 두른다
   const content = document.createElement("canvas");
   content.width = size;
   content.height = size;
@@ -510,20 +528,39 @@ export function renderTile(opts: RenderOptions): string {
   // 색조 본체
   tintBody(content, base, dx, dy, dw, dh, palette.body, opts.tintStrength);
 
-  // 얼굴 영역(앵커): 본체 상단 영역 중앙. (자동 앵커 규칙)
-  const fx = dx + dw * 0.18;
-  const fy = dy + dh * 0.1;
-  const fw = dw * 0.64;
-  const fh = dh * 0.6;
-  drawDeco(cctx, emotion.deco, fx, fy, fw, fh, rng);
-  drawEyes(cctx, emotion.eyes, fx, fy, fw, fh);
-  drawMouth(cctx, emotion.mouth, fx, fy, fw, fh);
+  // 앵커(정규화) → 타일 픽셀 좌표
+  const lcx = dx + anchor.eyeL.x * dw;
+  const lcy = dy + anchor.eyeL.y * dh;
+  const rcx = dx + anchor.eyeR.x * dw;
+  const rcy = dy + anchor.eyeR.y * dh;
+  const mcx = dx + anchor.mouth.x * dw;
+  const mcy = dy + anchor.mouth.y * dh;
+  const eyeDist = Math.hypot(rcx - lcx, rcy - lcy) || dw * 0.26;
+  const eyeR = Math.max(3, eyeDist * 0.17);
+  const mouthW = Math.max(6, eyeDist * 0.5);
 
-  // 외곽선 두께(템플릿 × 슬라이더 × 출력 크기 비례)
+  // 원래 그린 눈·입 자리 덮기(교체)
+  if (cover) {
+    coverFeature(cctx, lcx, lcy, eyeR * 2.0, palette.body);
+    coverFeature(cctx, rcx, rcy, eyeR * 2.0, palette.body);
+    coverFeature(cctx, mcx, mcy, mouthW * 0.9, palette.body);
+  }
+
+  // 데코용 얼굴 박스(앵커 바운딩 + 여유)
+  const topEye = Math.min(lcy, rcy);
+  const fx = Math.min(lcx, rcx) - eyeDist * 0.55;
+  const fy = topEye - eyeDist * 0.7;
+  const fw = eyeDist * 2.1;
+  const fh = mcy - topEye + eyeDist * 1.2;
+  drawDeco(cctx, emotion.deco, fx, fy, fw, fh, rng);
+
+  // 표정(지정 위치에)
+  drawEyes(cctx, emotion.eyes, lcx, lcy, rcx, rcy, eyeR);
+  drawMouth(cctx, emotion.mouth, mcx, mcy, mouthW);
+
   const ow = (template.outlineWidth * size) / 360 * opts.outlineScale;
   drawWithOutline(tile, content, ow, palette.outline);
 
-  // 캡션
   if (hasCaption) {
     const text = (opts.caption ?? emotion.caption ?? "").trim();
     if (text) {
@@ -548,13 +585,11 @@ function drawCaption(
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.font = `700 ${fontSize}px "Noto Sans KR", sans-serif`;
-  // 길면 폰트 줄이기
   while (ctx.measureText(text).width > size * 0.92 && fontSize > 10) {
     fontSize -= 2;
     ctx.font = `700 ${fontSize}px "Noto Sans KR", sans-serif`;
   }
   if (template.captionBold) {
-    // 굵은 밈 외곽선(흰 테두리 + 검정 본문)
     ctx.lineJoin = "round";
     ctx.lineWidth = fontSize * 0.32;
     ctx.strokeStyle = "#ffffff";

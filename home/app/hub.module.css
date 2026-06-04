@@ -4,25 +4,25 @@
  */
 /* 허브는 "검은색 계열" 프리미엄 다크가 기본. 토큰을 허브 스코프에서 다크로 덮는다(보라/파랑 금지, 코랄 악센트 유지).
    라이트는 html[data-theme="light"]일 때만(토글로 전환 가능). */
-/* 허브 기본 = 화이트. 모노크롬(검정·흰색) 정체성 — 보라/파랑 미사용. 코랄은 도구공방 앱 표현에만.
+/* 허브 = HUB-v4 색상. 화이트 기본 + 인디고/바이올렛 액센트. 코랄은 도구공방 앱 표현에만.
    다크는 html[data-theme="dark"]일 때만(토글). */
 .hub {
-  --bg: #f7f7f9;
+  --bg: #f4f4f7;
   --surface: #ffffff;
-  --surface-2: #f0f0f3;
-  --surface-sunken: #e9e9ee;
-  --ink: #0e0e12;
-  --ink-soft: #44444e;
-  --ink-faint: #70707c;
-  --hairline: rgba(0, 0, 0, 0.09);
-  --accent: #14141a;
-  --accent2: #3a3a44;
-  --accent-press: #000000;
-  --accent-weak: rgba(20, 20, 26, 0.06);
-  --accent-weak-strong: rgba(20, 20, 26, 0.12);
+  --surface-2: #f8f8fb;
+  --surface-sunken: #eeeef4;
+  --ink: #16161c;
+  --ink-soft: #5e5e6b;
+  --ink-faint: #9a9aa6;
+  --hairline: rgba(0, 0, 0, 0.08);
+  --accent: #6b7bff;
+  --accent2: #b56bff;
+  --accent-press: #5560e0;
+  --accent-weak: rgba(107, 123, 255, 0.1);
+  --accent-weak-strong: rgba(107, 123, 255, 0.2);
   --accent-ink: #ffffff;
-  --accent-ink-weak: #14141a;
-  --candy-coral: #ef7a52;
+  --accent-ink-weak: #5560e0;
+  --candy-coral: #ff9a6b;
   --candy-plum: #b65a6e;
   --candy-butter: #f5c451;
   --shadow-sm: 0 1px 2px rgba(40, 40, 60, 0.05), 0 6px 16px rgba(40, 40, 60, 0.08);
@@ -31,26 +31,26 @@
   --material-bg: rgba(255, 255, 255, 0.72);
   position: relative;
   overflow-x: hidden;
-  background: #f7f7f9;
+  background: #f4f4f7;
   min-height: 100vh;
 }
 :global(html[data-theme="dark"]) .hub {
   --bg: #08080b;
-  --surface: #14141b;
-  --surface-2: #1c1c24;
+  --surface: #131319;
+  --surface-2: #1a1a22;
   --surface-sunken: #0e0e13;
-  --ink: #f6f6f8;
-  /* 다크 가독성: 본문/캡션 회색을 더 밝게(흰색에 가깝게) */
-  --ink-soft: #d6d6de;
-  --ink-faint: #a6a6b2;
-  --hairline: rgba(255, 255, 255, 0.12);
-  --accent: #ffffff;
-  --accent2: #d4d4dc;
-  --accent-press: #ffffff;
-  --accent-weak: rgba(255, 255, 255, 0.1);
-  --accent-weak-strong: rgba(255, 255, 255, 0.18);
-  --accent-ink: #0b0b0e;
-  --accent-ink-weak: #f0f0f4;
+  --ink: #f5f5f7;
+  /* 다크 가독성: v4보다 약간 더 밝은 회색 */
+  --ink-soft: #b4b4c0;
+  --ink-faint: #7a7a86;
+  --hairline: rgba(255, 255, 255, 0.1);
+  --accent: #7b8cff;
+  --accent2: #b56bff;
+  --accent-press: #9aa6ff;
+  --accent-weak: rgba(123, 140, 255, 0.2);
+  --accent-weak-strong: rgba(123, 140, 255, 0.3);
+  --accent-ink: #ffffff;
+  --accent-ink-weak: #aab4ff;
   --candy-coral: #ff9a6f;
   --candy-plum: #d2829a;
   --candy-butter: #f5cd6b;
@@ -68,9 +68,15 @@
   height: 640px;
   z-index: 0;
   pointer-events: none;
-  opacity: 0.05;
-  background: radial-gradient(760px 380px at 50% -8%, var(--accent), transparent 70%);
-  filter: blur(20px);
+  opacity: 0.16;
+  background:
+    radial-gradient(460px 340px at 24% 4%, var(--accent), transparent 70%),
+    radial-gradient(480px 360px at 80% 0%, var(--accent2), transparent 70%),
+    radial-gradient(420px 320px at 56% 22%, #ff5e7e, transparent 72%);
+  filter: blur(12px);
+}
+:global(html[data-theme="dark"]) .hub::before {
+  opacity: 0.24;
 }
 .hub :global(.container) {
   position: relative;
@@ -198,7 +204,7 @@
   max-width: 16ch;
 }
 .grad {
-  background: linear-gradient(120deg, var(--ink), var(--ink-soft));
+  background: linear-gradient(100deg, var(--accent), var(--accent2) 52%, #ff5e7e);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -537,7 +543,7 @@
   align-items: center;
   gap: var(--sp-6);
   flex-wrap: wrap;
-  background: linear-gradient(135deg, var(--surface-2), var(--surface-sunken));
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 12%, var(--surface)), color-mix(in srgb, var(--accent2) 10%, var(--surface)));
   border: 1px solid var(--hairline);
 }
 .partnerText {

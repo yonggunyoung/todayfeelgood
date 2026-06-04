@@ -100,6 +100,38 @@ export const PARTS: TextPart[] = [
   { id: "deco-bang", slot: "deco", glyph: "!!", tier: "safe", tags: ["강조", "놀람"] },
   { id: "deco-note", slot: "deco", glyph: "♪", tier: "safe", tags: ["흥얼", "신남"] },
   { id: "deco-sweat", slot: "deco", glyph: ";;", tier: "safe", tags: ["땀", "당황"] },
+
+  // ── 확장 부품(특이·트렌드) — 변주 폭 확대 ──
+  { id: "eye-semi", slot: "eye", glyph: "˘", tier: "ok", tags: ["흐뭇", "졸림"] },
+  { id: "eye-hat", slot: "eye", glyph: "ˆ", tier: "ok", tags: ["웃는"] },
+  { id: "eye-uu", slot: "eye", glyph: "ᵕ", mirror: "ᵕ", tier: "ok", tags: ["웃는", "흐뭇"] },
+  { id: "eye-eq", slot: "eye", glyph: "=", tier: "safe", tags: ["졸림", "무표정"] },
+  { id: "eye-plus", slot: "eye", glyph: "+", tier: "safe", tags: ["기절", "별눈"] },
+  { id: "eye-heart", slot: "eye", glyph: "♥", tier: "ok", tags: ["심쿵", "사랑"] },
+  { id: "eye-sparkle", slot: "eye", glyph: "✧", tier: "fancy", tags: ["반짝", "심쿵"] },
+  { id: "eye-prime", slot: "eye", glyph: "ʘ", mirror: "ʘ", tier: "fancy", tags: ["충격", "동그란"] },
+  { id: "eye-tilde", slot: "eye", glyph: "˜", tier: "ok", tags: ["능청", "장난"] },
+
+  { id: "mouth-w", slot: "mouth", glyph: "w", tier: "safe", tags: ["웃음", "풀잎"] },
+  { id: "mouth-heart", slot: "mouth", glyph: "♡", tier: "ok", tags: ["뽀뽀", "사랑"] },
+  { id: "mouth-tri", slot: "mouth", glyph: "Ｗ", tier: "ok", tags: ["오열", "활짝"] },
+  { id: "mouth-wave", slot: "mouth", glyph: "～", tier: "ok", tags: ["능청", "여유"] },
+  { id: "mouth-star", slot: "mouth", glyph: "☆", tier: "ok", tags: ["반짝", "신남"] },
+  { id: "mouth-hash", slot: "mouth", glyph: "#", tier: "safe", tags: ["이악물", "화남"] },
+
+  { id: "face-brace", slot: "face", glyph: "{", mirror: "}", tier: "ok", tags: ["말랑"] },
+  { id: "face-bracket", slot: "face", glyph: "[", mirror: "]", tier: "safe", tags: ["각진", "로봇"] },
+  { id: "face-cloud", slot: "face", glyph: "╭", mirror: "╮", tier: "ok", tags: ["둥근", "구름"] },
+
+  { id: "arm-shrugL", slot: "arm", glyph: "╮", mirror: "╭", tier: "ok", tags: ["으쓱", "글쎄"] },
+  { id: "arm-raiseL", slot: "arm", glyph: "ヽ", mirror: "ノ", tier: "ok", tags: ["만세", "신남"] },
+
+  { id: "deco-zzz", slot: "deco", glyph: "zzz", tier: "safe", tags: ["졸림", "잠"] },
+  { id: "deco-kkk", slot: "deco", glyph: "ㅋㅋ", tier: "safe", tags: ["웃음", "빵터짐"] },
+  { id: "deco-heug", slot: "deco", glyph: "ㅠㅠ", tier: "safe", tags: ["눈물", "오열"] },
+  { id: "deco-flutter", slot: "deco", glyph: "❀", tier: "fancy", tags: ["꽃", "설렘"] },
+  { id: "deco-music", slot: "deco", glyph: "♬", tier: "safe", tags: ["신남", "노래"] },
+  { id: "deco-q", slot: "deco", glyph: "?!", tier: "safe", tags: ["혼란", "당황"] },
 ];
 
 /** id → 부품 (빠른 조회) */

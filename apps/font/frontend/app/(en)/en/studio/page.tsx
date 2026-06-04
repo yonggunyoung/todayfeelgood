@@ -18,7 +18,7 @@ export default function StudioPageEn() {
   return (
     <>
       {/* 홈 허브로의 링크는 basePath가 붙지 않는 <a>라 EN 홈(/en)을 직접 가리킨다. */}
-      <SiteHeader homeHref="/en" subtitle={c.subtitle} homeLabel={c.homeLabel} />
+      <SiteHeader homeHref="/en/neogul" subtitle={c.subtitle} homeLabel={c.homeLabel} />
       <HandwritingStudio locale="en" />
       <SiteFooter colophon={c.colophon} fineprint={c.fineprint} />
     </>

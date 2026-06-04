@@ -1,4 +1,4 @@
-import { BrushDivider, Card, Mascot, Sticker } from "@webapp/ui";
+import { BrushDivider, Card, Mascot, Sticker, ExitToHub } from "@webapp/ui";
 import { webApplicationJsonLd, htmlLang } from "@webapp/seo";
 import type { Locale } from "../lib/i18n";
 import { getDictionary, neogulPath, legalPath } from "../lib/i18n";
@@ -48,6 +48,7 @@ export function HomeView({ locale }: { locale: Locale }) {
             koLabel={t.langToggle.ko}
             enLabel={t.langToggle.en}
           />
+          <ExitToHub />
         </div>
 
         {/* 히어로 — 플래그십: 내 손글씨로 만드는 폰트를 무대 중앙으로. */}

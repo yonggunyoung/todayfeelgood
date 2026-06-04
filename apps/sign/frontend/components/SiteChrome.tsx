@@ -1,21 +1,24 @@
 import type { ReactNode } from "react";
-import { Mascot } from "@webapp/ui";
+import { Mascot, ExitToHub } from "@webapp/ui";
 import styles from "./SiteChrome.module.css";
 
-/** 워드마크 "획 싸인공방" + 공통 헤더(블러 머티리얼). 폰트앱 SiteChrome 패턴 동일. */
+/** "획 싸인공방" 헤더. 획 로고→도구공방(/neogul), 나가기→뚝딱 홈(/). */
 export function SiteHeader({ right }: { right?: ReactNode }) {
   return (
     <header className={styles.header}>
       <div className={`container ${styles.bar}`}>
-        {/* basePath(/sign)가 붙지 않는 일반 <a href="/">로 도메인 루트(홈 허브)로 간다. */}
-        <a href="/" className={styles.brand} aria-label="획 — 홈으로">
+        {/* 획 로고 → 도구공방 상위로. basePath(/sign) 안 붙게 일반 <a>. */}
+        <a href="/neogul" className={styles.brand} aria-label="획 — 도구공방으로">
           <Mascot mood="happy" size={36} still label="" />
           <span className={`display ${styles.wordmark}`}>
             <span className={styles.name}>획</span>
             <span className={styles.sub}>싸인공방</span>
           </span>
         </a>
-        {right && <div className={styles.right}>{right}</div>}
+        <div className={styles.right}>
+          {right}
+          <ExitToHub />
+        </div>
       </div>
     </header>
   );

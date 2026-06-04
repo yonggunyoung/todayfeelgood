@@ -16,7 +16,7 @@ import styles from "../app/landing.module.css";
 // 홈 허브로의 링크는 basePath(/font)가 붙으면 안 되므로 일반 <a>의 절대경로.
 // ko 홈=`/`, en 홈=`/en`.
 function homeHref(locale: Locale): string {
-  return locale === "ko" ? "/" : "/en";
+  return locale === "ko" ? "/neogul" : "/en/neogul";
 }
 
 /** 폰트 앱 랜딩 — 로케일을 받아 사전으로 렌더. ko(/font)·en(/font/en) 공유. */

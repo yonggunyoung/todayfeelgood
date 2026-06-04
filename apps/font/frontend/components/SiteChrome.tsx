@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
-import { Mascot } from "@webapp/ui";
+import { Mascot, ExitToHub } from "@webapp/ui";
 import styles from "./SiteChrome.module.css";
 
 const KO_SUB = "폰트공방";
-const KO_HOME_LABEL = "획 — 홈으로";
+const KO_HOME_LABEL = "획 — 도구공방으로";
 
 /** 워드마크 "획" + 공방 부제. 사이트 상단 공통 헤더(블러 머티리얼). */
 export function SiteHeader({
@@ -11,7 +11,7 @@ export function SiteHeader({
   // 도메인 루트의 홈 허브(home/)로 이동. 영어 랜딩은 홈 EN(/en)으로.
   // 폰트앱은 basePath=/font라 next/Link는 /font를 붙이므로, basePath가 붙지 않는
   // 일반 <a href>로 도메인 루트(홈 허브)를 가리킨다.
-  homeHref = "/",
+  homeHref = "/neogul",
   subtitle = KO_SUB,
   homeLabel = KO_HOME_LABEL,
 }: {
@@ -30,7 +30,16 @@ export function SiteHeader({
             <span className={styles.sub}>{subtitle}</span>
           </span>
         </a>
-        {right && <div className={styles.right}>{right}</div>}
+        {right ? (
+          <div className={styles.right}>
+            {right}
+            <ExitToHub />
+          </div>
+        ) : (
+          <div className={styles.right}>
+            <ExitToHub />
+          </div>
+        )}
       </div>
     </header>
   );

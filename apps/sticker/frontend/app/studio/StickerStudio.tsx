@@ -311,7 +311,7 @@ export default function StickerStudio() {
               한 세트로 떨어진다 너굴.
             </p>
             <p className={styles.honesty}>
-              AI 아님 · 절차적 자동 합성 · 그림은 이 브라우저 밖으로 나가지 않아요.
+              그림은 이 브라우저 안에서만 처리돼요 · 서버로 안 보내요.
             </p>
           </div>
         ) : (
@@ -337,7 +337,7 @@ export default function StickerStudio() {
                 ))}
               </div>
               <p className={styles.honesty}>
-                {MAX_STICKER_SET_SIZE}종 떴다 너굴. 전부 자동 합성(비AI)된 투명 PNG예요. 같은
+                {MAX_STICKER_SET_SIZE}종 떴다구리. 전부 투명 PNG예요. 같은
                 시드(현재 #{seed})면 같은 세트가 다시 나와요.
               </p>
             </>

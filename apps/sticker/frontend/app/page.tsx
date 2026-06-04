@@ -131,11 +131,10 @@ export default function LandingPage() {
           <div className={styles.howCard}>
             <Mascot mood="love" size={96} className={styles.howMascot} label="" />
             <div>
-              <h2 className={`display ${styles.howTitle}`}>정직하게, 전부 자동 합성이에요</h2>
+              <h2 className={`display ${styles.howTitle}`}>그린 그림으로, 바로 자동 생성</h2>
               <p className={styles.howBody}>
-                AI 아님 · 절차적 자동 합성이에요. 그린 그림에 표정 파츠를 얹고 색·테두리를
-                규칙으로 변주해요. 그림은 이 브라우저 밖으로 안 나가고, 같은 시드면 같은
-                세트가 다시 나와요.
+                그린 그림에 표정을 얹고 색·테두리를 규칙으로 변주해요. 그림은 이 브라우저
+                안에서만 처리되고 서버로 안 보내요. 같은 시드면 같은 세트가 다시 나와요.
               </p>
               <Link href="/studio" className={styles.howCta}>
                 작업대 열기 →

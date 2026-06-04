@@ -123,7 +123,7 @@ export default function LandingPage() {
           <div className={styles.howCard}>
             <Mascot mood="love" size={96} className={styles.howMascot} label="" />
             <div>
-              <h2 className={`display ${styles.howTitle}`}>정직하게, 공개 폰트 변형 기반이에요</h2>
+              <h2 className={`display ${styles.howTitle}`}>공개 폰트를 변형해 만들어요</h2>
               <p className={styles.howBody}>
                 키트의 글씨체는 공개 가변폰트(OFL)를 변형해 만든 결과예요. 실제 자필 캡처나
                 AI 생성이 아닙니다. 폰트 파일·시트·CSS·라이선스 고지까지 한 봉투에 담아 드려요.

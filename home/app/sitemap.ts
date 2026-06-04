@@ -34,6 +34,33 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.9,
       alternates: { languages },
     },
+    // 너굴이의 작은 도구 공방(웹앱) 랜딩 — ko/en. 폰트앱 등 개별 도구는 각자 sitemap.
+    {
+      url: `${base}/neogul`,
+      lastModified: now,
+      changeFrequency: "weekly" as const,
+      priority: 0.9,
+      alternates: {
+        languages: {
+          ko: `${base}/neogul`,
+          en: `${base}/en/neogul`,
+          "x-default": `${base}/neogul`,
+        },
+      },
+    },
+    {
+      url: `${base}/en/neogul`,
+      lastModified: now,
+      changeFrequency: "weekly" as const,
+      priority: 0.8,
+      alternates: {
+        languages: {
+          ko: `${base}/neogul`,
+          en: `${base}/en/neogul`,
+          "x-default": `${base}/neogul`,
+        },
+      },
+    },
     ...["privacy", "terms"].flatMap((doc) => [
       {
         url: `${base}/${doc}`,

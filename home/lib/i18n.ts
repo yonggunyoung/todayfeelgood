@@ -29,6 +29,16 @@ export function homeAlternates(): Record<Locale, string> {
   return { ko: homePath("ko"), en: homePath("en") };
 }
 
+/** 너굴이의 작은 도구 공방(웹앱) 경로. ko=`/neogul`, en=`/en/neogul`. 허브가 `/`를 차지하며 이 앱은 하위 경로로 이동. */
+export function neogulPath(locale: Locale): string {
+  return locale === "ko" ? "/neogul" : `/${locale}/neogul`;
+}
+
+/** 도구 공방 hreflang alternates(ko↔en). */
+export function neogulAlternates(): Record<Locale, string> {
+  return { ko: neogulPath("ko"), en: neogulPath("en") };
+}
+
 /** 법적 페이지 종류 — 사전 `legal` 키와 일치. */
 export type LegalDoc = "privacy" | "terms";
 

@@ -39,6 +39,13 @@ export function RootShell({ locale, children }: { locale: Locale; children: Reac
   return (
     <html lang={htmlLang(locale)} className={`${sansKr.variable} ${display.variable}`}>
       <body>
+        {/* 테마 부트 — hydration 전에 저장된 수동 테마(data-theme)를 선반영해 깜빡임 방지. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "(function(){try{var t=localStorage.getItem('ddukkit-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}})();",
+          }}
+        />
         {/* 광고·분석 스크립트(env on/off, 기본 OFF). 토스 미니앱 빌드에선 env 비워 자동 비활성. */}
         <SiteScripts />
         {children}

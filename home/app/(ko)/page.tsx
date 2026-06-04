@@ -1,19 +1,22 @@
 import type { Metadata } from "next";
 import { buildMeta } from "@webapp/seo";
-import { HomeView } from "../../components/HomeView";
+import { HubView } from "../../components/HubView";
 import { getDictionary, homeAlternates, homePath } from "../../lib/i18n";
 
-// 홈은 "도구 허브" 포지셔닝이되, 주력(플래그십)은 폰트생성이다.
-// 폰트 핵심 키워드("손글씨 폰트"·"글씨체 만들기")는 /font 랜딩에 집중시켜 자기잠식을 피하고,
-// home은 허브 일반어 + 플래그십(손글씨)을 히어로로 둔다.
+// 루트 `/` = 중립 허브 홈(웹앱 모음). 폰트 등 개별 도구는 각자 앱(/font…),
+// 도구 공방 묶음은 /neogul. 허브는 일반 허브 키워드로 노출.
 const t = getDictionary("ko");
-export const metadata: Metadata = buildMeta({
-  ...t.seo,
-  path: homePath("ko"),
-  locale: "ko",
-  alternates: homeAlternates(),
-});
+export const metadata: Metadata = {
+  ...buildMeta({
+    ...t.hub.seo,
+    path: homePath("ko"),
+    locale: "ko",
+    alternates: homeAlternates(),
+  }),
+  // 허브 제목은 제품 브랜드 접미사(템플릿) 없이 단독 노출.
+  title: { absolute: t.hub.seo.title },
+};
 
 export default function HomePage() {
-  return <HomeView locale="ko" />;
+  return <HubView locale="ko" />;
 }

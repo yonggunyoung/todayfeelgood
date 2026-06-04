@@ -1,7 +1,7 @@
 import { BrushDivider, Card, Mascot, Sticker } from "@webapp/ui";
 import { webApplicationJsonLd, htmlLang } from "@webapp/seo";
 import type { Locale } from "../lib/i18n";
-import { getDictionary, homePath, legalPath } from "../lib/i18n";
+import { getDictionary, neogulPath, legalPath } from "../lib/i18n";
 import { LanguageToggle } from "./LanguageToggle";
 import styles from "../app/home.module.css";
 
@@ -25,7 +25,7 @@ export function HomeView({ locale }: { locale: Locale }) {
   const jsonLd = webApplicationJsonLd({
     name: t.jsonLd.name,
     description: t.jsonLd.description,
-    path: homePath(locale),
+    path: neogulPath(locale),
     category: "DesignApplication",
     inLanguage: htmlLang(locale),
   });
@@ -42,8 +42,8 @@ export function HomeView({ locale }: { locale: Locale }) {
         <div className={`container ${styles.topbar}`}>
           <LanguageToggle
             current={locale}
-            hrefKo={homePath("ko")}
-            hrefEn={homePath("en")}
+            hrefKo={neogulPath("ko")}
+            hrefEn={neogulPath("en")}
             label={t.langToggle.label}
             koLabel={t.langToggle.ko}
             enLabel={t.langToggle.en}

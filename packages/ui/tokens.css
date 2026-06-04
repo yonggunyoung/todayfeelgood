@@ -113,9 +113,14 @@
   --dur-slow: 420ms;
 }
 
-/* ── 다크모드 ── 따뜻한 슬레이트 + 밝은 코랄 악센트. 블러 헤더가 흰 띠로 깨지지 않게. */
+/* ── 다크모드 ──
+ * 자동(OS 선호) + 수동 토글 둘 다 지원.
+ *  - OS가 dark이고 사용자가 수동 light로 끄지 않았으면 dark.
+ *  - 사용자가 수동으로 [data-theme="dark"|"light"]를 정하면 그 값이 OS보다 우선.
+ * 값은 한 곳(아래 다크 변수 묶음)에서만 관리하려 했으나 CSS 한계로 미디어/속성 두 셀렉터에 동일 적용한다.
+ */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #1a1714;
     --surface: #241f1b;
     --surface-2: #2e2823;
@@ -155,6 +160,47 @@
     --inset: inset 0 2px 5px rgba(0, 0, 0, 0.4);
     --material-bg: rgba(26, 23, 20, 0.72);
   }
+}
+
+/* 수동 다크 토글 — 위 미디어쿼리와 동일 값(OS 선호와 무관하게 강제). */
+:root[data-theme="dark"] {
+  --bg: #1a1714;
+  --surface: #241f1b;
+  --surface-2: #2e2823;
+  --surface-sunken: #181410;
+
+  --ink: #f3efe9;
+  --ink-soft: #c2bbb1;
+  --ink-faint: #9c948a;
+
+  --accent: #ff8a5f;
+  --accent-press: #ffa884;
+  --accent-weak: rgba(255, 138, 95, 0.22);
+  --accent-weak-strong: rgba(255, 138, 95, 0.3);
+  --accent-ink: #241f1b;
+  --accent-ink-weak: #ff8a5f;
+
+  --candy-coral: #ff9a6f;
+  --candy-mint: #5fcab0;
+  --candy-butter: #f5cd6b;
+  --candy-plum: #d2829a;
+
+  --success: #46c79c;
+  --warning: #f0ad55;
+  --danger: #f06b7c;
+
+  --hairline: rgba(255, 255, 255, 0.1);
+
+  --paper-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.6 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 12px rgba(0, 0, 0, 0.34);
+  --shadow-md: 0 2px 6px rgba(0, 0, 0, 0.34), 0 12px 28px rgba(0, 0, 0, 0.42);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.4), 0 24px 60px rgba(0, 0, 0, 0.5);
+  --clay: 0 10px 24px rgba(0, 0, 0, 0.4),
+    inset 0 2px 4px rgba(255, 255, 255, 0.08),
+    inset 0 -3px 6px rgba(0, 0, 0, 0.34);
+  --inset: inset 0 2px 5px rgba(0, 0, 0, 0.4);
+  --material-bg: rgba(26, 23, 20, 0.72);
 }
 
 * {

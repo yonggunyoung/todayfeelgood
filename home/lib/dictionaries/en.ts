@@ -22,6 +22,63 @@ export const en: typeof ko = {
     description:
       "A small workshop of web tools — from turning your handwriting into a font to text emoticons and stickers.",
   },
+  // Neutral hub home (root `/`) — landing that gathers the web apps.
+  hub: {
+    brand: "ddukkit",
+    seo: {
+      title: "ddukkit — Handy web apps in one place",
+      description:
+        "Small web tools to create, make and use — all in one place. Starting with Neoguri's little tool workshop for handwriting fonts, emoji and stickers.",
+      keywords: ["web apps", "web tools", "free web tools", "handwriting font"],
+    },
+    jsonLd: {
+      name: "ddukkit",
+      description: "A hub of handy web apps, all in one place.",
+    },
+    nav: { apps: "Apps", partner: "Partner", partnerCta: "Partner with us" },
+    theme: { toLight: "Switch to light", toDark: "Switch to dark" },
+    hero: {
+      kick: "Web App Studio",
+      titleA: "Every web app you need,",
+      titleB: "in one place.",
+      lede: "Hand-crafted web tools — create, make, use. No installs, right in your browser.",
+      searchPlaceholder: "Search what you want to make — fonts, stickers, emoji …",
+    },
+    rank: { head: "Trending", comingSoon: "Soon" },
+    apps: {
+      sectionTitle: "Browse web apps",
+      sectionSub: "Drag or use the arrows",
+      prev: "Previous",
+      next: "Next",
+      live: "LIVE",
+      soonBadge: "Soon",
+      neogul: {
+        eyebrow: "Make things like this",
+        name: "Neoguri's Tool Workshop",
+        desc: "Fonts · Emoji · Stickers · Free",
+        sampleWord: "hello, my hand",
+        chips: ["My font", "Emoji", "Sticker"],
+      },
+      soon: [
+        { hook: "Crafting the\nnext app", name: "App 2", note: "Coming soon" },
+        { hook: "Ideas\nwelcome", name: "App 3", note: "Coming soon" },
+        { hook: "The hub\nkeeps growing", name: "App 4", note: "Coming soon" },
+        { hook: "Your\napp?", name: "App 5", note: "Partner welcome" },
+      ],
+    },
+    partner: {
+      title: "Bring your web app here",
+      body: "Built a web tool or have a partnership idea? Send a proposal — we review and feature it on the hub. (Curated — not auto-upload.)",
+      cta: "Submit a proposal",
+      email: "contact@ddukkit.com",
+    },
+    footer: {
+      copyright: "© 2026 ddukkit · Small web apps, hand-crafted.",
+      privacy: "Privacy",
+      terms: "Terms",
+      partner: "Partner",
+    },
+  },
   langToggle: { ko: "한국어", en: "English", label: "Choose language" },
   hero: {
     eyebrow: "A little tool workshop, with Neoguri",

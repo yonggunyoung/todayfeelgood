@@ -11,6 +11,63 @@ export const ko = {
     description:
       "내 손글씨로 만드는 폰트 공방부터 텍스트 이모티콘·스티커까지, 웹 도구 공방.",
   },
+  // 중립 허브 홈(메인 `/`) 카피 — 웹앱들을 모아 보여주는 최상단 랜딩.
+  hub: {
+    brand: "ddukkit",
+    seo: {
+      title: "뚝딱 — 쓸모있는 웹앱을 한 곳에",
+      description:
+        "그리고, 만들고, 바로 쓰는 작은 웹 도구를 한 곳에. 손글씨 폰트·이모티콘·스티커를 만드는 너굴이의 작은 도구 공방부터.",
+      keywords: ["웹앱 모음", "웹 도구", "무료 웹 도구", "손글씨 폰트"],
+    },
+    jsonLd: {
+      name: "뚝딱(ddukkit)",
+      description: "쓸모있는 웹앱을 한 곳에 모은 허브.",
+    },
+    nav: { apps: "웹앱", partner: "제휴", partnerCta: "제휴 문의" },
+    theme: { toLight: "라이트 모드로 전환", toDark: "다크 모드로 전환" },
+    hero: {
+      kick: "Web App Studio",
+      titleA: "필요한 웹앱을,",
+      titleB: "한 곳에서.",
+      lede: "그리고, 만들고, 바로 쓰는 웹 도구를 하나씩 빚어 모읍니다. 설치 없이 브라우저에서.",
+      searchPlaceholder: "만들고 싶은 걸 검색 — 폰트, 스티커, 이모티콘 …",
+    },
+    rank: { head: "지금 인기", comingSoon: "준비중" },
+    apps: {
+      sectionTitle: "웹앱 둘러보기",
+      sectionSub: "끌거나 화살표로 넘겨보세요",
+      prev: "이전",
+      next: "다음",
+      live: "서비스중",
+      soonBadge: "준비중",
+      neogul: {
+        eyebrow: "이런 걸 만들어요",
+        name: "너굴이의 작은 도구 공방",
+        desc: "폰트·이모티콘·스티커 · 무료",
+        sampleWord: "안녕, 내 글씨",
+        chips: ["내 폰트", "이모티콘", "스티커"],
+      },
+      soon: [
+        { hook: "다음 웹앱\n짓는 중", name: "웹앱 2", note: "곧 공개" },
+        { hook: "아이디어\n환영", name: "웹앱 3", note: "곧 공개" },
+        { hook: "허브는\n계속 자란다", name: "웹앱 4", note: "곧 공개" },
+        { hook: "당신의\n웹앱?", name: "웹앱 5", note: "제휴 문의 환영" },
+      ],
+    },
+    partner: {
+      title: "당신의 웹앱을 여기에",
+      body: "직접 만든 웹 도구가 있거나 제휴 아이디어가 있나요? 제안을 보내주시면 검토 후 허브에 입점해 드려요. (검토형 — 자동 업로드 아님)",
+      cta: "제휴·입점 제안하기",
+      email: "contact@ddukkit.com",
+    },
+    footer: {
+      copyright: "© 2026 ddukkit · 손끝으로 빚는 작은 웹앱.",
+      privacy: "개인정보",
+      terms: "이용약관",
+      partner: "제휴 문의",
+    },
+  },
   langToggle: { ko: "한국어", en: "English", label: "언어 선택" },
   hero: {
     eyebrow: "너굴이의 작은 도구 공방",

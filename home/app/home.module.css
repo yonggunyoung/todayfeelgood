@@ -52,12 +52,21 @@
 }
 
 .heroCta {
-  font-weight: var(--weight-semi);
-  color: var(--accent-ink-weak);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-weight: var(--weight-bold);
   font-size: var(--text-lg);
+  color: var(--accent-ink);
+  background: var(--accent);
+  padding: var(--sp-3) var(--sp-6);
+  border-radius: var(--r-pill);
+  text-decoration: none;
+  box-shadow: var(--shadow-sm);
 }
 .heroCta:hover {
-  color: var(--accent-press);
+  background: var(--accent-press);
+  color: var(--accent-ink);
 }
 
 /* 스타일 샘플 카드 — 떠 있는 표면 + 마스킹테이프 라벨 */
@@ -214,13 +223,21 @@
 }
 
 .appCta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
   text-decoration: none;
   font-weight: var(--weight-semi);
-  color: var(--accent-ink-weak);
+  font-size: var(--text-sm);
+  color: var(--accent-ink);
+  background: var(--accent);
+  padding: var(--sp-2) var(--sp-4);
+  border-radius: var(--r-pill);
   align-self: flex-start;
 }
 .appCta:hover {
-  color: var(--accent-press);
+  background: var(--accent-press);
+  color: var(--accent-ink);
 }
 
 /* 1순위 — 텍스트 이모티콘 전면 카드(무대 중앙). 다른 카드보다 크고 강조. */

@@ -36,6 +36,8 @@ export default function KitStudio() {
   const [script, setScript] = useState<FontScript>("latin");
   const [accent, setAccent] = useState(PRESET_ACCENTS[0]!.hex);
   const [commercial, setCommercial] = useState(false);
+  // 폰트공방에서 받은 내 글씨 폰트를 올려 키트에 직접 쓰기(선택).
+  const [uploadFont, setUploadFont] = useState<{ base64: string; family: string; ext: string; fmt: FontFormat } | null>(null);
 
   const [sheetUrl, setSheetUrl] = useState<string | null>(null);
   const [previewFont, setPreviewFont] = useState<GenerateResponse | null>(null);
@@ -53,6 +55,24 @@ export default function KitStudio() {
     setMoodId(t.moodId);
     setAccent(t.accent);
     setScript(t.script);
+  }, []);
+
+  // 내 폰트 파일(.woff/.ttf) 올리기 → 미리보기·ZIP에 그대로 사용.
+  const onUploadFont = useCallback((file: File) => {
+    const name = file.name.toLowerCase();
+    const ext = name.endsWith(".ttf") ? "ttf" : name.endsWith(".woff") ? "woff" : null;
+    if (!ext) {
+      setError("woff 또는 ttf 파일만 올릴 수 있어요(폰트공방에서 받은 파일).");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const res = String(reader.result);
+      const base64 = res.includes(",") ? res.slice(res.indexOf(",") + 1) : res;
+      setError(null);
+      setUploadFont({ base64, family: "MyKitFont", ext, fmt: ext as FontFormat });
+    };
+    reader.readAsDataURL(file);
   }, []);
 
   // 폰트 미리보기 요청(엔진 재사용). 무드/스크립트가 바뀌면 woff 1개만 받아 시트에 쓴다.
@@ -108,8 +128,8 @@ export default function KitStudio() {
       description: description.trim() || undefined,
       palette,
       script,
-      fontBase64: previewFont?.fontBase64 ?? null,
-      fontFamily: previewFont?.fontFamily ?? "preview",
+      fontBase64: uploadFont?.base64 ?? previewFont?.fontBase64 ?? null,
+      fontFamily: uploadFont?.family ?? previewFont?.fontFamily ?? "preview",
       watermark: !commercial,
       highRes: false,
     }).then((url) => {
@@ -118,36 +138,40 @@ export default function KitStudio() {
     return () => {
       cancelled = true;
     };
-  }, [brand, description, palette, script, previewFont, commercial]);
+  }, [brand, description, palette, script, previewFont, commercial, uploadFont]);
 
   // 키트 ZIP 받기 — 받기 시점에 선택 포맷 폰트들을 엔진에서 받아 묶는다(앱 내 완결).
   const exportKit = useCallback(async () => {
     setExporting(true);
     setError(null);
     try {
-      const formats = commercial ? FULL_FORMATS : FREE_FORMATS;
+      let formats = commercial ? FULL_FORMATS : FREE_FORMATS;
       const slug = slugify(brand);
       const family = fontFamilyName(brand);
       const fileBase = slug;
 
-      // 1) 포맷별 폰트 파일 받기(엔진 재사용)
+      // 1) 폰트 파일 — 내 폰트 업로드 시 그대로, 아니면 엔진에서 포맷별로 받기.
       const fontFiles: ZipFile[] = [];
-      for (const fmt of formats) {
-        const res = await fetch(apiPath("/api/generate"), {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            params: paramsForMood(moodId),
-            script,
-            format: fmt,
-          }),
-        });
-        if (!res.ok) throw new Error(`font ${fmt} failed`);
-        const data = (await res.json()) as GenerateResponse;
+      if (uploadFont) {
+        formats = [uploadFont.fmt];
         fontFiles.push({
-          name: `${slug}-kit/font/${fileBase}.${FONT_FORMATS[fmt].ext}`,
-          base64: data.fontBase64,
+          name: `${slug}-kit/font/${fileBase}.${uploadFont.ext}`,
+          base64: uploadFont.base64,
         });
+      } else {
+        for (const fmt of formats) {
+          const res = await fetch(apiPath("/api/generate"), {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ params: paramsForMood(moodId), script, format: fmt }),
+          });
+          if (!res.ok) throw new Error(`font ${fmt} failed`);
+          const data = (await res.json()) as GenerateResponse;
+          fontFiles.push({
+            name: `${slug}-kit/font/${fileBase}.${FONT_FORMATS[fmt].ext}`,
+            base64: data.fontBase64,
+          });
+        }
       }
 
       // 2) 고해상·워터마크 없는 시트 PNG(받기 전용 재렌더)
@@ -156,8 +180,8 @@ export default function KitStudio() {
         description: description.trim() || undefined,
         palette,
         script,
-        fontBase64: previewFont?.fontBase64 ?? null,
-        fontFamily: previewFont?.fontFamily ?? "preview",
+        fontBase64: uploadFont?.base64 ?? previewFont?.fontBase64 ?? null,
+        fontFamily: uploadFont?.family ?? previewFont?.fontFamily ?? "preview",
         watermark: !commercial,
         highRes: commercial,
       });
@@ -197,7 +221,7 @@ export default function KitStudio() {
     } finally {
       setExporting(false);
     }
-  }, [brand, description, moodId, script, palette, previewFont, commercial]);
+  }, [brand, description, moodId, script, palette, previewFont, commercial, uploadFont]);
 
   const getButtonLabel = exporting
     ? "키트 묶는 중…"
@@ -280,6 +304,35 @@ export default function KitStudio() {
               폰트공방에서 만들기 →
             </a>
           </p>
+        </div>
+
+        <div className={styles.panel}>
+          <h2 className={`display ${styles.panelTitle}`}>내 폰트 쓰기 (선택)</h2>
+          <p className={styles.hint}>
+            폰트공방에서 받은 내 글씨 폰트(.woff/.ttf)를 올리면 미리보기·ZIP에 그대로 써요.
+          </p>
+          <input
+            type="file"
+            accept=".woff,.ttf,font/woff,font/ttf"
+            className={styles.text}
+            aria-label="내 폰트 파일 올리기"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) onUploadFont(f);
+            }}
+          />
+          {uploadFont && (
+            <p className={styles.hint}>
+              ✅ 내 폰트 적용됨 (.{uploadFont.ext}){" "}
+              <button
+                type="button"
+                onClick={() => setUploadFont(null)}
+                style={{ marginLeft: 6, border: 0, background: "transparent", color: "var(--accent-ink-weak)", fontWeight: 600, cursor: "pointer" }}
+              >
+                기본 글씨체로 ↺
+              </button>
+            </p>
+          )}
         </div>
 
         <div className={styles.panel}>

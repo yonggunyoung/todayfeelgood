@@ -267,6 +267,82 @@
   font-size: var(--text-title3);
 }
 
+/* ── 모바일: 도구 카드를 가로 컴팩트형으로 — 썸네일 왼쪽, 텍스트 오른쪽.
+   세로로 쌓지 않아 작은 화면에서 스크롤이 확 짧아진다. ── */
+@media (max-width: 720px) {
+  .appCard,
+  .featureCard,
+  .secondaryCard {
+    display: grid;
+    grid-template-columns: 108px minmax(0, 1fr);
+    column-gap: var(--sp-3);
+    row-gap: 4px;
+    align-content: center;
+    min-height: 0;
+    margin-bottom: var(--sp-3);
+  }
+  /* 썸네일 = 왼쪽 세로 칸(모든 행 스팬), 비율 해제하고 칸을 꽉 채움 */
+  .appCard > .toolThumb,
+  .featureCard > .toolThumb,
+  .secondaryCard > .toolThumb {
+    grid-column: 1;
+    grid-row: 1 / 99;
+    align-self: center;
+    aspect-ratio: 1 / 1;
+    min-height: 0;
+    margin: 0;
+  }
+  /* 텍스트류 = 오른쪽 칸 */
+  .appCard > :not(.toolThumb),
+  .featureCard > :not(.toolThumb),
+  .secondaryCard > :not(.toolThumb) {
+    grid-column: 2;
+    margin: 0;
+  }
+  /* 중복되는 우상단 태그 칩은 컴팩트 카드에선 숨김(이름/썸네일로 충분) */
+  .appCard > span:first-child,
+  .featureCard > span:first-child,
+  .secondaryCard > span:first-child {
+    display: none;
+  }
+  .appName,
+  .featureCard .appName,
+  .secondaryCard .appName {
+    font-size: var(--text-body);
+    font-weight: var(--weight-bold);
+  }
+  /* 설명은 2줄로 간략히(넘치면 …) */
+  .appDesc {
+    font-size: var(--text-sm);
+    line-height: 1.4;
+    flex: none;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .appCta {
+    font-size: var(--text-caption);
+    padding: 5px var(--sp-3);
+    margin-top: 2px;
+  }
+  /* 좁은 썸네일 칸에 맞춰 결과물 요소 축소 */
+  .thumbHand { font-size: 1.15rem; }
+  .thumbHand2 { font-size: 0.95rem; margin-left: 14px; }
+  .thumbFont { padding: 8px 10px; justify-content: center; }
+  .thumbKao { font-size: 0.62rem; padding: 3px 6px; }
+  .thumbMoji { gap: 4px 5px; padding: 7px; }
+  .thumbChip { padding: 2px; }
+  .thumbSticker { gap: 2px; }
+  .thumbSticker svg { width: 26px; height: 26px; }
+  .thumbBoard { padding: 5px 8px; gap: 7px; }
+  .thumbBrand { font-size: 0.8rem; }
+  .thumbSwatch { width: 9px; height: 16px; }
+  .thumbTag { font-size: 0.58rem; }
+  .thumbSig { font-size: 1.7rem; }
+  .thumbSigLine { width: 64%; }
+}
+
 /* 다른 공방 — 접힘 구석(싸인 등 강등) */
 .otherTools {
   margin-top: var(--sp-6);

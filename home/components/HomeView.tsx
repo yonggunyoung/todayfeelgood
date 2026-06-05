@@ -19,6 +19,44 @@ const SAMPLES = [
   { t: "안녕", paper: "var(--candy-mint)" },
 ];
 
+/** 도구 카드 상단 결과 썸네일 — "이런 게 나와요"를 글보다 먼저 직관적으로. */
+function ToolThumb({ kind }: { kind: "font" | "textmoji" | "sticker" | "kit" | "sign" }) {
+  if (kind === "font")
+    return (
+      <div className={`${styles.toolThumb} ${styles.thumbFont}`} aria-hidden>
+        <span className={styles.thumbHand}>안녕, 내 글씨</span>
+      </div>
+    );
+  if (kind === "textmoji")
+    return (
+      <div className={`${styles.toolThumb} ${styles.thumbMoji}`} aria-hidden>
+        <span className={styles.thumbKao}>(๑•̀ᴗ•́)૭ ♡</span>
+      </div>
+    );
+  if (kind === "sticker")
+    return (
+      <div className={`${styles.toolThumb} ${styles.thumbSticker}`} aria-hidden>
+        <span className={styles.thumbFace}>(• ◡ •)</span>
+        <span className={styles.thumbFace}>(&gt; ᴗ &lt;)</span>
+        <span className={styles.thumbFace}>(๑˃ᴗ˂)</span>
+      </div>
+    );
+  if (kind === "kit")
+    return (
+      <div className={`${styles.toolThumb} ${styles.thumbKit}`} aria-hidden>
+        {["#ef7a52", "#46b39a", "#f5c451", "#b65a6e"].map((c) => (
+          <span key={c} className={styles.thumbSwatch} style={{ background: c }} />
+        ))}
+        <span className={styles.thumbBrand}>BRAND</span>
+      </div>
+    );
+  return (
+    <div className={`${styles.toolThumb} ${styles.thumbSign}`} aria-hidden>
+      <span className={styles.thumbSig}>Yuna~</span>
+    </div>
+  );
+}
+
 /** 홈(허브) 랜딩 — 로케일을 받아 사전으로 렌더. ko/en 라우트가 공유. */
 export function HomeView({ locale }: { locale: Locale }) {
   const t = getDictionary(locale);
@@ -109,6 +147,7 @@ export function HomeView({ locale }: { locale: Locale }) {
 
           {/* 대표 — 폰트공방 전면 카드(플래그십) */}
           <Card tag={t.tools.font.tag} interactive className={styles.featureCard}>
+            <ToolThumb kind="font" />
             <h3 className={`display ${styles.appName}`}>{t.tools.font.name}</h3>
             <p className={styles.appDesc}>{t.tools.font.desc}</p>
             <a className={styles.appCta} href={fHref}>
@@ -118,6 +157,7 @@ export function HomeView({ locale }: { locale: Locale }) {
 
           {/* 강한 보조 — 텍스트 이모티콘공방 */}
           <Card tag={t.tools.textmoji.tag} interactive className={styles.secondaryCard}>
+            <ToolThumb kind="textmoji" />
             <h3 className={`display ${styles.appName}`}>{t.tools.textmoji.name}</h3>
             <p className={styles.appDesc}>{t.tools.textmoji.desc}</p>
             <a className={styles.appCta} href="/textmoji">
@@ -128,6 +168,7 @@ export function HomeView({ locale }: { locale: Locale }) {
           {/* 하위 도구 */}
           <div className={styles.grid}>
             <Card tag={t.tools.sticker.tag} interactive className={styles.appCard}>
+              <ToolThumb kind="sticker" />
               <h3 className={`display ${styles.appName}`}>{t.tools.sticker.name}</h3>
               <p className={styles.appDesc}>{t.tools.sticker.desc}</p>
               <a className={styles.appCta} href="/sticker">
@@ -135,6 +176,7 @@ export function HomeView({ locale }: { locale: Locale }) {
               </a>
             </Card>
             <Card tag={t.tools.kit.tag} interactive className={styles.appCard}>
+              <ToolThumb kind="kit" />
               <h3 className={`display ${styles.appName}`}>{t.tools.kit.name}</h3>
               <p className={styles.appDesc}>{t.tools.kit.desc}</p>
               <a className={styles.appCta} href="/kit">
@@ -148,6 +190,7 @@ export function HomeView({ locale }: { locale: Locale }) {
             <summary className={styles.otherSummary}>{t.tools.otherSummary}</summary>
             <div className={styles.otherInner}>
               <Card tag={t.tools.sign.tag} interactive className={styles.appCard}>
+                <ToolThumb kind="sign" />
                 <h3 className={`display ${styles.appName}`}>{t.tools.sign.name}</h3>
                 <p className={styles.appDesc}>{t.tools.sign.desc}</p>
                 <a className={styles.appCta} href="/sign">

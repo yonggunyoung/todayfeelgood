@@ -381,3 +381,74 @@
   color: var(--accent-ink);
   text-decoration: underline;
 }
+
+/* ── 도구 카드 결과 썸네일(직관성) ── */
+.toolThumb {
+  aspect-ratio: 16 / 6.5;
+  border-radius: var(--r-md);
+  margin-bottom: var(--sp-4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  overflow: hidden;
+  position: relative;
+  box-shadow: var(--inset);
+}
+.thumbFont {
+  background: linear-gradient(135deg, var(--candy-coral), var(--accent));
+}
+.thumbHand {
+  font-family: var(--font-display), system-ui, sans-serif;
+  font-size: clamp(1.6rem, 5vw, 2.2rem);
+  font-weight: var(--weight-bold);
+  color: #fff;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.18);
+}
+.thumbMoji {
+  background: linear-gradient(135deg, var(--candy-butter), #eaa53a);
+}
+.thumbKao {
+  font-size: clamp(1.3rem, 4.5vw, 1.7rem);
+  font-weight: var(--weight-bold);
+  color: #5b3a12;
+}
+.thumbSticker {
+  background: linear-gradient(135deg, var(--candy-mint), #2f9e84);
+}
+.thumbFace {
+  font-size: clamp(0.9rem, 3vw, 1.1rem);
+  font-weight: var(--weight-bold);
+  color: #08372d;
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: var(--r-pill);
+  padding: 5px 11px;
+}
+.thumbKit {
+  background: var(--surface-2);
+}
+.thumbSwatch {
+  width: 24px;
+  height: 38px;
+  border-radius: 6px;
+  box-shadow: var(--shadow-sm);
+}
+.thumbBrand {
+  font-family: var(--font-display), system-ui, sans-serif;
+  font-weight: var(--weight-bold);
+  font-size: 1.1rem;
+  color: var(--ink);
+  margin-left: var(--sp-2);
+}
+.thumbSign {
+  background: linear-gradient(135deg, var(--candy-plum), #8a4156);
+}
+.thumbSig {
+  font-family: var(--font-display), system-ui, sans-serif;
+  font-style: italic;
+  font-size: clamp(1.6rem, 5vw, 2rem);
+  font-weight: var(--weight-bold);
+  color: #fff;
+  transform: rotate(-7deg);
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+}

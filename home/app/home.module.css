@@ -281,22 +281,28 @@
     min-height: 0;
     margin-bottom: var(--sp-3);
   }
-  /* 썸네일 = 왼쪽 세로 칸(모든 행 스팬), 비율 해제하고 칸을 꽉 채움 */
+  /* 썸네일 = 왼쪽 세로 칸. 텍스트 3줄(이름·설명·버튼)만큼만 스팬.
+     주의: 1/99 같은 큰 줄번호를 쓰면 빈 행 트랙이 98개 생기고 row-gap이
+     누적돼 카드가 수백px 늘어난다(레이아웃 깨짐). span 3 으로 고정한다. */
   .appCard > .toolThumb,
   .featureCard > .toolThumb,
   .secondaryCard > .toolThumb {
     grid-column: 1;
-    grid-row: 1 / 99;
+    grid-row: 1 / span 3;
     align-self: center;
     aspect-ratio: 1 / 1;
     min-height: 0;
     margin: 0;
   }
-  /* 텍스트류 = 오른쪽 칸 */
+  /* 텍스트류 = 오른쪽 칸. min-width:0 으로 1fr 칸이 글자 단위로
+     찌부러지는 것 방지, keep-all 로 한글이 한 글자씩 끊기지 않게. */
   .appCard > :not(.toolThumb),
   .featureCard > :not(.toolThumb),
   .secondaryCard > :not(.toolThumb) {
     grid-column: 2;
+    min-width: 0;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
     margin: 0;
   }
   /* 중복되는 우상단 태그 칩은 컴팩트 카드에선 숨김(이름/썸네일로 충분) */
@@ -325,6 +331,9 @@
     font-size: var(--text-caption);
     padding: 5px var(--sp-3);
     margin-top: 2px;
+    /* 좁은 칸에서도 버튼 라벨이 한 글자씩 세로로 깨지지 않게 */
+    justify-self: start;
+    white-space: nowrap;
   }
   /* 좁은 썸네일 칸에 맞춰 결과물 요소 축소 */
   .thumbHand { font-size: 1.15rem; }

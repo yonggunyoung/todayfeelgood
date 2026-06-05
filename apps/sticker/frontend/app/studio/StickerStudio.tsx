@@ -16,7 +16,7 @@ import {
   type GeneratedItem,
 } from "../../lib/generate";
 import { downloadBlob, downloadDataUrl, makeZip } from "../../lib/zip";
-import { cropToContent, DEFAULT_ANCHOR, type FaceAnchor } from "../../lib/render";
+import { cropToContent, detectFaceAnchor, DEFAULT_ANCHOR, type FaceAnchor } from "../../lib/render";
 import FaceMarker from "../../components/FaceMarker";
 import styles from "./StickerStudio.module.css";
 
@@ -97,6 +97,8 @@ export default function StickerStudio() {
     setError(null);
     setMarkSrc(crop.toDataURL("image/png"));
     setMarkAspect(box.w / box.h);
+    // 그린 그림에서 눈·입 위치 자동 추정 → 마커 자동 배치(안 맞으면 끌어서 보정).
+    setAnchor(detectFaceAnchor(crop));
   }, []);
 
   const onGenerate = () => run(seed);
@@ -160,10 +162,10 @@ export default function StickerStudio() {
         <div className={styles.panel}>
           <h2 className={`display ${styles.panelTitle}`}>② 눈·입 위치를 잡아요</h2>
           <p className={styles.hint}>
-            그린 그림에서 눈·입이 어디인지 점으로 알려주면, 표정이 <strong>그 자리에 딱</strong> 그려져요.
+            그림을 불러오면 <strong>눈·입을 자동으로 인식</strong>해요. 표정이 그 자리에 딱 그려져요(안 맞으면 점을 끌어 보정).
           </p>
           <button type="button" className={styles.secondary} onClick={openMarker}>
-            {markSrc ? "🔄 내 그림 다시 불러오기" : "🎯 내 그림 불러와 위치 잡기"}
+            {markSrc ? "🔄 다시 인식" : "🎯 내 그림 불러와 자동 인식"}
           </button>
           {markSrc && (
             <FaceMarker src={markSrc} aspect={markAspect} anchor={anchor} onChange={setAnchor} />

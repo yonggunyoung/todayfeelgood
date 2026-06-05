@@ -33,6 +33,52 @@ export const DEFAULT_ANCHOR: FaceAnchor = {
   mouth: { x: 0.5, y: 0.62 },
 };
 
+/**
+ * 그린 그림에서 눈·입 위치를 휴리스틱으로 추정한다(비AI).
+ * 잉크(불투명·어두운 픽셀)의 무게중심을 영역별로 구한다:
+ *   왼눈=상단 좌측, 오른눈=상단 우측, 입=하단 중앙.
+ * "정상 배치(눈 위·입 아래)"를 가정 — 어긋나면 마커를 끌어 보정하면 된다.
+ * 픽셀이 너무 적은 영역은 DEFAULT_ANCHOR로 대체(빈손 방지).
+ */
+export function detectFaceAnchor(crop: HTMLCanvasElement): FaceAnchor {
+  const w = crop.width;
+  const h = crop.height;
+  const ctx = crop.getContext("2d");
+  if (!ctx || w < 4 || h < 4) return DEFAULT_ANCHOR;
+  const data = ctx.getImageData(0, 0, w, h).data;
+  const isInk = (i: number) => {
+    const a = data[i + 3]!;
+    if (a < 60) return false;
+    const lum = (data[i]! + data[i + 1]! + data[i + 2]!) / 3;
+    return lum < 150; // 어두운 선
+  };
+  const centroid = (x0: number, x1: number, y0: number, y1: number) => {
+    const X0 = Math.max(0, Math.floor(x0 * w));
+    const X1 = Math.min(w, Math.ceil(x1 * w));
+    const Y0 = Math.max(0, Math.floor(y0 * h));
+    const Y1 = Math.min(h, Math.ceil(y1 * h));
+    let sx = 0;
+    let sy = 0;
+    let n = 0;
+    for (let y = Y0; y < Y1; y++) {
+      for (let x = X0; x < X1; x++) {
+        if (isInk((y * w + x) * 4)) {
+          sx += x;
+          sy += y;
+          n++;
+        }
+      }
+    }
+    if (n < 8) return null;
+    return { x: sx / n / w, y: sy / n / h };
+  };
+  return {
+    eyeL: centroid(0.1, 0.5, 0.2, 0.56) ?? DEFAULT_ANCHOR.eyeL,
+    eyeR: centroid(0.5, 0.9, 0.2, 0.56) ?? DEFAULT_ANCHOR.eyeR,
+    mouth: centroid(0.25, 0.75, 0.58, 0.86) ?? DEFAULT_ANCHOR.mouth,
+  };
+}
+
 /** 그린 이미지의 실제 내용 바운딩박스(투명/흰 배경 제거)로 잘라 캔버스를 만든다. box(원본 좌표)도 함께 반환. */
 export function cropToContent(
   src: HTMLCanvasElement,

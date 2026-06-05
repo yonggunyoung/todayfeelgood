@@ -74,7 +74,7 @@ export default function FaceMarker({
           </button>
         ))}
       </div>
-      <p className={styles.hint}>눈·입 점을 끌어 실제 위치에 맞추구리. 표정이 그 자리에 그려진다구리.</p>
+      <p className={styles.hint}>눈·입을 자동으로 잡았어요. 안 맞으면 점을 끌어 맞춰요 — 표정이 그 자리에 그려져요.</p>
     </div>
   );
 }

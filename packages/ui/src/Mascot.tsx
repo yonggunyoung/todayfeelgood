@@ -1,7 +1,11 @@
 import type { CSSProperties } from "react";
 import styles from "./Mascot.module.css";
 
-/* 너구리 털 색(갈색) — 회색 대신 갈색+검정(마스크/줄무늬는 --ink) 으로 통일 */
+/* 너구리 털 색(갈색) — 회색 대신 갈색+검정으로 통일.
+ * 마스크/동공/줄무늬는 캐릭터 고유의 "검정"이라 테마와 무관하게 항상 진해야 한다.
+ * (예전엔 var(--ink)을 썼는데 다크모드에선 --ink가 거의 흰색으로 뒤집혀
+ *  흰 얼굴판/흰자 위에서 눈이 사라져 보였다 → 고정 다크색으로 못박는다.) */
+const INK = "#2b2a33";
 
 /**
  * 표정 변주. 같은 몸체(너구리)에 눈/입 SVG만 교체하는 구조라 경량(이미지 에셋 0).
@@ -49,7 +53,7 @@ function Face({ mood }: { mood: MascotMood }) {
   const eyeOpen = (cx: number) => (
     <>
       <circle cx={cx} cy="36" r="3.6" fill="#fff" />
-      <circle cx={cx} cy="36.4" r="2.1" fill="var(--ink)" />
+      <circle cx={cx} cy="36.4" r="2.1" fill={INK} />
       <circle cx={cx + 0.9} cy="35.4" r="0.8" fill="#fff" />
     </>
   );
@@ -57,7 +61,7 @@ function Face({ mood }: { mood: MascotMood }) {
   const eyeWink = (cx: number) => (
     <path
       d={`M${cx - 3.4} 36.6 q3.4 3 6.8 0`}
-      stroke="var(--ink)"
+      stroke={INK}
       strokeWidth="2.2"
       strokeLinecap="round"
       fill="none"
@@ -71,10 +75,10 @@ function Face({ mood }: { mood: MascotMood }) {
           {cheeks}
           <circle cx="25" cy="36" r="4" fill="#fff" />
           <circle cx="39" cy="36" r="4" fill="#fff" />
-          <circle cx="25" cy="36" r="2" fill="var(--ink)" />
-          <circle cx="39" cy="36" r="2" fill="var(--ink)" />
+          <circle cx="25" cy="36" r="2" fill={INK} />
+          <circle cx="39" cy="36" r="2" fill={INK} />
           {/* 동그란 입 */}
-          <ellipse cx="32" cy="46" rx="2.8" ry="3.3" fill="var(--ink)" />
+          <ellipse cx="32" cy="46" rx="2.8" ry="3.3" fill={INK} />
         </g>
       );
     case "focused":
@@ -82,8 +86,8 @@ function Face({ mood }: { mood: MascotMood }) {
         <g>
           {cheeks}
           {/* 집중한 가는 눈 */}
-          <path d="M22 36 q3 -2.4 6 0" stroke="var(--ink)" strokeWidth="2.2" strokeLinecap="round" fill="none" />
-          <path d="M36 36 q3 -2.4 6 0" stroke="var(--ink)" strokeWidth="2.2" strokeLinecap="round" fill="none" />
+          <path d="M22 36 q3 -2.4 6 0" stroke={INK} strokeWidth="2.2" strokeLinecap="round" fill="none" />
+          <path d="M36 36 q3 -2.4 6 0" stroke={INK} strokeWidth="2.2" strokeLinecap="round" fill="none" />
           {/* 혀 빼꼼 */}
           <path d="M29.5 44 q2.5 4 5 0 z" fill="var(--candy-coral)" />
         </g>
@@ -91,9 +95,9 @@ function Face({ mood }: { mood: MascotMood }) {
     case "sleepy":
       return (
         <g>
-          <path d="M22 37 q3 2.2 6 0" stroke="var(--ink)" strokeWidth="2.2" strokeLinecap="round" fill="none" />
-          <path d="M36 37 q3 2.2 6 0" stroke="var(--ink)" strokeWidth="2.2" strokeLinecap="round" fill="none" />
-          <circle cx="32" cy="45" r="1.6" fill="var(--ink)" />
+          <path d="M22 37 q3 2.2 6 0" stroke={INK} strokeWidth="2.2" strokeLinecap="round" fill="none" />
+          <path d="M36 37 q3 2.2 6 0" stroke={INK} strokeWidth="2.2" strokeLinecap="round" fill="none" />
+          <circle cx="32" cy="45" r="1.6" fill={INK} />
         </g>
       );
     case "love":
@@ -103,18 +107,18 @@ function Face({ mood }: { mood: MascotMood }) {
           {/* 하트눈 */}
           <path d="M22.4 34 a2 2 0 0 1 3 0 a2 2 0 0 1 3 0 q0 2.4 -3 4.4 q-3 -2 -3 -4.4z" fill="var(--candy-coral)" />
           <path d="M35.6 34 a2 2 0 0 1 3 0 a2 2 0 0 1 3 0 q0 2.4 -3 4.4 q-3 -2 -3 -4.4z" fill="var(--candy-coral)" />
-          <path d="M28 45 q4 4 8 0" stroke="var(--ink)" strokeWidth="2.1" strokeLinecap="round" fill="none" />
+          <path d="M28 45 q4 4 8 0" stroke={INK} strokeWidth="2.1" strokeLinecap="round" fill="none" />
         </g>
       );
     case "worried":
       return (
         <g>
-          <circle cx="25" cy="37" r="2" fill="var(--ink)" />
-          <circle cx="39" cy="37" r="2" fill="var(--ink)" />
+          <circle cx="25" cy="37" r="2" fill={INK} />
+          <circle cx="39" cy="37" r="2" fill={INK} />
           {/* 찡그린 눈썹 */}
-          <path d="M21 33 q3 -1.6 6 0" stroke="var(--ink)" strokeWidth="1.6" strokeLinecap="round" fill="none" />
-          <path d="M37 33 q3 -1.6 6 0" stroke="var(--ink)" strokeWidth="1.6" strokeLinecap="round" fill="none" />
-          <path d="M28 47 q4 -3 8 0" stroke="var(--ink)" strokeWidth="2.1" strokeLinecap="round" fill="none" />
+          <path d="M21 33 q3 -1.6 6 0" stroke={INK} strokeWidth="1.6" strokeLinecap="round" fill="none" />
+          <path d="M37 33 q3 -1.6 6 0" stroke={INK} strokeWidth="1.6" strokeLinecap="round" fill="none" />
+          <path d="M28 47 q4 -3 8 0" stroke={INK} strokeWidth="2.1" strokeLinecap="round" fill="none" />
           {/* 졸졸 땀 */}
           <path d="M47 32 q2 4 0 5.6 q-2 -1.6 0 -5.6z" fill="var(--candy-mint)" opacity="0.85" />
         </g>
@@ -127,7 +131,7 @@ function Face({ mood }: { mood: MascotMood }) {
           {cheeks}
           {eyeOpen(25)}
           {eyeWink(39)}
-          <path d="M27 45 q5 4.5 10 0" stroke="var(--ink)" strokeWidth="2.2" strokeLinecap="round" fill="none" />
+          <path d="M27 45 q5 4.5 10 0" stroke={INK} strokeWidth="2.2" strokeLinecap="round" fill="none" />
         </g>
       );
   }
@@ -177,8 +181,8 @@ export function Mascot({
       {/* ===== 줄무늬 꼬리 (몸 왼쪽 뒤) ===== */}
       <g>
         <path d="M15 46 C7 46 6 54 11 58 C15 61 21 58 21 52 C21 49 19 46 15 46z" fill="#946541" />
-        <path d="M11.5 49 q4 -1 7 1" stroke="var(--ink)" strokeWidth="2.4" strokeLinecap="round" fill="none" opacity="0.85" />
-        <path d="M10 54 q5 -1 9 1" stroke="var(--ink)" strokeWidth="2.4" strokeLinecap="round" fill="none" opacity="0.85" />
+        <path d="M11.5 49 q4 -1 7 1" stroke={INK} strokeWidth="2.4" strokeLinecap="round" fill="none" opacity="0.85" />
+        <path d="M10 54 q5 -1 9 1" stroke={INK} strokeWidth="2.4" strokeLinecap="round" fill="none" opacity="0.85" />
       </g>
 
       {/* ===== 통통한 몸(배 볼록) ===== */}
@@ -226,11 +230,11 @@ export function Mascot({
       <path d="M32 22 C25 22 21 27 21 33 C21 40 26 44 32 44 C38 44 43 40 43 33 C43 27 39 22 32 22z" fill="#f3ede2" />
 
       {/* 너구리 눈가 검은 마스크 무늬(좌우) */}
-      <path d="M16 31 C19 27 26 27 29 31 C31 34 30 39 26 40 C20 41 16 37 16 33z" fill="var(--ink)" />
-      <path d="M48 31 C45 27 38 27 35 31 C33 34 34 39 38 40 C44 41 48 37 48 33z" fill="var(--ink)" />
+      <path d="M16 31 C19 27 26 27 29 31 C31 34 30 39 26 40 C20 41 16 37 16 33z" fill={INK} />
+      <path d="M48 31 C45 27 38 27 35 31 C33 34 34 39 38 40 C44 41 48 37 48 33z" fill={INK} />
 
       {/* 코 */}
-      <ellipse cx="32" cy="41.5" rx="2.4" ry="1.8" fill="var(--ink)" />
+      <ellipse cx="32" cy="41.5" rx="2.4" ry="1.8" fill={INK} />
 
       <Face mood={mood} />
     </svg>

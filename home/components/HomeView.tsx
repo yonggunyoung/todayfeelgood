@@ -19,40 +19,70 @@ const SAMPLES = [
   { t: "안녕", paper: "var(--candy-mint)" },
 ];
 
-/** 도구 카드 상단 결과 썸네일 — "이런 게 나와요"를 글보다 먼저 직관적으로. */
+/**
+ * 도구 카드 상단 결과 썸네일 — "이런 게 나와요"를 글보다 먼저 보여준다.
+ * 단색 그라데이션을 버리고 "진짜 결과물 목업"처럼: 손글씨 폰트·실제 마스코트 얼굴·
+ * 브랜드 보드 등 여러 요소를 겹쳐 호기심을 끌도록 구성.
+ */
 function ToolThumb({ kind }: { kind: "font" | "textmoji" | "sticker" | "kit" | "sign" }) {
+  // ① 폰트공방 — 줄 친 종이 위에 손으로 쓴 한글(나눔손글씨). "내 글씨가 폰트로".
   if (kind === "font")
     return (
       <div className={`${styles.toolThumb} ${styles.thumbFont}`} aria-hidden>
-        <span className={styles.thumbHand}>안녕, 내 글씨</span>
+        <div className={styles.thumbPaper}>
+          <span className={styles.thumbHand}>오늘도 좋은 하루,</span>
+          <span className={styles.thumbHand2}>내 손글씨로 ✍︎</span>
+        </div>
       </div>
     );
+  // ② 이모티콘공방 — 여러 카오모지를 칩으로 흩뿌린 팔레트. 다양함을 보여줌.
   if (kind === "textmoji")
     return (
       <div className={`${styles.toolThumb} ${styles.thumbMoji}`} aria-hidden>
-        <span className={styles.thumbKao}>(๑•̀ᴗ•́)૭ ♡</span>
+        {["(๑•̀ᴗ•́)૭", "( ๑꒪⌓꒪)", "ヽ(•ω•)ノ", "(づ｡◕‿◕｡)づ"].map((m, i) => (
+          <span key={i} className={styles.thumbKao} data-i={i}>
+            {m}
+          </span>
+        ))}
       </div>
     );
+  // ③ 스티커공방 — 진짜 마스코트 얼굴 3종을 스티커 시트처럼. 카오모지보다 캐릭터.
   if (kind === "sticker")
     return (
       <div className={`${styles.toolThumb} ${styles.thumbSticker}`} aria-hidden>
-        <span className={styles.thumbFace}>(• ◡ •)</span>
-        <span className={styles.thumbFace}>(&gt; ᴗ &lt;)</span>
-        <span className={styles.thumbFace}>(๑˃ᴗ˂)</span>
+        <span className={styles.thumbChip} data-r="-8">
+          <Mascot mood="happy" size={46} still label="" />
+        </span>
+        <span className={styles.thumbChip} data-r="4">
+          <Mascot mood="love" size={52} still label="" />
+        </span>
+        <span className={styles.thumbChip} data-r="-3">
+          <Mascot mood="surprised" size={46} still label="" />
+        </span>
       </div>
     );
+  // ④ 키트공방 — 브랜드 보드 목업: 팔레트 + 로고 워드마크 + 태그.
   if (kind === "kit")
     return (
       <div className={`${styles.toolThumb} ${styles.thumbKit}`} aria-hidden>
-        {["#ef7a52", "#46b39a", "#f5c451", "#b65a6e"].map((c) => (
-          <span key={c} className={styles.thumbSwatch} style={{ background: c }} />
-        ))}
-        <span className={styles.thumbBrand}>BRAND</span>
+        <div className={styles.thumbBoard}>
+          <span className={styles.thumbBrand}>m o n g l</span>
+          <span className={styles.thumbPalette}>
+            {["#ef7a52", "#46b39a", "#f5c451", "#2b2a33"].map((c) => (
+              <span key={c} className={styles.thumbSwatch} style={{ background: c }} />
+            ))}
+          </span>
+        </div>
+        <span className={styles.thumbTag}>logo · 명함 · 배너</span>
       </div>
     );
+  // ⑤ 싸인공방 — 종이 위에 흐르는 필기체 사인 + 밑줄 획.
   return (
     <div className={`${styles.toolThumb} ${styles.thumbSign}`} aria-hidden>
-      <span className={styles.thumbSig}>Yuna~</span>
+      <span className={styles.thumbSig}>Jiwoo</span>
+      <svg className={styles.thumbSigLine} viewBox="0 0 120 16" preserveAspectRatio="none">
+        <path d="M3 11 q30 -9 58 -2 q24 6 56 -5" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" opacity="0.85" />
+      </svg>
     </div>
   );
 }

@@ -382,73 +382,157 @@
   text-decoration: underline;
 }
 
-/* ── 도구 카드 결과 썸네일(직관성) ── */
+/* ── 도구 카드 결과 썸네일(직관성) ──
+   단색 그라데이션 대신 "진짜 결과물 목업"처럼 보이게: 손글씨·캐릭터·브랜드 보드. */
 .toolThumb {
-  aspect-ratio: 16 / 6.5;
+  aspect-ratio: 16 / 7;
   border-radius: var(--r-md);
   margin-bottom: var(--sp-4);
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--sp-2);
+  gap: var(--sp-3);
   overflow: hidden;
   position: relative;
   box-shadow: var(--inset);
 }
+
+/* ① 폰트 — 줄 친 노트 종이 위 손글씨 */
 .thumbFont {
-  background: linear-gradient(135deg, var(--candy-coral), var(--accent));
+  background:
+    repeating-linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent 30px,
+      color-mix(in srgb, var(--accent) 22%, transparent) 30px,
+      color-mix(in srgb, var(--accent) 22%, transparent) 31px
+    ),
+    linear-gradient(135deg, #fff6ee, #ffeede);
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 10px 18px;
+  gap: 2px;
+}
+.thumbPaper {
+  display: flex;
+  flex-direction: column;
+  transform: rotate(-2.5deg);
 }
 .thumbHand {
-  font-family: var(--font-display), system-ui, sans-serif;
-  font-size: clamp(1.6rem, 5vw, 2.2rem);
-  font-weight: var(--weight-bold);
-  color: #fff;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.18);
+  font-family: var(--font-hand-kr), "Nanum Pen Script", cursive;
+  font-size: clamp(1.7rem, 6vw, 2.5rem);
+  line-height: 1.05;
+  color: #2b2a33;
 }
+.thumbHand2 {
+  font-family: var(--font-hand-kr), "Nanum Pen Script", cursive;
+  font-size: clamp(1.4rem, 5vw, 2rem);
+  line-height: 1.05;
+  color: var(--accent);
+  margin-left: 26px;
+}
+
+/* ② 이모티콘 — 카오모지 칩 팔레트 */
 .thumbMoji {
-  background: linear-gradient(135deg, var(--candy-butter), #eaa53a);
+  background: linear-gradient(135deg, #fff3d6, #ffe2a8);
+  flex-wrap: wrap;
+  gap: 6px 8px;
+  padding: 10px;
 }
 .thumbKao {
-  font-size: clamp(1.3rem, 4.5vw, 1.7rem);
+  font-size: clamp(0.78rem, 2.6vw, 1.02rem);
   font-weight: var(--weight-bold);
-  color: #5b3a12;
-}
-.thumbSticker {
-  background: linear-gradient(135deg, var(--candy-mint), #2f9e84);
-}
-.thumbFace {
-  font-size: clamp(0.9rem, 3vw, 1.1rem);
-  font-weight: var(--weight-bold);
-  color: #08372d;
-  background: rgba(255, 255, 255, 0.85);
+  color: #6a4310;
+  background: rgba(255, 255, 255, 0.92);
   border-radius: var(--r-pill);
   padding: 5px 11px;
+  box-shadow: 0 2px 6px rgba(120, 80, 10, 0.14);
 }
+.thumbKao[data-i="0"] { transform: rotate(-4deg); }
+.thumbKao[data-i="1"] { transform: rotate(3deg); }
+.thumbKao[data-i="2"] { transform: rotate(-2deg); }
+.thumbKao[data-i="3"] { transform: rotate(4deg); }
+
+/* ③ 스티커 — 실제 마스코트 얼굴 스티커 시트 */
+.thumbSticker {
+  background:
+    radial-gradient(circle at 22% 28%, rgba(255, 255, 255, 0.5), transparent 42%),
+    linear-gradient(135deg, #d7f5ec, #aee6d6);
+  gap: var(--sp-2);
+}
+.thumbChip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  border-radius: 16px;
+  padding: 4px;
+  box-shadow: 0 3px 10px rgba(15, 90, 70, 0.18);
+}
+.thumbChip[data-r="-8"] { transform: rotate(-8deg); }
+.thumbChip[data-r="4"] { transform: rotate(4deg); z-index: 2; }
+.thumbChip[data-r="-3"] { transform: rotate(-3deg); }
+
+/* ④ 키트 — 브랜드 보드 목업 */
 .thumbKit {
-  background: var(--surface-2);
+  background: linear-gradient(135deg, #f3efe9, #e7e0d5);
+  flex-direction: column;
+  gap: 7px;
 }
-.thumbSwatch {
-  width: 24px;
-  height: 38px;
-  border-radius: 6px;
-  box-shadow: var(--shadow-sm);
+.thumbBoard {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #fff;
+  border-radius: var(--r-md);
+  padding: 8px 14px;
+  box-shadow: 0 4px 12px rgba(60, 45, 25, 0.14);
+  transform: rotate(-1.5deg);
 }
 .thumbBrand {
   font-family: var(--font-display), system-ui, sans-serif;
   font-weight: var(--weight-bold);
-  font-size: 1.1rem;
-  color: var(--ink);
-  margin-left: var(--sp-2);
+  font-size: clamp(1rem, 3.4vw, 1.35rem);
+  letter-spacing: 0.04em;
+  color: #2b2a33;
 }
+.thumbPalette {
+  display: inline-flex;
+  gap: 4px;
+}
+.thumbSwatch {
+  width: 14px;
+  height: 26px;
+  border-radius: 4px;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.06);
+}
+.thumbTag {
+  font-size: 0.72rem;
+  font-weight: var(--weight-semi);
+  color: #8a7c66;
+  letter-spacing: 0.02em;
+}
+
+/* ⑤ 싸인 — 종이 위 필기체 사인 + 밑줄 획 */
 .thumbSign {
-  background: linear-gradient(135deg, var(--candy-plum), #8a4156);
+  background:
+    radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.12), transparent 45%),
+    linear-gradient(135deg, #5a3a6b, #2e2540);
+  flex-direction: column;
+  gap: 0;
 }
 .thumbSig {
-  font-family: var(--font-display), system-ui, sans-serif;
-  font-style: italic;
-  font-size: clamp(1.6rem, 5vw, 2rem);
-  font-weight: var(--weight-bold);
+  font-family: var(--font-hand-latin), "Caveat", cursive;
+  font-size: clamp(2.2rem, 7vw, 3rem);
+  font-weight: 700;
   color: #fff;
-  transform: rotate(-7deg);
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  transform: rotate(-6deg);
+  line-height: 0.9;
+  text-shadow: 0 3px 14px rgba(0, 0, 0, 0.3);
+}
+.thumbSigLine {
+  width: 58%;
+  height: 14px;
+  margin-top: -2px;
+  transform: rotate(-6deg);
 }

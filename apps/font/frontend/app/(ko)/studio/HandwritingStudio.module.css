@@ -453,14 +453,10 @@ details[open] > .accSummary .accTitle::after {
 
 @media (max-width: 980px) {
   .preview {
-    position: sticky;
-    top: var(--sp-3);
-    z-index: 20;
-    max-height: 46vh;
-    overflow: auto;
-    -webkit-overflow-scrolling: touch;
-    border-radius: var(--r-lg);
-    box-shadow: var(--shadow-md);
+    /* 모바일: 견본을 자체 스크롤(sticky+overflow)로 두면 그리드와 따로 움직여 헷갈림 → 한 흐름으로 정적 배치. */
+    position: static;
+    max-height: none;
+    overflow: visible;
   }
   .desktopActions {
     display: none;

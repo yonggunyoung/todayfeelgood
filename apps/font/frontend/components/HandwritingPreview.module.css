@@ -54,6 +54,34 @@
   word-break: break-word;
 }
 
+/* 대문자 A–Z 접기/펼치기 */
+.upperFold {
+  margin-top: 4px;
+}
+.upperFold .alphabet {
+  margin-top: 6px;
+}
+.upperSummary {
+  cursor: pointer;
+  list-style: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--ink-faint, #6b6875);
+}
+.upperSummary::-webkit-details-marker {
+  display: none;
+}
+.upperSummary::before {
+  content: "▸";
+  font-size: 0.7em;
+}
+.upperFold[open] .upperSummary::before {
+  content: "▾";
+}
+
 .inkChar {
   color: var(--text, #2b2a33);
 }

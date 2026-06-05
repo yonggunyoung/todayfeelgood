@@ -34,7 +34,10 @@ const DEBOUNCE_MS = 700;
 
 // 타깃: 라틴 소문자 a–z + 대문자 A–Z (원하는 만큼만 그려도 됨, 빈칸은 기본 글꼴).
 // 엔진은 이미 대문자(A.uc 글리프명·cap height 정렬·자동채움)를 지원한다.
-const ALPHABET = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+// 대문자는 그리드/미리보기에서 접기/펼치기로 분리(소문자 우선, 52칸 압박 완화).
+const ALPHABET_LOWER = "abcdefghijklmnopqrstuvwxyz".split("");
+const ALPHABET_UPPER = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+const ALPHABET = [...ALPHABET_LOWER, ...ALPHABET_UPPER];
 
 const FORMAT_OPTIONS: { value: FontFormat; label: string; full: boolean }[] =
   FULL_FORMATS.map((f) => ({
@@ -245,6 +248,11 @@ export default function HandwritingStudio({ locale = "ko" }: { locale?: Locale }
 
   const progress = drawnChars.length;
   const jamoProgress = drawnJamoChars.length;
+  // 대문자 그린 개수(접기 라벨 표시용).
+  const upperDrawnCount = useMemo(
+    () => drawnChars.filter((c) => c >= "A" && c <= "Z").length,
+    [drawnChars]
+  );
 
   const renderActions = (variant: "panel" | "bar") => (
     <div className={variant === "bar" ? styles.actionBarInner : styles.actionsPanel}>
@@ -391,23 +399,50 @@ export default function HandwritingStudio({ locale = "ko" }: { locale?: Locale }
                   ))}
                 </div>
               ) : (
-                <div
-                  className={styles.gridCells}
-                  role="group"
-                  aria-label={t.grid.cellsAriaLatin}
-                >
-                  {ALPHABET.map((ch) => (
-                    <GlyphCell
-                      key={ch}
-                      char={ch}
-                      strokes={glyphMap[ch] ?? []}
-                      onChange={onCellChange}
-                      disabled={downloading}
-                      t={t.cell}
-                      zoomT={t.zoom}
-                    />
-                  ))}
-                </div>
+                <>
+                  {/* 소문자 a–z — 항상 표시 */}
+                  <div
+                    className={styles.gridCells}
+                    role="group"
+                    aria-label={t.grid.cellsAriaLatin}
+                  >
+                    {ALPHABET_LOWER.map((ch) => (
+                      <GlyphCell
+                        key={ch}
+                        char={ch}
+                        strokes={glyphMap[ch] ?? []}
+                        onChange={onCellChange}
+                        disabled={downloading}
+                        t={t.cell}
+                        zoomT={t.zoom}
+                      />
+                    ))}
+                  </div>
+                  {/* 대문자 A–Z — 접기/펼치기(기본 접힘). 비우면 기본 글꼴로 채워짐. */}
+                  <details className={styles.upperFold}>
+                    <summary className={styles.upperSummary}>
+                      <span>{t.grid.upperToggle}</span>
+                      <span className={styles.upperCount}>{upperDrawnCount} / 26</span>
+                    </summary>
+                    <div
+                      className={styles.gridCells}
+                      role="group"
+                      aria-label={t.grid.cellsAriaUpper}
+                    >
+                      {ALPHABET_UPPER.map((ch) => (
+                        <GlyphCell
+                          key={ch}
+                          char={ch}
+                          strokes={glyphMap[ch] ?? []}
+                          onChange={onCellChange}
+                          disabled={downloading}
+                          t={t.cell}
+                          zoomT={t.zoom}
+                        />
+                      ))}
+                    </div>
+                  </details>
+                </>
               )}
               <div className={styles.gridActions}>
                 {method === "quick" && (

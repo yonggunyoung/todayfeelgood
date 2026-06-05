@@ -87,7 +87,8 @@ export default function HandwritingPreview({
   }, [fontBase64, fontFamily]);
 
   const drawnSet = new Set(drawnChars);
-  const filledSet = new Set(filledChars.map((c) => c.toLowerCase()));
+  // 대소문자 구분 — 'A'(자동채움)와 'a'(직접 그림)를 정확히 구별해 표시한다.
+  const filledSet = new Set(filledChars);
   // 폰트가 실제로 커버하는 글자(내가 그린 것 + 엔진이 자동 채운 것).
   const coveredSet = new Set<string>([...drawnSet, ...filledSet]);
   const hasFilled = filledSet.size > 0;
@@ -100,8 +101,23 @@ export default function HandwritingPreview({
     [...w].every((ch) => ch === " " || coveredSet.has(ch.toLowerCase()))
   );
 
-  // a–z 중 무엇이 채워졌는지 한눈에. 안 그린 글자는 흐리게.
-  const alphabet = "abcdefghijklmnopqrstuvwxyz".split("");
+  // a–z / A–Z 중 무엇이 채워졌는지 한눈에. 안 그린 글자는 흐리게.
+  const lowerAlphabet = "abcdefghijklmnopqrstuvwxyz".split("");
+  const upperAlphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+  const charSpan = (ch: string) => {
+    const isDrawn = drawnSet.has(ch);
+    const isFilled = !isDrawn && filledSet.has(ch);
+    return (
+      <span
+        key={ch}
+        className={isDrawn ? styles.inkChar : isFilled ? styles.filledChar : styles.dimChar}
+        style={isDrawn || isFilled ? fontStyle : undefined}
+        title={isFilled ? t.filledTitle : undefined}
+      >
+        {ch}
+      </span>
+    );
+  };
 
   return (
     <div className={styles.preview} aria-label={t.ariaLabel}>
@@ -115,24 +131,12 @@ export default function HandwritingPreview({
       {activeFamily ? (
         <div className={styles.sheet} style={fontStyle}>
           {/* 그린 알파벳 견본 — 그린 글자는 진하게, 자동 채운 글자는 점선 강조, 안 그린 글자는 흐리게 */}
-          <p className={styles.alphabet}>
-            {alphabet.map((ch) => {
-              const isDrawn = drawnSet.has(ch);
-              const isFilled = !isDrawn && filledSet.has(ch);
-              return (
-                <span
-                  key={ch}
-                  className={
-                    isDrawn ? styles.inkChar : isFilled ? styles.filledChar : styles.dimChar
-                  }
-                  style={isDrawn || isFilled ? fontStyle : undefined}
-                  title={isFilled ? t.filledTitle : undefined}
-                >
-                  {ch}
-                </span>
-              );
-            })}
-          </p>
+          <p className={styles.alphabet}>{lowerAlphabet.map(charSpan)}</p>
+          {/* 대문자 A–Z — 접기/펼치기(기본 접힘) */}
+          <details className={styles.upperFold}>
+            <summary className={styles.upperSummary}>{t.upperToggle}</summary>
+            <p className={styles.alphabet}>{upperAlphabet.map(charSpan)}</p>
+          </details>
           {hasFilled && <p className={styles.fillNote}>{t.fillNote}</p>}
 
           {/* 그린 글자만으로 만들 수 있는 예문 */}

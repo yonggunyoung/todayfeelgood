@@ -76,6 +76,8 @@ export default function GlyphCell({
         className={styles.canvas}
         ariaFilled={t.drawAriaFilled}
         ariaEmpty={t.drawAriaEmpty}
+        inline
+        onTouchTap={() => setZoom(true)}
       />
       <div className={styles.cellActions}>
         <button

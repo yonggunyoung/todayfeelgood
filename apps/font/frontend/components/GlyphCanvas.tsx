@@ -20,6 +20,9 @@ interface Props {
   /** 접근성 라벨 사전(셀 그리기 칸). {name} 치환. */
   ariaFilled?: string;
   ariaEmpty?: string;
+  /** 작은 셀 인라인 모드: 터치로는 그리지 않고(스크롤 허용) 탭하면 onTouchTap(큰 모달 열기). 마우스/펜은 그대로 그림. */
+  inline?: boolean;
+  onTouchTap?: () => void;
 }
 
 // 같은 점 사이 최소 거리(정규화). 과샘플 솎기로 MAX_STROKE_POINTS_PER_GLYPH 보호.
@@ -51,11 +54,14 @@ export default function GlyphCanvas({
   className,
   ariaFilled,
   ariaEmpty,
+  inline,
+  onTouchTap,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const drawing = useRef(false);
   const current = useRef<Array<[number, number]>>([]);
   const totalPoints = useRef(0);
+  const tapStart = useRef<{ x: number; y: number } | null>(null);
 
   const aspect = script === "hangul" ? 1 : 180 / 150;
   const baseW = resolution ?? (script === "hangul" ? 165 : 150);
@@ -146,6 +152,11 @@ export default function GlyphCanvas({
 
   const onPointerDown = (e: React.PointerEvent) => {
     if (disabled) return;
+    // 인라인 셀 + 터치: 작은 칸엔 안 그린다(페이지 스크롤 허용). 탭이면 모달 열기.
+    if (inline && e.pointerType === "touch") {
+      tapStart.current = { x: e.clientX, y: e.clientY };
+      return;
+    }
     e.preventDefault();
     if (totalPoints.current >= MAX_STROKE_POINTS_PER_GLYPH) return;
     (e.target as Element).setPointerCapture?.(e.pointerId);
@@ -169,6 +180,16 @@ export default function GlyphCanvas({
   };
 
   const endStroke = (e: React.PointerEvent) => {
+    // 인라인 터치 탭 → 모달 열기(움직임이 작으면 탭으로 간주).
+    if (inline && tapStart.current) {
+      const isUp = e.type === "pointerup";
+      const dx = e.clientX - tapStart.current.x;
+      const dy = e.clientY - tapStart.current.y;
+      const isTap = Math.hypot(dx, dy) < 12;
+      tapStart.current = null;
+      if (isUp && isTap) onTouchTap?.();
+      if (!drawing.current) return;
+    }
     if (!drawing.current) return;
     drawing.current = false;
     (e.target as Element).releasePointerCapture?.(e.pointerId);
@@ -191,6 +212,7 @@ export default function GlyphCanvas({
       width={W}
       height={H}
       className={className}
+      style={{ touchAction: inline ? "pan-y" : "none" }}
       role="img"
       aria-label={ariaLabel}
       onPointerDown={onPointerDown}

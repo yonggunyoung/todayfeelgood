@@ -403,7 +403,9 @@
   gap: 20px;
   overflow-x: auto;
   padding: var(--sp-1) 2px var(--sp-5);
-  scroll-snap-type: x mandatory;
+  /* proximity = 부드럽게 근접 시에만 스냅(mandatory의 뚝뚝 끊김 제거). 모바일 네이티브 관성과 잘 맞음. */
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
   cursor: grab;
   user-select: none;
   scrollbar-width: none;

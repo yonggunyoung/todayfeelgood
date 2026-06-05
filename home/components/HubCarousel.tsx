@@ -48,6 +48,8 @@ export function HubCarousel({
   }
 
   function onDown(e: React.PointerEvent<HTMLDivElement>) {
+    // 모바일(터치)은 브라우저 네이티브 관성 스크롤이 가장 부드러움 → 커스텀 드래그 미개입.
+    if (e.pointerType === "touch") return;
     const el = track.current;
     if (!el) return;
     cancelAnimationFrame(st.current.raf);

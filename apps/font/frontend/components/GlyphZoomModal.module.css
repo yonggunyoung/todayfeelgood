@@ -8,6 +8,8 @@
   padding: var(--sp-4);
   background: color-mix(in srgb, var(--ink) 38%, transparent);
   backdrop-filter: blur(3px);
+  touch-action: none;
+  overscroll-behavior: contain;
   animation: overlay-in var(--dur-fast) var(--ease-out);
 }
 

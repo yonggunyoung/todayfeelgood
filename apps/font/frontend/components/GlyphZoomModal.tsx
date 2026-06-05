@@ -69,14 +69,29 @@ export default function GlyphZoomModal({
       close();
     };
     window.addEventListener("popstate", onPop);
-    // 스크롤 잠금
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    // 스크롤 완전 잠금 — 모바일에서 그리다 손가락이 위아래로 움직여도 페이지가 안 흔들리고
+    // 주소창이 토글되지 않게 body를 fixed로 고정(스크롤 위치 보존).
+    const scrollY = window.scrollY;
+    const body = document.body;
+    const prevStyle = {
+      position: body.style.position,
+      top: body.style.top,
+      width: body.style.width,
+      overflow: body.style.overflow,
+    };
+    body.style.position = "fixed";
+    body.style.top = `-${scrollY}px`;
+    body.style.width = "100%";
+    body.style.overflow = "hidden";
     dialogRef.current?.focus();
     return () => {
       document.removeEventListener("keydown", onKey, true);
       window.removeEventListener("popstate", onPop);
-      document.body.style.overflow = prev;
+      body.style.position = prevStyle.position;
+      body.style.top = prevStyle.top;
+      body.style.width = prevStyle.width;
+      body.style.overflow = prevStyle.overflow;
+      window.scrollTo(0, scrollY);
       // 버튼·ESC·배경클릭으로 닫혔으면 우리가 쌓은 히스토리 항목을 제거(뒤로가기로 닫힌 경우는 이미 빠짐).
       if (!closedByBack.current) window.history.back();
     };

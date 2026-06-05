@@ -106,9 +106,12 @@ export default function GlyphCanvas({
         vLine(0.5);
         vLine(1 - pad);
       } else {
+        // 대문자·숫자는 cap height(윗선)까지, 소문자는 x-height까지가 본체.
+        // 그리는 글자에 맞춰 '본체 윗선'을 강조해 기준을 또렷이 보여준다.
+        const capBased = /[A-Z0-9]/.test(char);
         hLine(GUIDES.ascender, true, false);
-        hLine(GUIDES.cap, true, false);
-        hLine(GUIDES.xHeight, true, true);
+        hLine(GUIDES.cap, true, capBased);
+        hLine(GUIDES.xHeight, true, !capBased);
         hLine(GUIDES.baseline, false, true);
         hLine(GUIDES.descender, true, false);
       }
@@ -134,7 +137,7 @@ export default function GlyphCanvas({
       for (const s of strokes) paintStroke(s.points);
       if (live && live.length > 0) paintStroke(live);
     },
-    [strokes, script]
+    [strokes, script, char]
   );
 
   useEffect(() => {

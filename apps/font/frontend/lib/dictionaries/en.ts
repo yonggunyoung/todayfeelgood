@@ -78,7 +78,7 @@ export const en: typeof ko = {
   how: {
     id: "how",
     title: "It's simple to make",
-    body: "Draw your letters in the a–z cells, smooth out just the hand jitter with refine, then download as WOFF & TTF. No AI — a font built from strokes you really drew. Want a quick look first? There's a 'quick-start sample' (slider variations on a ready-made font) too.",
+    body: "Draw your letters in the a–z and A–Z cells, smooth out just the hand jitter with refine, then download as WOFF & TTF. No AI — a font built from strokes you really drew. Want a quick look first? There's a 'quick-start sample' (slider variations on a ready-made font) too.",
     cta: "Open the drawing board →",
   },
   /** Studio entry: a single-step "how do you want to make it?" with three paths. Changeable anytime up top. */
@@ -130,10 +130,10 @@ export const en: typeof ko = {
     },
     scriptTabs: {
       ariaLabel: "Script",
-      latin: "Latin a–z",
+      latin: "Latin a–z·A–Z",
       hangul: "Korean jamo",
       hintHangul: "Draw the 24 basic jamo and we compose syllables (some seams may show).",
-      hintLatin: "Draw the lowercase letters a–z yourself.",
+      hintLatin: "Draw the letters a–z and A–Z yourself. Draw only the ones you want — empty cells use a default font.",
     },
     grid: {
       titleHangul: "Draw the basic jamo",

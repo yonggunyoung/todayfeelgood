@@ -32,8 +32,9 @@ import styles from "./HandwritingStudio.module.css";
 // 그리기/다듬기 변경 후 폰트 호출까지 디바운스(ms). 그리기는 자주 바뀌므로 넉넉히.
 const DEBOUNCE_MS = 700;
 
-// 타깃: 라틴 소문자 a–z (원하는 만큼만 그려도 됨)
-const ALPHABET = "abcdefghijklmnopqrstuvwxyz".split("");
+// 타깃: 라틴 소문자 a–z + 대문자 A–Z (원하는 만큼만 그려도 됨, 빈칸은 기본 글꼴).
+// 엔진은 이미 대문자(A.uc 글리프명·cap height 정렬·자동채움)를 지원한다.
+const ALPHABET = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
 const FORMAT_OPTIONS: { value: FontFormat; label: string; full: boolean }[] =
   FULL_FORMATS.map((f) => ({
@@ -364,7 +365,7 @@ export default function HandwritingStudio({ locale = "ko" }: { locale?: Locale }
                   </HelpTip>
                 </h2>
                 <span className={styles.progress} aria-live="polite">
-                  {script === "hangul" ? `${jamoProgress} / 24` : `${progress} / 26`}
+                  {script === "hangul" ? `${jamoProgress} / 24` : `${progress} / ${ALPHABET.length}`}
                 </span>
               </div>
               <p className={styles.groupSub}>

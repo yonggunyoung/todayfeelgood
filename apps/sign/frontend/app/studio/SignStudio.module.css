@@ -120,15 +120,15 @@
   display: block;
   border-radius: var(--r-sm);
   overflow: hidden;
-  /* 투명 PNG/SVG 확인용 체커보드 */
+  /* 투명 PNG/SVG 확인용 체커보드 — 항상 밝은 바탕(다크모드에서 진한 잉크 사인이 묻히지 않게) */
   background-image:
-    linear-gradient(45deg, var(--surface-sunken) 25%, transparent 25%),
-    linear-gradient(-45deg, var(--surface-sunken) 25%, transparent 25%),
-    linear-gradient(45deg, transparent 75%, var(--surface-sunken) 75%),
-    linear-gradient(-45deg, transparent 75%, var(--surface-sunken) 75%);
+    linear-gradient(45deg, #e6e2ef 25%, transparent 25%),
+    linear-gradient(-45deg, #e6e2ef 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #e6e2ef 75%),
+    linear-gradient(-45deg, transparent 75%, #e6e2ef 75%);
   background-size: 14px 14px;
   background-position: 0 0, 0 7px, 7px -7px, -7px 0;
-  background-color: var(--surface);
+  background-color: #ffffff;
 }
 .cellImg {
   display: block;
@@ -189,14 +189,15 @@
 }
 
 .previewBox {
+  /* 결과 미리보기 — 항상 밝은 바탕(다크모드에서 진한 잉크 사인이 묻히지 않게) */
   background-image:
-    linear-gradient(45deg, var(--surface-sunken) 25%, transparent 25%),
-    linear-gradient(-45deg, var(--surface-sunken) 25%, transparent 25%),
-    linear-gradient(45deg, transparent 75%, var(--surface-sunken) 75%),
-    linear-gradient(-45deg, transparent 75%, var(--surface-sunken) 75%);
+    linear-gradient(45deg, #e6e2ef 25%, transparent 25%),
+    linear-gradient(-45deg, #e6e2ef 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #e6e2ef 75%),
+    linear-gradient(-45deg, transparent 75%, #e6e2ef 75%);
   background-size: 22px 22px;
   background-position: 0 0, 0 11px, 11px -11px, -11px 0;
-  background-color: var(--surface);
+  background-color: #ffffff;
   border-radius: var(--r-lg);
   box-shadow: var(--shadow-md);
   padding: var(--sp-5);

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Chip, Mascot, Segmented } from "@webapp/ui";
+import { Chip, Mascot, Segmented, FeedbackWidget } from "@webapp/ui";
 import {
   FONT_FORMATS,
   FREE_FORMATS,
@@ -426,6 +426,7 @@ export default function KitStudio() {
             공개 가변폰트 변형 기반 키트예요 · 실제 자필/AI 아님 · 폰트 라이선스 고지(LICENSE.txt)를
             함께 담아 드려요. 합성·ZIP은 이 브라우저에서(서버 0).
           </p>
+          <FeedbackWidget appKey="kit" beta />
         </div>
       </section>
     </div>

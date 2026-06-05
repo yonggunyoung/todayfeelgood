@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useRef, useState } from "react";
-import { Chip, Mascot, Segmented } from "@webapp/ui";
+import { Chip, Mascot, Segmented, FeedbackWidget } from "@webapp/ui";
 import SketchCanvas, { type SketchCanvasHandle } from "../../components/SketchCanvas";
 import {
   COLOR_PALETTES,
@@ -319,6 +319,7 @@ export default function StickerStudio() {
               <p className={styles.honesty}>내가 그린 부위를 표정마다 변형해 만들었어요(같은 시드 #{seed}면 같은 세트).</p>
             </>
           )}
+          <FeedbackWidget appKey="sticker" beta />
         </section>
       </div>
     </>

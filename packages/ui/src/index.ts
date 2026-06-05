@@ -18,3 +18,4 @@ export { HelpTip, default as HelpTipDefault } from "./HelpTip";
 export { sanitizeColor } from "./color";
 export { SiteScripts, default as SiteScriptsDefault } from "./SiteScripts";
 export { ExitToHub, default as ExitToHubDefault } from "./ExitToHub";
+export { FeedbackWidget, default as FeedbackWidgetDefault } from "./FeedbackWidget";

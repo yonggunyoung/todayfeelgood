@@ -13,6 +13,7 @@ export function SiteHeader({ right }: { right?: ReactNode }) {
           <span className={`display ${styles.wordmark}`}>
             <span className={styles.name}>획</span>
             <span className={styles.sub}>스티커공방</span>
+            <span style={{ marginLeft: 6, fontSize: "0.58rem", fontWeight: 800, letterSpacing: "0.06em", color: "var(--bg)", background: "var(--ink)", borderRadius: 999, padding: "2px 7px" }}>BETA</span>
           </span>
         </a>
         <div className={styles.right}>

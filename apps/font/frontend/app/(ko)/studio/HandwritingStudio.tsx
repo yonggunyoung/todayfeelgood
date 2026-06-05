@@ -52,10 +52,12 @@ function base64ToBlob(b64: string, mime: string): Blob {
 
 type Mode = "draw" | "sample";
 
-// 진입 "만드는 방법" 3갈래. mode/autofill의 상위 입구(UI). 선택 시 둘을 함께 세팅한다.
+// 진입 "만드는 방법". mode/autofill의 상위 입구(UI). 선택 시 둘을 함께 세팅한다.
+// 'full'(다 직접 그리기)은 'quick'(직접 그리기)에 통합 — 다 그리면 채울 게 없어 동일하므로
+// 진입에서 노출하지 않는다(타입/사전엔 보류로 남김). 그리기 모드는 항상 빈칸=기본 글꼴.
 type Method = "quick" | "full" | "sample";
 
-const METHOD_ORDER: Method[] = ["quick", "full", "sample"];
+const METHOD_ORDER: Method[] = ["quick", "sample"];
 
 /**
  * 손글씨 공방 메인(클라이언트).

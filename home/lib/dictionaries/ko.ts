@@ -31,7 +31,7 @@ export const ko = {
       titleA: "필요한 웹앱을,",
       titleB: "한 곳에서.",
       lede: "쓸모있는 웹 도구를 한 곳에. 설치 없이, 바로.",
-      searchPlaceholder: "만들고 싶은 걸 검색 — 폰트, 스티커, 이모티콘 …",
+      searchPlaceholder: "만들고 싶은 걸 검색 — 폰트, 이모티콘 …",
     },
     search: {
       feature: "기능 검색",
@@ -40,9 +40,6 @@ export const ko = {
       tools: [
         { name: "폰트공방", href: "/font", keywords: ["폰트", "글씨", "손글씨", "글씨체", "ttf", "woff"] },
         { name: "이모티콘공방", href: "/textmoji", keywords: ["이모티콘", "이모지", "카오모지", "텍스트", "emoji"] },
-        { name: "스티커공방", href: "/sticker", keywords: ["스티커", "캐릭터", "표정", "sticker", "png"] },
-        { name: "키트공방", href: "/kit", keywords: ["키트", "브랜드", "팔레트", "로고", "색"] },
-        { name: "싸인공방", href: "/sign", keywords: ["서명", "싸인", "사인", "sign", "흘림"] },
       ],
     },
     rank: { head: "지금 인기", comingSoon: "준비중" },
@@ -56,9 +53,9 @@ export const ko = {
       neogul: {
         eyebrow: "내 글씨체로 편지를 보낸다면?",
         name: "너굴이의 작은 도구 공방",
-        desc: "폰트·이모티콘·스티커 · 무료",
+        desc: "폰트·이모티콘 · 무료",
         sampleWord: "안녕, 내 글씨",
-        chips: ["내 폰트", "이모티콘", "스티커"],
+        chips: ["내 폰트", "이모티콘"],
       },
       soon: [
         { hook: "다음 웹앱\n짓는 중", name: "웹앱 2", note: "곧 공개" },

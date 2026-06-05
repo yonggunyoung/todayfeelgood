@@ -195,40 +195,8 @@ export function HomeView({ locale }: { locale: Locale }) {
             </a>
           </Card>
 
-          {/* 하위 도구 */}
-          <div className={styles.grid}>
-            <Card tag={t.tools.sticker.tag} interactive className={styles.appCard}>
-              <ToolThumb kind="sticker" />
-              <h3 className={`display ${styles.appName}`}>{t.tools.sticker.name}</h3>
-              <p className={styles.appDesc}>{t.tools.sticker.desc}</p>
-              <a className={styles.appCta} href="/sticker">
-                {t.tools.sticker.cta}
-              </a>
-            </Card>
-            <Card tag={t.tools.kit.tag} interactive className={styles.appCard}>
-              <ToolThumb kind="kit" />
-              <h3 className={`display ${styles.appName}`}>{t.tools.kit.name}</h3>
-              <p className={styles.appDesc}>{t.tools.kit.desc}</p>
-              <a className={styles.appCta} href="/kit">
-                {t.tools.kit.cta}
-              </a>
-            </Card>
-          </div>
-
-          {/* 다른 공방 — 접힘 구석(싸인 등 문서·서명 타깃 도구) */}
-          <details className={styles.otherTools}>
-            <summary className={styles.otherSummary}>{t.tools.otherSummary}</summary>
-            <div className={styles.otherInner}>
-              <Card tag={t.tools.sign.tag} interactive className={styles.appCard}>
-                <ToolThumb kind="sign" />
-                <h3 className={`display ${styles.appName}`}>{t.tools.sign.name}</h3>
-                <p className={styles.appDesc}>{t.tools.sign.desc}</p>
-                <a className={styles.appCta} href="/sign">
-                  {t.tools.sign.cta}
-                </a>
-              </Card>
-            </div>
-          </details>
+          {/* 스티커·키트·싸인 공방은 보류 — 폰트·이모티콘에 집중하기 위해 화면에서 감춤.
+             (코드/라우트/사전은 보존: 직접 URL로는 여전히 접근 가능, 추후 복귀 쉬움) */}
         </section>
 
         <footer className={styles.footer}>

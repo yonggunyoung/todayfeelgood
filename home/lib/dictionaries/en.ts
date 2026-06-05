@@ -42,7 +42,7 @@ export const en: typeof ko = {
       titleA: "Every web app you need,",
       titleB: "in one place.",
       lede: "Useful web tools, all in one place. No installs — right in your browser.",
-      searchPlaceholder: "Search what you want to make — fonts, stickers, emoji …",
+      searchPlaceholder: "Search what you want to make — fonts, emoji …",
     },
     search: {
       feature: "Tools",
@@ -51,9 +51,6 @@ export const en: typeof ko = {
       tools: [
         { name: "Font Workshop", href: "/font", keywords: ["font", "handwriting", "type", "ttf", "woff", "폰트"] },
         { name: "Emoticon Workshop", href: "/textmoji", keywords: ["emoji", "emoticon", "kaomoji", "text", "이모티콘"] },
-        { name: "Sticker Workshop", href: "/sticker", keywords: ["sticker", "character", "expression", "png", "스티커"] },
-        { name: "Kit Workshop", href: "/kit", keywords: ["kit", "brand", "palette", "logo", "color"] },
-        { name: "Signature Workshop", href: "/sign", keywords: ["signature", "sign", "autograph", "서명"] },
       ],
     },
     rank: { head: "Trending", comingSoon: "Soon" },
@@ -67,9 +64,9 @@ export const en: typeof ko = {
       neogul: {
         eyebrow: "A letter in your own handwriting?",
         name: "Neoguri's Tool Workshop",
-        desc: "Fonts · Emoji · Stickers · Free",
+        desc: "Fonts · Emoji · Free",
         sampleWord: "hello, my hand",
-        chips: ["My font", "Emoji", "Sticker"],
+        chips: ["My font", "Emoji"],
       },
       soon: [
         { hook: "Crafting the\nnext app", name: "App 2", note: "Coming soon" },

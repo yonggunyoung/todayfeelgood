@@ -617,6 +617,188 @@ export function renderTile(opts: RenderOptions): string {
   return tile.toDataURL("image/png");
 }
 
+// ───────── 레이어 합성 표정(부위별 그리기 기반) ─────────
+// 사용자가 윤곽/눈/입을 단계별로 그린 레이어(같은 캔버스 좌표)를 받아,
+// 표정마다 눈·입 레이어를 실제로 변형(이동·확대·회전·뒤집기)해 합성한다.
+
+export interface ExprTransform {
+  sx: number;
+  sy: number;
+  rot: number;
+  dx: number; // srcSize 대비 비율
+  dy: number;
+}
+export interface EmotionLayerStyle {
+  eyes: ExprTransform;
+  mouth: ExprTransform;
+}
+const T = (sx = 1, sy = 1, rot = 0, dx = 0, dy = 0): ExprTransform => ({ sx, sy, rot, dx, dy });
+
+/** 표정 id → 눈·입 변형. EMOTION_PRESETS의 id와 정합(데이터만 추가하면 표정 늘어남). */
+export const EMOTION_LAYER: Record<string, EmotionLayerStyle> = {
+  joy: { eyes: T(1, 0.6), mouth: T(1.3, 1.4, 0, 0, 0.01) },
+  love: { eyes: T(1.12, 1.12), mouth: T(1, 1) },
+  wink: { eyes: T(1, 0.78, -0.06), mouth: T(1.1, 1) },
+  sad: { eyes: T(1, 1, 0, 0, 0.02), mouth: T(1, -0.9, 0, 0, 0.03) },
+  angry: { eyes: T(1.06, 0.76, 0, 0, -0.01), mouth: T(0.9, 0.8) },
+  surprise: { eyes: T(1.3, 1.3, 0, 0, -0.01), mouth: T(1.25, 1.5) },
+  star: { eyes: T(1.14, 1.14), mouth: T(1.2, 1.2) },
+  sleepy: { eyes: T(1, 0.22, 0, 0, 0.012), mouth: T(0.8, 0.8) },
+  ok: { eyes: T(1, 0.8), mouth: T(1.1, 1.1) },
+  fighting: { eyes: T(1.06, 1), mouth: T(1.25, 1.35) },
+  kiss: { eyes: T(1, 0.7), mouth: T(0.6, 0.85, 0, 0, 0.01) },
+  blank: { eyes: T(1, 1), mouth: T(0.9, 0.55) },
+};
+
+/** 투명 레이어의 내용 바운딩박스(알파 기준). 변형 기준점·데코 배치에 사용. */
+export function contentBox(
+  c: HTMLCanvasElement
+): { x: number; y: number; w: number; h: number } | null {
+  const w = c.width;
+  const h = c.height;
+  const ctx = c.getContext("2d");
+  if (!ctx) return null;
+  const d = ctx.getImageData(0, 0, w, h).data;
+  let minX = w;
+  let minY = h;
+  let maxX = -1;
+  let maxY = -1;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      if (d[(y * w + x) * 4 + 3]! > 24) {
+        if (x < minX) minX = x;
+        if (y < minY) minY = y;
+        if (x > maxX) maxX = x;
+        if (y > maxY) maxY = y;
+      }
+    }
+  }
+  if (maxX < minX) return null;
+  return { x: minX, y: minY, w: maxX - minX + 1, h: maxY - minY + 1 };
+}
+
+function drawLayerT(
+  ctx: CanvasRenderingContext2D,
+  layer: HTMLCanvasElement,
+  box: { x: number; y: number; w: number; h: number } | null,
+  t: ExprTransform,
+  srcSize: number
+) {
+  if (!box) {
+    ctx.drawImage(layer, 0, 0);
+    return;
+  }
+  const cx = box.x + box.w / 2;
+  const cy = box.y + box.h / 2;
+  ctx.save();
+  ctx.translate(cx + t.dx * srcSize, cy + t.dy * srcSize);
+  ctx.rotate(t.rot);
+  ctx.scale(t.sx, t.sy);
+  ctx.translate(-cx, -cy);
+  ctx.drawImage(layer, 0, 0);
+  ctx.restore();
+}
+
+export interface CharLayers {
+  base: HTMLCanvasElement;
+  eyes: HTMLCanvasElement;
+  mouth: HTMLCanvasElement;
+}
+
+/** 윤곽+표정 변형된 눈·입을 합쳐 캐릭터 캔버스(srcSize, 투명)를 만든다. */
+export function composeCharacter(layers: CharLayers, ls: EmotionLayerStyle, srcSize: number): HTMLCanvasElement {
+  const c = document.createElement("canvas");
+  c.width = srcSize;
+  c.height = srcSize;
+  const ctx = c.getContext("2d")!;
+  ctx.drawImage(layers.base, 0, 0);
+  drawLayerT(ctx, layers.eyes, contentBox(layers.eyes), ls.eyes, srcSize);
+  drawLayerT(ctx, layers.mouth, contentBox(layers.mouth), ls.mouth, srcSize);
+  return c;
+}
+
+export interface RenderLayersOptions {
+  layers: CharLayers;
+  srcSize: number;
+  emotion: EmotionPreset;
+  palette: ColorPalette;
+  template: MemeTemplate;
+  size: number;
+  seed: number;
+  tintStrength: number;
+  outlineScale: number;
+  caption?: string;
+}
+
+/** 레이어 기반 한 타일 렌더. 표정마다 눈·입을 변형해 합성 → 색조·외곽선·데코·캡션. */
+export function renderTileFromLayers(opts: RenderLayersOptions): string {
+  const { layers, srcSize, emotion, palette, template, size, seed } = opts;
+  const ls = EMOTION_LAYER[emotion.id] ?? { eyes: T(), mouth: T() };
+  const rng = makeRng(seed);
+  const char = composeCharacter(layers, ls, srcSize);
+  const cbox = contentBox(char) ?? { x: 0, y: 0, w: srcSize, h: srcSize };
+
+  const tile = document.createElement("canvas");
+  tile.width = size;
+  tile.height = size;
+  const ctx = tile.getContext("2d")!;
+
+  if (template.showBgChip) {
+    const m = size * 0.06;
+    roundRect(ctx, m, m, size - m * 2, size - m * 2, size * 0.22);
+    ctx.fillStyle = palette.bg;
+    ctx.fill();
+  }
+
+  const hasCaption = template.caption;
+  const capH = hasCaption ? size * 0.2 : 0;
+  const charTop = template.captionPos === "top" ? capH : 0;
+  const charArea = size - capH;
+
+  // 캐릭터 내용 박스를 정사각 영역 중앙에 배치
+  const cw = cbox.w;
+  const ch = cbox.h;
+  const scale = (charArea * 0.78) / Math.max(cw, ch);
+  const dw = cw * scale;
+  const dh = ch * scale;
+  const dx = (size - dw) / 2;
+  const dy = charTop + (charArea - dh) / 2;
+
+  const content = document.createElement("canvas");
+  content.width = size;
+  content.height = size;
+  const cctx = content.getContext("2d")!;
+
+  // 색조 입힌 캐릭터(내용 박스만 잘라 배치)
+  const tinted = document.createElement("canvas");
+  tinted.width = dw;
+  tinted.height = dh;
+  const tctx = tinted.getContext("2d")!;
+  tctx.drawImage(char, cbox.x, cbox.y, cw, ch, 0, 0, dw, dh);
+  if (opts.tintStrength > 0) {
+    tctx.globalCompositeOperation = "source-atop";
+    tctx.globalAlpha = opts.tintStrength;
+    tctx.fillStyle = palette.body;
+    tctx.fillRect(0, 0, dw, dh);
+    tctx.globalAlpha = 1;
+    tctx.globalCompositeOperation = "source-over";
+  }
+  cctx.drawImage(tinted, dx, dy);
+
+  // 데코(표정 분위기) — 얼굴 영역은 캐릭터 박스 상단부로 근사
+  drawDeco(cctx, emotion.deco, dx + dw * 0.1, dy + dh * 0.05, dw * 0.8, dh * 0.7, rng);
+
+  const ow = (template.outlineWidth * size) / 360 * opts.outlineScale;
+  drawWithOutline(tile, content, ow, palette.outline);
+
+  if (hasCaption) {
+    const text = (opts.caption ?? emotion.caption ?? "").trim();
+    if (text) drawCaption(ctx, text, size, capH, template, palette);
+  }
+
+  return tile.toDataURL("image/png");
+}
+
 function drawCaption(
   ctx: CanvasRenderingContext2D,
   text: string,

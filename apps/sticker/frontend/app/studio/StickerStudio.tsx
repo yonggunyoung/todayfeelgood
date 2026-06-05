@@ -11,17 +11,37 @@ import {
 } from "../../lib/presets";
 import {
   DEFAULT_CONFIG,
-  generateSet,
+  generateSetFromLayers,
   type GenerateConfig,
   type GeneratedItem,
 } from "../../lib/generate";
+import type { CharLayers } from "../../lib/render";
 import { downloadBlob, downloadDataUrl, makeZip } from "../../lib/zip";
-import { cropToContent, detectFaceAnchor, DEFAULT_ANCHOR, type FaceAnchor } from "../../lib/render";
-import FaceMarker from "../../components/FaceMarker";
 import styles from "./StickerStudio.module.css";
+
+const SRC = 360;
+type Layers = { base: HTMLCanvasElement | null; eyes: HTMLCanvasElement | null; mouth: HTMLCanvasElement | null };
+type StepKey = "base" | "eyes" | "mouth";
+const STEPS: { key: StepKey; n: string; title: string; hint: string }[] = [
+  { key: "base", n: "①", title: "얼굴·몸 그리기", hint: "캐릭터 윤곽을 그려요. (눈·입은 다음 단계에)" },
+  { key: "eyes", n: "②", title: "눈 그리기", hint: "눈을 그려요 — 표정에 따라 이 부위가 움직여요." },
+  { key: "mouth", n: "③", title: "입 그리기", hint: "입을 그려요 — 웃고·놀라고·삐죽… 표정마다 변형돼요." },
+];
+
+function snapshot(src: HTMLCanvasElement): HTMLCanvasElement {
+  const c = document.createElement("canvas");
+  c.width = src.width;
+  c.height = src.height;
+  c.getContext("2d")!.drawImage(src, 0, 0);
+  return c;
+}
 
 export default function StickerStudio() {
   const canvasRef = useRef<SketchCanvasHandle>(null);
+  const [step, setStep] = useState(0); // 0~2 그리기, 3 결과
+  const [layers, setLayers] = useState<Layers>({ base: null, eyes: null, mouth: null });
+  const [bg, setBg] = useState<string | null>(null);
+
   const [items, setItems] = useState<GeneratedItem[]>([]);
   const [seed, setSeed] = useState(1);
   const [presetId, setPresetId] = useState(SHARE_PRESETS[0]!.id);
@@ -29,32 +49,28 @@ export default function StickerStudio() {
   const [fixedPaletteId, setFixedPaletteId] = useState(COLOR_PALETTES[0]!.id);
   const [varyTemplate, setVaryTemplate] = useState(true);
   const [fixedTemplateId, setFixedTemplateId] = useState("chip");
-  const [tintStrength, setTintStrength] = useState(0.55);
+  const [tintStrength, setTintStrength] = useState(0.35);
   const [outlineScale, setOutlineScale] = useState(1);
   const [caption, setCaption] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  // 가이드형 표정: 눈·입 위치 마커(본체 정규화 0~1)
-  const [anchor, setAnchor] = useState<FaceAnchor>(DEFAULT_ANCHOR);
-  const [markSrc, setMarkSrc] = useState<string | null>(null);
-  const [markAspect, setMarkAspect] = useState(1);
 
-  const size = useMemo(
-    () => SHARE_PRESETS.find((p) => p.id === presetId)?.size ?? 512,
-    [presetId]
-  );
+  const size = useMemo(() => SHARE_PRESETS.find((p) => p.id === presetId)?.size ?? 512, [presetId]);
 
-  const run = useCallback(
-    (useSeed: number) => {
-      const cv = canvasRef.current?.getCanvas();
-      if (!cv || !canvasRef.current?.isDirty()) {
-        setError("먼저 캐릭터를 그려 주세요. 동그라미 하나여도 충분해요!");
-        setItems([]);
-        return;
-      }
-      setError(null);
+  const compositeBg = (list: (HTMLCanvasElement | null)[]) => {
+    const c = document.createElement("canvas");
+    c.width = SRC;
+    c.height = SRC;
+    const ctx = c.getContext("2d")!;
+    list.forEach((l) => l && ctx.drawImage(l, 0, 0));
+    return c.toDataURL("image/png");
+  };
+
+  const runGenerate = useCallback(
+    (lay: Layers, useSeed: number) => {
+      if (!lay.base || !lay.eyes || !lay.mouth) return;
       setBusy(true);
-      // 무거운 합성은 다음 틱으로 미뤄 UI가 멈추지 않게
+      setError(null);
       setTimeout(() => {
         const cfg: GenerateConfig = {
           ...DEFAULT_CONFIG,
@@ -67,291 +83,266 @@ export default function StickerStudio() {
           varyTemplate,
           fixedTemplateId,
           caption: caption.trim() || undefined,
-          anchor,
         };
-        const { items: out, isEmpty } = generateSet(cv, cfg);
-        if (isEmpty) {
-          setError("그린 내용이 없어요. 캐릭터를 그려 주세요.");
-          setItems([]);
-        } else {
-          setItems(out);
-        }
+        const chars: CharLayers = { base: lay.base!, eyes: lay.eyes!, mouth: lay.mouth! };
+        const { items: out } = generateSetFromLayers(chars, SRC, cfg);
+        setItems(out);
         setBusy(false);
       }, 16);
     },
-    [size, tintStrength, outlineScale, varyColor, fixedPaletteId, varyTemplate, fixedTemplateId, caption, anchor]
+    [size, tintStrength, outlineScale, varyColor, fixedPaletteId, varyTemplate, fixedTemplateId, caption]
   );
 
-  // 내 그림을 잘라 마커 스테이지로 불러온다(눈·입 위치 지정용).
-  const openMarker = useCallback(() => {
+  // "다음 / 표정 만들기" — 현재 단계 그림을 레이어로 캡처하고 진행.
+  const advance = () => {
     const cv = canvasRef.current?.getCanvas();
     if (!cv || !canvasRef.current?.isDirty()) {
-      setError("먼저 캐릭터를 그려 주세요. 그다음 눈·입 위치를 잡아요!");
-      return;
-    }
-    const { canvas: crop, isEmpty, box } = cropToContent(cv, true);
-    if (isEmpty) {
-      setError("그린 내용이 없어요. 캐릭터를 먼저 그려 주세요.");
+      setError(`${STEPS[step]!.title}를 먼저 그려주세요.`);
       return;
     }
     setError(null);
-    setMarkSrc(crop.toDataURL("image/png"));
-    setMarkAspect(box.w / box.h);
-    // 그린 그림에서 눈·입 위치 자동 추정 → 마커 자동 배치(안 맞으면 끌어서 보정).
-    setAnchor(detectFaceAnchor(crop));
-  }, []);
+    const snap = snapshot(cv);
+    const next: Layers = { ...layers, [STEPS[step]!.key]: snap };
+    setLayers(next);
+    if (step < 2) {
+      const captured = [next.base, next.eyes, next.mouth].filter(Boolean) as HTMLCanvasElement[];
+      setBg(compositeBg(captured));
+      canvasRef.current?.clear();
+      setStep(step + 1);
+    } else {
+      runGenerate(next, seed);
+      setStep(3);
+    }
+  };
 
-  const onGenerate = () => run(seed);
+  const restart = () => {
+    setLayers({ base: null, eyes: null, mouth: null });
+    setBg(null);
+    setItems([]);
+    setError(null);
+    setStep(0);
+    canvasRef.current?.clear();
+  };
 
   const onReroll = () => {
-    const next = (Math.floor(Math.random() * 1_000_000) + 1) >>> 0;
-    setSeed(next);
-    run(next);
+    const n = (Math.floor(Math.random() * 1_000_000) + 1) >>> 0;
+    setSeed(n);
+    runGenerate(layers, n);
   };
+  const regen = () => runGenerate(layers, seed);
 
-  const downloadOne = (item: GeneratedItem) => {
-    downloadDataUrl(item.dataUrl, `sticker-${item.emotionId}.png`);
-  };
-
+  const downloadOne = (it: GeneratedItem) => downloadDataUrl(it.dataUrl, `sticker-${it.emotionId}.png`);
   const downloadAll = () => {
     if (!items.length) return;
     const zip = makeZip(
-      items.map((it, i) => ({
-        name: `sticker-${String(i + 1).padStart(2, "0")}-${it.emotionId}.png`,
-        dataUrl: it.dataUrl,
-      }))
+      items.map((it, i) => ({ name: `sticker-${String(i + 1).padStart(2, "0")}-${it.emotionId}.png`, dataUrl: it.dataUrl }))
     );
     downloadBlob(zip, `sticker-pack-seed${seed}.zip`);
   };
 
-  // 액션 버튼(만들기·주사위·ZIP) — 데스크톱 컬럼과 모바일 하단 고정 바에서 공유.
-  // 동일 핸들러로 두 폼팩터의 받기 도달성을 동등하게 보장(폰트앱 패턴).
-  const renderActions = () => (
-    <>
-      <button type="button" className={styles.primary} onClick={onGenerate} disabled={busy}>
-        {busy ? "만드는 중…" : `표정 ${MAX_STICKER_SET_SIZE}종 만들기`}
-      </button>
-      <button
-        type="button"
-        className={styles.dice}
-        onClick={onReroll}
-        disabled={busy}
-        aria-label="주사위 — 다른 색/템플릿 조합으로 다시"
-        title="다른 조합으로 다시 (시드 바꿈)"
-      >
-        🎲 다른 조합
-      </button>
-      {items.length > 0 && (
-        <button type="button" className={styles.secondary} onClick={downloadAll}>
-          전체 ZIP 챙기기
-        </button>
-      )}
-    </>
-  );
+  const cur = STEPS[Math.min(step, 2)]!;
 
   return (
     <>
-    <div className={`container ${styles.layout}`}>
-      {/* ── 왼쪽: 그리기 + 컨트롤 ── */}
-      <section className={styles.left} aria-label="그리기와 변주 설정">
-        <div className={styles.panel}>
-          <h2 className={`display ${styles.panelTitle}`}>① 캐릭터를 그려요</h2>
-          <SketchCanvas ref={canvasRef} size={360} />
-        </div>
-
-        <div className={styles.panel}>
-          <h2 className={`display ${styles.panelTitle}`}>② 눈·입 위치를 잡아요</h2>
-          <p className={styles.hint}>
-            그림을 불러오면 <strong>눈·입을 자동으로 인식</strong>해요. 표정이 그 자리에 딱 그려져요(안 맞으면 점을 끌어 보정).
-          </p>
-          <button type="button" className={styles.secondary} onClick={openMarker}>
-            {markSrc ? "🔄 다시 인식" : "🎯 내 그림 불러와 자동 인식"}
-          </button>
-          {markSrc && (
-            <FaceMarker src={markSrc} aspect={markAspect} anchor={anchor} onChange={setAnchor} />
-          )}
-        </div>
-
-        <div className={styles.panel}>
-          <h2 className={`display ${styles.panelTitle}`}>③ 변주를 골라요</h2>
-
-          <div className={styles.field}>
-            <span className={styles.fieldLabel}>색 변주</span>
-            <Segmented<"mix" | "one">
-              ariaLabel="색 변주 방식"
-              value={varyColor ? "mix" : "one"}
-              onChange={(v) => setVaryColor(v === "mix")}
-              options={[
-                { value: "mix", label: "여러 색 섞기" },
-                { value: "one", label: "한 색 통일" },
-              ]}
-            />
-            {!varyColor && (
-              <div className={styles.swatches} role="group" aria-label="고정 색 팔레트">
-                {COLOR_PALETTES.map((p) => (
-                  <button
-                    key={p.id}
-                    type="button"
-                    className={`${styles.swatch} ${fixedPaletteId === p.id ? styles.swatchOn : ""}`}
-                    style={{ background: p.body }}
-                    aria-label={p.label}
-                    aria-pressed={fixedPaletteId === p.id}
-                    onClick={() => setFixedPaletteId(p.id)}
-                  />
-                ))}
-              </div>
+      <div className={`container ${styles.layout}`}>
+        {/* ── 왼쪽: 단계별 그리기 + 변주 설정 ── */}
+        <section className={styles.left} aria-label="부위별 그리기와 변주 설정">
+          <div className={styles.panel}>
+            {step < 3 ? (
+              <>
+                <h2 className={`display ${styles.panelTitle}`}>
+                  {cur.n} {cur.title} <span style={{ color: "var(--ink-faint)", fontWeight: 400 }}>· {step + 1}/3</span>
+                </h2>
+                <p className={styles.hint}>{cur.hint}</p>
+                <SketchCanvas ref={canvasRef} size={SRC} background={bg} />
+                <div className={styles.actions} style={{ marginTop: "var(--sp-4)" }}>
+                  <button type="button" className={styles.primary} onClick={advance}>
+                    {step < 2 ? "다음 →" : `✨ 표정 ${MAX_STICKER_SET_SIZE}종 만들기`}
+                  </button>
+                  <button type="button" className={styles.secondary} onClick={restart}>
+                    처음부터
+                  </button>
+                </div>
+                {error && (
+                  <p className={styles.error} role="alert">
+                    <Mascot mood="worried" size={24} still label="" /> {error}
+                  </p>
+                )}
+              </>
+            ) : (
+              <>
+                <h2 className={`display ${styles.panelTitle}`}>✅ 다 그렸어요</h2>
+                <p className={styles.hint}>내가 그린 눈·입을 표정마다 변형했어요. 색·템플릿을 바꾸면 다시 만들 수 있어요.</p>
+                {bg && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={compositeBg([layers.base, layers.eyes, layers.mouth])} alt="내 캐릭터" style={{ width: 160, height: 160, background: "#fff", borderRadius: 16, boxShadow: "var(--shadow-sm)" }} />
+                )}
+                <div className={styles.actions} style={{ marginTop: "var(--sp-4)" }}>
+                  <button type="button" className={styles.secondary} onClick={restart}>
+                    처음부터 다시
+                  </button>
+                </div>
+              </>
             )}
           </div>
 
-          <div className={styles.field}>
-            <span className={styles.fieldLabel}>밈·템플릿</span>
-            <Segmented<"mix" | "one">
-              ariaLabel="템플릿 방식"
-              value={varyTemplate ? "mix" : "one"}
-              onChange={(v) => setVaryTemplate(v === "mix")}
-              options={[
-                { value: "mix", label: "섞기" },
-                { value: "one", label: "하나로" },
-              ]}
-            />
-            {!varyTemplate && (
-              <div className={styles.chips} role="group" aria-label="고정 템플릿">
-                {MEME_TEMPLATES.map((t) => (
-                  <Chip
-                    key={t.id}
-                    selected={fixedTemplateId === t.id}
-                    onClick={() => setFixedTemplateId(t.id)}
-                    title={t.desc}
-                  >
-                    {t.label}
+          <div className={styles.panel}>
+            <h2 className={`display ${styles.panelTitle}`}>변주 설정</h2>
+            <div className={styles.field}>
+              <span className={styles.fieldLabel}>색 변주</span>
+              <Segmented<"mix" | "one">
+                ariaLabel="색 변주 방식"
+                value={varyColor ? "mix" : "one"}
+                onChange={(v) => setVaryColor(v === "mix")}
+                options={[
+                  { value: "mix", label: "여러 색 섞기" },
+                  { value: "one", label: "한 색 통일" },
+                ]}
+              />
+              {!varyColor && (
+                <div className={styles.swatches} role="group" aria-label="고정 색 팔레트">
+                  {COLOR_PALETTES.map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      className={`${styles.swatch} ${fixedPaletteId === p.id ? styles.swatchOn : ""}`}
+                      style={{ background: p.body }}
+                      aria-label={p.label}
+                      aria-pressed={fixedPaletteId === p.id}
+                      onClick={() => setFixedPaletteId(p.id)}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className={styles.field}>
+              <span className={styles.fieldLabel}>밈·템플릿</span>
+              <Segmented<"mix" | "one">
+                ariaLabel="템플릿 방식"
+                value={varyTemplate ? "mix" : "one"}
+                onChange={(v) => setVaryTemplate(v === "mix")}
+                options={[
+                  { value: "mix", label: "섞기" },
+                  { value: "one", label: "하나로" },
+                ]}
+              />
+              {!varyTemplate && (
+                <div className={styles.chips} role="group" aria-label="고정 템플릿">
+                  {MEME_TEMPLATES.map((t) => (
+                    <Chip key={t.id} selected={fixedTemplateId === t.id} onClick={() => setFixedTemplateId(t.id)} title={t.desc}>
+                      {t.label}
+                    </Chip>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className={styles.field}>
+              <label className={styles.fieldLabel} htmlFor="caption">
+                캡션(짤 글귀, 선택)
+              </label>
+              <input
+                id="caption"
+                type="text"
+                className={styles.text}
+                placeholder="예: ㅇㅋ / 화이팅 / 좋아!"
+                value={caption}
+                maxLength={14}
+                onChange={(e) => setCaption(e.target.value)}
+              />
+            </div>
+
+            <div className={styles.field}>
+              <label className={styles.fieldLabel} htmlFor="tint">
+                색 입히기 {Math.round(tintStrength * 100)}%
+              </label>
+              <input id="tint" type="range" min={0} max={100} value={Math.round(tintStrength * 100)} onChange={(e) => setTintStrength(Number(e.target.value) / 100)} className={styles.range} />
+              <span className={styles.hint}>0%면 내가 그린 색 그대로.</span>
+            </div>
+
+            <div className={styles.field}>
+              <span className={styles.fieldLabel}>내보내기 크기</span>
+              <div className={styles.chips} role="group" aria-label="내보내기 크기">
+                {SHARE_PRESETS.map((p) => (
+                  <Chip key={p.id} selected={presetId === p.id} onClick={() => setPresetId(p.id)} title={p.note}>
+                    {p.label}
                   </Chip>
                 ))}
               </div>
-            )}
-          </div>
-
-          <div className={styles.field}>
-            <label className={styles.fieldLabel} htmlFor="caption">
-              캡션(짤 글귀, 선택)
-            </label>
-            <input
-              id="caption"
-              type="text"
-              className={styles.text}
-              placeholder="예: ㅇㅋ / 화이팅 / 좋아!"
-              value={caption}
-              maxLength={14}
-              onChange={(e) => setCaption(e.target.value)}
-            />
-            <span className={styles.hint}>비우면 표정별 기본 글귀가 들어가요.</span>
-          </div>
-
-          <div className={styles.field}>
-            <label className={styles.fieldLabel} htmlFor="tint">
-              색 입히기 {Math.round(tintStrength * 100)}%
-            </label>
-            <input
-              id="tint"
-              type="range"
-              min={0}
-              max={100}
-              value={Math.round(tintStrength * 100)}
-              onChange={(e) => setTintStrength(Number(e.target.value) / 100)}
-              className={styles.range}
-            />
-          </div>
-
-          <div className={styles.field}>
-            <label className={styles.fieldLabel} htmlFor="outline">
-              테두리 굵기 {outlineScale.toFixed(1)}×
-            </label>
-            <input
-              id="outline"
-              type="range"
-              min={0}
-              max={20}
-              value={Math.round(outlineScale * 10)}
-              onChange={(e) => setOutlineScale(Number(e.target.value) / 10)}
-              className={styles.range}
-            />
-          </div>
-
-          <div className={styles.field}>
-            <span className={styles.fieldLabel}>내보내기 크기</span>
-            <div className={styles.chips} role="group" aria-label="내보내기 크기">
-              {SHARE_PRESETS.map((p) => (
-                <Chip
-                  key={p.id}
-                  selected={presetId === p.id}
-                  onClick={() => setPresetId(p.id)}
-                  title={p.note}
-                >
-                  {p.label}
-                </Chip>
-              ))}
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* ── 오른쪽: 액션 + 변주 갤러리 ── */}
-      <section className={styles.right} aria-label="변주 결과">
-        {/* 데스크톱: 컬럼 안 액션 행. 모바일: 숨김(하단 고정 바가 대체). */}
-        <div className={styles.actions}>{renderActions()}</div>
+        {/* ── 오른쪽: 결과 ── */}
+        <section className={styles.right} aria-label="표정 결과">
+          {step === 3 && (
+            <div className={styles.actions}>
+              <button type="button" className={styles.primary} onClick={regen} disabled={busy}>
+                {busy ? "만드는 중…" : "이 설정으로 다시 만들기"}
+              </button>
+              <button type="button" className={styles.dice} onClick={onReroll} disabled={busy} title="다른 색/템플릿 조합">
+                🎲 다른 조합
+              </button>
+              {items.length > 0 && (
+                <button type="button" className={styles.secondary} onClick={downloadAll}>
+                  전체 ZIP 챙기기
+                </button>
+              )}
+            </div>
+          )}
 
-        {error && (
-          <p className={styles.error} role="alert">
-            <Mascot mood="worried" size={28} still label="" /> {error}
-          </p>
-        )}
-
-        {items.length === 0 && !error ? (
-          <div className={styles.empty}>
-            <Mascot mood="sleepy" size={96} label="너굴이가 기다려요" />
-            <p className={styles.emptyText}>
-              그려봐 너굴. 동그라미 하나면 <strong>표정 {MAX_STICKER_SET_SIZE}종</strong>이
-              한 세트로 떨어진다 너굴.
-            </p>
-            <p className={styles.honesty}>
-              그림은 이 브라우저 안에서만 처리돼요 · 서버로 안 보내요.
-            </p>
-          </div>
-        ) : (
-          items.length > 0 && (
+          {step < 3 ? (
+            <div className={styles.empty}>
+              <Mascot mood="happy" size={96} label="너굴이가 기다려요" />
+              <p className={styles.emptyText}>
+                부위별로 그리면(윤곽→눈→입) <strong>내가 그린 눈·입</strong>이 표정마다 변형돼 <strong>{MAX_STICKER_SET_SIZE}종</strong>으로 떨어져요.
+              </p>
+              <p className={styles.honesty}>그림은 이 브라우저 안에서만 처리돼요.</p>
+            </div>
+          ) : (
             <>
-              <div className={styles.gallery} role="list" aria-label="스티커 변주 세트">
+              <div className={styles.gallery} role="list" aria-label="표정 변주 세트">
                 {items.map((it) => (
                   <figure key={it.id} className={styles.cell} role="listitem">
-                    {/* 투명 PNG 확인용 체커보드 위에 표시 */}
                     <div className={styles.cellImgWrap}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img className={styles.cellImg} src={it.dataUrl} alt={`${it.label} 스티커`} />
                     </div>
                     <figcaption className={styles.cellCap}>{it.label}</figcaption>
-                    <button
-                      type="button"
-                      className={styles.cellDl}
-                      onClick={() => downloadOne(it)}
-                    >
+                    <button type="button" className={styles.cellDl} onClick={() => downloadOne(it)}>
                       PNG 받기
                     </button>
                   </figure>
                 ))}
               </div>
-              <p className={styles.honesty}>
-                {MAX_STICKER_SET_SIZE}종 떴다구리. 전부 투명 PNG예요. 같은
-                시드(현재 #{seed})면 같은 세트가 다시 나와요.
-              </p>
+              <p className={styles.honesty}>내가 그린 부위를 표정마다 변형해 만들었어요(같은 시드 #{seed}면 같은 세트).</p>
             </>
-          )
-        )}
-      </section>
-    </div>
+          )}
+        </section>
+      </div>
 
-    {/* 모바일 전용: 하단 고정 액션 바 — 만들기·ZIP이 한 손에 항상 도달. */}
-    <div className={styles.mobileActionBar} role="region" aria-label="스티커 만들기·받기">
-      <div className={styles.actionBarInner}>{renderActions()}</div>
-    </div>
+      {/* 모바일 하단 고정 바 */}
+      <div className={styles.mobileActionBar} role="region" aria-label="스티커 만들기·받기">
+        <div className={styles.actionBarInner}>
+          {step < 3 ? (
+            <button type="button" className={styles.primary} onClick={advance}>
+              {step < 2 ? "다음 →" : "✨ 표정 만들기"}
+            </button>
+          ) : (
+            <>
+              <button type="button" className={styles.dice} onClick={onReroll} disabled={busy}>
+                🎲 다른 조합
+              </button>
+              {items.length > 0 && (
+                <button type="button" className={styles.secondary} onClick={downloadAll}>
+                  ZIP
+                </button>
+              )}
+            </>
+          )}
+        </div>
+      </div>
     </>
   );
 }

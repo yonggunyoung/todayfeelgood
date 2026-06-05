@@ -12,7 +12,13 @@ import {
   type EmotionPreset,
   type MemeTemplate,
 } from "./presets";
-import { cropToContent, renderTile, type FaceAnchor } from "./render";
+import {
+  cropToContent,
+  renderTile,
+  renderTileFromLayers,
+  type CharLayers,
+  type FaceAnchor,
+} from "./render";
 import { makeRng, pick } from "./rng";
 
 export interface GeneratedItem {
@@ -111,4 +117,48 @@ export function generateSet(
   });
 
   return { items, isEmpty: false };
+}
+
+/**
+ * 부위별 레이어(윤곽·눈·입) → 표정 세트 생성.
+ * 표정마다 눈·입 레이어를 변형해 합성한다(사용자가 그린 실제 부위 사용).
+ */
+export function generateSetFromLayers(
+  layers: CharLayers,
+  srcSize: number,
+  cfg: GenerateConfig
+): { items: GeneratedItem[] } {
+  const emotions = emotionsFor(cfg);
+  const rng = makeRng(cfg.seed);
+  const fixedPalette =
+    COLOR_PALETTES.find((p) => p.id === cfg.fixedPaletteId) ?? COLOR_PALETTES[0]!;
+  const fixedTemplate =
+    MEME_TEMPLATES.find((t) => t.id === cfg.fixedTemplateId) ?? MEME_TEMPLATES[1]!;
+  const items: GeneratedItem[] = [];
+  emotions.forEach((emotion, i) => {
+    const palette = cfg.varyColor ? pick(rng, COLOR_PALETTES) : fixedPalette;
+    const template = cfg.varyTemplate ? pick(rng, MEME_TEMPLATES) : fixedTemplate;
+    const tileSeed = (cfg.seed * 2654435761 + i * 40503) >>> 0;
+    const dataUrl = renderTileFromLayers({
+      layers,
+      srcSize,
+      emotion,
+      palette,
+      template,
+      size: cfg.size,
+      seed: tileSeed,
+      tintStrength: cfg.tintStrength,
+      outlineScale: cfg.outlineScale,
+      caption: cfg.caption,
+    });
+    items.push({
+      id: `${emotion.id}-${i}`,
+      emotionId: emotion.id,
+      label: emotion.label,
+      paletteId: palette.id,
+      templateId: template.id,
+      dataUrl,
+    });
+  });
+  return { items };
 }

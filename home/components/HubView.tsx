@@ -4,6 +4,7 @@ import { getDictionary, homePath, neogulPath, legalPath } from "../lib/i18n";
 import { LanguageToggle } from "./LanguageToggle";
 import { ThemeToggle } from "./ThemeToggle";
 import { HubCarousel } from "./HubCarousel";
+import { HubSearch } from "./HubSearch";
 import styles from "../app/hub.module.css";
 
 /** 도구공방(너굴이) 대표 캐릭터 아이콘 — 코랄 타일 안 흰 라쿤. 각 웹앱 고유 아이콘 자리. */
@@ -72,13 +73,11 @@ export function HubView({ locale }: { locale: Locale }) {
               <span className={styles.grad}>{h.hero.titleB}</span>
             </h1>
             <p className={styles.lede}>{h.hero.lede}</p>
-            <div className={styles.search} role="search">
-              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-                <circle cx="11" cy="11" r="7" />
-                <path d="m21 21-4.3-4.3" />
-              </svg>
-              <input className={styles.searchInput} placeholder={h.hero.searchPlaceholder} aria-label={h.hero.searchPlaceholder} />
-            </div>
+            <HubSearch
+              placeholder={h.hero.searchPlaceholder}
+              tools={h.search.tools}
+              labels={{ feature: h.search.feature, web: h.search.web, webGo: h.search.webGo }}
+            />
 
             {/* 인기 순위 미니카드 */}
             <div className={styles.ranks}>

@@ -33,6 +33,18 @@ export const ko = {
       lede: "쓸모있는 웹 도구를 한 곳에. 설치 없이, 바로.",
       searchPlaceholder: "만들고 싶은 걸 검색 — 폰트, 스티커, 이모티콘 …",
     },
+    search: {
+      feature: "기능 검색",
+      web: "웹 검색",
+      webGo: "구글에서 검색…",
+      tools: [
+        { name: "폰트공방", href: "/font", keywords: ["폰트", "글씨", "손글씨", "글씨체", "ttf", "woff"] },
+        { name: "이모티콘공방", href: "/textmoji", keywords: ["이모티콘", "이모지", "카오모지", "텍스트", "emoji"] },
+        { name: "스티커공방", href: "/sticker", keywords: ["스티커", "캐릭터", "표정", "sticker", "png"] },
+        { name: "키트공방", href: "/kit", keywords: ["키트", "브랜드", "팔레트", "로고", "색"] },
+        { name: "싸인공방", href: "/sign", keywords: ["서명", "싸인", "사인", "sign", "흘림"] },
+      ],
+    },
     rank: { head: "지금 인기", comingSoon: "준비중" },
     apps: {
       sectionTitle: "웹앱 둘러보기",

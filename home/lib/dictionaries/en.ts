@@ -44,6 +44,18 @@ export const en: typeof ko = {
       lede: "Useful web tools, all in one place. No installs — right in your browser.",
       searchPlaceholder: "Search what you want to make — fonts, stickers, emoji …",
     },
+    search: {
+      feature: "Tools",
+      web: "Web",
+      webGo: "Search on Google…",
+      tools: [
+        { name: "Font Workshop", href: "/font", keywords: ["font", "handwriting", "type", "ttf", "woff", "폰트"] },
+        { name: "Emoticon Workshop", href: "/textmoji", keywords: ["emoji", "emoticon", "kaomoji", "text", "이모티콘"] },
+        { name: "Sticker Workshop", href: "/sticker", keywords: ["sticker", "character", "expression", "png", "스티커"] },
+        { name: "Kit Workshop", href: "/kit", keywords: ["kit", "brand", "palette", "logo", "color"] },
+        { name: "Signature Workshop", href: "/sign", keywords: ["signature", "sign", "autograph", "서명"] },
+      ],
+    },
     rank: { head: "Trending", comingSoon: "Soon" },
     apps: {
       sectionTitle: "Browse web apps",

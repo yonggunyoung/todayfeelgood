@@ -237,6 +237,59 @@
   width: 100%;
 }
 
+/* ── 검색 (모드 전환 + 추천) ── */
+.searchWrap {
+  width: 100%;
+  max-width: 540px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+.searchModes {
+  display: inline-flex;
+  gap: 4px;
+  background: var(--surface-2);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-pill);
+  padding: 3px;
+}
+.mode,
+.modeOn {
+  font-size: 13px;
+  font-weight: var(--weight-semi);
+  padding: 6px 15px;
+  border-radius: var(--r-pill);
+  border: 0;
+  background: transparent;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+.modeOn {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.suggest {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+  text-align: left;
+}
+.suggestItem {
+  display: block;
+  padding: 11px 16px;
+  font-size: var(--text-body);
+  color: var(--ink);
+  text-decoration: none;
+}
+.suggestItem:hover {
+  background: var(--surface-2);
+  color: var(--ink);
+}
+
 /* ── 인기 순위 미니카드 ── */
 .ranks {
   display: flex;

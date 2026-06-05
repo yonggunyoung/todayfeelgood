@@ -165,6 +165,10 @@
 
 html {
   -webkit-text-size-adjust: 100%;
+  /* 가로 넘침 가드 — 어떤 요소가 뷰포트보다 살짝 넓어도 화면이 옆으로 밀리거나
+     확대된 채로 보이지 않게(모바일 "딱 맞게"). clip은 hidden과 달리
+     position:sticky(상단 헤더)를 깨지 않는다. 내부 캐러셀의 overflow-x:auto는 별개. */
+  overflow-x: clip;
 }
 
 body {
@@ -211,6 +215,16 @@ p {
 
 button {
   font-family: inherit;
+}
+
+/* 폼 컨트롤 — iOS는 폰트<16px 입력에 포커스하면 화면을 자동 확대한다.
+   이를 막아 모바일에서 입력 칸을 누를 때 "살짝 확대된 채로" 들어가는 현상 방지.
+   (컴포넌트가 더 큰 값을 지정하면 그쪽이 우선) */
+input,
+textarea,
+select {
+  font-family: inherit;
+  font-size: 16px;
 }
 
 ::selection {

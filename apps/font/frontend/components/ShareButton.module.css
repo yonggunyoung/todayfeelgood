@@ -17,7 +17,9 @@
 
 .warn {
   font-size: var(--text-caption);
-  color: #b4231a;
+  /* 토큰 사용 — 다크모드에선 밝은 빨강(#f06b7c)으로 떠 가독성 유지.
+     하드코딩 어두운 빨강은 다크 배경에서 묻힌다. */
+  color: var(--danger, #b4231a);
   line-height: 1.45;
 }
 

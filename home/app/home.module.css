@@ -480,6 +480,11 @@
   overflow: hidden;
   position: relative;
   box-shadow: var(--inset);
+  /* 데스크톱에선 카드 전체폭으로 퍼지면 썸네일이 과하게 커진다.
+     폭을 제한하고 가운데 정렬해 "미리보기 타일" 크기로 유지. */
+  width: 100%;
+  max-width: 26rem;
+  align-self: center;
 }
 
 /* ① 폰트 — 줄 친 노트 종이 위 손글씨 */

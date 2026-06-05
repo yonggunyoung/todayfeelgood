@@ -113,18 +113,21 @@
 }
 .toolBtn {
   font-size: var(--text-sm);
+  font-weight: var(--weight-med);
   padding: var(--sp-2) var(--sp-4);
   border-radius: var(--r-pill);
+  /* 다이얼로그(--surface)와 같은 색이면 다크에서 버튼이 안 보인다.
+     한 단계 다른 면(--surface-2) + 또렷한 글자(--ink)로 양쪽 모드 모두 보이게. */
   border: 1px solid var(--hairline);
-  background: var(--surface);
-  color: var(--ink-soft);
+  background: var(--surface-2);
+  color: var(--ink);
   cursor: pointer;
 }
 .toolBtn:hover:not(:disabled) {
-  background: var(--surface-2);
+  background: var(--surface-sunken);
 }
 .toolBtn:disabled {
-  opacity: 0.4;
+  opacity: 0.55;
   cursor: default;
 }
 .doneBtn {

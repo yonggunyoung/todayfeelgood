@@ -15,6 +15,9 @@ out/
 build/
 dist/
 
+# typescript 증분 빌드 캐시(tsc --noEmit 등이 생성 — 커밋 금지)
+*.tsbuildinfo
+
 # env / secrets
 .env
 .env.local

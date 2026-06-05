@@ -73,7 +73,8 @@
   aspect-ratio: 150 / 180;
   display: block;
   border-radius: var(--r-sm, 10px);
-  background: var(--surface-2, #faf9ff);
+  /* 그리기 면은 항상 밝은 종이색(다크모드에서도 펜이 보이게). */
+  background: #faf7f1;
   touch-action: none;
   cursor: crosshair;
 }

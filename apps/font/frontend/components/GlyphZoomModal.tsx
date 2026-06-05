@@ -49,23 +49,40 @@ export default function GlyphZoomModal({
     [onChange]
   );
 
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+  const closedByBack = useRef(false);
+
   useEffect(() => {
+    const close = () => onCloseRef.current();
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.stopPropagation();
-        onClose();
+        close();
       }
     };
     document.addEventListener("keydown", onKey, true);
+    // 뒤로가기로 "모달만" 닫기: 히스토리 항목을 하나 쌓고, 뒤로가기(popstate) 시 닫는다.
+    window.history.pushState({ glyphModal: true }, "");
+    const onPop = () => {
+      closedByBack.current = true;
+      close();
+    };
+    window.addEventListener("popstate", onPop);
     // 스크롤 잠금
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     dialogRef.current?.focus();
     return () => {
       document.removeEventListener("keydown", onKey, true);
+      window.removeEventListener("popstate", onPop);
       document.body.style.overflow = prev;
+      // 버튼·ESC·배경클릭으로 닫혔으면 우리가 쌓은 히스토리 항목을 제거(뒤로가기로 닫힌 경우는 이미 빠짐).
+      if (!closedByBack.current) window.history.back();
     };
-  }, [onClose]);
+    // 의도적으로 1회만 실행(onClose는 ref로 최신값 사용).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div

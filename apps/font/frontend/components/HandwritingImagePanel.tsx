@@ -260,19 +260,48 @@ export default function HandwritingImagePanel({
     textToDraw,
   ]);
 
-  const handleDownloadPng = () => {
+  const handleDownloadPng = async () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const url = canvas.toDataURL("image/png");
-    const a = document.createElement("a");
-    a.href = url;
     const slug =
       textToDraw
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/^-+|-+$/g, "")
         .slice(0, 24) || "handwriting";
-    a.download = `${slug}-${size.width}x${size.height}.png`;
+    const filename = `${slug}-${size.width}x${size.height}.png`;
+    const blob: Blob | null = await new Promise((res) => canvas.toBlob(res, "image/png"));
+
+    // 모바일·인앱 브라우저(카톡 등)는 a.download를 막는 경우가 많다 → Web Share(공유 시트) 우선.
+    if (blob) {
+      const file = new File([blob], filename, { type: "image/png" });
+      const nav = navigator as Navigator & { canShare?: (d: { files: File[] }) => boolean };
+      if (nav.canShare && nav.canShare({ files: [file] })) {
+        try {
+          await (navigator as Navigator & { share: (d: { files: File[] }) => Promise<void> }).share({ files: [file] });
+          return;
+        } catch {
+          /* 사용자가 취소했거나 미지원 → 아래 다운로드 폴백 */
+        }
+      }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.target = "_blank";
+      a.rel = "noopener";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      return;
+    }
+
+    // 최후 폴백: dataURL 다운로드
+    const url = canvas.toDataURL("image/png");
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
     document.body.appendChild(a);
     a.click();
     a.remove();

@@ -41,7 +41,8 @@
   gap: 16px;
   padding: 20px 16px;
   border-radius: var(--r-md, 16px);
-  background: var(--surface-2, #faf9ff);
+  /* 견본 면은 항상 밝은 종이색 — 다크모드에서 진한 손글씨가 묻히지 않게. */
+  background: #faf7f1;
   min-height: 200px;
 }
 

@@ -85,8 +85,9 @@
   min-height: 180px;
   overflow: hidden;
 }
-/* 투명 배경일 때 체커보드로 알파를 시각화 */
+/* 투명 배경일 때 체커보드로 알파를 시각화 — 항상 흰 바탕(다크모드에서 결과가 묻히지 않게) */
 .checker {
+  background-color: #ffffff;
   background-image:
     linear-gradient(45deg, #e8e4f2 25%, transparent 25%),
     linear-gradient(-45deg, #e8e4f2 25%, transparent 25%),

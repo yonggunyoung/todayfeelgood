@@ -38,6 +38,7 @@ const SketchCanvas = forwardRef<SketchCanvasHandle, Props>(function SketchCanvas
   const drawing = useRef(false);
   const dirty = useRef(false);
   const last = useRef<{ x: number; y: number } | null>(null);
+  const lastMid = useRef<{ x: number; y: number } | null>(null);
   const [color, setColor] = useState(PEN_COLORS[0]!);
   const [width, setWidth] = useState(8);
   const [eraser, setEraser] = useState(false);
@@ -66,6 +67,7 @@ const SketchCanvas = forwardRef<SketchCanvasHandle, Props>(function SketchCanvas
     (e.target as Element).setPointerCapture?.(e.pointerId);
     drawing.current = true;
     last.current = pos(e);
+    lastMid.current = last.current;
     const ctx = getCtx();
     if (ctx && last.current) {
       applyStroke(ctx);
@@ -95,15 +97,18 @@ const SketchCanvas = forwardRef<SketchCanvasHandle, Props>(function SketchCanvas
   const onPointerMove = (e: React.PointerEvent) => {
     if (!drawing.current) return;
     const ctx = getCtx();
-    if (!ctx || !last.current) return;
+    if (!ctx || !last.current || !lastMid.current) return;
     const p = pos(e);
     applyStroke(ctx);
+    // 곡선 보간(quadratic) — 지난 중점→현재 중점, 제어점=지난 점. 획이 매끄러워져 조악함이 줄어든다.
+    const mid = { x: (last.current.x + p.x) / 2, y: (last.current.y + p.y) / 2 };
     ctx.beginPath();
-    ctx.moveTo(last.current.x, last.current.y);
-    ctx.lineTo(p.x, p.y);
+    ctx.moveTo(lastMid.current.x, lastMid.current.y);
+    ctx.quadraticCurveTo(last.current.x, last.current.y, mid.x, mid.y);
     ctx.stroke();
     ctx.globalCompositeOperation = "source-over";
     last.current = p;
+    lastMid.current = mid;
     dirty.current = true;
   };
 

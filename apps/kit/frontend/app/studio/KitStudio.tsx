@@ -274,6 +274,12 @@ export default function KitStudio() {
               </Chip>
             ))}
           </div>
+          <p className={styles.hint}>
+            내 손글씨로 만든 글씨체를 쓰고 싶나요?{" "}
+            <a href="/font" style={{ fontWeight: 600 }}>
+              폰트공방에서 만들기 →
+            </a>
+          </p>
         </div>
 
         <div className={styles.panel}>

@@ -64,4 +64,20 @@ export const KIT_TEMPLATES: KitTemplate[] = [
     accent: "#46b39a",
     script: "latin",
   },
+  {
+    id: "card",
+    label: "명함 키트",
+    desc: "단정한 글씨 + 먹빛 모노톤",
+    moodId: "elegant",
+    accent: "#3a3742",
+    script: "latin",
+  },
+  {
+    id: "youtube",
+    label: "유튜브 썸네일 키트",
+    desc: "튼튼한 글씨 + 쨍한 버터옐로",
+    moodId: "bouncy",
+    accent: "#f5c451",
+    script: "latin",
+  },
 ];

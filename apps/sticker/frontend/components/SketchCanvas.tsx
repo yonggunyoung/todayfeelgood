@@ -132,14 +132,14 @@ const SketchCanvas = forwardRef<SketchCanvasHandle, Props>(function SketchCanvas
 
   return (
     <div className={styles.wrap}>
-      <div className={styles.stage} style={{ position: "relative", background: "#ffffff", borderRadius: 16 }}>
+      <div className={styles.stage} style={{ position: "relative", width: "100%", aspectRatio: "1 / 1", maxWidth: size, margin: "0 auto", background: "#ffffff", borderRadius: 16, overflow: "hidden", boxShadow: "var(--inset)" }}>
         {background && (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={background}
             alt=""
             aria-hidden
-            style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0.28, pointerEvents: "none" }}
+            style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0.16, pointerEvents: "none" }}
           />
         )}
         <canvas
@@ -147,7 +147,7 @@ const SketchCanvas = forwardRef<SketchCanvasHandle, Props>(function SketchCanvas
           width={size}
           height={size}
           className={styles.canvas}
-          style={{ position: "relative", background: "transparent" }}
+          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", background: "transparent", touchAction: "none" }}
           role="img"
           aria-label="부위 그리기 영역(마우스·터치). 단계별로 윤곽·눈·입을 그려요."
           onPointerDown={onPointerDown}

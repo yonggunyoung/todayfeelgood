@@ -114,13 +114,15 @@
   .right {
     position: static;
   }
-  /* 데스크톱 액션 행은 모바일에서 숨김 — 하단 고정 바가 대체(받기 버튼 항상 도달). */
-  .actions {
-    display: none;
-  }
 }
 
 .actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+  align-items: center;
+}
+.stepRow {
   display: flex;
   flex-wrap: wrap;
   gap: var(--sp-3);
@@ -168,6 +170,7 @@
   cursor: pointer;
   min-height: var(--touch-min);
   box-shadow: var(--shadow-md);
+  white-space: nowrap;
   transition: transform var(--dur-fast) var(--ease-spring), background-color var(--dur-fast);
 }
 .primary:hover:not(:disabled) {
@@ -190,6 +193,7 @@
   cursor: pointer;
   min-height: var(--touch-min);
   box-shadow: var(--shadow-sm);
+  white-space: nowrap;
 }
 .dice:hover:not(:disabled) {
   background: var(--surface-2);
@@ -209,6 +213,7 @@
   cursor: pointer;
   min-height: var(--touch-min);
   box-shadow: var(--shadow-sm);
+  white-space: nowrap;
 }
 .secondary:hover {
   filter: brightness(0.96);

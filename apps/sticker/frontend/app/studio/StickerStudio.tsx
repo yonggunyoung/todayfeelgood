@@ -155,7 +155,7 @@ export default function StickerStudio() {
                 </h2>
                 <p className={styles.hint}>{cur.hint}</p>
                 <SketchCanvas ref={canvasRef} size={SRC} background={bg} />
-                <div className={styles.actions} style={{ marginTop: "var(--sp-4)" }}>
+                <div className={styles.stepRow} style={{ marginTop: "var(--sp-4)" }}>
                   <button type="button" className={styles.primary} onClick={advance}>
                     {step < 2 ? "다음 →" : `✨ 표정 ${MAX_STICKER_SET_SIZE}종 만들기`}
                   </button>
@@ -177,7 +177,7 @@ export default function StickerStudio() {
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={compositeBg([layers.base, layers.eyes, layers.mouth])} alt="내 캐릭터" style={{ width: 160, height: 160, background: "#fff", borderRadius: 16, boxShadow: "var(--shadow-sm)" }} />
                 )}
-                <div className={styles.actions} style={{ marginTop: "var(--sp-4)" }}>
+                <div className={styles.stepRow} style={{ marginTop: "var(--sp-4)" }}>
                   <button type="button" className={styles.secondary} onClick={restart}>
                     처음부터 다시
                   </button>
@@ -320,28 +320,6 @@ export default function StickerStudio() {
             </>
           )}
         </section>
-      </div>
-
-      {/* 모바일 하단 고정 바 */}
-      <div className={styles.mobileActionBar} role="region" aria-label="스티커 만들기·받기">
-        <div className={styles.actionBarInner}>
-          {step < 3 ? (
-            <button type="button" className={styles.primary} onClick={advance}>
-              {step < 2 ? "다음 →" : "✨ 표정 만들기"}
-            </button>
-          ) : (
-            <>
-              <button type="button" className={styles.dice} onClick={onReroll} disabled={busy}>
-                🎲 다른 조합
-              </button>
-              {items.length > 0 && (
-                <button type="button" className={styles.secondary} onClick={downloadAll}>
-                  ZIP
-                </button>
-              )}
-            </>
-          )}
-        </div>
       </div>
     </>
   );

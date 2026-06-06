@@ -1,0 +1,10 @@
+/* 애드센스 광고 단위 컨테이너 — 가운데 정렬 + 레이아웃 시프트 최소화.
+   콘텐츠 흐름을 해치지 않게 위아래 여백을 두고 폭을 제한한다. */
+.wrap {
+  width: 100%;
+  max-width: var(--maxw, 1100px);
+  margin: var(--sp-8, 32px) auto;
+  min-height: 90px; /* 리더보드 대략 높이 예약 → CLS 완화 */
+  text-align: center;
+  overflow: hidden;
+}

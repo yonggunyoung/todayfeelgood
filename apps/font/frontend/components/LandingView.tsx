@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { webApplicationJsonLd, htmlLang } from "@webapp/seo";
-import { BrushDivider, BrushUnderline, Mascot, Sticker } from "@webapp/ui";
+import { AdSlot, BrushDivider, BrushUnderline, Mascot, Sticker } from "@webapp/ui";
 import { SiteHeader, SiteFooter } from "./SiteChrome";
 import InteractiveSpecimen from "./InteractiveSpecimen";
 import { LanguageToggle } from "./LanguageToggle";
@@ -136,6 +136,10 @@ export function LandingView({ locale }: { locale: Locale }) {
             </div>
           </div>
         </section>
+        {/* 광고(웹 전용) — env 설정 시에만. 콘텐츠 하단, 그리기 화면(스튜디오)엔 두지 않음. */}
+        <div className="container">
+          <AdSlot />
+        </div>
       </main>
 
       <SiteFooter colophon={t.footer.colophon} fineprint={t.footer.fineprint} />

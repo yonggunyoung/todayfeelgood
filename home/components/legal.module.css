@@ -59,3 +59,14 @@
   margin-bottom: var(--sp-3);
   word-break: break-word;
 }
+
+/* 가이드 FAQ 항목 */
+.faqItem {
+  margin-bottom: var(--sp-4);
+}
+.faqQ {
+  font-size: var(--text-md);
+  font-weight: var(--weight-semi);
+  color: var(--ink);
+  margin-bottom: var(--sp-2);
+}

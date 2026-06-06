@@ -139,6 +139,69 @@ export const en: typeof ko = {
       cta: "Enter the workshop →",
     },
   },
+  // About, how-to and FAQ — body content for SEO and AdSense approval.
+  guide: {
+    linkLabel: "Guide & FAQ",
+    seoTitle: "Guide & About — Turn your handwriting into a font",
+    seoDescription:
+      "ddukkit (Hoek) is a free web tool that turns your own handwriting into a real font (WOFF & TTF). No sign-up, Korean and Latin supported. Here's how to use it and answers to common questions.",
+    title: "How it works & About",
+    intro:
+      "ddukkit (Hoek) is a free web tool that turns the letters you draw into a real font file. No install, no sign-up — right in your browser, for both Korean and Latin. New here? Follow the steps below and you'll have your own handwriting font in about five minutes.",
+    sections: [
+      {
+        heading: "What is ddukkit?",
+        body: [
+          "It reads the strokes you draw in each cell and bakes them into a font. No AI imitating someone else's hand — the lines you actually draw become the letters.",
+          "Download your font as a WOFF or TTF file and use it in documents, design, or your blog. Everything you make is yours, and nothing is stored on our servers.",
+        ],
+      },
+      {
+        heading: "How to make one (3 steps)",
+        body: [
+          "1) Draw the letters you like in the cells, with a mouse or your finger. You don't have to draw them all — empty cells are filled with a default font.",
+          "2) Use the refine sliders to smooth out hand jitter and set weight and slant to taste.",
+          "3) Check the preview, then download as WOFF or TTF. You can also make an image for KakaoTalk or Instagram, where you can't install fonts.",
+        ],
+      },
+      {
+        heading: "Does it support Korean?",
+        body: [
+          "Yes. Draw the basic jamo (14 consonants + 10 vowels) and we compose Korean syllables from them. Unlike Latin-only tools, Korean is a first-class citizen here.",
+          "For Latin you can draw both lowercase a–z and uppercase A–Z, and digits are filled in too.",
+        ],
+      },
+      {
+        heading: "Don't feel like drawing?",
+        body: [
+          "The 'quick-start sample' lets you vary an open font with sliders (weight, slant, and more) without drawing. It's not your real hand, but it's the fastest way to look around.",
+        ],
+      },
+    ],
+    faqTitle: "Frequently asked questions",
+    faqs: [
+      {
+        q: "Is it really free?",
+        a: "Yes — making and downloading fonts is free, with no sign-up or login required.",
+      },
+      {
+        q: "Can I use the font commercially?",
+        a: "What you make from your own strokes is yours to use freely. The 'default font' that fills empty cells is based on open-license fonts (such as OFL), so for commercial use we recommend drawing the letters yourself.",
+      },
+      {
+        q: "Are my drawings or images stored on a server?",
+        a: "No. Fonts are generated and handed to your browser on the spot and not stored. See the Privacy Policy for details.",
+      },
+      {
+        q: "Is this made by AI?",
+        a: "No. Font generation currently uses no AI — only the strokes you really drew plus traditional font processing. Cells you don't draw are honestly labeled as a default font, not 'your hand'.",
+      },
+      {
+        q: "Does it work on a phone?",
+        a: "Yes. You can draw with your finger, so it works well on mobile. You can also export an image for use in KakaoTalk or Instagram.",
+      },
+    ],
+  },
   footer: "Hoek — small tools made by hand. Everything you make is yours.",
   legal: {
     navAria: "Legal & policies",

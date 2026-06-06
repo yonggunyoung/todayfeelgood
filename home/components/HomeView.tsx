@@ -1,7 +1,7 @@
 import { BrushDivider, Card, Mascot, Sticker, ExitToHub } from "@webapp/ui";
 import { webApplicationJsonLd, htmlLang } from "@webapp/seo";
 import type { Locale } from "../lib/i18n";
-import { getDictionary, neogulPath, legalPath } from "../lib/i18n";
+import { getDictionary, neogulPath, legalPath, guidePath } from "../lib/i18n";
 import { LanguageToggle } from "./LanguageToggle";
 import styles from "../app/home.module.css";
 
@@ -203,6 +203,8 @@ export function HomeView({ locale }: { locale: Locale }) {
           <div className="container">
             <p>{t.footer}</p>
             <nav className={styles.footerNav} aria-label={t.legal.navAria}>
+              <a href={guidePath(locale)}>{t.guide.linkLabel}</a>
+              <span aria-hidden>·</span>
               <a href={legalPath(locale, "privacy")}>{t.legal.privacy.linkLabel}</a>
               <span aria-hidden>·</span>
               <a href={legalPath(locale, "terms")}>{t.legal.terms.linkLabel}</a>

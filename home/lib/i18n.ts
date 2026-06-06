@@ -39,6 +39,16 @@ export function neogulAlternates(): Record<Locale, string> {
   return { ko: neogulPath("ko"), en: neogulPath("en") };
 }
 
+/** 가이드(소개·사용법·FAQ) 경로. ko=`/guide`, en=`/en/guide`. */
+export function guidePath(locale: Locale): string {
+  return locale === "ko" ? "/guide" : `/${locale}/guide`;
+}
+
+/** 가이드 hreflang alternates(ko↔en). */
+export function guideAlternates(): Record<Locale, string> {
+  return { ko: guidePath("ko"), en: guidePath("en") };
+}
+
 /** 법적 페이지 종류 — 사전 `legal` 키와 일치. */
 export type LegalDoc = "privacy" | "terms";
 

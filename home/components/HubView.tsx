@@ -1,6 +1,7 @@
 import { webApplicationJsonLd, htmlLang } from "@webapp/seo";
+import { AdSlot } from "@webapp/ui";
 import type { Locale } from "../lib/i18n";
-import { getDictionary, homePath, neogulPath, legalPath } from "../lib/i18n";
+import { getDictionary, homePath, neogulPath, legalPath, guidePath } from "../lib/i18n";
 import { LanguageToggle } from "./LanguageToggle";
 import { ThemeToggle } from "./ThemeToggle";
 import { HubCarousel } from "./HubCarousel";
@@ -167,10 +168,15 @@ export function HubView({ locale }: { locale: Locale }) {
             </a>
           </section>
 
+          {/* 광고(웹 전용) — env 설정 시에만 노출. 작업 화면이 아닌 랜딩 하단. */}
+          <AdSlot />
+
           {/* ── 푸터 ── */}
           <footer className={styles.footer}>
             <p>{h.footer.copyright}</p>
             <nav className={styles.footerNav} aria-label={t.legal.navAria}>
+              <a href={guidePath(locale)}>{t.guide.linkLabel}</a>
+              <span aria-hidden>·</span>
               <a href={legalPath(locale, "privacy")}>{h.footer.privacy}</a>
               <span aria-hidden>·</span>
               <a href={legalPath(locale, "terms")}>{h.footer.terms}</a>

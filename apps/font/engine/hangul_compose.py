@@ -385,18 +385,25 @@ def _fill_boxes(
     fill: float = PLACE_FILL,
     ax: str = "center",
     ay: str = "center",
+    direct: bool = False,
 ) -> Tuple[List[List[Point]], bool]:
     """
     펼친 낱자 chars 를 boxes 에 순서대로 배치. 모든 낱자가 그려져 있어야 성공.
-    chars 가 1개면 단일 박스(첫 박스 전체)에, 2개면 분할 박스 사용 등.
+    - 기본: 1개면 첫(가장 큰) 박스, 여러 개면 분할 박스(인덱스 1..) 사용
+      (세로모음 ㅐ=ㅏ+ㅣ 처럼 '단일 본체' vs '분할' 구분이 필요한 경우).
+    - direct=True: char[i] → box[i] **직접 매핑**(복합모음 ㅘ=ㅗ+ㅏ 처럼 칸이 요소별로
+      이미 정해진 경우. 첫 박스 건너뛰기 금지 — 안 그러면 한 칸씩 밀려 깨진다).
     ax/ay 는 박스 내 정렬(예: 세로모음 줄기를 왼쪽=초성 쪽으로).
     반환: (배치된 **중심선들**, 모든 낱자 ink 가용 여부). 굵기는 음절 단위로 나중에 입힘.
     """
     out: List[List[Point]] = []
     if not chars:
         return out, True
-    # 사용할 박스 선택: 낱자 수에 맞춰. 단일이면 첫(가장 큰) 박스.
-    if len(chars) == 1:
+    if direct:
+        chosen = boxes[: len(chars)]
+        if len(chosen) < len(chars):  # 박스가 모자라면 마지막 박스 재사용(안전).
+            chosen = chosen + [boxes[-1]] * (len(chars) - len(chosen))
+    elif len(chars) == 1:
         chosen = [boxes[0]]
     else:
         # 분할 박스(인덱스 1..)가 충분하면 그걸로, 아니면 첫 박스에 겹쳐.
@@ -432,7 +439,8 @@ def _compose_syllable_polys(
 
     # 세로모음(ㅏ류)은 초성 우측에 모음이 오므로, 초성은 오른쪽(모음 쪽)·모음 줄기는
     # 왼쪽(초성 쪽)으로 붙여 초성↔모음 간격을 일정하게(떨어져 보이던 문제 완화).
-    is_vert = (jung not in HORIZONTAL_VOWELS) and (jung not in COMPLEX_VOWELS)
+    is_complex = jung in COMPLEX_VOWELS
+    is_vert = (jung not in HORIZONTAL_VOWELS) and not is_complex
     cho_ax = "center"
     jung_ax = "left" if is_vert else "center"
 
@@ -441,7 +449,8 @@ def _compose_syllable_polys(
     if not ok:
         return [], False
     skeletons.extend(p)
-    p, ok = _fill_boxes(jung_chars, jung_boxes, inks, ax=jung_ax)
+    # 복합모음은 칸이 요소별로 정해져 있으므로 직접 매핑(char[i]→box[i]).
+    p, ok = _fill_boxes(jung_chars, jung_boxes, inks, ax=jung_ax, direct=is_complex)
     if not ok:
         return [], False
     skeletons.extend(p)

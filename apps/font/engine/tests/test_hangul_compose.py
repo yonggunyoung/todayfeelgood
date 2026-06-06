@@ -136,6 +136,19 @@ def test_compound_vowel_approximation():
     assert ord("과") in _open(raw).getBestCmap()
 
 
+def test_complex_vowel_horizontal_element_placed_at_bottom():
+    # 복합모음 직접매핑 회귀 가드: '과'의 가로요소 ㅗ 는 하단 칸에 배치돼야 한다.
+    # (직접 매핑이 깨지면 ㅗ 가 윗칸으로 밀려 글리프가 baseline 아래로 안 내려간다.)
+    jamo = _jamo_list(["ㄱ", "ㅗ", "ㅏ"])
+    raw, _, count, _d, _f = hc.build_hangul_font(jamo, "과", RefineParams(), "ttf")
+    assert count == 1
+    f = _open(raw)
+    name = f.getBestCmap()[ord("과")]
+    g = f["glyf"][name]
+    g.recalcBounds(f["glyf"])
+    assert g.yMin < 0, f"가로요소가 하단에 안 들어감: yMin={g.yMin}"
+
+
 def test_compound_jongseong_approximation():
     # '값' = ㄱ + ㅏ + ㅄ(ㅂ+ㅅ).
     jamo = _jamo_list(["ㄱ", "ㅏ", "ㅂ", "ㅅ"])

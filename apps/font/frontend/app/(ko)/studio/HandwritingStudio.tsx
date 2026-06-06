@@ -26,6 +26,7 @@ import HandwritingImagePanel from "../../../components/HandwritingImagePanel";
 import LetterPanel from "../../../components/LetterPanel";
 import HangulPreview from "../../../components/HangulPreview";
 import HangulImagePanel from "../../../components/HangulImagePanel";
+import HangulLetterPanel from "../../../components/HangulLetterPanel";
 import FontStudio from "./FontStudio";
 import styles from "./HandwritingStudio.module.css";
 
@@ -100,6 +101,8 @@ export default function HandwritingStudio({ locale = "ko" }: { locale?: Locale }
   const [justDownloaded, setJustDownloaded] = useState(false);
   // 라틴 결과물 형태: 이미지/짤 ↔ 편지
   const [latinResult, setLatinResult] = useState<"image" | "letter">("image");
+  // 한글 결과물 형태: 이미지/짤 ↔ 편지
+  const [hangulResult, setHangulResult] = useState<"image" | "letter">("image");
 
   // 진입 입구 선택 → mode/autofill 동시 세팅. (mode/autofill이 여전히 단일 출처, method는 그 위 UI)
   const method: Method = mode === "sample" ? "sample" : autofill ? "quick" : "full";
@@ -531,14 +534,38 @@ export default function HandwritingStudio({ locale = "ko" }: { locale?: Locale }
                   autofill={autofill}
                   t={t.hangulPreview}
                 />
-                {/* 한글 결과물 = 그린 자모로 음절을 조합한 문구 이미지 */}
-                <HangulImagePanel
-                  jamo={jamoGlyphs}
-                  drawnJamo={drawnJamoChars}
-                  refine={refine}
-                  autofill={autofill}
-                  t={t}
-                />
+                {/* 결과물 형태 선택: 이미지/짤 ↔ 편지 (라틴과 동일 라벨 재사용) */}
+                <div className={styles.resultTabs}>
+                  <Segmented<"image" | "letter">
+                    ariaLabel={t.resultTabs.ariaLabel}
+                    value={hangulResult}
+                    onChange={setHangulResult}
+                    options={[
+                      { value: "image", label: t.resultTabs.image },
+                      { value: "letter", label: t.resultTabs.letter },
+                    ]}
+                  />
+                </div>
+
+                {hangulResult === "image" ? (
+                  // 한글 결과물 = 그린 자모로 음절을 조합한 문구 이미지
+                  <HangulImagePanel
+                    jamo={jamoGlyphs}
+                    drawnJamo={drawnJamoChars}
+                    refine={refine}
+                    autofill={autofill}
+                    t={t}
+                  />
+                ) : (
+                  // 한글 편지쓰기 — 편지지에 긴 글 → 음절 조합 → PNG.
+                  <HangulLetterPanel
+                    jamo={jamoGlyphs}
+                    drawnJamo={drawnJamoChars}
+                    refine={refine}
+                    autofill={autofill}
+                    t={t.hangulLetter}
+                  />
+                )}
               </>
             ) : (
               <>

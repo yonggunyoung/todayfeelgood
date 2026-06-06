@@ -232,19 +232,28 @@ def _prepare_jamo_inks(
 
 
 # 자모를 박스에 넣을 때 채우는 비율(여백 = 1-fill). 굵기 여백 포함이라 약간 크게.
-PLACE_FILL = 0.9
+PLACE_FILL = 0.92
 # "같은 펜" 굵기 배율: 음절 안 자모는 낱자보다 작게 들어가므로, 펜 반경도 그만큼
 # 줄여 일정하게 입힌다. 칸 크기와 무관하게 음절 전체가 한 굵기 → 손글씨 일관성.
 WEIGHT_SCALE = 0.62
 
 
-def _place_strokes(ink: _JamoInk, box: _Box, fill: float = PLACE_FILL) -> List[List[Point]]:
+def _place_strokes(
+    ink: _JamoInk,
+    box: _Box,
+    fill: float = PLACE_FILL,
+    ax: str = "center",
+    ay: str = "center",
+) -> List[List[Point]]:
     """
-    자모 **중심선**을 box 안에 균일 스케일(종횡비 보존)로 맞춰 가운데 정렬한다.
+    자모 **중심선**을 box 안에 균일 스케일(종횡비 보존)로 맞춰 정렬한다.
 
     굵기는 입히지 않는다(배치 후 음절 단위로 일정 굵기 적용). 균일 스케일만 쓰므로
     ㅡ/ㅣ/ㅇ 등의 모양이 늘어나 망가지지 않는다(개성/형태 보존). 가로로 납작하거나
     세로로 가는 자모는 단변이 0에 가까워 0으로 나눠지는 걸 막으려 단변을 1유닛으로 바닥.
+
+    ax/ay: 박스 안 정렬("center"/"left"/"right"/"top"/"bottom"). 예: 세로모음 줄기를
+    초성 쪽(왼쪽)에 붙여 초성↔모음 간격을 일정하게.
     """
     iw = max(ink.x1 - ink.x0, 1.0)
     ih = max(ink.y1 - ink.y0, 1.0)
@@ -256,8 +265,20 @@ def _place_strokes(ink: _JamoInk, box: _Box, fill: float = PLACE_FILL) -> List[L
     # 균일 스케일: 장변을 박스(여백 fill)에 맞춘다 — 비균일 왜곡 없음.
     s = min((bw * fill) / iw, (bh * fill) / ih)
 
-    cx = (box.x0 + box.x1) / 2.0
-    cy = (box.y0 + box.y1) / 2.0
+    iw_s, ih_s = iw * s, ih * s
+    # 정렬에 따른 목표 중심(스케일된 잉크 크기를 박스 안에 배치).
+    if ax == "left":
+        cx = box.x0 + iw_s / 2.0 + bw * (1.0 - fill) * 0.5
+    elif ax == "right":
+        cx = box.x1 - iw_s / 2.0 - bw * (1.0 - fill) * 0.5
+    else:
+        cx = (box.x0 + box.x1) / 2.0
+    if ay == "top":
+        cy = box.y1 - ih_s / 2.0 - bh * (1.0 - fill) * 0.5
+    elif ay == "bottom":
+        cy = box.y0 + ih_s / 2.0 + bh * (1.0 - fill) * 0.5
+    else:
+        cy = (box.y0 + box.y1) / 2.0
     icx = (ink.x0 + ink.x1) / 2.0
     icy = (ink.y0 + ink.y1) / 2.0
     out: List[List[Point]] = []
@@ -362,10 +383,13 @@ def _fill_boxes(
     boxes: List[_Box],
     inks: Dict[str, _JamoInk],
     fill: float = PLACE_FILL,
+    ax: str = "center",
+    ay: str = "center",
 ) -> Tuple[List[List[Point]], bool]:
     """
     펼친 낱자 chars 를 boxes 에 순서대로 배치. 모든 낱자가 그려져 있어야 성공.
     chars 가 1개면 단일 박스(첫 박스 전체)에, 2개면 분할 박스 사용 등.
+    ax/ay 는 박스 내 정렬(예: 세로모음 줄기를 왼쪽=초성 쪽으로).
     반환: (배치된 **중심선들**, 모든 낱자 ink 가용 여부). 굵기는 음절 단위로 나중에 입힘.
     """
     out: List[List[Point]] = []
@@ -385,7 +409,7 @@ def _fill_boxes(
         ink = inks.get(ch)
         if ink is None:
             return out, False
-        out.extend(_place_strokes(ink, box, fill))
+        out.extend(_place_strokes(ink, box, fill, ax, ay))
     return out, True
 
 
@@ -406,12 +430,18 @@ def _compose_syllable_polys(
 
     cho_boxes, jung_boxes, jong_boxes = _layout_boxes(jung, bool(jong))
 
+    # 세로모음(ㅏ류)은 초성 우측에 모음이 오므로, 초성은 오른쪽(모음 쪽)·모음 줄기는
+    # 왼쪽(초성 쪽)으로 붙여 초성↔모음 간격을 일정하게(떨어져 보이던 문제 완화).
+    is_vert = (jung not in HORIZONTAL_VOWELS) and (jung not in COMPLEX_VOWELS)
+    cho_ax = "center"
+    jung_ax = "left" if is_vert else "center"
+
     skeletons: List[List[Point]] = []
-    p, ok = _fill_boxes(cho_chars, cho_boxes, inks)
+    p, ok = _fill_boxes(cho_chars, cho_boxes, inks, ax=cho_ax)
     if not ok:
         return [], False
     skeletons.extend(p)
-    p, ok = _fill_boxes(jung_chars, jung_boxes, inks)
+    p, ok = _fill_boxes(jung_chars, jung_boxes, inks, ax=jung_ax)
     if not ok:
         return [], False
     skeletons.extend(p)

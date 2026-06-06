@@ -11,15 +11,20 @@ interface Props {
   label: string;
   closeLabel: string;
   dialogLabel: string;
-  fitLabel: string;
-  actualLabel: string;
+  zoomInLabel: string;
+  zoomOutLabel: string;
+  resetLabel: string;
   className?: string;
 }
 
+// 줌 단계(컨테이너 폭 대비 %). 1.0 = 폭 맞춤. 작게(0.4)~크게(4.0).
+const LEVELS = [0.4, 0.55, 0.7, 0.85, 1, 1.25, 1.5, 2, 2.5, 3, 4];
+const DEFAULT_IDX = LEVELS.indexOf(1);
+
 /**
- * 미리보기 확대 모달 — 캔버스를 PNG로 떠서 크게 보여준다(맞춤 ↔ 실제 크기 스크롤).
- * 결과물을 그대로 캡처하므로 폰트/색/편지지가 100% 일치한다. GlyphZoomModal과 동일하게
- * ESC·배경클릭·뒤로가기 닫기 + 스크롤 잠금.
+ * 미리보기 확대 모달 — 캔버스를 PNG로 떠서 +/- 단계 줌으로 본다.
+ * 결과물을 그대로 캡처하므로 폰트/색/편지지가 100% 일치한다. 줌 인하면 스크롤로 이동.
+ * ESC·배경클릭·뒤로가기 닫기 + 스크롤 잠금(GlyphZoomModal과 동일).
  */
 export default function PreviewZoom({
   canvasRef,
@@ -27,26 +32,30 @@ export default function PreviewZoom({
   label,
   closeLabel,
   dialogLabel,
-  fitLabel,
-  actualLabel,
+  zoomInLabel,
+  zoomOutLabel,
+  resetLabel,
   className,
 }: Props) {
   const [src, setSrc] = useState<string | null>(null);
-  const [actual, setActual] = useState(false);
+  const [idx, setIdx] = useState(DEFAULT_IDX);
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const open = src !== null;
+  const zoom = LEVELS[idx]!;
 
   const handleOpen = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     try {
       setSrc(canvas.toDataURL("image/png"));
-      setActual(false);
+      setIdx(DEFAULT_IDX);
     } catch {
       /* canvas 비었거나 보안 제약 — 무시 */
     }
   };
   const close = () => setSrc(null);
+  const zoomIn = () => setIdx((i) => Math.min(LEVELS.length - 1, i + 1));
+  const zoomOut = () => setIdx((i) => Math.max(0, i - 1));
 
   const closeRef = useRef(close);
   closeRef.current = close;
@@ -60,6 +69,10 @@ export default function PreviewZoom({
       if (e.key === "Escape") {
         e.stopPropagation();
         doClose();
+      } else if (e.key === "+" || e.key === "=") {
+        setIdx((i) => Math.min(LEVELS.length - 1, i + 1));
+      } else if (e.key === "-" || e.key === "_") {
+        setIdx((i) => Math.max(0, i - 1));
       }
     };
     document.addEventListener("keydown", onKey, true);
@@ -121,14 +134,35 @@ export default function PreviewZoom({
             tabIndex={-1}
           >
             <header className={styles.head}>
-              <button
-                type="button"
-                className={styles.toggle}
-                onClick={() => setActual((v) => !v)}
-                aria-pressed={actual}
-              >
-                {actual ? fitLabel : actualLabel}
-              </button>
+              <div className={styles.zoomCtl}>
+                <button
+                  type="button"
+                  className={styles.stepBtn}
+                  onClick={zoomOut}
+                  disabled={idx === 0}
+                  aria-label={zoomOutLabel}
+                >
+                  −
+                </button>
+                <button
+                  type="button"
+                  className={styles.pct}
+                  onClick={() => setIdx(DEFAULT_IDX)}
+                  aria-label={resetLabel}
+                  title={resetLabel}
+                >
+                  {Math.round(zoom * 100)}%
+                </button>
+                <button
+                  type="button"
+                  className={styles.stepBtn}
+                  onClick={zoomIn}
+                  disabled={idx === LEVELS.length - 1}
+                  aria-label={zoomInLabel}
+                >
+                  +
+                </button>
+              </div>
               <button
                 type="button"
                 className={styles.closeBtn}
@@ -138,12 +172,13 @@ export default function PreviewZoom({
                 ✕
               </button>
             </header>
-            <div className={`${styles.body} ${actual ? styles.bodyScroll : ""}`}>
+            <div className={styles.body}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={src}
                 alt={dialogLabel}
-                className={actual ? styles.imgActual : styles.imgFit}
+                className={styles.img}
+                style={{ width: `${zoom * 100}%` }}
               />
             </div>
           </div>

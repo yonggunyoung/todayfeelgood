@@ -59,8 +59,11 @@ MAX_CONCURRENT_HANGUL = 1
 _generate_semaphore = asyncio.Semaphore(MAX_CONCURRENT_GENERATES)
 _hangul_semaphore = asyncio.Semaphore(MAX_CONCURRENT_HANGUL)
 _handwriting_semaphore = asyncio.Semaphore(MAX_CONCURRENT_HANDWRITING)
-# 한글 조합도 음절마다 다중 자모 affine 합성 → CPU 집약. 별도 세마포어로 제한.
-_hangul_compose_semaphore = asyncio.Semaphore(MAX_CONCURRENT_HANDWRITING)
+# 한글 "조합"은 문구의 음절만 만든다(전체 2,350자 서브셋 아님) → /generate 보다 가볍다.
+# 한글 화면은 견본(HangulPreview)+이미지/편지 패널이 동시에 호출하므로 한도를 약간 높여
+# 정상적 동시 요청이 서로를 막지 않게 한다(메모리는 음절 수가 적어 안전).
+MAX_CONCURRENT_HANGUL_COMPOSE = 3
+_hangul_compose_semaphore = asyncio.Semaphore(MAX_CONCURRENT_HANGUL_COMPOSE)
 
 
 def _allowed_origins() -> list[str]:
@@ -484,14 +487,17 @@ def _hangul_compose_blocking(req: HangulComposeRequest):
 
 @app.post("/hangul-compose", response_model=HangulComposeResponse)
 async def hangul_compose_endpoint(req: HangulComposeRequest) -> HangulComposeResponse:
-    # 동시성 제한: 포화 시 즉시 503(저비용 DoS 방어).
-    if _hangul_compose_semaphore.locked():
+    # 동시성 제한: 슬롯이 차 있으면 '즉시 거절'하지 않고 잠깐 대기(큐)한다.
+    # (견본+패널이 동시에 호출하므로 즉시 503은 정상 사용까지 막았다.)
+    # 단, 과부하 폭주 방지로 대기 상한을 두고 초과 시 503.
+    try:
+        await asyncio.wait_for(_hangul_compose_semaphore.acquire(), timeout=20.0)
+    except asyncio.TimeoutError:
         raise HTTPException(
             status_code=503,
-            detail="요청이 많아 일시적으로 처리할 수 없습니다. 잠시 후 다시 시도하세요.",
+            detail="요청이 많아 잠시 대기 후에도 처리하지 못했습니다. 잠시 후 다시 시도하세요.",
         )
-
-    async with _hangul_compose_semaphore:
+    try:
         loop = asyncio.get_running_loop()
         try:
             b64, family, count, drawn, filled = await loop.run_in_executor(
@@ -505,6 +511,8 @@ async def hangul_compose_endpoint(req: HangulComposeRequest) -> HangulComposeRes
         except Exception:
             logger.exception("한글 조합 폰트 생성 실패")
             raise HTTPException(status_code=500, detail="폰트 생성에 실패했습니다.")
+    finally:
+        _hangul_compose_semaphore.release()
 
     return HangulComposeResponse(
         fontBase64=b64,

@@ -322,7 +322,7 @@ export const en: typeof ko = {
       textScale: "Text size",
       textScaleAria: "Body text size",
       scales: { s: "Small", m: "Medium", l: "Large" },
-      papers: { cream: "Cream", white: "White", mint: "Mint", pink: "Pink", grid: "Grid", dot: "Dot", kraft: "Kraft" },
+      papers: { cream: "Cream", white: "White", mint: "Mint", pink: "Pink", grid: "Grid", dot: "Dot", kraft: "Kraft", sky: "Sky", lavender: "Lavender", sepia: "Sepia" },
       sizes: { a4: "Portrait (A4)", square: "Square", card: "Postcard (landscape)" },
     },
     hangulLetter: {
@@ -348,15 +348,16 @@ export const en: typeof ko = {
       textScale: "Text size",
       textScaleAria: "Body text size",
       scales: { s: "Small", m: "Medium", l: "Large" },
-      papers: { cream: "Cream", white: "White", mint: "Mint", pink: "Pink", grid: "Grid", dot: "Dot", kraft: "Kraft" },
+      papers: { cream: "Cream", white: "White", mint: "Mint", pink: "Pink", grid: "Grid", dot: "Dot", kraft: "Kraft", sky: "Sky", lavender: "Lavender", sepia: "Sepia" },
       sizes: { a4: "Portrait (A4)", square: "Square", card: "Postcard (landscape)" },
     },
     previewZoom: {
       open: "View larger",
       close: "Close",
       dialogLabel: "Preview zoom",
-      fit: "Fit",
-      actual: "Actual size",
+      zoomIn: "Zoom in",
+      zoomOut: "Zoom out",
+      reset: "Reset size",
     },
     share: {
       copy: "Copy share link",

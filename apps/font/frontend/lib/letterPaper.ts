@@ -1,7 +1,17 @@
 // 편지 렌더 공용 모듈 — 라틴/한글 편지 패널이 같은 편지지·크기·글자크기·렌더를 공유한다.
 // "스타일 하나 추가"가 한 곳에서 끝나도록(두 패널 동기화 버그 방지).
 
-export type PaperId = "cream" | "white" | "mint" | "pink" | "grid" | "dot" | "kraft";
+export type PaperId =
+  | "cream"
+  | "white"
+  | "mint"
+  | "pink"
+  | "grid"
+  | "dot"
+  | "kraft"
+  | "sky"
+  | "lavender"
+  | "sepia";
 export interface Paper {
   id: PaperId;
   bg: string;
@@ -17,6 +27,9 @@ export const PAPERS: Paper[] = [
   { id: "grid", bg: "#fbfbfd", line: "#e4e7ef", ruled: "grid" },
   { id: "dot", bg: "#fcfbf7", line: "#cfc8b4", ruled: "dot" },
   { id: "kraft", bg: "#e7dabd", line: "#c9b88f", ruled: "line" },
+  { id: "sky", bg: "#eef5fd", line: "#cfe0f3", ruled: "line" },
+  { id: "lavender", bg: "#f4eefb", line: "#ddd1ef", ruled: "line" },
+  { id: "sepia", bg: "#f6efe1", line: "#dccbab", ruled: "line" },
 ];
 export const findPaper = (id: PaperId): Paper => PAPERS.find((p) => p.id === id) ?? PAPERS[0]!;
 

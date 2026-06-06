@@ -201,9 +201,26 @@ export async function POST(req: Request) {
       console.error(
         `[hangul-compose] 엔진 오류 ${res.status}: ${detail.slice(0, 500)}`
       );
+      // 엔진의 실제 사유를 살려 전달(진단 가능). FastAPI는 {detail:"..."} 형태.
+      let reason = "";
+      try {
+        const j = JSON.parse(detail) as { detail?: unknown };
+        if (typeof j?.detail === "string") reason = j.detail;
+      } catch {
+        /* 본문이 JSON이 아니면 무시 */
+      }
+      // 상태코드 의미 보존: 503(혼잡)·429·4xx는 그대로, 그 외 5xx는 502로.
+      const status =
+        res.status === 503 || res.status === 429 || (res.status >= 400 && res.status < 500)
+          ? res.status
+          : 502;
+      const base =
+        status === 503
+          ? "지금 요청이 몰려 잠시 후 다시 시도해 주세요."
+          : "글씨 합성에 실패했습니다. 잠시 후 다시 시도해 주세요.";
       return NextResponse.json(
-        { error: "글씨 합성에 실패했습니다. 잠시 후 다시 시도해 주세요." },
-        { status: 502 }
+        { error: reason ? `${base} (엔진 ${res.status}: ${reason.slice(0, 120)})` : `${base} (엔진 ${res.status})` },
+        { status }
       );
     }
 

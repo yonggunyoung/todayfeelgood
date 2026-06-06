@@ -383,8 +383,9 @@ export default function HangulImagePanel({ jamo, drawnJamo, refine = DEFAULT_REF
             label={t.previewZoom.open}
             closeLabel={t.previewZoom.close}
             dialogLabel={t.previewZoom.dialogLabel}
-            fitLabel={t.previewZoom.fit}
-            actualLabel={t.previewZoom.actual}
+            zoomInLabel={t.previewZoom.zoomIn}
+            zoomOutLabel={t.previewZoom.zoomOut}
+            resetLabel={t.previewZoom.reset}
           />
         </div>
       )}

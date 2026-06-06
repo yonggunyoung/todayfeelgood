@@ -202,8 +202,9 @@ export default function LetterPanel({ fontBase64, coveredChars, autofill = false
             label={zoom.open}
             closeLabel={zoom.close}
             dialogLabel={zoom.dialogLabel}
-            fitLabel={zoom.fit}
-            actualLabel={zoom.actual}
+            zoomInLabel={zoom.zoomIn}
+            zoomOutLabel={zoom.zoomOut}
+            resetLabel={zoom.reset}
           />
         </div>
       )}

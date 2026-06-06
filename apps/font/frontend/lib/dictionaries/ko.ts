@@ -325,7 +325,7 @@ export const ko = {
       textScale: "글자 크기",
       textScaleAria: "본문 글자 크기",
       scales: { s: "작게", m: "보통", l: "크게" },
-      papers: { cream: "크림", white: "흰 종이", mint: "민트", pink: "핑크", grid: "모눈", dot: "도트", kraft: "크라프트" },
+      papers: { cream: "크림", white: "흰 종이", mint: "민트", pink: "핑크", grid: "모눈", dot: "도트", kraft: "크라프트", sky: "하늘", lavender: "라벤더", sepia: "세피아" },
       sizes: { a4: "세로(A4)", square: "정사각", card: "엽서(가로)" },
     },
     // 한글 편지 패널(자모 조합 → 편지지 → PNG)
@@ -352,7 +352,7 @@ export const ko = {
       textScale: "글자 크기",
       textScaleAria: "본문 글자 크기",
       scales: { s: "작게", m: "보통", l: "크게" },
-      papers: { cream: "크림", white: "흰 종이", mint: "민트", pink: "핑크", grid: "모눈", dot: "도트", kraft: "크라프트" },
+      papers: { cream: "크림", white: "흰 종이", mint: "민트", pink: "핑크", grid: "모눈", dot: "도트", kraft: "크라프트", sky: "하늘", lavender: "라벤더", sepia: "세피아" },
       sizes: { a4: "세로(A4)", square: "정사각", card: "엽서(가로)" },
     },
     // 미리보기 확대 모달(공유)
@@ -360,8 +360,9 @@ export const ko = {
       open: "확대해서 보기",
       close: "닫기",
       dialogLabel: "미리보기 확대",
-      fit: "맞춤",
-      actual: "실제 크기",
+      zoomIn: "크게",
+      zoomOut: "작게",
+      reset: "기본 크기",
     },
     // 공유 버튼
     share: {

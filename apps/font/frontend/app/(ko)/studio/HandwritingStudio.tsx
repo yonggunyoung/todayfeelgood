@@ -564,6 +564,7 @@ export default function HandwritingStudio({ locale = "ko" }: { locale?: Locale }
                     refine={refine}
                     autofill={autofill}
                     t={t.hangulLetter}
+                    zoom={t.previewZoom}
                   />
                 )}
               </>
@@ -611,6 +612,7 @@ export default function HandwritingStudio({ locale = "ko" }: { locale?: Locale }
                     coveredChars={coveredChars}
                     autofill={autofill}
                     t={t.letter}
+                    zoom={t.previewZoom}
                   />
                 )}
 

@@ -12,6 +12,7 @@ import {
 } from "../lib/imageTemplates";
 import type { SharePayload } from "../lib/shareCodec";
 import ShareButton from "./ShareButton";
+import PreviewZoom from "./PreviewZoom";
 import type { Dictionary } from "../lib/i18n";
 import styles from "./HandwritingImagePanel.module.css";
 
@@ -385,6 +386,19 @@ export default function HandwritingImagePanel({
           />
         )}
       </div>
+
+      {!disabled && (
+        <div className={styles.zoomRow}>
+          <PreviewZoom
+            canvasRef={canvasRef}
+            label={t.previewZoom.open}
+            closeLabel={t.previewZoom.close}
+            dialogLabel={t.previewZoom.dialogLabel}
+            fitLabel={t.previewZoom.fit}
+            actualLabel={t.previewZoom.actual}
+          />
+        </div>
+      )}
 
       {/* 옵션들 */}
       <div className={styles.options}>

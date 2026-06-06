@@ -186,6 +186,11 @@
   cursor: pointer;
 }
 
+.zoomRow {
+  display: flex;
+  justify-content: center;
+}
+
 .exportBtn {
   width: 100%;
 }

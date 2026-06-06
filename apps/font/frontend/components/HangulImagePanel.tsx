@@ -20,6 +20,7 @@ import {
 } from "../lib/imageTemplates";
 import type { SharePayload } from "../lib/shareCodec";
 import ShareButton from "./ShareButton";
+import PreviewZoom from "./PreviewZoom";
 import type { Dictionary } from "../lib/i18n";
 import styles from "./HandwritingImagePanel.module.css";
 
@@ -374,6 +375,19 @@ export default function HangulImagePanel({ jamo, drawnJamo, refine = DEFAULT_REF
           </div>
         )}
       </div>
+
+      {ready && (
+        <div className={styles.zoomRow}>
+          <PreviewZoom
+            canvasRef={canvasRef}
+            label={t.previewZoom.open}
+            closeLabel={t.previewZoom.close}
+            dialogLabel={t.previewZoom.dialogLabel}
+            fitLabel={t.previewZoom.fit}
+            actualLabel={t.previewZoom.actual}
+          />
+        </div>
+      )}
 
       <div className={styles.options}>
         <div className={styles.optRow}>

@@ -322,7 +322,10 @@ export const ko = {
       export: "편지 PNG로 받기",
       honesty: "진짜 내가 그린 글씨로 쓴 편지예요. 편지지 무늬는 이미지 전용 효과예요.",
       defaultText: "dear friend,\nthank you for being\nthere for me.\n\nlove always",
-      papers: { cream: "크림", white: "흰 종이", mint: "민트", pink: "핑크", grid: "모눈" },
+      textScale: "글자 크기",
+      textScaleAria: "본문 글자 크기",
+      scales: { s: "작게", m: "보통", l: "크게" },
+      papers: { cream: "크림", white: "흰 종이", mint: "민트", pink: "핑크", grid: "모눈", dot: "도트", kraft: "크라프트" },
       sizes: { a4: "세로(A4)", square: "정사각", card: "엽서(가로)" },
     },
     // 한글 편지 패널(자모 조합 → 편지지 → PNG)
@@ -346,8 +349,19 @@ export const ko = {
       ink: "글자색",
       export: "편지 PNG로 받기",
       honesty: "그린 기본 자모로 음절을 조합한 편지예요(조합 티가 있을 수 있어요). 편지지 무늬는 이미지 전용 효과예요.",
-      papers: { cream: "크림", white: "흰 종이", mint: "민트", pink: "핑크", grid: "모눈" },
+      textScale: "글자 크기",
+      textScaleAria: "본문 글자 크기",
+      scales: { s: "작게", m: "보통", l: "크게" },
+      papers: { cream: "크림", white: "흰 종이", mint: "민트", pink: "핑크", grid: "모눈", dot: "도트", kraft: "크라프트" },
       sizes: { a4: "세로(A4)", square: "정사각", card: "엽서(가로)" },
+    },
+    // 미리보기 확대 모달(공유)
+    previewZoom: {
+      open: "확대해서 보기",
+      close: "닫기",
+      dialogLabel: "미리보기 확대",
+      fit: "맞춤",
+      actual: "실제 크기",
     },
     // 공유 버튼
     share: {

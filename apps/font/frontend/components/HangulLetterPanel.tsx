@@ -11,6 +11,19 @@ import {
 } from "@webapp/core";
 import { apiPath } from "../lib/paths";
 import { isHangulChar, requiredJamo } from "../lib/hangul";
+import {
+  PAPERS,
+  SIZES,
+  TEXT_SCALES,
+  findPaper,
+  findSize,
+  findScale,
+  drawLetter,
+  type PaperId,
+  type SizeId,
+  type TextScaleId,
+} from "../lib/letterPaper";
+import PreviewZoom from "./PreviewZoom";
 import type { Dictionary } from "../lib/i18n";
 import styles from "./LetterPanel.module.css";
 
@@ -24,6 +37,8 @@ interface Props {
   /** 안 그린 자모를 내 스타일로 자동 채움(엔진 병행). */
   autofill?: boolean;
   t: Dictionary["studio"]["hangulLetter"];
+  /** 확대 모달 라벨(스튜디오 공유). */
+  zoom: Dictionary["studio"]["previewZoom"];
 }
 
 // 편지 내용이 바뀐 뒤 엔진 합성까지 디바운스(ms). 긴 글 타이핑이 잦으므로 넉넉히.
@@ -37,31 +52,11 @@ function base64ToArrayBuffer(b64: string): ArrayBuffer {
   return bytes.buffer;
 }
 
-// 편지지 종류 — LetterPanel과 동일(색지/줄/여백).
-type PaperId = "cream" | "white" | "mint" | "pink" | "grid";
-const PAPERS: { id: PaperId; bg: string; line: string; ruled: "line" | "grid" | "none" }[] = [
-  { id: "cream", bg: "#fdf6e8", line: "#e6d9bd", ruled: "line" },
-  { id: "white", bg: "#ffffff", line: "#e6e3ef", ruled: "line" },
-  { id: "mint", bg: "#eaf6f0", line: "#cfe6da", ruled: "line" },
-  { id: "pink", bg: "#fdeef0", line: "#f1d4da", ruled: "line" },
-  { id: "grid", bg: "#fbfbfd", line: "#e4e7ef", ruled: "grid" },
-];
-
-type SizeId = "a4" | "square" | "card";
-const SIZES: { id: SizeId; w: number; h: number }[] = [
-  { id: "a4", w: 1240, h: 1754 },
-  { id: "square", w: 1240, h: 1240 },
-  { id: "card", w: 1748, h: 1240 },
-];
-
 /**
- * "내 자모로 한글 편지 쓰기" — LetterPanel(편지지/줄/PNG)과 HangulImagePanel(텍스트→조합 폰트)
- * 을 합친 패널. 한글은 음절이 텍스트에 의존하므로, 편지 내용이 바뀌면 그린 자모 + text를
+ * "내 자모로 한글 편지 쓰기" — LetterPanel(편지지/줄/확대/PNG)과 HangulImagePanel(텍스트→조합
+ * 폰트)을 합친 패널. 한글은 음절이 텍스트에 의존하므로, 편지 내용이 바뀌면 그린 자모 + text를
  * `/api/hangul-compose`에 보내 합성 폰트를 받아 @font-face로 편지지 위에 렌더한다.
- *
- * 라틴 LetterPanel과 다른 점:
- *  - 폰트가 미리 있지 않고 편지 내용으로 매번 합성(디바운스 + 이전 요청 취소).
- *  - 줄바꿈은 한글 특성상 **글자 단위**로 자동 줄바꿈(공백 우선).
+ * 편지지·크기·글자크기·렌더는 lib/letterPaper(라틴 편지와 공유, 줄바꿈만 글자 단위).
  */
 export default function HangulLetterPanel({
   jamo,
@@ -69,10 +64,12 @@ export default function HangulLetterPanel({
   refine = DEFAULT_REFINE,
   autofill = false,
   t,
+  zoom,
 }: Props) {
   const [text, setText] = useState(t.defaultText);
   const [paperId, setPaperId] = useState<PaperId>("cream");
   const [sizeId, setSizeId] = useState<SizeId>(SIZES[0]!.id);
+  const [scaleId, setScaleId] = useState<TextScaleId>("m");
   const [inkInput, setInkInput] = useState("#3a3550");
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -86,8 +83,9 @@ export default function HangulLetterPanel({
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
-  const paper = PAPERS.find((p) => p.id === paperId) ?? PAPERS[0]!;
-  const size = SIZES.find((s) => s.id === sizeId) ?? SIZES[0]!;
+  const paper = findPaper(paperId);
+  const size = findSize(sizeId);
+  const scale = findScale(scaleId);
   const safeInk = sanitizeColor(inkInput, "#3a3550");
 
   const drawnSet = useMemo(() => new Set(drawnJamo), [drawnJamo]);
@@ -221,86 +219,25 @@ export default function HangulLetterPanel({
     };
   }, [fontBase64]);
 
-  // 캔버스 렌더(결정적) — 편지지 + 줄 + 한글 본문(글자 단위 자동 줄바꿈).
+  // 캔버스 렌더(결정적) — 편지지 + 줄 + 한글 본문(공용 drawLetter, 글자 단위 줄바꿈).
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas || !activeFamily || !fontReady || !textToCompose) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-
-    const W = size.w;
-    const H = size.h;
-    canvas.width = W;
-    canvas.height = H;
-
-    // 1) 색지
-    ctx.fillStyle = paper.bg;
-    ctx.fillRect(0, 0, W, H);
-
-    const margin = Math.round(W * 0.1);
-    const box = { x: margin, y: margin, w: W - margin * 2, h: H - margin * 2 };
-
-    const fontPx = Math.round(W * 0.05);
-    const lineH = Math.round(fontPx * 1.7);
-
-    // 2) 줄/모눈
-    ctx.strokeStyle = paper.line;
-    ctx.lineWidth = 1.4;
-    if (paper.ruled === "line") {
-      for (let y = box.y + lineH; y <= box.y + box.h; y += lineH) {
-        ctx.beginPath();
-        ctx.moveTo(box.x, y);
-        ctx.lineTo(box.x + box.w, y);
-        ctx.stroke();
-      }
-    } else if (paper.ruled === "grid") {
-      for (let y = box.y; y <= box.y + box.h; y += lineH) {
-        ctx.beginPath();
-        ctx.moveTo(box.x, y);
-        ctx.lineTo(box.x + box.w, y);
-        ctx.stroke();
-      }
-      for (let x = box.x; x <= box.x + box.w; x += lineH) {
-        ctx.beginPath();
-        ctx.moveTo(x, box.y);
-        ctx.lineTo(x, box.y + box.h);
-        ctx.stroke();
-      }
-    }
-
-    // 3) 한글 본문 — 글자 단위 자동 줄바꿈(공백에서 끊김 선호) + 명시적 줄바꿈 존중.
-    ctx.font = `${fontPx}px "${activeFamily}", system-ui, sans-serif`;
-    ctx.fillStyle = safeInk;
-    ctx.textBaseline = "alphabetic";
-    ctx.textAlign = "left";
-
-    const wrap = (line: string): string[] => {
-      if (line === "") return [""];
-      const out: string[] = [];
-      let cur = "";
-      for (const ch of line) {
-        const test = cur + ch;
-        if (ctx.measureText(test).width > box.w && cur) {
-          out.push(cur);
-          cur = ch === " " ? "" : ch; // 줄 시작 공백은 버림
-        } else {
-          cur = test;
-        }
-      }
-      out.push(cur);
-      return out;
-    };
-
-    const wrapped: string[] = [];
-    for (const raw of renderText.split("\n")) wrapped.push(...wrap(raw));
-
-    let y = box.y + lineH * 0.82;
-    for (const line of wrapped) {
-      if (y > box.y + box.h) break; // 종이 넘치면 멈춤
-      ctx.fillText(line, box.x, y);
-      y += lineH;
-    }
-  }, [activeFamily, fontReady, size, paper, safeInk, renderText, textToCompose]);
+    canvas.width = size.w;
+    canvas.height = size.h;
+    drawLetter(ctx, {
+      W: size.w,
+      H: size.h,
+      paper,
+      fontFamily: activeFamily,
+      ink: safeInk,
+      text: renderText,
+      fontScale: scale.mul,
+      wrapMode: "char",
+    });
+  }, [activeFamily, fontReady, size, paper, safeInk, renderText, scale, textToCompose]);
 
   const handleDownload = () => {
     const canvas = canvasRef.current;
@@ -367,6 +304,19 @@ export default function HangulLetterPanel({
         )}
       </div>
 
+      {ready && (
+        <div className={styles.zoomRow}>
+          <PreviewZoom
+            canvasRef={canvasRef}
+            label={zoom.open}
+            closeLabel={zoom.close}
+            dialogLabel={zoom.dialogLabel}
+            fitLabel={zoom.fit}
+            actualLabel={zoom.actual}
+          />
+        </div>
+      )}
+
       <div className={styles.options}>
         <div className={styles.optRow}>
           <span className={styles.optLabel}>{t.paper}</span>
@@ -393,6 +343,16 @@ export default function HangulLetterPanel({
             value={sizeId}
             onChange={setSizeId}
             options={SIZES.map((s) => ({ value: s.id, label: t.sizes[s.id] }))}
+          />
+        </div>
+
+        <div className={styles.optRow}>
+          <span className={styles.optLabel}>{t.textScale}</span>
+          <Segmented<TextScaleId>
+            ariaLabel={t.textScaleAria}
+            value={scaleId}
+            onChange={setScaleId}
+            options={TEXT_SCALES.map((s) => ({ value: s.id, label: t.scales[s.id] }))}
           />
         </div>
 

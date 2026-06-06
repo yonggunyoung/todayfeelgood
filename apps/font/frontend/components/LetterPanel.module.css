@@ -163,6 +163,12 @@
   cursor: pointer;
 }
 
+.zoomRow {
+  display: flex;
+  justify-content: center;
+  margin-top: calc(-1 * var(--sp-1, 4px));
+}
+
 .exportBtn {
   width: 100%;
 }

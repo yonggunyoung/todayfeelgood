@@ -175,14 +175,16 @@ def _smooth_stroke(points: List[Point], smoothing: float) -> List[Point]:
     pts = _dedupe(points)
     if len(pts) < 2:
         return pts
-    # RDP epsilon: smoothing 클수록 더 많이 솎음. smoothing 0이면 거의 안 솎음(원형 보존).
-    eps = 0.0008 + 0.012 * smoothing
+    # RDP epsilon: smoothing 클수록 더 많이 솎아 "정리" 효과가 또렷하게 보이도록 범위를 키움.
+    # (이전 0.0008+0.012*s 는 tidy에서도 ~0.9%만 단순화 → 차이가 거의 안 보였음.)
+    # 0 = 거의 원형 보존, 1 ≈ 6% 단순화(구불구불 확실히 정돈).
+    eps = 0.001 + 0.06 * smoothing
     simplified = _rdp(pts, eps)
     if len(simplified) < 3:
         # 점 2개(직선)는 보간 불필요 — 그대로 둔다(원형 보존, 직선은 직선).
         return simplified
-    # 보간 밀도: smoothing 0이어도 약한 곡선(samples>=3), 클수록 부드럽게.
-    samples = 3 + int(round(9 * smoothing))
+    # 보간 밀도: smoothing 0이어도 약한 곡선(samples>=3), 클수록 더 부드럽게.
+    samples = 3 + int(round(11 * smoothing))
     return _catmull_rom(simplified, samples)
 
 

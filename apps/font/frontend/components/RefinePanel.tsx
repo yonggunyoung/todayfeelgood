@@ -15,10 +15,11 @@ interface Props {
 // "✨ 자동 정리" 쉬운 프리셋 — smoothing/straighten을 한 번에 묶어 노출.
 // (슬라이더 세부 조정은 아래 "고급"에서.)
 type TidyLevel = "raw" | "light" | "tidy";
+// 3단계 차이가 또렷하게 느껴지도록 간격을 넓힘(날것=원형 그대로 ↔ 자동=확실히 정돈).
 const TIDY_VALUES: { id: TidyLevel; smoothing: number; straighten: number }[] = [
   { id: "raw", smoothing: 0, straighten: 0 },
-  { id: "light", smoothing: 0.35, straighten: 0.2 },
-  { id: "tidy", smoothing: 0.7, straighten: 0.5 },
+  { id: "light", smoothing: 0.45, straighten: 0.35 },
+  { id: "tidy", smoothing: 0.9, straighten: 0.75 },
 ];
 
 // 현재 값이 어느 프리셋에 해당하는지(가까운 것). 사용자가 슬라이더를 만지면 매칭 해제될 수 있음.

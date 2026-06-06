@@ -21,6 +21,7 @@
 """
 from __future__ import annotations
 
+import functools
 import math
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Sequence, Tuple
@@ -212,36 +213,52 @@ def _style_weight(style: DrawnStyle) -> float:
 
 
 # ---------------- 베이스 폰트 인스턴싱 + 글리프 추출 ----------------
-def _instance_latin(base_font_path: str, style: DrawnStyle) -> TTFont:
+@functools.lru_cache(maxsize=12)
+def _instanced_bytes(base_font_path: str, wght_b: int, slnt_b: int, casl_pct: int) -> bytes:
     """
-    Recursive VF를 추출 스타일(weight/slant)로 인스턴싱한 정적 폰트.
-    UPM은 1000(손글씨와 동일)이라 좌표를 그대로 합칠 수 있다.
+    (weight·slant·CASL) 버킷별 **인스턴싱 결과 폰트 바이트** — 캐시.
+
+    [핵심 최적화] instantiateVariableFont 는 무겁다(특히 한글 Pretendard는 수천 글리프를
+    인터폴레이션). 자동채움이 매 요청(키 입력마다) 이걸 반복하면 CPU/메모리가 폭주해
+    느려지고 502(엔진 5xx)가 난다. weight/slant 를 버킷으로 묶어 결과 바이트를 캐시하면,
+    그리기 반복·슬라이더 미세조작에도 같은 버킷이면 인스턴싱을 건너뛴다.
+    casl_pct<0 이면 CASL 미적용(예: 한글 Pretendard).
     """
-    data = _read_bytes(base_font_path)
     import io
 
+    data = _read_bytes(base_font_path)
     font = TTFont(io.BytesIO(data), recalcTimestamp=False)
-    if "fvar" not in font:
-        return font
-    available = {a.axisTag: (a.minValue, a.maxValue) for a in font["fvar"].axes}
-    defaults = {a.axisTag: a.defaultValue for a in font["fvar"].axes}
-    axis_values = dict(defaults)
+    if "fvar" in font:
+        available = {a.axisTag: (a.minValue, a.maxValue) for a in font["fvar"].axes}
+        axis_values = {a.axisTag: a.defaultValue for a in font["fvar"].axes}
+        if "wght" in available:
+            lo, hi = available["wght"]
+            t = (float(wght_b) - 100.0) / 800.0
+            axis_values["wght"] = lo + max(0.0, min(1.0, t)) * (hi - lo)
+        if "slnt" in available:
+            lo, hi = available["slnt"]
+            axis_values["slnt"] = max(lo, min(hi, float(slnt_b)))
+        if casl_pct >= 0 and "CASL" in available:
+            lo, hi = available["CASL"]
+            axis_values["CASL"] = max(lo, min(hi, casl_pct / 100.0))
+        instantiateVariableFont(font, axis_values, inplace=True)
+    buf = io.BytesIO()
+    font.save(buf)
+    return buf.getvalue()
 
-    if "wght" in available:
-        lo, hi = available["wght"]
-        ui_w = _style_weight(style)
-        t = (ui_w - 100.0) / 800.0
-        axis_values["wght"] = lo + max(0.0, min(1.0, t)) * (hi - lo)
-    if "slnt" in available:
-        lo, hi = available["slnt"]
-        axis_values["slnt"] = max(lo, min(hi, style.slant_deg))
-    # 손글씨 느낌: CASL(부드러움)을 약간 준다(과하지 않게).
-    if "CASL" in available:
-        lo, hi = available["CASL"]
-        axis_values["CASL"] = max(lo, min(hi, 0.35))
 
-    instantiateVariableFont(font, axis_values, inplace=True)
-    return font
+def _instance_latin(base_font_path: str, style: DrawnStyle) -> TTFont:
+    """
+    Recursive VF를 추출 스타일(weight/slant)로 인스턴싱한 정적 폰트(버킷 캐시 사용).
+    UPM은 1000(손글씨와 동일)이라 좌표를 그대로 합칠 수 있다.
+    매 요청 캐시된 바이트에서 새 TTFont를 로드 → 동시 추출에도 객체 공유 위험 없음.
+    """
+    import io
+
+    wb = int(round(_style_weight(style) / 25.0) * 25)
+    sb = int(round(max(-20.0, min(20.0, style.slant_deg))))
+    data = _instanced_bytes(base_font_path, wb, sb, 35)
+    return TTFont(io.BytesIO(data), recalcTimestamp=False)
 
 
 def _read_bytes(path: str) -> bytes:
@@ -399,20 +416,11 @@ def hangul_fill_jamo_strokes(
     """
     import io
 
-    data = _read_bytes(base_font_path)
+    # 굵기(weight) 버킷별 인스턴싱 결과를 캐시(Pretendard 수천 글리프 인터폴레이션 반복 제거).
+    # 한글은 slnt/CASL 축이 없으므로 slnt_b=0, casl_pct=-1.
+    wb = int(round(_style_weight(style) / 25.0) * 25)
+    data = _instanced_bytes(base_font_path, wb, 0, -1)
     font = TTFont(io.BytesIO(data), recalcTimestamp=False)
-
-    # 추출 스타일에 맞춰 굵기(weight) 인스턴싱(Pretendard는 wght 단일 축).
-    if "fvar" in font:
-        available = {a.axisTag: (a.minValue, a.maxValue) for a in font["fvar"].axes}
-        defaults = {a.axisTag: a.defaultValue for a in font["fvar"].axes}
-        axis_values = dict(defaults)
-        if "wght" in available:
-            lo, hi = available["wght"]
-            ui_w = _style_weight(style)
-            t = (ui_w - 100.0) / 800.0
-            axis_values["wght"] = lo + max(0.0, min(1.0, t)) * (hi - lo)
-        instantiateVariableFont(font, axis_values, inplace=True)
 
     cmap = font.getBestCmap()
     glyphset = font.getGlyphSet()

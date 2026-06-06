@@ -84,6 +84,9 @@ ENV APP_DIR=${APP_DIR}
 ENV BASE_PATH=${BASE_PATH}
 ENV PORT=${PORT}
 ENV HOSTNAME=0.0.0.0
+# corepack이 런타임에 pnpm을 새로 받으려다(다운로드 프롬프트/네트워크 차단) 멈추는 것을 차단.
+# (아래 CMD는 pnpm을 거치지 않고 next를 node로 직접 실행하므로 corepack 자체가 불필요하지만 안전장치.)
+ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
 
 # 빌드 결과 전체(소스 + .next + node_modules)를 그대로 가져온다.
 # standalone 미사용이므로 워크스페이스 심볼릭릭/공용 패키지 의존을 위해 전체가 필요.
@@ -98,4 +101,7 @@ EXPOSE ${PORT}
 
 # next start 를 워크스페이스 디렉터리에서 실행. PORT/BASE_PATH 는 env로 주입됨.
 # (각 앱 next.config 가 process.env.BASE_PATH 를 읽어 basePath 결정)
-CMD ["sh", "-c", "cd \"$APP_DIR\" && exec pnpm exec next start -p \"$PORT\""]
+# pnpm/corepack을 거치지 않고 next 바이너리를 node로 직접 실행 — 런타임 corepack 다운로드
+# (프롬프트/네트워크)에서 멈춰 포트가 안 열리던 502 원인 제거. next는 워크스페이스
+# node_modules에 심볼릭링크로 존재한다.
+CMD ["sh", "-c", "cd \"$APP_DIR\" && exec node node_modules/next/dist/bin/next start -p \"$PORT\""]

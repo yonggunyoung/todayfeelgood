@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type RefObject } from "react";
+import { createPortal } from "react-dom";
 import styles from "./PreviewZoom.module.css";
 
 interface Props {
@@ -118,13 +119,14 @@ export default function PreviewZoom({
         <span aria-hidden>🔍</span> {label}
       </button>
 
-      {open && (
-        <div
-          className={styles.overlay}
-          onPointerDown={(e) => {
-            if (e.target === e.currentTarget) close();
-          }}
-        >
+      {open &&
+        createPortal(
+          <div
+            className={styles.overlay}
+            onPointerDown={(e) => {
+              if (e.target === e.currentTarget) close();
+            }}
+          >
           <div
             ref={dialogRef}
             className={styles.dialog}
@@ -182,8 +184,9 @@ export default function PreviewZoom({
               />
             </div>
           </div>
-        </div>
-      )}
+          </div>,
+          document.body,
+        )}
     </>
   );
 }

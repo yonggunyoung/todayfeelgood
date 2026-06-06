@@ -22,7 +22,8 @@
 .overlay {
   position: fixed;
   inset: 0;
-  z-index: 100;
+  /* body로 포털 렌더 + 앱의 다른 스택킹 컨텍스트(헤더·그리기 칸 ⤢ 버튼 등) 위로. */
+  z-index: 1000;
   display: flex;
   align-items: center;
   justify-content: center;

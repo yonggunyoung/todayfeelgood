@@ -9,6 +9,7 @@ export const metadata: Metadata = buildMeta({
   description: t.guide.seoDescription,
   path: guidePath("en"),
   locale: "en",
+  ogImage: "/og",
   alternates: guideAlternates(),
 });
 

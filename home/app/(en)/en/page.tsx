@@ -10,6 +10,7 @@ export const metadata: Metadata = {
     ...t.hub.seo,
     path: homePath("en"),
     locale: "en",
+    ogImage: "/og",
     alternates: homeAlternates(),
   }),
   title: { absolute: t.hub.seo.title },

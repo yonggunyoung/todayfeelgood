@@ -9,6 +9,7 @@ export const metadata: Metadata = buildMeta({
   ...t.seo,
   path: neogulPath("ko"),
   locale: "ko",
+  ogImage: "/og",
   alternates: neogulAlternates(),
 });
 

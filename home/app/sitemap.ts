@@ -61,6 +61,33 @@ export default function sitemap(): MetadataRoute.Sitemap {
         },
       },
     },
+    // 사용법·소개·FAQ(가이드) — 검색 노출·애드센스 승인용 본문 콘텐츠. ko/en.
+    {
+      url: `${base}/guide`,
+      lastModified: now,
+      changeFrequency: "monthly" as const,
+      priority: 0.7,
+      alternates: {
+        languages: {
+          ko: `${base}/guide`,
+          en: `${base}/en/guide`,
+          "x-default": `${base}/guide`,
+        },
+      },
+    },
+    {
+      url: `${base}/en/guide`,
+      lastModified: now,
+      changeFrequency: "monthly" as const,
+      priority: 0.6,
+      alternates: {
+        languages: {
+          ko: `${base}/guide`,
+          en: `${base}/en/guide`,
+          "x-default": `${base}/guide`,
+        },
+      },
+    },
     ...["privacy", "terms"].flatMap((doc) => [
       {
         url: `${base}/${doc}`,

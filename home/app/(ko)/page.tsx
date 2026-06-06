@@ -11,6 +11,7 @@ export const metadata: Metadata = {
     ...t.hub.seo,
     path: homePath("ko"),
     locale: "ko",
+    ogImage: "/og",
     alternates: homeAlternates(),
   }),
   // 허브 제목은 제품 브랜드 접미사(템플릿) 없이 단독 노출.

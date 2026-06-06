@@ -362,6 +362,17 @@ def _dot_polygon(center: Point, radius: float, segments: int = 16) -> List[Point
 
 
 # ---------------- 폴리곤 → 2차 베지어 컨투어 ----------------
+def _signed_area(pts: List[Point]) -> float:
+    """닫힌 폴리곤의 부호 있는 넓이(shoelace). >0=CCW, <0=CW. 방향 통일 판정용."""
+    a = 0.0
+    n = len(pts)
+    for i in range(n):
+        x0, y0 = pts[i]
+        x1, y1 = pts[(i + 1) % n]
+        a += x0 * y1 - x1 * y0
+    return a * 0.5
+
+
 def _to_quad_contour(poly: List[Point], pen) -> None:
     """
     닫힌 폴리곤(외곽선 점열)을 2차 베지어(qCurveTo) 로 매끄럽게 그린다.
@@ -374,6 +385,11 @@ def _to_quad_contour(poly: List[Point], pen) -> None:
     pts = _dedupe(poly)
     if len(pts) < 3:
         return
+    # ★ winding(방향) 정규화: 모든 외곽선을 같은 방향(TrueType 관례=시계방향, 넓이<0)으로 통일.
+    # 안 하면 획을 그린 방향에 따라 컨투어 방향이 제각각 → 두 획이 겹치는 곳에서
+    # nonzero 채움 규칙이 서로 상쇄돼 "구멍/파먹힘"이 생긴다(특히 한글 자모 교차부).
+    if _signed_area(pts) > 0.0:
+        pts = pts[::-1]
     n = len(pts)
     # 시작 on-curve 점: 마지막↔첫 점의 중점.
     start = ((pts[-1][0] + pts[0][0]) / 2.0, (pts[-1][1] + pts[0][1]) / 2.0)

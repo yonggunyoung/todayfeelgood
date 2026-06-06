@@ -60,6 +60,7 @@ export default function HangulPreview({ jamo, drawnJamo, refine = DEFAULT_REFINE
   const seqRef = useRef(0);
   const reqIdRef = useRef(0);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   // 견본 단어/자모 변경 → 디바운스 후 엔진 합성.
   useEffect(() => {
@@ -70,6 +71,11 @@ export default function HangulPreview({ jamo, drawnJamo, refine = DEFAULT_REFINE
     }
     debounceRef.current = setTimeout(() => {
       const myId = ++reqIdRef.current;
+      // ★ 이전 요청 취소: 진행 중 요청을 끊어 서버에 동시 요청이 쌓이지 않게 한다
+      //   (세마포어 포화 → 503 → BFF 502 깜빡임 방지). 항상 최신 1건만 비행 중.
+      if (abortRef.current) abortRef.current.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
       setLoading(true);
       const payload: HangulComposeRequest = {
         jamo,
@@ -82,6 +88,7 @@ export default function HangulPreview({ jamo, drawnJamo, refine = DEFAULT_REFINE
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
+        signal: controller.signal,
       })
         .then(async (res) => {
           if (!res.ok) throw new Error(`요청 실패 (${res.status})`);
@@ -91,8 +98,11 @@ export default function HangulPreview({ jamo, drawnJamo, refine = DEFAULT_REFINE
           if (myId !== reqIdRef.current) return;
           setFontBase64(data.fontBase64);
         })
-        .catch(() => {
-          if (myId === reqIdRef.current) setFontBase64(null);
+        .catch((err) => {
+          // 취소(abort)·일시적 서버 오류(503/502)는 직전 미리보기를 그대로 유지
+          //   → 그릴 때마다 미리보기가 사라졌다 떴다 하지 않는다.
+          if (err instanceof Error && err.name === "AbortError") return;
+          // 직전 결과 유지(setFontBase64 호출 안 함). 로딩만 해제.
         })
         .finally(() => {
           if (myId === reqIdRef.current) setLoading(false);

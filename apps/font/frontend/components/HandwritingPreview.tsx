@@ -101,9 +101,10 @@ export default function HandwritingPreview({
     [...w].every((ch) => ch === " " || coveredSet.has(ch.toLowerCase()))
   );
 
-  // a–z / A–Z 중 무엇이 채워졌는지 한눈에. 안 그린 글자는 흐리게.
+  // a–z / A–Z / 특수문자 중 무엇이 채워졌는지 한눈에. 안 그린 글자는 흐리게.
   const lowerAlphabet = "abcdefghijklmnopqrstuvwxyz".split("");
   const upperAlphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+  const specialChars = [".", ",", "!", "?", ":", ";", "'", '"', "-", "(", ")", "&", "@", "#"];
   const charSpan = (ch: string) => {
     const isDrawn = drawnSet.has(ch);
     const isFilled = !isDrawn && filledSet.has(ch);
@@ -136,6 +137,11 @@ export default function HandwritingPreview({
           <details className={styles.upperFold}>
             <summary className={styles.upperSummary}>{t.upperToggle}</summary>
             <p className={styles.alphabet}>{upperAlphabet.map(charSpan)}</p>
+          </details>
+          {/* 특수문자 — 접기/펼치기(기본 접힘) */}
+          <details className={styles.upperFold}>
+            <summary className={styles.upperSummary}>{t.specialToggle}</summary>
+            <p className={styles.alphabet}>{specialChars.map(charSpan)}</p>
           </details>
           {hasFilled && <p className={styles.fillNote}>{t.fillNote}</p>}
 

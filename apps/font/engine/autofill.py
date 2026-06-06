@@ -44,8 +44,12 @@ from handwriting import (
     _nib_half_width,
 )
 
-# 채울 수 있는 라틴 글자(계약 TARGET_CHARSET + 핵심 구두점은 제외, 글자만).
-LATIN_FILL_CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+# 채울 수 있는 라틴 글자 + 공통 특수문자(프론트 SPECIAL_CHARS와 동일 집합).
+# 안 그린 칸은 베이스 폰트(Recursive)의 해당 글리프로 채운다.
+LATIN_FILL_CHARS = (
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+    ".,!?:;'\"-()&@#"
+)
 
 # 굵기 추정용 기준 상수.
 # 사람이 "보통 굵기"로 느끼는 획폭/잉크높이 비율(대략). 이 비율을 UI weight 400

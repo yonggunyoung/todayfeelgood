@@ -173,8 +173,14 @@ def required_basic_jamo(text: str) -> set:
 # ---------------- 자모 글리프(잉크) 준비 ----------------
 @dataclass
 class _JamoInk:
-    """한 기본 자모의 폰트 유닛 외곽선 폴리곤들 + 잉크 bbox."""
-    polys: List[List[Point]]
+    """
+    한 기본 자모의 **스켈레톤(중심선, 폰트 유닛)** + 중심선 bbox.
+
+    [핵심] 외곽선(굵기)을 미리 굽지 않는다. 음절 배치 때 중심선만 칸에 맞춰
+    scale/translate 하고, **굵기는 배치 후에 일정한 '같은 펜'으로 입힌다**
+    (→ 칸 크기에 따라 획이 굵어졌다 가늘어졌다 하던 문제 제거).
+    """
+    strokes: List[List[Point]]
     x0: float
     y0: float
     x1: float
@@ -190,7 +196,6 @@ def _prepare_jamo_inks(
     메트릭 정렬(_align_to_guides)은 자모엔 부적합하므로, straighten=0 으로 셀변환만 쓴다.
     (음절 배치 시 우리가 직접 affine으로 칸에 맞춘다.)
     """
-    half = _nib_half_width(refine.nib)
     out: Dict[str, _JamoInk] = {}
     for ch, strokes in jamo:
         if ch not in BASIC_JAMO:
@@ -208,95 +213,72 @@ def _prepare_jamo_inks(
             spacing=refine.spacing,
         )
         font_strokes = _prepare_strokes_font_units(strokes, prep_refine, "")
-        polys: List[List[Point]] = []
+        # 중심선만 보관(굵기는 배치 후 입힘). bbox 는 중심선 기준.
+        sk: List[List[Point]] = []
         xs: List[float] = []
         ys: List[float] = []
         for s in font_strokes:
-            outline = _stroke_outline(list(s), half, refine.taper)
-            if len(outline) < 3:
+            pts = [(float(px), float(py)) for px, py in s]
+            if len(pts) < 1:
                 continue
-            polys.append(outline)
-            for px, py in outline:
+            sk.append(pts)
+            for px, py in pts:
                 xs.append(px)
                 ys.append(py)
-        if not polys or not xs:
+        if not sk or not xs:
             continue
-        out[ch] = _JamoInk(polys, min(xs), min(ys), max(xs), max(ys))
+        out[ch] = _JamoInk(sk, min(xs), min(ys), max(xs), max(ys))
     return out
 
 
-# 자모를 박스에 넣을 때 채우는 비율(여백 = 1-fill). 일관성 위해 고정.
-PLACE_FILL = 0.84
-# 균일 스케일에서 한쪽 변이 너무 작아지지 않게 하는 최소 변 비율.
-# 예: ㅡ(가로로 길고 세로로 납작)는 uniform scale 때 세로변이 박스 대비 매우
-# 작아진다. 이때 잉크가 시각적으로 너무 작아 보이지 않도록 단변 길이에
-# 최소 크기를 보장(박스 단변의 MIN_SHORT_FILL 이상)한다 → '글' 같은 글자가
-# 유독 작아지던 문제 완화. (과도 확대는 막아 손맛/형태는 유지.)
-MIN_SHORT_FILL = 0.34
-# 형태 왜곡(개성 손상) 방지를 위한 비균일 스케일 상한(장변/단변 비).
-MAX_ANISO = 1.6
+# 자모를 박스에 넣을 때 채우는 비율(여백 = 1-fill). 굵기 여백 포함이라 약간 크게.
+PLACE_FILL = 0.9
+# "같은 펜" 굵기 배율: 음절 안 자모는 낱자보다 작게 들어가므로, 펜 반경도 그만큼
+# 줄여 일정하게 입힌다. 칸 크기와 무관하게 음절 전체가 한 굵기 → 손글씨 일관성.
+WEIGHT_SCALE = 0.62
 
 
-def _place_ink(ink: _JamoInk, box: _Box, fill: float = PLACE_FILL) -> List[List[Point]]:
+def _place_strokes(ink: _JamoInk, box: _Box, fill: float = PLACE_FILL) -> List[List[Point]]:
     """
-    자모 잉크(폴리곤들)를 box 안에 affine(scale+translate)으로 맞춰 가운데 정렬.
+    자모 **중심선**을 box 안에 균일 스케일(종횡비 보존)로 맞춰 가운데 정렬한다.
 
-    기본은 종횡비 보존(uniform scale)이되, **특정 자모만 유독 작아지는 문제**를
-    막기 위해 단변(짧은 쪽)에 최소 크기를 보장한다:
-      - uniform scale s = min(sx, sy) 로 장변을 박스에 맞춘다(여백 fill).
-      - 그 결과 단변이 박스 단변의 MIN_SHORT_FILL 미만으로 쪼그라들면,
-        단변 방향만 살짝 더 키워(비균일) 최소 크기를 확보한다.
-        단, 형태 왜곡을 막으려 종횡비 변형은 MAX_ANISO 배 이내로 클램프.
-    이렇게 하면 ㅡ/ㅣ 같은 가늘고 긴 자모도 칸 안에서 일정 크기 이상으로
-    안정 배치되어 음절 간 크기 들쭉날쭉이 줄어든다(개성/형태는 보존).
+    굵기는 입히지 않는다(배치 후 음절 단위로 일정 굵기 적용). 균일 스케일만 쓰므로
+    ㅡ/ㅣ/ㅇ 등의 모양이 늘어나 망가지지 않는다(개성/형태 보존). 가로로 납작하거나
+    세로로 가는 자모는 단변이 0에 가까워 0으로 나눠지는 걸 막으려 단변을 1유닛으로 바닥.
     """
-    iw = ink.x1 - ink.x0
-    ih = ink.y1 - ink.y0
+    iw = max(ink.x1 - ink.x0, 1.0)
+    ih = max(ink.y1 - ink.y0, 1.0)
     bw = box.x1 - box.x0
     bh = box.y1 - box.y0
-    if iw < 1e-6 or ih < 1e-6 or bw < 1e-6 or bh < 1e-6:
-        return [list(p) for p in ink.polys]
+    if bw < 1e-6 or bh < 1e-6:
+        return [list(s) for s in ink.strokes]
 
-    # 1) 균일 스케일: 장변을 박스(여백 fill)에 맞춘다.
-    sx = (bw * fill) / iw
-    sy = (bh * fill) / ih
-    s = min(sx, sy)
-    scale_x = s
-    scale_y = s
+    # 균일 스케일: 장변을 박스(여백 fill)에 맞춘다 — 비균일 왜곡 없음.
+    s = min((bw * fill) / iw, (bh * fill) / ih)
 
-    # 2) 단변 최소 크기 보장: 균일 스케일 후 각 변이 박스 단변 대비 너무 작으면
-    #    그 축만 살짝 더 키운다(비균일). 종횡비 왜곡은 MAX_ANISO 배 이내로 클램프.
-    min_w = bw * MIN_SHORT_FILL
-    min_h = bh * MIN_SHORT_FILL
-    if iw * scale_x < min_w:
-        want = min_w / iw
-        # 박스 폭(fill)을 넘지 않게, 왜곡 상한 이내로.
-        scale_x = min(want, sx, s * MAX_ANISO)
-    if ih * scale_y < min_h:
-        want = min_h / ih
-        scale_y = min(want, sy, s * MAX_ANISO)
-
-    # box 중앙 정렬: 잉크 중심을 box 중심으로.
     cx = (box.x0 + box.x1) / 2.0
     cy = (box.y0 + box.y1) / 2.0
     icx = (ink.x0 + ink.x1) / 2.0
     icy = (ink.y0 + ink.y1) / 2.0
     out: List[List[Point]] = []
-    for poly in ink.polys:
-        np = [((px - icx) * scale_x + cx, (py - icy) * scale_y + cy) for px, py in poly]
-        out.append(np)
+    for st in ink.strokes:
+        out.append([((px - icx) * s + cx, (py - icy) * s + cy) for px, py in st])
     return out
 
 
 # ---------------- 모아쓰기(박스 분할) ----------------
 # ---- 모아쓰기 비율(전 모임유형 공통, 일관성 핵심) ----
-# 받침 있을 때 초+중(윗블록)이 차지하는 세로 비율. 나머지가 종성.
-# 모든 모임유형에서 동일하게 적용해 "받침 있는 글자"의 윗블록 크기를 통일한다.
-JONG_SPLIT_RATIO = 0.62      # baseline 위 (top - base) 중 윗블록 하한 위치 비율
+# 받침이 차지하는 세로 비율(음절 전체 높이 T..B 중 아래쪽 밴드). 나머지가 초+중.
+# (이전엔 baseline 위 비율로 잘못 잡아 받침이 초중성보다 더 커졌었음 → 전체 높이 기준으로 수정.)
+JONG_BAND = 0.32
+# 받침 폭(전각 대비) — 너무 퍼지지 않게 가운데로 모은다.
+JONG_WIDTH = 0.78
+# 받침 채움 비율(초중성보다 약간 작게 — 받침이 글자를 압도하지 않게).
+JONG_FILL = 0.78
 # 세로모음(ㅏ류): 초성 좌, 중성 우 — 좌우 분할선 위치.
-VJUNG_SPLIT_X = 0.62
+VJUNG_SPLIT_X = 0.6
 # 가로모음(ㅗ류): 초성 위, 중성 아래 — 상하 분할선 위치(윗블록 내).
-HJUNG_SPLIT_Y = 0.56
+HJUNG_SPLIT_Y = 0.54
 # 곁(ㅣ) 칸 폭 비율(겹모음 ㅐ/ㅚ 등의 세로 ㅣ).
 ITAIL_W = 0.16
 
@@ -316,15 +298,17 @@ def _layout_boxes(jung: str, has_jong: bool) -> Tuple[List[_Box], List[_Box], Li
     T, B = float(SYL_TOP), float(SYL_BOTTOM)
     BASE = 0.0  # baseline
 
-    # 받침 있으면 윗블록(초+중)을 baseline 위 일정 비율로 통일 압축, 하단에 종성.
+    # 받침 있으면 윗블록(초+중)은 위쪽 (1-JONG_BAND), 종성은 아래쪽 JONG_BAND 밴드.
+    # 음절 전체 높이(T..B) 기준이라 받침이 초중성보다 커지지 않는다.
     if has_jong:
         top_b = T
-        mid_b = BASE + JONG_SPLIT_RATIO * (T - BASE)  # 윗블록 아래선(받침 위)
+        mid_b = B + JONG_BAND * (T - B)  # 윗블록 아래선(받침 위)
         jong_top = mid_b
         jong_bot = B
     else:
         top_b = T
         mid_b = B
+    _ = BASE  # (baseline 참고용, 현재 분할은 전체 높이 기준)
 
     cho_boxes: List[_Box] = []
     jung_boxes: List[_Box] = []
@@ -362,19 +346,27 @@ def _layout_boxes(jung: str, has_jong: bool) -> Tuple[List[_Box], List[_Box], Li
         jung_boxes.append(_Box(R - ITAIL_W * (R - L), mid_b, R, top_b))
 
     if has_jong:
-        # 종성 전폭 하단. 겹받침이면 좌우로 분할.
-        jong_boxes.append(_Box(L, jong_bot, R, jong_top))
-        jong_boxes.append(_Box(L, jong_bot, (L + R) / 2.0, jong_top))   # 겹받침 좌
-        jong_boxes.append(_Box((L + R) / 2.0, jong_bot, R, jong_top))   # 겹받침 우
+        # 종성: 가운데로 모은 폭(JONG_WIDTH), 하단 밴드. 겹받침이면 좌우로 분할.
+        cxm = (L + R) / 2.0
+        jw = JONG_WIDTH * (R - L)
+        jl, jr = cxm - jw / 2.0, cxm + jw / 2.0
+        jong_boxes.append(_Box(jl, jong_bot, jr, jong_top))            # 홑받침 가운데
+        jong_boxes.append(_Box(jl, jong_bot, cxm, jong_top))           # 겹받침 좌
+        jong_boxes.append(_Box(cxm, jong_bot, jr, jong_top))           # 겹받침 우
 
     return cho_boxes, jung_boxes, jong_boxes
 
 
-def _fill_boxes(chars: List[str], boxes: List[_Box], inks: Dict[str, _JamoInk]) -> Tuple[List[List[Point]], bool]:
+def _fill_boxes(
+    chars: List[str],
+    boxes: List[_Box],
+    inks: Dict[str, _JamoInk],
+    fill: float = PLACE_FILL,
+) -> Tuple[List[List[Point]], bool]:
     """
     펼친 낱자 chars 를 boxes 에 순서대로 배치. 모든 낱자가 그려져 있어야 성공.
     chars 가 1개면 단일 박스(첫 박스 전체)에, 2개면 분할 박스 사용 등.
-    반환: (배치된 폴리곤들, 모든 낱자 ink 가용 여부).
+    반환: (배치된 **중심선들**, 모든 낱자 ink 가용 여부). 굵기는 음절 단위로 나중에 입힘.
     """
     out: List[List[Point]] = []
     if not chars:
@@ -393,15 +385,20 @@ def _fill_boxes(chars: List[str], boxes: List[_Box], inks: Dict[str, _JamoInk]) 
         ink = inks.get(ch)
         if ink is None:
             return out, False
-        out.extend(_place_ink(ink, box))
+        out.extend(_place_strokes(ink, box, fill))
     return out, True
 
 
 # ---------------- 음절 합성 ----------------
 def _compose_syllable_polys(
-    ch: str, inks: Dict[str, _JamoInk]
+    ch: str, inks: Dict[str, _JamoInk], half: float, taper: float
 ) -> Tuple[List[List[Point]], bool]:
-    """한 음절 → 배치된 외곽선 폴리곤들. 필요한 기본 자모가 없으면 (.., False)."""
+    """
+    한 음절 → 배치된 외곽선 폴리곤들. 필요한 기본 자모가 없으면 (.., False).
+
+    [핵심] 자모 중심선을 칸에 맞춰 배치한 뒤, **음절 전체를 한 굵기(half_eff)** 로
+    외곽선화한다. 칸 크기와 무관하게 같은 펜이라 획 굵기가 들쭉날쭉하지 않다.
+    """
     cho, jung, jong = decompose_syllable(ch)
     cho_chars = expand_jamo(cho)
     jung_chars = expand_jamo(jung)
@@ -409,20 +406,28 @@ def _compose_syllable_polys(
 
     cho_boxes, jung_boxes, jong_boxes = _layout_boxes(jung, bool(jong))
 
-    polys: List[List[Point]] = []
+    skeletons: List[List[Point]] = []
     p, ok = _fill_boxes(cho_chars, cho_boxes, inks)
     if not ok:
         return [], False
-    polys.extend(p)
+    skeletons.extend(p)
     p, ok = _fill_boxes(jung_chars, jung_boxes, inks)
     if not ok:
         return [], False
-    polys.extend(p)
+    skeletons.extend(p)
     if jong_chars:
-        p, ok = _fill_boxes(jong_chars, jong_boxes, inks)
+        p, ok = _fill_boxes(jong_chars, jong_boxes, inks, fill=JONG_FILL)
         if not ok:
             return [], False
-        polys.extend(p)
+        skeletons.extend(p)
+
+    # 같은 펜으로 굵기 입히기(일정) — 손글씨 일관성의 핵심.
+    half_eff = max(1.0, half * WEIGHT_SCALE)
+    polys: List[List[Point]] = []
+    for st in skeletons:
+        outline = _stroke_outline(list(st), half_eff, taper)
+        if len(outline) >= 3:
+            polys.append(outline)
     return polys, True
 
 
@@ -528,9 +533,12 @@ def build_hangul_font(
     advances["space"] = space_adv
     lsbs["space"] = 0
 
+    # "같은 펜" 굵기 기준(자모 준비 때와 동일한 nib 반경).
+    half = _nib_half_width(refine.nib)
+
     count = 0
     for ch in syllables:
-        polys, ok = _compose_syllable_polys(ch, inks)
+        polys, ok = _compose_syllable_polys(ch, inks, half, refine.taper)
         if not ok or not polys:
             # 필요한 기본 자모가 없으면 이 음절은 스킵(graceful).
             continue

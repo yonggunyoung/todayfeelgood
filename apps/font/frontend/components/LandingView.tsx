@@ -159,14 +159,14 @@ export function LandingView({ locale }: { locale: Locale }) {
             </p>
           ))}
           <h3 className={styles.faqTitle}>{t.seoSection.faqTitle}</h3>
-          <dl className={styles.faq}>
+          <div className={styles.faq}>
             {t.seoSection.faq.map((f) => (
-              <div key={f.q} className={styles.faqItem}>
-                <dt className={styles.faqQ}>{f.q}</dt>
-                <dd className={styles.faqA}>{f.a}</dd>
-              </div>
+              <details key={f.q} className={styles.faqItem}>
+                <summary className={styles.faqQ}>{f.q}</summary>
+                <p className={styles.faqA}>{f.a}</p>
+              </details>
             ))}
-          </dl>
+          </div>
         </section>
 
         {/* 광고(웹 전용) — env 설정 시에만. 콘텐츠 하단, 그리기 화면(스튜디오)엔 두지 않음. */}

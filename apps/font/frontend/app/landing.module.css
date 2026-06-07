@@ -299,16 +299,34 @@
   margin: 0;
 }
 .faqItem {
-  padding: var(--sp-5) 0;
   border-top: 1px solid var(--hairline);
 }
+/* 질문(summary) — 접이식. 평소엔 질문만, 누르면 펼쳐짐(시각 무게 최소화). */
 .faqQ {
+  list-style: none;
+  cursor: pointer;
+  position: relative;
+  padding: var(--sp-5) var(--sp-6) var(--sp-5) 0;
   font-weight: var(--weight-semi);
   color: var(--ink);
-  margin-bottom: var(--sp-2);
+}
+.faqQ::-webkit-details-marker {
+  display: none;
+}
+.faqQ::after {
+  content: "+";
+  position: absolute;
+  right: 0;
+  top: var(--sp-5);
+  color: var(--ink-faint);
+  font-weight: var(--weight-reg);
+}
+.faqItem[open] .faqQ::after {
+  content: "–";
 }
 .faqA {
   margin: 0;
+  padding: 0 var(--sp-6) var(--sp-5) 0;
   color: var(--ink-soft);
   line-height: 1.75;
 }

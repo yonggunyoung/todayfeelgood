@@ -269,3 +269,46 @@
 .howCta:hover {
   color: var(--accent-press);
 }
+
+/* ── SEO 본문(랜딩 최하단) — 차분하게, 도구 UX와 시각적으로 분리 ── */
+.seo {
+  max-width: 760px;
+  padding-top: var(--sp-16);
+  padding-bottom: var(--sp-16);
+}
+.seoTitle {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+  color: var(--ink);
+  margin-bottom: var(--sp-6);
+}
+.seoText {
+  color: var(--ink-soft);
+  font-size: var(--text-body);
+  line-height: 1.85;
+  margin-bottom: var(--sp-5);
+}
+.faqTitle {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semi);
+  color: var(--ink);
+  margin-top: var(--sp-10);
+  margin-bottom: var(--sp-2);
+}
+.faq {
+  margin: 0;
+}
+.faqItem {
+  padding: var(--sp-5) 0;
+  border-top: 1px solid var(--hairline);
+}
+.faqQ {
+  font-weight: var(--weight-semi);
+  color: var(--ink);
+  margin-bottom: var(--sp-2);
+}
+.faqA {
+  margin: 0;
+  color: var(--ink-soft);
+  line-height: 1.75;
+}

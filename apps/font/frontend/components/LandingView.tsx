@@ -29,12 +29,26 @@ export function LandingView({ locale }: { locale: Locale }) {
     category: "DesignApplication",
     inLanguage: htmlLang(locale),
   });
+  // FAQ 리치결과(구조화 데이터) — 검색결과에 질문/답이 펼쳐질 수 있게.
+  const faqLd = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: t.seoSection.faq.map((f) => ({
+      "@type": "Question",
+      name: f.q,
+      acceptedAnswer: { "@type": "Answer", text: f.a },
+    })),
+  };
 
   return (
     <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }}
       />
       <SiteHeader
         homeHref={homeHref(locale)}
@@ -136,6 +150,25 @@ export function LandingView({ locale }: { locale: Locale }) {
             </div>
           </div>
         </section>
+        {/* SEO 본문 — 검색 키워드용. 최하단에 분리 배치(도구 UX·직관성 우선). */}
+        <section className={`container ${styles.seo}`} aria-label={t.seoSection.title}>
+          <h2 className={styles.seoTitle}>{t.seoSection.title}</h2>
+          {t.seoSection.paras.map((p, i) => (
+            <p key={i} className={styles.seoText}>
+              {p}
+            </p>
+          ))}
+          <h3 className={styles.faqTitle}>{t.seoSection.faqTitle}</h3>
+          <dl className={styles.faq}>
+            {t.seoSection.faq.map((f) => (
+              <div key={f.q} className={styles.faqItem}>
+                <dt className={styles.faqQ}>{f.q}</dt>
+                <dd className={styles.faqA}>{f.a}</dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+
         {/* 광고(웹 전용) — env 설정 시에만. 콘텐츠 하단, 그리기 화면(스튜디오)엔 두지 않음. */}
         <div className="container">
           <AdSlot />

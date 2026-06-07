@@ -16,6 +16,9 @@ export const en: typeof ko = {
       "free handwriting to font",
       "make your own handwriting font",
       "convert handwriting to font",
+      "free font generator",
+      "font maker",
+      "make your own font",
     ],
   },
   jsonLd: {
@@ -33,6 +36,38 @@ export const en: typeof ko = {
     colophon:
       "Hoek Font Workshop — a small tool that gives your letters character. Everything you make is yours.",
     fineprint: "Download your font right here. We never send it anywhere.",
+  },
+  // ── SEO copy (bottom of landing) — keyword text for search. Kept separate from the tool UX. ──
+  seoSection: {
+    title: "Free font generator — make a font from your handwriting",
+    paras: [
+      "Hoek is a free font generator that turns your own handwriting into a font. Draw each letter by hand and we keep your real strokes to build a genuine font in your style — no install, no payment, and you download the font file right here.",
+      "Unlike typical AI font generators that imitate someone else's writing, Hoek builds the font from the strokes you actually draw. Don't feel like drawing? Tweak a public font with weight and slant sliders for a quick start, so making a handwriting font is easy even the first time.",
+      "You can make Korean handwriting fonts too: draw the 24 basic jamo and we compose syllables into a Korean font. Export your finished font as images anywhere, or download WOFF & TTF files for documents and design. The whole thing is free.",
+    ],
+    faqTitle: "Frequently asked questions",
+    faq: [
+      {
+        q: "Is the font generator really free?",
+        a: "Yes. Making a font from your handwriting and downloading it as WOFF & TTF is free, with no install or payment required.",
+      },
+      {
+        q: "How do I make a font from my handwriting?",
+        a: "Open the workshop and draw each letter with your mouse or finger. We keep your strokes and build them into a font. Draw only the letters you want — empty cells are filled with a default typeface and marked as such.",
+      },
+      {
+        q: "What format is the font I get?",
+        a: "You can download WOFF (for the web) and TTF font files, or export images to use without installing anything.",
+      },
+      {
+        q: "Can I make a Korean font?",
+        a: "Yes. Draw the 24 basic Korean jamo and we compose syllables into a handwriting font. Latin a–z, A–Z and digits are supported too.",
+      },
+      {
+        q: "Can I use the font commercially?",
+        a: "A font built from letters you drew yourself is yours to use freely. The quick-start samples made by modifying a public font follow that original font's license.",
+      },
+    ],
   },
   hero: {
     eyebrow: "Draw your own handwriting font",

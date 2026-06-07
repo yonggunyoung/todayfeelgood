@@ -330,3 +330,59 @@
   color: var(--ink-soft);
   line-height: 1.75;
 }
+/* 랜딩 SEO 섹션 하단의 가이드 링크 — 차분한 텍스트 링크. */
+.guideLink {
+  display: inline-block;
+  margin-top: var(--sp-6);
+  color: var(--accent-ink-weak);
+  font-weight: var(--weight-semi);
+  font-size: var(--text-body);
+}
+.guideLink:hover {
+  color: var(--accent-press);
+}
+
+/* ── 가이드 페이지(/font/guide) — 기존 토큰만 사용, 랜딩과 톤 일관 ── */
+.guide {
+  max-width: 760px;
+  padding-top: var(--sp-12);
+  padding-bottom: var(--sp-16);
+}
+.guideHead {
+  margin-bottom: var(--sp-12);
+}
+.guideTitle {
+  font-size: var(--text-large);
+  margin-bottom: var(--sp-5);
+}
+.guideLead {
+  color: var(--ink-soft);
+  font-size: var(--text-lg);
+  line-height: 1.7;
+  margin-bottom: var(--sp-8);
+}
+.steps {
+  list-style: none;
+  margin: 0 0 var(--sp-12);
+  padding: 0;
+  display: grid;
+  gap: var(--sp-8);
+}
+.step {
+  padding-left: var(--sp-6);
+  border-left: 3px solid var(--accent-weak);
+}
+.stepTitle {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+  color: var(--ink);
+  margin-bottom: var(--sp-3);
+}
+.stepBody {
+  margin: 0;
+  color: var(--ink-soft);
+  line-height: 1.8;
+}
+.guideFaq {
+  margin-top: var(--sp-8);
+}

@@ -48,3 +48,18 @@ export function landingPath(locale: Locale): string {
 export function landingAlternates(): Record<Locale, string> {
   return { ko: landingPath("ko"), en: landingPath("en") };
 }
+
+/** 가이드 내부 라우트(basePath 제외). next/Link용. ko=`/guide`, en=`/en/guide`. */
+export function guideRoute(locale: Locale): string {
+  return locale === "ko" ? "/guide" : `/${locale}/guide`;
+}
+
+/** 가이드 SEO 절대경로(basePath /font 포함). canonical/sitemap/hreflang용. */
+export function guidePath(locale: Locale): string {
+  return locale === "ko" ? "/font/guide" : `/font/${locale}/guide`;
+}
+
+/** 가이드 hreflang alternates 맵(ko↔en, basePath 포함). */
+export function guideAlternates(): Record<Locale, string> {
+  return { ko: guidePath("ko"), en: guidePath("en") };
+}

@@ -68,6 +68,39 @@ export const en: typeof ko = {
         a: "A font built from letters you drew yourself is yours to use freely. The quick-start samples made by modifying a public font follow that original font's license.",
       },
     ],
+    guideLink: "See the full guide: how to make a handwriting font",
+  },
+  // Guide page (/font/en/guide) — long-tail ("how to make a handwriting font"). Separate from landing design.
+  guide: {
+    meta: {
+      title: "How to make a handwriting font — free font generator guide",
+      description:
+        "A step-by-step guide to making a font from your own handwriting: draw your letters, download WOFF & TTF, make Korean fonts, and commercial use — with the free font generator Hoek.",
+      keywords: [
+        "how to make a handwriting font",
+        "how to make a font",
+        "font generator guide",
+        "free font making",
+        "make a korean font",
+      ],
+    },
+    h1: "How to make a handwriting font",
+    lead: "From your drawn letters to a real font in three steps — free, no install, no payment.",
+    steps: [
+      {
+        title: "1. Draw your letters",
+        body: "Open the workshop and draw each letter with your mouse or finger — Latin a–z, A–Z, digits and Korean jamo. Draw only what you want; empty cells are filled with a default typeface and marked as not your hand.",
+      },
+      {
+        title: "2. Refine and preview",
+        body: "Use the weight, slant and curvature sliders to keep your hand's character while tidying it up. Watch the specimen update in real time.",
+      },
+      {
+        title: "3. Download your font",
+        body: "When you're happy, download WOFF & TTF font files right away, or export images to use without installing anything. All here, all free.",
+      },
+    ],
+    ctaLabel: "Start making yours",
   },
   hero: {
     eyebrow: "Draw your own handwriting font",

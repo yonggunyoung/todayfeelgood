@@ -7,6 +7,7 @@ import { LanguageToggle } from "./LanguageToggle";
 import type { Locale } from "../lib/i18n";
 import {
   getDictionary,
+  guideRoute,
   landingPath,
   landingRoute,
   studioRoute,
@@ -167,6 +168,9 @@ export function LandingView({ locale }: { locale: Locale }) {
               </details>
             ))}
           </div>
+          <Link href={guideRoute(locale)} className={styles.guideLink}>
+            {t.seoSection.guideLink} →
+          </Link>
         </section>
 
         {/* 광고(웹 전용) — env 설정 시에만. 콘텐츠 하단, 그리기 화면(스튜디오)엔 두지 않음. */}

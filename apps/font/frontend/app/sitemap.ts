@@ -18,6 +18,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
     en: `${base}/font/en/studio`,
     "x-default": `${base}/font/studio`,
   };
+  const guideAlternates = {
+    ko: `${base}/font/guide`,
+    en: `${base}/font/en/guide`,
+    "x-default": `${base}/font/guide`,
+  };
   return [
     {
       url: `${base}/font`,
@@ -46,6 +51,20 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "weekly",
       priority: 0.8,
       alternates: { languages: studioAlternates },
+    },
+    {
+      url: `${base}/font/guide`,
+      lastModified: now,
+      changeFrequency: "monthly",
+      priority: 0.7,
+      alternates: { languages: guideAlternates },
+    },
+    {
+      url: `${base}/font/en/guide`,
+      lastModified: now,
+      changeFrequency: "monthly",
+      priority: 0.6,
+      alternates: { languages: guideAlternates },
     },
   ];
 }

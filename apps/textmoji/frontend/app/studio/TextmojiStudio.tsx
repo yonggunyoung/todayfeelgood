@@ -12,7 +12,7 @@ import { CURATED } from "../../lib/curated";
 import { LIBRARY } from "../../lib/kaomojiLibrary";
 import { SYMBOL_CATS } from "../../lib/symbols";
 import { FONTS } from "../../lib/fonts";
-import { decorate } from "../../lib/decorate";
+import { decorate, THEMES } from "../../lib/decorate";
 import { copyText } from "../../lib/clipboard";
 import {
   loadFavorites,
@@ -53,6 +53,8 @@ export default function TextmojiStudio() {
   // 한 줄 꾸미기
   const [decorateInput, setDecorateInput] = useState("");
   const [decorateSeed, setDecorateSeed] = useState(0);
+  const [decorateTheme, setDecorateTheme] = useState<string>(THEMES[0]!.id);
+  const [decorateKao, setDecorateKao] = useState(true);
 
   // 공통
   const [query, setQuery] = useState("");
@@ -124,8 +126,13 @@ export default function TextmojiStudio() {
 
   // ── 한 줄 꾸미기 결과 ──
   const decorateOutputs = useMemo(
-    () => decorate(decorateInput.trim() || DECORATE_SAMPLE, decorateSeed),
-    [decorateInput, decorateSeed]
+    () =>
+      decorate(decorateInput.trim() || DECORATE_SAMPLE, {
+        theme: decorateTheme,
+        seed: decorateSeed,
+        withKaomoji: decorateKao,
+      }),
+    [decorateInput, decorateSeed, decorateTheme, decorateKao]
   );
 
   const showToast = useCallback((msg: string) => {
@@ -308,28 +315,51 @@ export default function TextmojiStudio() {
           </div>
         ) : null}
 
-        {/* ── 한 줄 꾸미기: 입력 + 다른 조합 ── */}
+        {/* ── 한 줄 꾸미기: 입력 + 테마 + 카오모지 토글 ── */}
         {tab === "all" && mode === "decorate" ? (
-          <div className={styles.searchRow}>
-            <input
-              type="text"
-              className={styles.search}
-              placeholder="이름·한줄소개를 넣으면 꾸며 줘요 (한글 OK)"
-              value={decorateInput}
-              onChange={(e) => setDecorateInput(e.target.value)}
-              aria-label="꾸밀 글자"
-              maxLength={40}
-            />
-            <button
-              type="button"
-              className={styles.dice}
-              onClick={() => setDecorateSeed((s) => s + 1)}
-              aria-label="다른 조합으로"
-              title="🎲 다른 조합"
-            >
-              🎲
-            </button>
-          </div>
+          <>
+            <div className={styles.searchRow}>
+              <input
+                type="text"
+                className={styles.search}
+                placeholder="이름·한줄소개를 넣으면 꾸며 줘요 (한글 OK)"
+                value={decorateInput}
+                onChange={(e) => setDecorateInput(e.target.value)}
+                aria-label="꾸밀 글자"
+                maxLength={40}
+              />
+              <button
+                type="button"
+                className={styles.dice}
+                onClick={() => setDecorateSeed((s) => s + 1)}
+                aria-label="다른 조합으로"
+                title="🎲 다른 조합"
+              >
+                🎲
+              </button>
+            </div>
+            <div className={styles.chips} role="tablist" aria-label="꾸미기 테마">
+              {THEMES.map((th) => (
+                <Chip
+                  key={th.id}
+                  selected={th.id === decorateTheme}
+                  onClick={() => setDecorateTheme(th.id)}
+                  className={styles.chip}
+                >
+                  <span aria-hidden>{th.emoji}</span> {th.label}
+                </Chip>
+              ))}
+            </div>
+            <div className={styles.styleRow} aria-label="꾸미기 옵션">
+              <Chip
+                selected={decorateKao}
+                onClick={() => setDecorateKao((v) => !v)}
+                className={styles.styleChip}
+              >
+                {decorateKao ? "카오모지 ✓" : "카오모지"}
+              </Chip>
+            </div>
+          </>
         ) : null}
       </div>
 

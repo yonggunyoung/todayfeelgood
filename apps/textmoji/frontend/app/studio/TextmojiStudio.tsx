@@ -12,6 +12,7 @@ import { CURATED } from "../../lib/curated";
 import { LIBRARY } from "../../lib/kaomojiLibrary";
 import { SYMBOL_CATS } from "../../lib/symbols";
 import { FONTS } from "../../lib/fonts";
+import { decorate } from "../../lib/decorate";
 import { copyText } from "../../lib/clipboard";
 import {
   loadFavorites,
@@ -20,12 +21,14 @@ import {
 } from "../../lib/favorites";
 import styles from "./TextmojiStudio.module.css";
 
-type Mode = "kaomoji" | "symbol" | "font";
+type Mode = "kaomoji" | "symbol" | "font" | "decorate";
 type Tab = "all" | "fav";
 const GRID = 12;
 const FONT_SAMPLE = "Aa Bb 123";
+const DECORATE_SAMPLE = "내이름";
 
 const MODES: { id: Mode; label: string; emoji: string }[] = [
+  { id: "decorate", label: "꾸미기", emoji: "꒰♡꒱" },
   { id: "kaomoji", label: "카오모지", emoji: "ʕ•ᴥ•ʔ" },
   { id: "symbol", label: "특수기호", emoji: "✦" },
   { id: "font", label: "인싸폰트", emoji: "𝓐𝒶" },
@@ -46,6 +49,10 @@ export default function TextmojiStudio() {
 
   // 인싸폰트
   const [fontInput, setFontInput] = useState("");
+
+  // 한 줄 꾸미기
+  const [decorateInput, setDecorateInput] = useState("");
+  const [decorateSeed, setDecorateSeed] = useState(0);
 
   // 공통
   const [query, setQuery] = useState("");
@@ -115,6 +122,12 @@ export default function TextmojiStudio() {
     return FONTS.map((f) => ({ id: f.id, label: f.label, text: f.transform(src) }));
   }, [fontInput]);
 
+  // ── 한 줄 꾸미기 결과 ──
+  const decorateOutputs = useMemo(
+    () => decorate(decorateInput.trim() || DECORATE_SAMPLE, decorateSeed),
+    [decorateInput, decorateSeed]
+  );
+
   const showToast = useCallback((msg: string) => {
     setToast(msg);
     if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -148,7 +161,7 @@ export default function TextmojiStudio() {
   const gridTexts =
     tab === "fav" ? favs : mode === "kaomoji" ? kaomojiItems : symbolItems;
 
-  const showSearch = tab === "all" && mode !== "font";
+  const showSearch = tab === "all" && (mode === "kaomoji" || mode === "symbol");
 
   return (
     <div className={styles.app}>
@@ -294,11 +307,73 @@ export default function TextmojiStudio() {
             />
           </div>
         ) : null}
+
+        {/* ── 한 줄 꾸미기: 입력 + 다른 조합 ── */}
+        {tab === "all" && mode === "decorate" ? (
+          <div className={styles.searchRow}>
+            <input
+              type="text"
+              className={styles.search}
+              placeholder="이름·한줄소개를 넣으면 꾸며 줘요 (한글 OK)"
+              value={decorateInput}
+              onChange={(e) => setDecorateInput(e.target.value)}
+              aria-label="꾸밀 글자"
+              maxLength={40}
+            />
+            <button
+              type="button"
+              className={styles.dice}
+              onClick={() => setDecorateSeed((s) => s + 1)}
+              aria-label="다른 조합으로"
+              title="🎲 다른 조합"
+            >
+              🎲
+            </button>
+          </div>
+        ) : null}
       </div>
 
       {/* ── 본문 ── */}
       <div className={styles.gridScroll}>
-        {tab === "all" && mode === "font" ? (
+        {tab === "all" && mode === "decorate" ? (
+          <div className={styles.fontList}>
+            <p className={styles.decoHint}>
+              마음에 드는 줄을 탭하면 복사돼요. 🎲로 다른 조합도 뽑아 봐요.
+            </p>
+            {decorateOutputs.map((text, i) => {
+              const isFav = favs.includes(text);
+              return (
+                <div key={`${text}-${i}`} className={styles.fontCard}>
+                  <button
+                    type="button"
+                    className={styles.fontPreview}
+                    onClick={() => onCopy(text)}
+                    aria-label={`${text} 복사`}
+                    title="탭하면 복사"
+                  >
+                    {text}
+                  </button>
+                  <button
+                    type="button"
+                    className={`${styles.star} ${isFav ? styles.starOn : ""}`}
+                    onClick={() => onToggleFav(text)}
+                    aria-pressed={isFav}
+                    aria-label={isFav ? "즐겨찾기 해제" : "즐겨찾기"}
+                  >
+                    {isFav ? "★" : "☆"}
+                  </button>
+                </div>
+              );
+            })}
+            <button
+              type="button"
+              className={styles.moreBtn}
+              onClick={() => setDecorateSeed((s) => s + 1)}
+            >
+              🎲 다른 조합 더 보기
+            </button>
+          </div>
+        ) : tab === "all" && mode === "font" ? (
           <div className={styles.fontList}>
             {fontOutputs.map((f) => {
               const isFav = favs.includes(f.text);

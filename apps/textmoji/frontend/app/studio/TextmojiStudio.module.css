@@ -246,9 +246,15 @@
   line-height: 1.1;
 }
 
-/* ── 인싸폰트 ── */
+/* ── 인싸폰트 / 꾸미기 ── */
 .fontInputWrap {
   padding-top: var(--sp-1);
+}
+.decoHint {
+  font-size: var(--text-caption);
+  color: var(--ink-faint);
+  text-align: center;
+  margin: 0 0 var(--sp-1);
 }
 .fontList {
   display: flex;

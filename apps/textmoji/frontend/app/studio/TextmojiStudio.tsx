@@ -9,6 +9,7 @@ import {
   type TextmojiStyle,
 } from "../../lib/generate";
 import { CURATED } from "../../lib/curated";
+import { LIBRARY } from "../../lib/kaomojiLibrary";
 import { SYMBOL_CATS } from "../../lib/symbols";
 import { FONTS } from "../../lib/fonts";
 import { copyText } from "../../lib/clipboard";
@@ -61,21 +62,35 @@ export default function TextmojiStudio() {
     () => (showGenerated ? generateSet(emotion, style, seed, GRID) : []),
     [showGenerated, emotion, style, seed]
   );
+  // 큐레이션(엄선) + 외부 라이브러리(다양성)를 하나의 풀로. 큐레이션이 앞이라 첫인상이 좋다.
+  const allKao = useMemo(
+    () => [
+      ...CURATED.map((c) => ({ text: c.text, emotion: c.emotion, keywords: c.tags ?? [] })),
+      ...LIBRARY,
+    ],
+    []
+  );
   const kaomojiItems = useMemo<string[]>(() => {
-    const curated = CURATED.filter((c) => c.emotion === emotion).map((c) => c.text);
-    const gen = generated.map((g) => g.text);
-    const merged = showGenerated ? [...gen, ...curated] : curated;
     const q = query.trim().toLowerCase();
-    if (!q) return Array.from(new Set(merged));
+    if (!q) {
+      const base = allKao.filter((k) => k.emotion === emotion).map((k) => k.text);
+      const gen = generated.map((g) => g.text);
+      return Array.from(new Set(showGenerated ? [...gen, ...base] : base));
+    }
+    // 검색: 텍스트·키워드(한/영) + 감정 라벨/키워드 매칭
     const matchEmotions = EMOTIONS.filter(
       (e) => e.label.includes(q) || e.keywords.some((k) => k.toLowerCase().includes(q))
     ).map((e) => e.id);
-    // 검색 시엔 전체 큐레이션에서 감정 키워드/텍스트로 매칭
-    const pool = matchEmotions.length
-      ? CURATED.filter((c) => matchEmotions.includes(c.emotion)).map((c) => c.text)
-      : merged.filter((t) => t.toLowerCase().includes(q));
-    return Array.from(new Set(pool));
-  }, [emotion, showGenerated, generated, query]);
+    const hits = allKao
+      .filter(
+        (k) =>
+          k.text.toLowerCase().includes(q) ||
+          k.keywords.some((kw) => kw.toLowerCase().includes(q)) ||
+          matchEmotions.includes(k.emotion)
+      )
+      .map((k) => k.text);
+    return Array.from(new Set(hits));
+  }, [allKao, emotion, showGenerated, generated, query]);
 
   // ── 특수기호 목록 ──
   const symbolItems = useMemo<string[]>(() => {

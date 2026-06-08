@@ -6,11 +6,11 @@ import { EMOTIONS, EMOTION_BY_ID } from "../../lib/emotions";
 import {
   DEFAULT_STYLE,
   generateSet,
-  type TextmojiItem,
   type TextmojiStyle,
 } from "../../lib/generate";
 import { CURATED } from "../../lib/curated";
-import { estimateTier, TIER_META, type SafetyTier } from "../../lib/safety";
+import { SYMBOL_CATS } from "../../lib/symbols";
+import { FONTS } from "../../lib/fonts";
 import { copyText } from "../../lib/clipboard";
 import {
   loadFavorites,
@@ -19,106 +19,97 @@ import {
 } from "../../lib/favorites";
 import styles from "./TextmojiStudio.module.css";
 
+type Mode = "kaomoji" | "symbol" | "font";
 type Tab = "all" | "fav";
 const GRID = 12;
+const FONT_SAMPLE = "Aa Bb 123";
 
-/** 큐레이션 시드 → 표시 항목(등급은 런타임 재산정 = 정직성) */
-function curatedItems(emotionId: string): TextmojiItem[] {
-  return CURATED.filter((c) => c.emotion === emotionId).map((c) => ({
-    text: c.text,
-    tier: estimateTier(c.text),
-    emotion: c.emotion,
-    source: "curated" as const,
-  }));
-}
+const MODES: { id: Mode; label: string; emoji: string }[] = [
+  { id: "kaomoji", label: "카오모지", emoji: "ʕ•ᴥ•ʔ" },
+  { id: "symbol", label: "특수기호", emoji: "✦" },
+  { id: "font", label: "인싸폰트", emoji: "𝓐𝒶" },
+];
 
 export default function TextmojiStudio() {
+  const [mode, setMode] = useState<Mode>("kaomoji");
+  const [tab, setTab] = useState<Tab>("all");
+
+  // 카오모지
   const [emotion, setEmotion] = useState<string>(EMOTIONS[0]!.id);
   const [style, setStyle] = useState<TextmojiStyle>(DEFAULT_STYLE);
   const [seed, setSeed] = useState(1);
   const [showGenerated, setShowGenerated] = useState(false);
-  const [safeOnly, setSafeOnly] = useState(false);
+
+  // 특수기호
+  const [symbolCat, setSymbolCat] = useState<string>(SYMBOL_CATS[0]!.id);
+
+  // 인싸폰트
+  const [fontInput, setFontInput] = useState("");
+
+  // 공통
   const [query, setQuery] = useState("");
-  const [tab, setTab] = useState<Tab>("all");
   const [favs, setFavs] = useState<string[]>([]);
   const [toast, setToast] = useState("");
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // 즐겨찾기 로드(localStorage, 클라 전용)
   useEffect(() => {
     setFavs(loadFavorites());
   }, []);
 
-  const maxTier: SafetyTier | undefined = safeOnly ? "safe" : undefined;
-
-  // 절차 생성 세트 — 같은 (감정·스타일·시드)면 항상 같은 결과(재현)
+  // ── 카오모지 목록 ──
   const generated = useMemo(
-    () =>
-      showGenerated
-        ? generateSet(emotion, style, seed, GRID, maxTier)
-        : [],
-    [showGenerated, emotion, style, seed, maxTier]
+    () => (showGenerated ? generateSet(emotion, style, seed, GRID) : []),
+    [showGenerated, emotion, style, seed]
   );
+  const kaomojiItems = useMemo<string[]>(() => {
+    const curated = CURATED.filter((c) => c.emotion === emotion).map((c) => c.text);
+    const gen = generated.map((g) => g.text);
+    const merged = showGenerated ? [...gen, ...curated] : curated;
+    const q = query.trim().toLowerCase();
+    if (!q) return Array.from(new Set(merged));
+    const matchEmotions = EMOTIONS.filter(
+      (e) => e.label.includes(q) || e.keywords.some((k) => k.toLowerCase().includes(q))
+    ).map((e) => e.id);
+    // 검색 시엔 전체 큐레이션에서 감정 키워드/텍스트로 매칭
+    const pool = matchEmotions.length
+      ? CURATED.filter((c) => matchEmotions.includes(c.emotion)).map((c) => c.text)
+      : merged.filter((t) => t.toLowerCase().includes(q));
+    return Array.from(new Set(pool));
+  }, [emotion, showGenerated, generated, query]);
 
-  // 첫인상 = 큐레이션, "더 만들기" 누르면 생성물 추가
-  const baseItems = useMemo<TextmojiItem[]>(() => {
-    const curated = curatedItems(emotion);
-    return showGenerated ? [...generated, ...curated] : curated;
-  }, [emotion, showGenerated, generated]);
-
-  // 탭/검색/안전필터 적용 + 안전 우선 정렬
-  const items = useMemo<TextmojiItem[]>(() => {
-    let list: TextmojiItem[];
-    if (tab === "fav") {
-      list = favs.map((text) => ({
-        text,
-        tier: estimateTier(text),
-        source: "curated" as const,
-      }));
-    } else {
-      list = baseItems;
-    }
-    if (maxTier) list = list.filter((it) => it.tier === "safe");
+  // ── 특수기호 목록 ──
+  const symbolItems = useMemo<string[]>(() => {
     const q = query.trim().toLowerCase();
     if (q) {
-      // 키워드: 감정 라벨/키워드 또는 텍스트 자체 부분일치
-      const matchEmotions = EMOTIONS.filter(
-        (e) =>
-          e.label.includes(q) ||
-          e.keywords.some((k) => k.toLowerCase().includes(q))
-      ).map((e) => e.id);
-      list = list.filter(
-        (it) =>
-          it.text.toLowerCase().includes(q) ||
-          (it.emotion ? matchEmotions.includes(it.emotion) : false)
-      );
+      const hits: string[] = [];
+      for (const cat of SYMBOL_CATS) {
+        const catMatch =
+          cat.label.includes(q) || cat.keywords.some((k) => k.toLowerCase().includes(q));
+        for (const it of cat.items) {
+          if (catMatch || it.toLowerCase().includes(q)) hits.push(it);
+        }
+      }
+      return Array.from(new Set(hits));
     }
-    // 안전 우선 정렬(같은 등급은 원래 순서 유지)
-    return [...list].sort(
-      (a, b) => TIER_META[a.tier].rank - TIER_META[b.tier].rank
-    );
-  }, [tab, favs, baseItems, maxTier, query]);
+    return SYMBOL_CATS.find((c) => c.id === symbolCat)?.items ?? [];
+  }, [symbolCat, query]);
+
+  // ── 인싸폰트 결과 ──
+  const fontOutputs = useMemo(() => {
+    const src = fontInput.trim() || FONT_SAMPLE;
+    return FONTS.map((f) => ({ id: f.id, label: f.label, text: f.transform(src) }));
+  }, [fontInput]);
 
   const showToast = useCallback((msg: string) => {
     setToast(msg);
     if (toastTimer.current) clearTimeout(toastTimer.current);
-    toastTimer.current = setTimeout(() => setToast(""), 1800);
+    toastTimer.current = setTimeout(() => setToast(""), 1500);
   }, []);
 
   const onCopy = useCallback(
-    async (it: TextmojiItem) => {
-      const ok = await copyText(it.text);
-      if (!ok) {
-        showToast("복사 실패했다 너굴… 길게 눌러 직접 복사해 줘.");
-        return;
-      }
-      if (it.tier === "fancy") {
-        showToast("받았다 너굴! 근데 상대 기기에선 □로 깨질 수 있어 너굴.");
-      } else if (it.tier === "ok") {
-        showToast("복사했다 너굴! 구형 기기에선 살짝 깨질 수도 있어 너굴.");
-      } else {
-        showToast("복사했다 너굴!");
-      }
+    async (text: string) => {
+      const ok = await copyText(text);
+      showToast(ok ? "복사했다 너굴! 붙여넣기 해 봐 ✨" : "복사 실패… 길게 눌러 직접 복사해 줘.");
     },
     [showToast]
   );
@@ -138,155 +129,233 @@ export default function TextmojiStudio() {
 
   const curEmotion = EMOTION_BY_ID[emotion];
 
+  // 그리드에 그릴 텍스트 목록(탭/모드에 따라)
+  const gridTexts =
+    tab === "fav" ? favs : mode === "kaomoji" ? kaomojiItems : symbolItems;
+
+  const showSearch = tab === "all" && mode !== "font";
+
   return (
     <div className={styles.app}>
-      {/* ── 상단 고정: 검색 + 감정칩 ── */}
       <div className={styles.sticky}>
-        <div className={styles.searchRow}>
-          <input
-            type="search"
-            className={styles.search}
-            placeholder="감정·키워드 검색 (곰, 우는, 하트…)"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            aria-label="텍스트 이모티콘 검색"
-          />
-          <button
-            type="button"
-            className={styles.dice}
-            onClick={reroll}
-            aria-label="더 만들기 — 새 조합 생성"
-            title="🎲 더 만들기"
-          >
-            🎲
-          </button>
-        </div>
-
-        <div className={styles.chips} role="tablist" aria-label="감정 카테고리">
-          {EMOTIONS.slice()
-            .sort((a, b) => Number(Boolean(b.trend)) - Number(Boolean(a.trend)))
-            .map((e) => (
-              <Chip
-                key={e.id}
-                selected={e.id === emotion && tab === "all"}
+        {/* ── 매크로 모드 바 ── */}
+        {tab === "all" ? (
+          <div className={styles.modeBar} role="tablist" aria-label="콘텐츠 종류">
+            {MODES.map((m) => (
+              <button
+                key={m.id}
+                type="button"
+                role="tab"
+                aria-selected={mode === m.id}
+                className={`${styles.modeBtn} ${mode === m.id ? styles.modeOn : ""}`}
                 onClick={() => {
-                  setEmotion(e.id);
-                  setTab("all");
-                  setShowGenerated(false);
+                  setMode(m.id);
+                  setQuery("");
+                }}
+              >
+                <span className={styles.modeEmoji} aria-hidden>
+                  {m.emoji}
+                </span>
+                {m.label}
+              </button>
+            ))}
+          </div>
+        ) : null}
+
+        {/* ── 검색(+카오모지 주사위) ── */}
+        {showSearch ? (
+          <div className={styles.searchRow}>
+            <input
+              type="search"
+              className={styles.search}
+              placeholder={
+                mode === "kaomoji" ? "감정·키워드 검색 (곰, 우는, 하트…)" : "기호 검색 (별, 화살표, 하트…)"
+              }
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              aria-label="검색"
+            />
+            {mode === "kaomoji" ? (
+              <button
+                type="button"
+                className={styles.dice}
+                onClick={reroll}
+                aria-label="더 만들기 — 새 조합 생성"
+                title="🎲 더 만들기"
+              >
+                🎲
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+
+        {/* ── 카오모지: 감정칩 + 스타일 ── */}
+        {tab === "all" && mode === "kaomoji" ? (
+          <>
+            <div className={styles.chips} role="tablist" aria-label="감정 카테고리">
+              {EMOTIONS.slice()
+                .sort((a, b) => Number(Boolean(b.trend)) - Number(Boolean(a.trend)))
+                .map((e) => (
+                  <Chip
+                    key={e.id}
+                    selected={e.id === emotion}
+                    onClick={() => {
+                      setEmotion(e.id);
+                      setShowGenerated(false);
+                      setQuery("");
+                    }}
+                    className={styles.chip}
+                  >
+                    <span aria-hidden>{e.emoji}</span> {e.label}
+                    {e.trend ? <span className={styles.trendDot}> ·HOT</span> : null}
+                  </Chip>
+                ))}
+            </div>
+            <div className={styles.styleRow} aria-label="생성 스타일">
+              <Chip
+                selected={style.animalFace}
+                onClick={() => setStyle((s) => ({ ...s, animalFace: !s.animalFace }))}
+                className={styles.styleChip}
+              >
+                동물상
+              </Chip>
+              <Chip
+                selected={style.action}
+                onClick={() => setStyle((s) => ({ ...s, action: !s.action }))}
+                className={styles.styleChip}
+              >
+                액션형
+              </Chip>
+              <Chip
+                selected={style.symmetric}
+                onClick={() => setStyle((s) => ({ ...s, symmetric: !s.symmetric }))}
+                className={styles.styleChip}
+              >
+                좌우대칭
+              </Chip>
+              <Chip
+                selected={style.fancy >= 2}
+                onClick={() =>
+                  setStyle((s) => ({ ...s, fancy: s.fancy >= 2 ? 0 : s.fancy + 1 }))
+                }
+                className={styles.styleChip}
+              >
+                장식 {style.fancy}
+              </Chip>
+            </div>
+          </>
+        ) : null}
+
+        {/* ── 특수기호: 카테고리칩 ── */}
+        {tab === "all" && mode === "symbol" ? (
+          <div className={styles.chips} role="tablist" aria-label="기호 카테고리">
+            {SYMBOL_CATS.map((c) => (
+              <Chip
+                key={c.id}
+                selected={c.id === symbolCat && !query.trim()}
+                onClick={() => {
+                  setSymbolCat(c.id);
+                  setQuery("");
                 }}
                 className={styles.chip}
               >
-                <span aria-hidden>{e.emoji}</span> {e.label}
-                {e.trend ? <span className={styles.trendDot} aria-label="트렌드"> ·HOT</span> : null}
+                <span aria-hidden>{c.emoji}</span> {c.label}
               </Chip>
             ))}
-        </div>
+          </div>
+        ) : null}
 
-        <div className={styles.styleRow} aria-label="생성 스타일">
-          <Chip
-            selected={style.animalFace}
-            onClick={() => setStyle((s) => ({ ...s, animalFace: !s.animalFace }))}
-            className={styles.styleChip}
-          >
-            동물상
-          </Chip>
-          <Chip
-            selected={style.action}
-            onClick={() => setStyle((s) => ({ ...s, action: !s.action }))}
-            className={styles.styleChip}
-          >
-            액션형
-          </Chip>
-          <Chip
-            selected={style.symmetric}
-            onClick={() => setStyle((s) => ({ ...s, symmetric: !s.symmetric }))}
-            className={styles.styleChip}
-          >
-            좌우대칭
-          </Chip>
-          <Chip
-            selected={style.fancy >= 2}
-            onClick={() =>
-              setStyle((s) => ({ ...s, fancy: s.fancy >= 2 ? 0 : s.fancy + 1 }))
-            }
-            className={styles.styleChip}
-          >
-            장식 {style.fancy}
-          </Chip>
-          <Chip
-            selected={safeOnly}
-            onClick={() => setSafeOnly((v) => !v)}
-            className={styles.styleChip}
-            title="🟢 안전등급만 보기"
-          >
-            🟢 안전만
-          </Chip>
-        </div>
+        {/* ── 인싸폰트: 입력 ── */}
+        {tab === "all" && mode === "font" ? (
+          <div className={styles.fontInputWrap}>
+            <input
+              type="text"
+              className={styles.search}
+              placeholder="여기에 영어·숫자를 입력하면 폰트로 변환돼요"
+              value={fontInput}
+              onChange={(e) => setFontInput(e.target.value)}
+              aria-label="인싸폰트로 변환할 글자"
+              maxLength={60}
+            />
+          </div>
+        ) : null}
       </div>
 
-      {/* ── 큰 이모티콘 그리드 ── */}
+      {/* ── 본문 ── */}
       <div className={styles.gridScroll}>
-        {items.length === 0 ? (
+        {tab === "all" && mode === "font" ? (
+          <div className={styles.fontList}>
+            {fontOutputs.map((f) => {
+              const isFav = favs.includes(f.text);
+              return (
+                <div key={f.id} className={styles.fontCard}>
+                  <span className={styles.fontLabel}>{f.label}</span>
+                  <button
+                    type="button"
+                    className={styles.fontPreview}
+                    onClick={() => onCopy(f.text)}
+                    aria-label={`${f.label} 복사: ${f.text}`}
+                    title="탭하면 복사"
+                  >
+                    {f.text}
+                  </button>
+                  <button
+                    type="button"
+                    className={`${styles.star} ${isFav ? styles.starOn : ""}`}
+                    onClick={() => onToggleFav(f.text)}
+                    aria-pressed={isFav}
+                    aria-label={isFav ? "즐겨찾기 해제" : "즐겨찾기"}
+                  >
+                    {isFav ? "★" : "☆"}
+                  </button>
+                </div>
+              );
+            })}
+            <p className={styles.honest}>
+              인싸폰트는 영어·숫자만 변환돼요. 일부 기기·앱에선 다르게 보일 수 있어요.
+            </p>
+          </div>
+        ) : gridTexts.length === 0 ? (
           <p className={styles.empty}>
             {tab === "fav"
-              ? "아직 즐겨찾기가 없어 너굴. 마음에 드는 카드의 ★를 눌러 봐."
-              : "조건에 맞는 게 없어 너굴. 🎲 더 만들기로 새로 뽑아 봐."}
+              ? "아직 즐겨찾기가 없어 너굴. 마음에 드는 카드의 ☆를 눌러 봐."
+              : "조건에 맞는 게 없어 너굴. 다른 검색어나 카테고리를 골라 봐."}
           </p>
         ) : (
           <div className={styles.grid}>
-            {items.map((it, i) => {
-              const m = TIER_META[it.tier];
-              const isFav = favs.includes(it.text);
+            {gridTexts.map((text, i) => {
+              const isFav = favs.includes(text);
               return (
-                <div key={`${it.text}-${i}`} className={styles.card}>
+                <div key={`${text}-${i}`} className={styles.card}>
                   <button
                     type="button"
                     className={styles.copyBtn}
-                    onClick={() => onCopy(it)}
-                    aria-label={`${it.text} 복사 (${m.label}: ${m.short})`}
+                    onClick={() => onCopy(text)}
+                    aria-label={`${text} 복사`}
                     title="탭하면 복사"
                   >
-                    <span className={styles.moji}>{it.text}</span>
+                    <span className={styles.moji}>{text}</span>
                   </button>
-                  <div className={styles.cardMeta}>
-                    <span
-                      className={styles.badge}
-                      data-tier={it.tier}
-                      title={`${m.label} — ${m.short} (추정치)`}
-                    >
-                      {m.dot} {m.label}
-                    </span>
-                    {it.source === "generated" ? (
-                      <span className={styles.src} title="절차적으로 방금 생성됨">
-                        생성
-                      </span>
-                    ) : null}
-                    <button
-                      type="button"
-                      className={`${styles.star} ${isFav ? styles.starOn : ""}`}
-                      onClick={() => onToggleFav(it.text)}
-                      aria-pressed={isFav}
-                      aria-label={isFav ? "즐겨찾기 해제" : "즐겨찾기"}
-                    >
-                      {isFav ? "★" : "☆"}
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    className={`${styles.star} ${styles.starCorner} ${isFav ? styles.starOn : ""}`}
+                    onClick={() => onToggleFav(text)}
+                    aria-pressed={isFav}
+                    aria-label={isFav ? "즐겨찾기 해제" : "즐겨찾기"}
+                  >
+                    {isFav ? "★" : "☆"}
+                  </button>
                 </div>
               );
             })}
           </div>
         )}
 
-        {tab === "all" ? (
+        {tab === "all" && mode === "kaomoji" && !query.trim() ? (
           <button type="button" className={styles.moreBtn} onClick={reroll}>
             🎲 {curEmotion?.label ?? ""} 더 만들기
           </button>
         ) : null}
-
-        <p className={styles.honest}>
-          등급은 <b>추정치</b>예요. 같은 글자도 카톡·인스타·디스코드·구형폰에서
-          □로 깨질 수 있어요. 🟢 안전부터 쓰는 걸 권해요.
-        </p>
       </div>
 
       {/* ── 하단 탭바 ── */}
@@ -309,7 +378,6 @@ export default function TextmojiStudio() {
         </button>
       </nav>
 
-      {/* 복사 알림(aria-live) */}
       <div className={styles.toastWrap} aria-live="polite" aria-atomic="true">
         {toast ? <div className={styles.toast}>{toast}</div> : null}
       </div>

@@ -109,6 +109,7 @@
 }
 
 .card {
+  position: relative;
   display: flex;
   flex-direction: column;
   background: var(--surface);
@@ -116,16 +117,20 @@
   box-shadow: var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.08));
   border: 1px solid var(--surface-sunken);
   overflow: hidden;
+  transition: border-color 0.12s ease, transform 0.12s ease;
+}
+.card:hover {
+  border-color: var(--accent);
 }
 
-/* 원탭 복사 = 카드 본문 전체가 큰 터치 타깃 */
+/* 원탭 복사 = 카드 전체가 큰 터치 타깃 */
 .copyBtn {
   flex: 1;
-  min-height: 4.5rem;
+  min-height: 5rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: var(--sp-4) var(--sp-2);
+  padding: var(--sp-5) var(--sp-3);
   border: none;
   background: transparent;
   cursor: pointer;
@@ -135,13 +140,13 @@
   background: var(--accent-weak);
 }
 .moji {
-  font-size: 1.35rem;
-  line-height: 1.3;
+  font-size: 1.5rem;
+  line-height: 1.35;
   color: var(--ink);
-  word-break: break-all;
+  word-break: break-word;
   text-align: center;
   /* 모노 계열이 카오모지 정렬에 유리 */
-  font-family: "Noto Sans KR", system-ui, "Segoe UI Symbol", sans-serif;
+  font-family: "Noto Sans KR", system-ui, "Segoe UI Symbol", "Apple Color Emoji", sans-serif;
 }
 
 .cardMeta {
@@ -188,6 +193,105 @@
 }
 .starOn {
   color: var(--candy-butter);
+}
+
+/* 카드 우상단 코너 별(카오모지·기호 그리드) */
+.starCorner {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  margin: 0;
+  font-size: 0.95rem;
+  opacity: 0.55;
+  z-index: 2;
+}
+.starCorner.starOn {
+  opacity: 1;
+}
+
+/* ── 매크로 모드 바 ── */
+.modeBar {
+  display: flex;
+  gap: var(--sp-2);
+  padding-bottom: var(--sp-2);
+}
+.modeBtn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: var(--sp-2) var(--sp-1);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-med);
+  color: var(--ink-soft);
+  background: var(--surface-2);
+  border: 1.5px solid transparent;
+  border-radius: var(--r-md);
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+.modeBtn:active {
+  transform: scale(0.97);
+}
+.modeOn {
+  color: var(--accent-ink);
+  background: var(--accent);
+  border-color: var(--accent);
+  font-weight: var(--weight-semi);
+}
+.modeEmoji {
+  font-size: 1.05rem;
+  line-height: 1.1;
+}
+
+/* ── 인싸폰트 ── */
+.fontInputWrap {
+  padding-top: var(--sp-1);
+}
+.fontList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+.fontCard {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--surface);
+  border: 1px solid var(--surface-sunken);
+  border-radius: var(--r-md);
+  transition: border-color 0.12s ease;
+}
+.fontCard:hover {
+  border-color: var(--accent);
+}
+.fontLabel {
+  flex: none;
+  width: 5rem;
+  font-size: var(--text-caption);
+  font-weight: var(--weight-semi);
+  color: var(--ink-faint);
+}
+.fontPreview {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  font-size: 1.25rem;
+  line-height: 1.4;
+  color: var(--ink);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: var(--sp-2) 0;
+  word-break: break-word;
+  font-family: "Noto Sans KR", system-ui, "Segoe UI Symbol", sans-serif;
+}
+.fontPreview:active {
+  color: var(--accent-ink-weak);
 }
 
 .empty {

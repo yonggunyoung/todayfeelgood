@@ -1,635 +1,93 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { initializeApp, getApps } from 'firebase/app';
-import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from 'firebase/auth';
-import { getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot, increment } from 'firebase/firestore';
-import { 
-  Trophy, 
-  Calendar, 
-  Palette, 
-  Target, 
-  Zap, 
-  Users, 
-  Sparkles,
-  Flame,
-  Award,
-  Volume2,
-  VolumeX,
-  RefreshCcw,
-  Star,
-  Music,
-  PartyPopper,
-  Moon,
-  Sun,
-  Eye,
-  Ghost,
-  Atom,
-  Heart
-} from 'lucide-react';
+# 🧊 냉비서 — 내 냉장고 비서
 
-// --- Firebase 설정 ---
-const firebaseConfig = JSON.parse(__firebase_config);
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'mystic-lotto-v10';
+**영수증 한 장으로 냉장고를 등록하고, 내 목표에 맞는 "오늘 뭐 해먹지"를 추천받고, 요리 완료 한 번이면 재고가 알아서 줄어드는 앱.**
 
-// --- 고성능 비트 사운드 엔진 ---
-const useAudio = () => {
-  const [muted, setMuted] = useState(false);
-  const audioCtx = useRef(null);
+빌드 과정이 없는 정적 웹앱(PWA)이라 어떤 정적 호스팅에든 올리면 바로 동작하고, 휴대폰에서는 홈 화면에 설치해 앱처럼 쓸 수 있습니다. 같은 동기화 코드를 입력한 기기끼리는 냉장고가 실시간으로 연동됩니다 (가족 공유 포함).
 
-  const initAudio = () => {
-    if (!audioCtx.current) {
-      audioCtx.current = new (window.AudioContext || window.webkitAudioContext)();
-    }
-    if (audioCtx.current.state === 'suspended') {
-      audioCtx.current.resume();
-    }
-  };
+> 제품 기획 전체(0→100 설계)는 [`docs/`](./docs/00-overview.md) 폴더에 있습니다.
+> (이전 프로토타입 코드는 git 히스토리에 보존되어 있습니다.)
 
-  const playBitSound = (freq = 110, duration = 0.1, type = 'square', vol = 0.08) => {
-    if (muted || !audioCtx.current) return;
-    const ctx = audioCtx.current;
-    const now = ctx.currentTime;
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
+## 주요 기능
 
-    osc.type = type;
-    osc.frequency.setValueAtTime(freq, now);
-    osc.connect(gain);
-    gain.connect(ctx.destination);
+| 기능 | 설명 | 비용 |
+|---|---|---|
+| 📷 **AI 입고 스캔** | 영수증/장본 사진 1장 → 품목·수량 자동 인식 → 일괄 등록 | 본인 Claude API 키 (장당 수~수십 원) |
+| ➕ **빠른 추가** | 재료 77종 사전에서 검색 후 탭 — 소비기한·보관위치 자동 | 무료 |
+| 🍳 **모드별 추천** | 기본/💪운동(고단백)/🪙자린고비(임박 소진)/🤰산모(주의재료 차단) — 내 냉장고 기준 정렬, 레시피 40종 내장 | 무료 |
+| 🧾 **요리 완료 원탭 차감** | 인분 수만 고르면 영수증 전표 스타일로 재고 자동 차감 (양념은 차감 안 함) | 무료 |
+| 🍱 **잔반 관리** | 남은 음식 3초 등록 → D-day 타이머 → 홈 최상단 "먼저 먹기" | 무료 |
+| 🧺 **장보기 연결** | 다 떨어진 재료 자동 담기 → 쿠팡 검색 원탭 → 산 것들 원탭 재입고 | 무료 |
+| 💰 **절약 장부** | 임박 재료 소진·잔반 해결로 "아낀 돈", 폐기로 "버린 돈" 집계 | 무료 |
+| 🔄 **기기 연동** | 동기화 코드 하나로 폰↔PC↔가족 냉장고 공유 (본인 Firebase 무료 티어) | 무료 |
 
-    gain.gain.setValueAtTime(vol, now);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+## 바로 띄우기 (GitHub Pages — 5분)
 
-    osc.start(now);
-    osc.stop(now + duration);
-  };
+1. 이 브랜치를 `main`에 병합
+2. GitHub 저장소 → **Settings → Pages → Source: Deploy from a branch → `main` / `/ (root)`** 선택
+3. 1~2분 후 발급되는 주소로 접속: `https://yonggunyoung.github.io/todayfeelgood/`
 
-  return { playBitSound, muted, setMuted, initAudio };
-};
+다른 정적 호스팅(Vercel, Netlify, Cloudflare Pages)도 저장소 연결만 하면 끝납니다 (빌드 명령 없음, 출력 디렉터리 = 루트).
 
-export default function App() {
-  const [initialized, setInitialized] = useState(false);
-  const [user, setUser] = useState(null);
-  const [globalStats, setGlobalStats] = useState({ 
-    totalUsage: 8145060, // 1등 확률에 맞춘 초기 동기화 횟수
-    luckGauge: 1.2,
-    win1: 1, // 요청하신 대로 1등 1회 기준
-    win2: 54, 
-    win3: 2450 
-  }); 
-  const [formData, setFormData] = useState({ date: '', color: '#8b5cf6', wish: '' });
-  const [results, setResults] = useState([]);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [explosion, setExplosion] = useState(false);
-  const [extraLuck, setExtraLuck] = useState(0); 
-  const [bubbles, setBubbles] = useState([]);
-  const [sincerityWarning, setSincerityWarning] = useState(false);
-  const { playBitSound, muted, setMuted, initAudio } = useAudio();
+## 뚝딱 사이트에 연결하기
 
-  // 2025년 12월 22일 기준 최신 로또 번호 (제1203회)
-  const LATEST_DRAW = {
-    drawNo: 1203,
-    date: '2025-12-20',
-    numbers: [4, 15, 23, 31, 38, 45],
-    bonus: 10
-  };
+발급된 주소를 뚝딱 사이트에 연결하는 방법은 두 가지입니다.
 
-  const currentLuckGauge = Math.min(100, 
-    (formData.date ? 20 : 0) + 
-    (formData.wish ? 20 : 0) + 
-    (formData.color ? 20 : 0) + 
-    extraLuck
-  );
+**① 링크/버튼 연결 (권장)** — 메뉴나 버튼의 링크 주소로 위 URL을 넣으면 끝.
 
-  // 알록달록 영혼 입자 생성
-  useEffect(() => {
-    const bubbleColors = ['#ec4899', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ef4444', '#06b6d4'];
-    const interval = setInterval(() => {
-      if (bubbles.length < 5) {
-        const newBubble = {
-          id: Date.now() + Math.random(),
-          x: Math.random() * 80 + 10,
-          y: Math.random() * 80 + 10,
-          size: Math.random() * 30 + 35,
-          color: bubbleColors[Math.floor(Math.random() * bubbleColors.length)]
-        };
-        setBubbles(prev => [...prev, newBubble]);
-      }
-    }, 4500);
-    return () => clearInterval(interval);
-  }, [bubbles.length]);
+**② 페이지 안에 임베드** — HTML 삽입(임베드) 위젯에 아래 코드를 붙여넣기:
 
-  const popBubble = (id) => {
-    initAudio();
-    playBitSound(165, 0.12, 'triangle'); 
-    setBubbles(prev => prev.filter(b => b.id !== id));
-    setExtraLuck(prev => Math.min(prev + (Math.floor(Math.random() * 5) + 4), 40));
-  };
+```html
+<iframe src="https://yonggunyoung.github.io/todayfeelgood/"
+        style="width:100%;max-width:480px;height:780px;border:1.5px solid #20312a;border-radius:18px"
+        title="냉비서"></iframe>
+```
 
-  useEffect(() => {
-    let unsubscribeAuth = () => {};
-    const startApp = async () => {
-      try {
-        const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
-        const auth = getAuth(app);
-        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-          await signInWithCustomToken(auth, __initial_auth_token);
-        } else {
-          await signInAnonymously(auth);
-        }
-        unsubscribeAuth = onAuthStateChanged(auth, (u) => {
-          setUser(u);
-          setInitialized(true);
-        });
-      } catch (err) { setInitialized(true); }
-    };
-    startApp();
-    return () => unsubscribeAuth();
-  }, []);
+모바일 사용자는 앱 화면 그대로, 데스크톱 사용자는 사이트 본문 속 위젯으로 쓰게 됩니다.
 
-  // 글로벌 통계 리스너
-  useEffect(() => {
-    if (!user || !initialized) return;
-    const db = getFirestore();
-    const statsDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'globalStats', 'main');
-    
-    const unsubscribe = onSnapshot(statsDocRef, (snap) => {
-      if (snap.exists()) {
-        const data = snap.data();
-        setGlobalStats({ 
-          totalUsage: Number(data.totalUsage || 8145060), 
-          luckGauge: Number(data.luckGauge || 1.2),
-          win1: Number(data.win1 || 1),
-          win2: Number(data.win2 || 54),
-          win3: Number(data.win3 || 2450)
-        });
-        if (data.luckGauge >= 100) {
-          setExplosion(true);
-          playBitSound(220, 0.6, 'square');
-          setTimeout(() => {
-            setExplosion(false);
-            updateDoc(statsDocRef, { luckGauge: 0.001 }).catch(console.error); // 초기화
-          }, 6500);
-        }
-      } else {
-        setDoc(statsDocRef, { totalUsage: 8145060, luckGauge: 1.2, win1: 1, win2: 54, win3: 2450 }).catch(console.error);
-      }
-    }, (err) => console.error(err));
-    return () => unsubscribe();
-  }, [user, initialized]);
+## 휴대폰에 "앱"으로 설치 (PWA)
 
-  const handleGenerate = async () => {
-    initAudio(); 
-    
-    // 꾸짖음 경고 1: 빈칸
-    if (!formData.date || !formData.wish) {
-      playBitSound(80, 0.3, 'sawtooth');
-      alert("이렇게 행운을 시험할 거야? 염원을 담아 빈칸을 채워줘! 우주는 정성 없는 소망에 응답하지 않아. 어서 채우도록!");
-      return;
-    }
+- **Android (Chrome)**: 사이트 접속 → 메뉴 ⋮ → **홈 화면에 추가/앱 설치**
+- **iPhone (Safari)**: 공유 버튼 → **홈 화면에 추가**
 
-    // 꾸짖음 경고 2: 성의 없는 염원
-    if (formData.wish.length < 8 && !sincerityWarning) {
-      playBitSound(120, 0.2, 'square');
-      setSincerityWarning(true);
-      alert("염원이 너무 짧아! 조금 더 구체적으로 성의 있게 우주에 속삭여줘. 당신의 정성이 행운의 크기를 결정해!");
-      return;
-    }
+설치하면 전체화면 단독 앱으로 실행되고, 앱 셸이 캐시되어 오프라인에서도 냉장고를 확인할 수 있습니다. (스토어 배포가 필요해지면 같은 코드를 Capacitor로 감싸는 경로를 권장 — `docs/04-tech-architecture.md` 참고)
 
-    setIsGenerating(true);
-    setSincerityWarning(false);
-    playBitSound(110, 0.2, 'square', 0.15);
-    setResults([]);
+## 기기 연동·가족 공유 설정 (선택)
 
-    const dateNum = parseInt(formData.date.replace(/-/g, '')) || 0;
-    const colorNum = parseInt(formData.color.substring(1), 16) || 0;
-    let textHash = 0;
-    for (let i = 0; i < formData.wish.length; i++) {
-      textHash = ((textHash << 5) - textHash) + formData.wish.charCodeAt(i);
-      textHash |= 0;
-    }
-    const seed = Math.abs(dateNum + colorNum + textHash + extraLuck);
+설정 없이도 앱은 기기 로컬 모드로 완전히 동작합니다. 폰↔PC↔가족 연동을 원할 때만:
 
-    const newSets = [];
-    let localWin1 = 0;
-    let localWin2 = 0;
-    let localWin3 = 0;
+1. [Firebase 콘솔](https://console.firebase.google.com)에서 무료 프로젝트 생성 → 웹앱 추가 → 설정(JSON) 복사
+2. **Authentication → 로그인 방법 → 익명** 사용 설정
+3. **Firestore Database** 생성 (테스트 모드로 시작 가능)
+4. 앱의 **설정 → 기기 연동**에 JSON 붙여넣기 + 동기화 코드 생성
+5. 다른 기기에서도 같은 JSON + 같은 코드 입력 → 냉장고가 합쳐짐
 
-    for (let i = 0; i < 5; i++) {
-      const nums = [];
-      let localSeed = seed + (i * 777);
-      while (nums.length < 6) {
-        const x = Math.sin(localSeed++) * 10000;
-        const rand = x - Math.floor(x);
-        const n = Math.floor(rand * 45) + 1;
-        if (!nums.includes(n)) nums.push(n);
-      }
-      nums.sort((a, b) => a - b);
-      
-      // 당첨 시뮬레이션
-      const matches = nums.filter(n => LATEST_DRAW.numbers.includes(n)).length;
-      if (matches === 6) localWin1++;
-      else if (matches === 5) localWin2++;
-      else if (matches === 4) localWin3++;
+API 키(AI용)는 보안상 동기화되지 않고 각 기기에만 저장됩니다.
 
-      newSets.push({ numbers: nums, message: getRandomKoreanMessage(), matches });
-    }
+## AI 스캔 설정 (선택)
 
-    try {
-      const db = getFirestore();
-      const statsDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'globalStats', 'main');
-      await updateDoc(statsDocRef, { 
-        totalUsage: increment(1), 
-        luckGauge: increment(localWin1 > 0 ? 50 : 0.000123), // 1등급 기운 감지 시 대폭 상승
-        win1: increment(localWin1),
-        win2: increment(localWin2),
-        win3: increment(localWin3)
-      });
-    } catch (e) { console.error(e); }
+설정 → AI 스캔에 본인의 Claude API 키([console.anthropic.com](https://console.anthropic.com)에서 발급)를 등록하면 영수증/사진 입고가 활성화됩니다. 비용은 본인 계정 과금이며 모델을 선택할 수 있습니다 (기본: Opus 4.8). 공용 기기에서는 키를 등록하지 마세요. 서비스로 정식 운영할 때는 키를 클라이언트에 두지 않고 서버(Cloud Functions) 경유로 전환하는 설계가 `docs/04-tech-architecture.md`에 있습니다.
 
-    for (let i = 0; i < 6; i++) {
-      await new Promise(r => setTimeout(r, 200));
-      playBitSound(130 + (i * 15), 0.12, 'square');
-    }
+## 개발
 
-    setResults(newSets);
-    setIsGenerating(false);
-    playBitSound(200, 0.4, 'triangle');
-    
-    // 자동 초기화
-    setFormData({ date: '', color: '#8b5cf6', wish: '' });
-    setExtraLuck(0); 
-  };
+```bash
+npm start     # 로컬 서버 (http://localhost:8080) — python3 http.server 사용
+npm test      # 추천/차감 엔진 스모크 테스트 (node)
+```
 
-  const getRandomKoreanMessage = () => {
-    const msgs = [
-      "아이필 굿! 우주가 당신의 정성을 수열로 빚어냈습니다! 🚀",
-      "굿럭! 이건 우주가 보낸 신호야! 느낌이 아주 좋아요!",
-      "행운도 실력이야! 당신의 에너지가 담긴 완벽한 조합!",
-      "무의식이 유의식으로 변하는 순간, 행운은 현실이 됩니다.",
-      "운명의 파동이 최고조에 달했습니다. 가즈아!"
-    ];
-    return msgs[Math.floor(Math.random() * msgs.length)];
-  };
+빌드 도구·의존성 없음. 구조:
 
-  const handleInputChange = (field, val) => {
-    initAudio();
-    setFormData({...formData, [field]: val});
-    playBitSound(140, 0.05, 'sine');
-  };
+```
+index.html            앱 셸
+css/styles.css        디자인 시스템 ("신선식료품점 × 종이 가계부")
+js/main.js            화면·상호작용 전부
+js/engine.js          추천·차감 엔진 (전부 비AI — 변동비 0원 코어)
+js/store.js           상태 + localStorage 영속화
+js/ai.js              AI 입고 스캔 (Claude API)
+js/sync.js            선택적 Firebase 동기화
+js/data/              재료 사전 77종 · 레시피 40종 시드
+docs/                 제품 기획 문서 (0→100)
+```
 
-  const handleInputBlur = () => {
-    playBitSound(200, 0.08, 'sine', 0.04); 
-  };
+## 로드맵 요약
 
-  if (!initialized) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#030308]">
-        <Atom className="animate-spin text-purple-600" size={60} />
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-[#020206] text-slate-100 font-sans pb-24 overflow-hidden relative selection:bg-purple-500/30">
-      
-      {/* 반짝이는 별가루 */}
-      <div className="fixed inset-0 pointer-events-none">
-        {[...Array(40)].map((_, i) => (
-          <div 
-            key={i}
-            className="absolute rounded-full bg-white/20 animate-pulse"
-            style={{
-              width: Math.random() * 3 + 'px',
-              height: Math.random() * 3 + 'px',
-              top: Math.random() * 100 + '%',
-              left: Math.random() * 100 + '%',
-              animationDelay: Math.random() * 5 + 's',
-              animationDuration: Math.random() * 4 + 2 + 's'
-            }}
-          ></div>
-        ))}
-      </div>
-
-      {/* 알록달록 영혼 입자 */}
-      {bubbles.map(bubble => (
-        <div 
-          key={bubble.id}
-          onClick={() => popBubble(bubble.id)}
-          className="absolute z-50 cursor-pointer animate-bounce hover:scale-150 transition-all duration-300 group"
-          style={{ 
-            left: `${bubble.x}%`, 
-            top: `${bubble.y}%`, 
-            width: `${bubble.size}px`, 
-            height: `${bubble.size}px`,
-            background: `radial-gradient(circle, ${bubble.color}dd 0%, transparent 85%)`,
-            borderRadius: '50%',
-            border: `2px solid ${bubble.color}66`,
-            backdropFilter: 'blur(5px)',
-            boxShadow: `0 0 30px ${bubble.color}55`
-          }}
-        >
-          <div className="w-full h-full flex items-center justify-center text-[9px] text-white font-black tracking-tighter uppercase opacity-80 group-hover:opacity-100">기운</div>
-        </div>
-      ))}
-
-      {/* 잭팟 폭발 효과 */}
-      {explosion && (
-        <div className="fixed inset-0 z-50 pointer-events-none flex flex-col items-center justify-center bg-purple-900/30 backdrop-blur-3xl animate-in fade-in duration-700">
-          <PartyPopper size={200} className="text-yellow-400 animate-bounce mb-10 shadow-2xl" />
-          <h2 className="text-6xl md:text-9xl font-black text-white text-center px-12 drop-shadow-[0_0_60px_rgba(255,255,255,1)] italic uppercase tracking-tighter">
-            행운 폭발!<br/>
-            <span className="text-purple-400">우주의 문이 활짝 열렸습니다!</span>
-          </h2>
-        </div>
-      )}
-
-      <header className="bg-black/90 backdrop-blur-3xl border-b border-white/5 sticky top-0 z-40 p-6 shadow-[0_10px_40px_rgba(0,0,0,0.6)]">
-        <div className="max-w-5xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
-          <div className="flex items-center gap-5">
-            <div className="p-3 bg-gradient-to-tr from-purple-800 to-indigo-800 rounded-3xl shadow-2xl shadow-purple-500/30">
-              <Sparkles size={28} className="text-white animate-pulse" />
-            </div>
-            <div>
-              <p className="text-[10px] text-purple-400 font-black tracking-[0.5em] uppercase mb-1">최신 로또 당첨 결과</p>
-              <h1 className="text-sm font-black text-white">제 {LATEST_DRAW.drawNo}회 (2025.12.20)</h1>
-            </div>
-          </div>
-          <div className="flex items-center gap-3 bg-white/5 px-8 py-4 rounded-full border border-white/10 shadow-inner group transition-all hover:bg-white/10">
-            {LATEST_DRAW.numbers.map(n => (
-              <span key={n} className="w-9 h-9 flex items-center justify-center rounded-full font-black text-xs text-indigo-100 transition-transform hover:scale-125">
-                {n}
-              </span>
-            ))}
-            <span className="px-1 opacity-20 text-xs text-white">＋</span>
-            <span className="w-9 h-9 flex items-center justify-center bg-amber-500 text-black rounded-full font-black text-xs shadow-[0_0_20px_rgba(245,158,11,0.6)]">
-              {LATEST_DRAW.bonus}
-            </span>
-          </div>
-          <button onClick={() => { initAudio(); setMuted(!muted); }} className="p-4 bg-white/5 rounded-3xl text-white/30 hover:text-purple-400 transition-all active:scale-90 border border-white/5">
-            {muted ? <VolumeX size={22} /> : <Volume2 size={22} />}
-          </button>
-        </div>
-      </header>
-
-      <main className="max-w-4xl mx-auto mt-16 px-6 space-y-20 relative z-10">
-        
-        {/* 시크릿 법칙 */}
-        <section className="relative overflow-hidden bg-white/[0.01] backdrop-blur-3xl border border-white/5 rounded-[5rem] p-16 md:p-20 text-center group shadow-[0_40px_100px_rgba(0,0,0,0.4)] transition-all hover:border-purple-500/20">
-          <Eye className="absolute top-10 left-16 text-purple-500/5 group-hover:text-purple-500/15 transition-all animate-bounce" size={100} />
-          <h3 className="text-purple-400 font-black text-[11px] uppercase tracking-[0.8em] mb-12 flex items-center justify-center gap-5">
-             <Moon size={18} className="text-purple-600" /> 우주의 이끌림, 신비로운 시크릿 <Moon size={18} className="text-purple-600" />
-          </h3>
-          <p className="text-slate-50 text-xl md:text-3xl font-black leading-[1.7] italic tracking-tight drop-shadow-2xl">
-            "당신은 지금 우주의 기운에 한발자국을 디뎠습니다. <br className="hidden md:block"/>
-            이것은 단순한 랜덤 생성기가 아닌 이끌림의 법칙에 <br className="hidden md:block"/>
-            무의식의 법칙을 유의식의 법칙으로 바꿔주는데 힘을 보태줍니다."
-          </p>
-        </section>
-
-        {/* 당첨 통계 보드 */}
-        <section className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-             <div className="bg-black/60 border border-white/5 p-8 rounded-[3.5rem] text-center shadow-2xl backdrop-blur-md hover:border-yellow-500/30 transition-all">
-                <p className="text-[11px] text-yellow-500 font-black uppercase tracking-widest mb-2">1등 동기화 횟수</p>
-                <h4 className="text-4xl font-black text-white italic">{globalStats.win1}<span className="text-xs ml-1 opacity-40 font-medium tracking-normal">회</span></h4>
-             </div>
-             <div className="bg-black/60 border border-white/5 p-8 rounded-[3.5rem] text-center shadow-2xl backdrop-blur-md hover:border-indigo-500/30 transition-all">
-                <p className="text-[11px] text-indigo-400 font-black uppercase tracking-widest mb-2">2등 동기화 횟수</p>
-                <h4 className="text-4xl font-black text-white italic">{globalStats.win2}<span className="text-xs ml-1 opacity-40 font-medium tracking-normal">회</span></h4>
-             </div>
-             <div className="bg-black/60 border border-white/5 p-8 rounded-[3.5rem] text-center shadow-2xl backdrop-blur-md hover:border-rose-500/30 transition-all">
-                <p className="text-[11px] text-rose-400 font-black uppercase tracking-widest mb-2">3등 동기화 횟수</p>
-                <h4 className="text-4xl font-black text-white italic">{globalStats.win3}<span className="text-xs ml-1 opacity-40 font-medium tracking-normal">회</span></h4>
-             </div>
-          </div>
-
-          {/* 글로벌 동기화 게이지 */}
-          <div className="bg-black/80 border border-white/10 rounded-[4rem] p-12 shadow-[0_50px_120px_rgba(0,0,0,0.8)] relative overflow-hidden group">
-            <div className="flex justify-between items-center mb-10 px-6">
-              <div className="flex items-center gap-5">
-                <Flame size={28} className={globalStats.luckGauge > 80 ? 'text-orange-500 animate-pulse' : 'text-purple-600'} />
-                <span className="font-black text-slate-400 text-xs tracking-[0.4em] uppercase">우주 기운 집결 (현재 진행형)</span>
-              </div>
-              <div className="flex items-center gap-4 text-[12px] font-black text-purple-400 bg-purple-600/5 px-8 py-3 rounded-full border border-purple-600/10 shadow-2xl">
-                <Users size={18} />
-                <span>{globalStats.totalUsage.toLocaleString()} 회의 염원 중</span>
-              </div>
-            </div>
-            <div className="h-20 bg-black/50 rounded-full p-2.5 border border-white/5 shadow-inner relative overflow-hidden group-hover:border-purple-500/20 transition-all">
-              <div 
-                className={`h-full rounded-full transition-all duration-1000 flex items-center justify-center text-[12px] font-black shadow-[0_0_40px_rgba(139,92,246,0.4)]
-                  ${globalStats.luckGauge > 80 ? 'bg-gradient-to-r from-orange-600 via-yellow-500 to-red-600 animate-pulse' : 'bg-gradient-to-r from-purple-800 to-purple-500'}`}
-                style={{ width: `${Math.min(globalStats.luckGauge, 100)}%` }}
-              >
-                {globalStats.luckGauge > 3 ? `${globalStats.luckGauge.toFixed(6)}%` : ''}
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* 입력란 섹션 - 우주 기운 집결형 디자인 */}
-        <section className="bg-white rounded-[6rem] p-16 md:p-24 shadow-[0_120px_250px_rgba(0,0,0,1)] space-y-20 border-b-[30px] border-purple-100/40 relative overflow-hidden text-slate-900">
-          <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-purple-50/50 rounded-full blur-[180px] -mr-80 -mt-80 opacity-60"></div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-20">
-            <div className="space-y-8">
-              <label className="text-[13px] font-black text-slate-400 uppercase tracking-[0.4em] flex items-center gap-4 px-10">
-                <Calendar size={20} className="text-purple-600" /> 운명의 시작 (날짜 선택)
-              </label>
-              <div className="relative group">
-                <input 
-                  type="date" 
-                  className="w-full p-10 bg-slate-50 border-none rounded-full focus:ring-[20px] focus:ring-purple-100/60 outline-none font-black text-slate-800 transition-all text-3xl shadow-inner text-center hover:bg-slate-100/50 appearance-none"
-                  value={formData.date}
-                  onChange={e => handleInputChange('date', e.target.value)}
-                  onBlur={handleInputBlur}
-                  onClick={initAudio}
-                />
-              </div>
-            </div>
-            <div className="space-y-8">
-              <label className="text-[13px] font-black text-slate-400 uppercase tracking-[0.4em] flex items-center gap-4 px-10">
-                <Palette size={20} className="text-purple-600" /> 영혼의 파동 (색상 선택)
-              </label>
-              <div className="flex gap-12 items-center bg-slate-50 p-5 rounded-full shadow-inner border border-transparent transition-all hover:bg-slate-100 px-12">
-                <input 
-                  type="color" 
-                  className="w-28 h-20 border-none rounded-full cursor-pointer bg-white p-3 shadow-sm transition-transform hover:scale-110"
-                  value={formData.color}
-                  onChange={e => handleInputChange('color', e.target.value)}
-                  onBlur={handleInputBlur}
-                  onClick={initAudio}
-                />
-                <div className="flex flex-col items-center group/ghost">
-                   <Ghost size={48} fill={formData.color} stroke={formData.color} className="drop-shadow-[0_0_20px_rgba(0,0,0,0.2)] animate-bounce" />
-                   <span className="text-[10px] font-black text-slate-400 uppercase mt-3 tracking-widest">Aura Sync</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-8">
-            <label className="text-[13px] font-black text-slate-400 uppercase tracking-[0.4em] flex items-center gap-4 px-10">
-              <Target size={20} className="text-purple-600" /> 우주로 보내는 간절한 염원
-            </label>
-            <textarea 
-              placeholder="당신의 진심 어린 염원을 새겨주세요..."
-              className="w-full p-12 bg-slate-50 border-none rounded-[5rem] focus:ring-[20px] focus:ring-purple-100/60 outline-none resize-none h-44 font-bold text-slate-800 transition-all text-3xl shadow-inner text-center leading-relaxed"
-              value={formData.wish}
-              onChange={e => handleInputChange('wish', e.target.value)}
-              onBlur={handleInputBlur}
-              onClick={initAudio}
-            />
-          </div>
-
-          {/* 개인 기운 게이지 */}
-          <div className="space-y-8 px-12">
-             <div className="flex justify-between items-end">
-                <span className="text-[13px] font-black text-slate-400 uppercase tracking-[0.5em] flex items-center gap-4 italic">
-                   <Ghost size={22} className="text-purple-600 animate-pulse" /> 기운 응축도
-                </span>
-                <span className={`text-5xl font-black italic transition-all duration-700 ${currentLuckGauge === 100 ? 'text-purple-700 scale-110 drop-shadow-2xl' : 'text-slate-300'}`}>
-                   {currentLuckGauge}%
-                </span>
-             </div>
-             <div className="h-6 bg-slate-100 rounded-full p-2 shadow-inner border border-slate-200 relative">
-                <div 
-                  className={`h-full rounded-full transition-all duration-1000 ${currentLuckGauge === 100 ? 'bg-gradient-to-r from-purple-700 via-indigo-600 to-purple-700 animate-[shimmer_3s_infinite]' : 'bg-purple-400'}`}
-                  style={{ width: `${currentLuckGauge}%` }}
-                ></div>
-             </div>
-          </div>
-
-          {/* 운명의 수열 추출 버튼 */}
-          <button 
-            onClick={handleGenerate}
-            disabled={isGenerating}
-            className={`w-full py-16 rounded-[6rem] text-4xl font-black shadow-2xl transform transition-all flex flex-col items-center justify-center gap-3 overflow-hidden relative group
-              ${isGenerating ? 'bg-slate-200 scale-95 cursor-not-allowed' : 'bg-[#0a0a1a] text-white hover:bg-black active:scale-95 shadow-[0_40px_100px_rgba(0,0,0,0.6)] border border-white/5'}
-              ${currentLuckGauge === 100 && !isGenerating ? 'ring-[20px] ring-purple-500/20 animate-pulse shadow-[0_0_150px_rgba(139,92,246,0.6)] border-purple-400/50' : ''}`}
-          >
-            {isGenerating ? (
-              <RefreshCcw className="animate-spin text-purple-600" size={70} />
-            ) : (
-              <>
-                <div className={`flex items-center gap-10 transition-all duration-700 ${currentLuckGauge === 100 ? 'scale-110 text-purple-300' : ''}`}>
-                  <Zap fill={currentLuckGauge === 100 ? "#facc15" : "white"} size={56} className={currentLuckGauge === 100 ? "animate-bounce text-yellow-400" : "animate-pulse"} />
-                  <span className="italic uppercase tracking-tighter">운명의 수열 추출하기</span>
-                  <Zap fill={currentLuckGauge === 100 ? "#facc15" : "white"} size={56} className={currentLuckGauge === 100 ? "animate-bounce text-yellow-400" : "animate-pulse"} />
-                </div>
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[250%] transition-transform duration-1000 skew-x-[-35deg]"></div>
-              </>
-            )}
-          </button>
-        </section>
-
-        {/* 결과 섹션 */}
-        {results.length > 0 && (
-          <div className="space-y-20 animate-in fade-in slide-in-from-bottom-24 duration-1000">
-            
-            <div className="flex flex-col items-center text-center space-y-6">
-              <div className="bg-purple-600 text-white px-20 py-5 rounded-full text-[13px] font-black uppercase tracking-[0.8em] shadow-2xl animate-pulse">아이필 굿! 행운의 수열 발견!</div>
-              <h2 className="text-5xl md:text-6xl font-black text-white italic tracking-tighter drop-shadow-[0_0_50px_rgba(255,255,255,0.5)]">"우주가 당신의 이름으로 빚은 수열"</h2>
-            </div>
-            
-            <div className="space-y-16">
-              {results.map((res, idx) => (
-                <div key={idx} className="bg-white/[0.04] backdrop-blur-3xl p-14 md:p-20 rounded-[7rem] border border-white/10 shadow-3xl relative group transition-all hover:bg-white/[0.08]">
-                  <div className="flex flex-col items-center gap-12">
-                    <div className="flex items-center gap-8 w-full justify-center">
-                       <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-purple-500/40 to-transparent"></div>
-                       <div className="text-[12px] font-black text-purple-400 uppercase tracking-[1em] px-8 italic">조합 {idx+1}</div>
-                       <div className="h-[1px] flex-1 bg-gradient-to-l from-transparent via-purple-500/40 to-transparent"></div>
-                    </div>
-                    
-                    {/* 가로 나열 강조 */}
-                    <div className="flex gap-5 sm:gap-10 flex-wrap justify-center items-center w-full px-8 py-8">
-                      {res.numbers.map((num, nIdx) => {
-                        let colorClass = "bg-slate-900 text-slate-500";
-                        if (num <= 10) colorClass = "bg-yellow-400 text-black border-yellow-200 shadow-[0_0_25px_rgba(250,204,21,0.5)]";
-                        else if (num <= 20) colorClass = "bg-blue-600 text-white border-blue-400 shadow-[0_0_25px_rgba(37,99,235,0.5)]";
-                        else if (num <= 30) colorClass = "bg-rose-600 text-white border-rose-400 shadow-[0_0_25px_rgba(225,29,72,0.5)]";
-                        else if (num <= 40) colorClass = "bg-slate-600 text-white border-slate-400 shadow-[0_0_25px_rgba(71,85,105,0.5)]";
-                        else colorClass = "bg-emerald-600 text-white border-emerald-400 shadow-[0_0_25px_rgba(16,185,129,0.5)]";
-
-                        return (
-                          <div 
-                            key={num} 
-                            className="group/ball relative" 
-                            style={{ 
-                              animation: `sparklePop 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) forwards`,
-                              animationDelay: `${nIdx * 0.12}s`
-                            }}
-                          >
-                            <div className={`w-22 h-22 md:w-26 md:h-26 rounded-full flex items-center justify-center font-black text-4xl transition-all duration-700 group-hover/ball:scale-125 border-4 shadow-2xl relative z-10 ${colorClass}`}>
-                              {num}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    <div className="w-full max-w-3xl relative">
-                      <div className="bg-black/70 p-10 rounded-[5rem] border border-white/10 flex items-center justify-center gap-8 shadow-2xl text-center transition-all">
-                        <Sparkles size={28} className="text-purple-400 shrink-0 animate-pulse" />
-                        <p className="text-base font-black text-purple-50 leading-relaxed italic tracking-wide">
-                          {res.message}
-                        </p>
-                        <Sparkles size={28} className="text-purple-400 shrink-0 animate-pulse" />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="bg-gradient-to-br from-purple-950/90 to-[#020208] border border-purple-500/30 rounded-[7rem] p-32 text-center shadow-3xl relative group overflow-hidden">
-               <Trophy className="mx-auto text-yellow-400 mb-16 animate-bounce" size={140} />
-               <p className="text-purple-200 font-black text-7xl mb-12 italic tracking-tighter">"행운도 실력이야! 굿럭! 👍"</p>
-               <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-purple-600 to-transparent"></div>
-            </div>
-          </div>
-        )}
-
-        <div className="bg-white/[0.02] border-2 border-dashed border-white/5 rounded-[7rem] py-60 text-center text-white/5 text-[13px] font-black uppercase tracking-[3em] italic">
-           ENERGY SUPPORT ZONE
-        </div>
-      </main>
-
-      <footer className="mt-60 text-center px-20 border-t border-white/5 pt-40 pb-24">
-        <div className="flex justify-center gap-32 opacity-5 mb-24 animate-pulse">
-          <Moon size={80} />
-          <Eye size={80} />
-          <Sun size={80} />
-        </div>
-        <p className="text-sm text-slate-800 max-w-lg mx-auto leading-relaxed font-black uppercase italic tracking-[0.8em] mb-20">
-          아이필 굿! 당신의 무의식이 거대한 행운을 끌어당기고 있습니다. 즐겁게 우주의 환상을 만끽하세요.
-        </p>
-        <p className="text-[12px] text-white/5 font-black tracking-[2em] uppercase">MYSTIC COSMOS PRO V4</p>
-      </footer>
-
-      <style dangerouslySetInnerHTML={{ __html: `
-        @keyframes shimmer {
-          0% { transform: translateX(-100%) skewX(-35deg); }
-          100% { transform: translateX(500%) skewX(-35deg); }
-        }
-        @keyframes sparklePop {
-          0% { transform: scale(0) rotate(-30deg); opacity: 0; }
-          60% { transform: scale(1.3) rotate(15deg); opacity: 1; }
-          100% { transform: scale(1) rotate(0); opacity: 1; }
-        }
-        input[type="date"]::-webkit-inner-spin-button,
-        input[type="date"]::-webkit-calendar-picker-indicator {
-          filter: invert(0.9);
-          cursor: pointer;
-          font-size: 2.5rem;
-        }
-        /* 우주 스크롤바 */
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #020206; }
-        ::-webkit-scrollbar-thumb { background: #1e1e30; border-radius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: #2d2d4a; }
-      `}} />
-    </div>
-  );
-}
+Phase 1(현재): 코어 루프 완성 → Phase 2: 소비 패턴 학습 선제 알림, 유튜브 레시피 추출, 산모 모드 검수 출시, 서버 경유 AI(구독 모델) → Phase 3: 커뮤니티·크리에이터 제휴. 상세: [`docs/05-roadmap.md`](./docs/05-roadmap.md)

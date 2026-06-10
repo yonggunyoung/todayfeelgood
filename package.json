@@ -1,0 +1,11 @@
+{
+  "name": "naengbiseo",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "냉비서 — 냉장고 관리 + 모드별 레시피 추천 PWA (빌드 불필요, 정적 호스팅이면 어디든 동작)",
+  "scripts": {
+    "start": "python3 -m http.server 8080",
+    "test": "node tests/engine.test.mjs"
+  }
+}

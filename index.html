@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>냉비서 — 내 냉장고 비서</title>
+  <meta name="description" content="영수증 한 장으로 냉장고를 등록하고, 내 목표에 맞는 오늘의 요리를 추천받으세요. 요리 완료 한 번이면 재고가 알아서 줄어듭니다." />
+  <meta name="theme-color" content="#f7f2e7" />
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="icon" href="./icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="./icon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" as="style" crossorigin
+        href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+  <link rel="stylesheet" href="./css/styles.css" />
+</head>
+<body>
+  <div id="shell">
+    <header id="topbar">
+      <div class="brand">
+        <span class="brand-mark">냉</span>
+        <div class="brand-text">
+          <strong>냉비서</strong>
+          <small id="top-date"></small>
+        </div>
+      </div>
+      <div class="top-right">
+        <span id="sync-badge" class="pill pill-muted" title="동기화 상태">로컬</span>
+        <span id="saved-badge" class="pill pill-save" title="이번 달 아낀 돈">₩0</span>
+      </div>
+    </header>
+
+    <main id="view" aria-live="polite"></main>
+
+    <nav id="tabbar">
+      <button data-tab="home"><span>🏠</span>홈</button>
+      <button data-tab="pantry"><span>🧊</span>냉장고</button>
+      <button data-tab="recipes"><span>🍳</span>레시피</button>
+      <button data-tab="shopping"><span>🧺</span>장보기</button>
+      <button data-tab="settings"><span>⚙️</span>설정</button>
+    </nav>
+  </div>
+
+  <div id="modal-root"></div>
+  <div id="toast-root"></div>
+
+  <script type="module" src="./js/main.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
+    }
+  </script>
+</body>
+</html>

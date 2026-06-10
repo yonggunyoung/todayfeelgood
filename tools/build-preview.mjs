@@ -9,13 +9,9 @@ const stamp = (d) =>
   : d <= 3 ? `<span class="stamp stamp-warn">D-${d}</span>`
   : `<span class="stamp stamp-ok">D-${d}</span>`;
 
-const tile = (emoji, name, qty, tint, dot) => `
-  <button class="tile t-${tint}">
-    <span class="t-dot dot-${dot}"></span>
-    <span class="t-face">${emoji}</span>
-    <span class="t-name">${name}</span>
-    <span class="t-qty">${qty}</span>
-  </button>`;
+const fi = (emoji, name, dot) => `
+  <button class="f-item">${dot ? `<span class="fi-dot dot-${dot}"></span>` : ''}
+    <span class="fi-face">${emoji}</span><span class="fi-name">${name}</span></button>`;
 
 /* ── ① 홈 ── */
 const homeView = `
@@ -58,32 +54,38 @@ const homeView = `
     <div class="waste"><div class="l-label">버린 돈 (누적)</div><div class="l-val">₩4,500</div></div>
   </div>`;
 
-/* ── ② 냉장고 선반 뷰 ── */
+/* ── ② 냉장고 — 실제 내부 뷰 ── */
 const pantryView = `
-  <div class="hero"><h1>한눈에 보는 <em>냉장고</em></h1><p>14개 보관 중 · 임박 2개 — 빨간 점부터 드세요</p></div>
-  <div class="seg" style="margin-top:14px">
-    <button class="on">🧊 선반 보기</button><button>📋 목록 보기</button>
+  <div class="hero"><h1>우리집 <em>냉장고</em></h1><p>14개 보관 중 · 빨간 점 1개 먼저 드세요</p></div>
+  <div class="seg" style="margin-top:12px">
+    <button class="on">🧊 냉장고</button><button>📋 자세히 보기</button>
   </div>
-  <div class="shelf">
-    <div class="shelf-head"><b>🧊 냉장실</b><small>8개 · 임박 2</small></div>
-    <div class="shelf-grid">
-      ${tile('🥚', '계란', '6개', '신선', 'green')}${tile('⬜', '두부', '1모', '신선', 'amber')}
-      ${tile('🥬', '김치', '절반', '가공', 'green')}${tile('🥛', '우유', '1팩', '유제품', 'red')}
-      ${tile('🥬', '대파', '1단', '채소', 'green')}${tile('🍅', '토마토', '3개', '채소', 'green')}
-      ${tile('🍗', '닭가슴살', '2팩', '육류', 'amber')}${tile('🧀', '치즈', '8장', '유제품', 'green')}
+  <div class="fridge">
+    <div class="fridge-inner">
+      <div class="f-led"></div>
+      <div class="f-vent"><i></i><i></i><i></i><i></i></div>
+      <span class="mist" style="left:16%"></span>
+      <span class="mist" style="left:46%;animation-delay:1.7s;--dx:-16px"></span>
+      <span class="mist" style="left:71%;animation-delay:3.2s;--dx:9px"></span>
+      <div class="f-sec-label"><span>냉장실</span><span>9개</span></div>
+      <div class="f-row">${fi('🥚', '계란')}${fi('⬜', '두부', 'amber')}${fi('🥛', '우유', 'red')}${fi('🍗', '닭가슴살', 'amber')}</div>
+      <div class="f-shelf"></div>
+      <div class="f-row">${fi('🥬', '대파')}${fi('🍅', '토마토')}${fi('🧀', '치즈')}${fi('🥦', '브로콜리')}</div>
+      <div class="f-shelf"></div>
+      <div class="f-pocket"><div class="fp-label">도어 포켓 · 소스</div>
+        <div class="fp-row">${fi('🥬', '김치')}${fi('🥚', '마요네즈')}${fi('🍅', '케찹')}${fi('🦪', '굴소스')}</div></div>
+    </div>
+    <div class="f-divider"></div>
+    <div class="fridge-inner freezer">
+      <div class="f-sec-label"><span>냉동실</span><span>3개</span></div>
+      <div class="f-row">${fi('🥟', '만두')}${fi('🦐', '새우')}${fi('🥓', '삼겹살')}</div>
+      <div class="f-shelf"></div>
     </div>
   </div>
-  <div class="shelf">
-    <div class="shelf-head"><b>❄️ 냉동실</b><small>3개</small></div>
-    <div class="shelf-grid">
-      ${tile('🥟', '만두', '1봉', '가공', 'green')}${tile('🦐', '새우', '0.5팩', '수산', 'green')}${tile('🥓', '삼겹살', '1근', '육류', 'green')}
-    </div>
-  </div>
-  <div class="shelf">
-    <div class="shelf-head"><b>🧺 실온 선반</b><small>3개</small></div>
-    <div class="shelf-grid">
-      ${tile('🍚', '즉석밥', '4개', '주식', 'green')}${tile('🧅', '양파', '3개', '채소', 'green')}${tile('🍜', '라면', '5개', '주식', 'green')}
-    </div>
+  <div class="basket">
+    <div class="f-sec-label"><span>실온 선반</span><span>3개</span></div>
+    <div class="f-row">${fi('🍚', '즉석밥')}${fi('🧅', '양파')}${fi('🍜', '라면')}</div>
+    <div class="f-shelf"></div>
   </div>`;
 
 /* ── ③ 레시피 (유튜브 저장 + 모드 칩) ── */
@@ -207,7 +209,7 @@ ${previewCss}
   <div class="pv-title"><h1>🧊 냉비서 — 디자인 v2 미리보기</h1>
     <p>iOS 네이티브 감성 · 실제 스타일시트로 렌더링된 4개 핵심 화면 (실제 앱은 모든 버튼이 동작합니다)</p></div>
   ${frame('① 홈', '먼저 먹기 · 임박 재료 "활용 →" · 절약 장부', homeView, 'home')}
-  ${frame('② 냉장고 — 선반 보기', '재료 한눈에 · 카테고리 파스텔 타일 · 임박 신호등 점 · 실사 사진 첨부 가능', pantryView, 'pantry')}
+  ${frame('② 냉장고 — 실제 내부 뷰', 'LED 조명 · 유리 선반 · 냉기 모션 · 도어 포켓(소스) · 상냉장 하냉동 · 탭하면 자세히', pantryView, 'pantry')}
   ${frame('③ 레시피', '맞춤 모드 칩 · 유튜브 저장(실사 썸네일) · 내 레시피 · ❤️ 찜', recipesView, 'recipes')}
   ${frame('④ 나만의 모드 만들기', '추천 기준 직접 설계 · 공유 코드로 친구에게 전달', homeView, 'recipes', modeMakerOverlay)}
   <div class="pv-foot">유튜브 레시피를 저장하면 영상 실사 썸네일이 카드에 자동으로 붙고, 재료에 내 사진을 찍어 붙이면 선반에 실사로 보입니다.<br>모드·레시피는 공유 코드(NB1.…)로 카톡 등에서 주고받을 수 있어요.</div>

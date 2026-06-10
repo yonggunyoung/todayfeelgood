@@ -189,26 +189,101 @@ a { color: var(--blue); text-decoration: none; }
 .t-신선 { background: var(--tint-veg); }
 .t-기타 { background: var(--tint-etc); }
 
-/* ── 냉장고 선반 뷰 ─────────────────── */
-.shelf { background: var(--card); border-radius: var(--r-lg); box-shadow: var(--shadow-card); padding: 13px 13px 6px; margin-bottom: 12px; }
-.shelf-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding: 0 2px; }
-.shelf-head b { font-size: 0.86rem; font-weight: 800; }
-.shelf-head small { color: var(--label-3); font-size: 0.7rem; font-weight: 600; }
-.shelf-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 9px; padding-bottom: 9px; border-bottom: 2px solid rgba(118, 118, 128, 0.08); margin-bottom: 9px; }
-.shelf-grid:last-child { border-bottom: none; margin-bottom: 0; }
-.tile {
-  position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px;
-  padding: 11px 3px 8px; border-radius: 15px; transition: transform 0.1s; overflow: hidden;
+/* ── 프리미엄 냉장고 내부 뷰 ─────────────── */
+.fridge {
+  border-radius: 28px; padding: 11px; margin: 4px 0 14px; position: relative;
+  background: linear-gradient(155deg, #454b54 0%, #23262c 55%, #2e333b 100%);
+  box-shadow: 0 22px 44px rgba(20, 24, 33, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.22), inset 0 -1px 0 rgba(0, 0, 0, 0.4);
 }
-.tile:active { transform: scale(0.92); }
-.tile .t-face { font-size: 1.65rem; line-height: 1; width: 44px; height: 44px; display: grid; place-items: center; border-radius: 12px; overflow: hidden; }
-.tile .t-face img { width: 100%; height: 100%; object-fit: cover; border-radius: 12px; }
-.tile .t-name { font-size: 0.68rem; font-weight: 700; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.tile .t-qty { font-size: 0.62rem; font-weight: 600; color: var(--label-2); }
-.tile .t-dot { position: absolute; top: 7px; right: 7px; width: 9px; height: 9px; border-radius: 99px; }
-.dot-red { background: var(--red); box-shadow: 0 0 0 3px var(--red-bg); }
-.dot-amber { background: #f0a818; box-shadow: 0 0 0 3px var(--amber-bg); }
-.dot-green { background: var(--green); opacity: 0.5; }
+.fridge-inner {
+  border-radius: 19px; position: relative; overflow: hidden; padding: 30px 11px 10px;
+  background: linear-gradient(180deg, #f8fcff 0%, #ecf4fa 55%, #e4eef6 100%);
+  box-shadow: inset 0 8px 22px rgba(80, 112, 142, 0.2), inset 0 -5px 14px rgba(80, 112, 142, 0.1);
+}
+.f-led {
+  position: absolute; top: 9px; left: 13%; right: 13%; height: 4px; border-radius: 99px;
+  background: linear-gradient(90deg, rgba(214, 238, 255, 0.35), #ecf8ff 50%, rgba(214, 238, 255, 0.35));
+  box-shadow: 0 2px 16px 3px rgba(150, 205, 255, 0.6);
+}
+.f-vent { position: absolute; top: 17px; left: 50%; transform: translateX(-50%); display: flex; gap: 4px; }
+.f-vent i { width: 15px; height: 3px; border-radius: 2px; background: rgba(122, 152, 178, 0.32); }
+/* 냉기 안개 모션 */
+.mist {
+  position: absolute; top: 19px; width: 52px; height: 17px; border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0) 70%);
+  filter: blur(5px); opacity: 0; pointer-events: none;
+  animation: mist 5.2s ease-in-out infinite;
+}
+@keyframes mist {
+  0% { transform: translate(0, 0) scale(0.65); opacity: 0; }
+  22% { opacity: 0.85; }
+  100% { transform: translate(var(--dx, 14px), 52px) scale(1.8); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) { .mist { animation: none; display: none; } }
+.f-sec-label {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 0.7rem; font-weight: 800; color: #61788c; padding: 0 6px 7px; position: relative; z-index: 1;
+  letter-spacing: 0.02em;
+}
+.f-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; padding: 0 3px; position: relative; z-index: 1; }
+.f-shelf {
+  height: 7px; margin: 1px 3px 11px; border-radius: 4px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(165, 195, 218, 0.55));
+  box-shadow: 0 4px 7px rgba(88, 120, 150, 0.26), inset 0 1px 0 #fff;
+}
+.f-item {
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  padding: 5px 2px 4px; position: relative; border-radius: 12px; transition: transform 0.12s;
+}
+.f-item:active { transform: scale(0.88); }
+.f-item .fi-face {
+  font-size: 1.95rem; line-height: 1; width: 48px; height: 48px; display: grid; place-items: center;
+  filter: drop-shadow(0 6px 5px rgba(70, 100, 132, 0.3));
+}
+.f-item .fi-face img { width: 44px; height: 44px; object-fit: cover; border-radius: 11px; box-shadow: 0 6px 9px rgba(70, 100, 132, 0.32); }
+.f-item .fi-name { font-size: 0.63rem; font-weight: 700; color: #41505d; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.f-item .fi-dot { position: absolute; top: 1px; right: 9px; width: 8px; height: 8px; border-radius: 99px; z-index: 2; }
+.dot-red { background: var(--red); box-shadow: 0 0 0 3px rgba(255, 69, 58, 0.18); }
+.dot-amber { background: #f0a818; box-shadow: 0 0 0 3px rgba(240, 168, 24, 0.18); }
+.f-empty { text-align: center; color: #8fa6b8; font-size: 0.74rem; font-weight: 600; padding: 14px 0 18px; position: relative; z-index: 1; }
+/* 도어 포켓 (양념·소스) */
+.f-pocket {
+  margin: 2px 3px 4px; padding: 6px 7px 5px; position: relative; z-index: 1;
+  border-radius: 11px 11px 15px 15px;
+  background: linear-gradient(180deg, rgba(213, 231, 244, 0.55), rgba(186, 209, 229, 0.82));
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  box-shadow: inset 0 5px 9px rgba(88, 120, 150, 0.16);
+}
+.f-pocket .fp-label { font-size: 0.6rem; font-weight: 800; color: #6b8092; padding: 0 3px 3px; letter-spacing: 0.03em; }
+.f-pocket .fp-row { display: flex; gap: 1px; overflow-x: auto; scrollbar-width: none; }
+.f-pocket .fp-row::-webkit-scrollbar { display: none; }
+.f-pocket .f-item { flex: 0 0 56px; padding: 2px 1px 3px; }
+.f-pocket .f-item .fi-face { font-size: 1.4rem; width: 36px; height: 36px; }
+.f-pocket .f-item .fi-face img { width: 32px; height: 32px; }
+/* 냉장↔냉동 분리 핸들 */
+.f-divider {
+  height: 15px; margin: 9px 5px; border-radius: 9px;
+  background: linear-gradient(180deg, #4d535c, #2a2d33 70%, #3a3e45);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+/* 냉동 칸 — 더 차갑게 + 성에 */
+.fridge-inner.freezer { background: linear-gradient(180deg, #eef5fd 0%, #dde9f6 60%, #d3e2f2 100%); padding-top: 14px; }
+.fridge-inner.freezer::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background:
+    radial-gradient(circle at 12% 8%, rgba(255, 255, 255, 0.6), transparent 26%),
+    radial-gradient(circle at 88% 14%, rgba(255, 255, 255, 0.5), transparent 22%),
+    radial-gradient(circle at 50% 100%, rgba(255, 255, 255, 0.35), transparent 30%);
+}
+/* 실온 바구니 */
+.basket {
+  border-radius: 19px; padding: 13px 10px 6px; margin-bottom: 12px;
+  background: linear-gradient(180deg, #fbf7ef, #f2eadb);
+  box-shadow: var(--shadow-card), inset 0 3px 7px rgba(165, 142, 100, 0.14);
+}
+.basket .f-sec-label { color: #8a7654; }
+.basket .f-item .fi-name { color: #6f604a; }
+.basket .f-shelf { background: linear-gradient(180deg, rgba(255, 252, 244, 0.95), rgba(205, 184, 148, 0.5)); box-shadow: 0 3px 6px rgba(150, 125, 85, 0.2), inset 0 1px 0 #fff; }
 
 /* 수량 스테퍼 */
 .stepper { display: inline-flex; align-items: center; border-radius: var(--r-sm); overflow: hidden; background: rgba(118, 118, 128, 0.08); }

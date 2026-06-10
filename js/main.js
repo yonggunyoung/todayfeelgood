@@ -46,8 +46,6 @@ function stampFor(days) {
   if (days <= 3) return `<span class="stamp stamp-warn">D-${days}</span>`;
   return `<span class="stamp stamp-ok">D-${days}</span>`;
 }
-const dotFor = (d) => d <= 1 ? 'dot-red' : d <= 3 ? 'dot-amber' : 'dot-green';
-
 function qtyLabel(p) {
   if (p.qtyType === 'level') return (LEVELS.find(([v]) => v === p.level) || [])[1] || '보통';
   return `${p.qty}${p.unit || ''}`;
@@ -193,59 +191,82 @@ UI.useIdeas = (name) => {
   `);
 };
 
-/* ── 냉장고 ─────────────────────────────── */
-function tileHtml(p) {
+/* ── 냉장고 (프리미엄 내부 뷰) ───────────── */
+function fItem(p) {
+  const d = daysLeft(p.expiresAt);
   return `
-    <button class="tile ${catClass(p.name)}" onclick="UI.editPantry('${p.id}')">
-      <span class="t-dot ${dotFor(daysLeft(p.expiresAt))}"></span>
-      <span class="t-face">${p.photo ? `<img src="${p.photo}" alt="" />` : p.emoji}</span>
-      <span class="t-name">${esc(p.name)}</span>
-      <span class="t-qty">${qtyLabel(p)}</span>
+    <button class="f-item" onclick="UI.editPantry('${p.id}')">
+      ${d <= 3 ? `<span class="fi-dot ${d <= 1 ? 'dot-red' : 'dot-amber'}"></span>` : ''}
+      <span class="fi-face">${p.photo ? `<img src="${p.photo}" alt="" />` : p.emoji}</span>
+      <span class="fi-name">${esc(p.name)}</span>
     </button>`;
+}
+const chunk = (arr, n) => arr.reduce((acc, x, i) => (i % n ? acc[acc.length - 1].push(x) : acc.push([x]), acc), []);
+const shelfRows = (items) => items.length
+  ? chunk(items, 4).map((row) => `<div class="f-row">${row.map(fItem).join('')}</div><div class="f-shelf"></div>`).join('')
+  : `<p class="f-empty">텅 비었어요</p>`;
+
+function fridgeHtml(all) {
+  const fr = all.filter((p) => p.location === 'fridge');
+  const frMain = fr.filter((p) => p.qtyType !== 'level');
+  const frDoor = fr.filter((p) => p.qtyType === 'level');
+  const fz = all.filter((p) => p.location === 'freezer');
+  const rm = all.filter((p) => p.location === 'room');
+  return `
+    <div class="fridge">
+      <div class="fridge-inner">
+        <div class="f-led"></div>
+        <div class="f-vent"><i></i><i></i><i></i><i></i></div>
+        <span class="mist" style="left:16%"></span>
+        <span class="mist" style="left:46%;animation-delay:1.7s;--dx:-16px"></span>
+        <span class="mist" style="left:71%;animation-delay:3.2s;--dx:9px"></span>
+        <div class="f-sec-label"><span>냉장실</span><span>${fr.length ? fr.length + '개' : ''}</span></div>
+        ${shelfRows(frMain)}
+        ${frDoor.length ? `<div class="f-pocket"><div class="fp-label">도어 포켓 · 소스</div><div class="fp-row">${frDoor.map(fItem).join('')}</div></div>` : ''}
+      </div>
+      <div class="f-divider"></div>
+      <div class="fridge-inner freezer">
+        <div class="f-sec-label"><span>냉동실</span><span>${fz.length ? fz.length + '개' : ''}</span></div>
+        ${shelfRows(fz)}
+      </div>
+    </div>
+    ${rm.length ? `<div class="basket"><div class="f-sec-label"><span>실온 선반</span><span>${rm.length}개</span></div>${shelfRows(rm)}</div>` : ''}`;
 }
 
 function renderPantry() {
   const all = S.pantry.slice().sort((a, b) => daysLeft(a.expiresAt) - daysLeft(b.expiresAt));
-  const list = all.filter((p) => pantryLoc === 'all' || p.location === pantryLoc);
+  const exp = expiringItems(S, 3).length;
 
   let body = '';
-  if (all.length === 0) {
-    body = `<div class="empty"><span class="e-emoji">🕳️</span><b>여긴 비어 있네요</b><small>위의 버튼으로 재료를 담아보세요</small></div>`;
-  } else if (pantryView === 'shelf') {
-    const groups = [['fridge', '🧊 냉장실'], ['freezer', '❄️ 냉동실'], ['room', '🧺 실온 선반']];
-    body = groups.map(([loc, label]) => {
-      const items = all.filter((p) => p.location === loc);
-      if (!items.length) return '';
-      return `<div class="shelf">
-        <div class="shelf-head"><b>${label}</b><small>${items.length}개 · 임박 ${items.filter((p) => daysLeft(p.expiresAt) <= 3).length}</small></div>
-        <div class="shelf-grid">${items.map(tileHtml).join('')}</div>
-      </div>`;
-    }).join('');
+  if (pantryView === 'shelf') {
+    body = fridgeHtml(all);
   } else {
+    const list = all.filter((p) => pantryLoc === 'all' || p.location === pantryLoc);
     body = `
       <div class="seg" style="margin-top:0">
         ${['all', 'fridge', 'freezer', 'room'].map((l) =>
           `<button class="${pantryLoc === l ? 'on' : ''}" onclick="UI.setLoc('${l}')">${l === 'all' ? '전체' : LOC_LABEL[l]}</button>`).join('')}
       </div>` +
-      list.map((p) => `
+      (list.length ? list.map((p) => `
         <div class="item" onclick="UI.editPantry('${p.id}')">
           <span class="emoji ${catClass(p.name)}">${p.photo ? `<img src="${p.photo}" alt="" />` : p.emoji}</span>
           <div class="grow"><div class="name">${esc(p.name)}</div>
             <div class="sub">${qtyLabel(p)} · ${LOC_LABEL[p.location]} · ~${p.expiresAt || '기한 없음'}</div></div>
           ${stampFor(daysLeft(p.expiresAt))}
-        </div>`).join('');
+        </div>`).join('')
+      : `<div class="empty"><span class="e-emoji">🕳️</span><b>여긴 비어 있네요</b><small>위의 버튼으로 재료를 담아보세요</small></div>`);
   }
 
   $('#view').innerHTML = `
-    <div class="hero"><h1>한눈에 보는 <em>냉장고</em></h1>
-      <p>${S.pantry.length}개 보관 중 · 임박 ${expiringItems(S, 3).length}개 ${expiringItems(S, 3).length ? '— 빨간 점부터 드세요' : '👍'}</p></div>
+    <div class="hero"><h1>우리집 <em>냉장고</em></h1>
+      <p>${S.pantry.length ? `${S.pantry.length}개 보관 중${exp ? ` · 빨간 점 ${exp}개 먼저 드세요` : ' · 모두 신선해요 ❄️'}` : '재료를 담으면 추천이 시작돼요'}</p></div>
     <div class="action-strip">
       <button class="btn btn-primary" onclick="UI.openScan()"><b>📷 AI 스캔</b><small>영수증/사진 입고</small></button>
       <button class="btn" onclick="UI.openQuickAdd()"><b>➕ 빠른 추가</b><small>검색 후 탭</small></button>
     </div>
     <div class="seg">
-      <button class="${pantryView === 'shelf' ? 'on' : ''}" onclick="UI.setPantryView('shelf')">🧊 선반 보기</button>
-      <button class="${pantryView === 'list' ? 'on' : ''}" onclick="UI.setPantryView('list')">📋 목록 보기</button>
+      <button class="${pantryView === 'shelf' ? 'on' : ''}" onclick="UI.setPantryView('shelf')">🧊 냉장고</button>
+      <button class="${pantryView === 'list' ? 'on' : ''}" onclick="UI.setPantryView('list')">📋 자세히 보기</button>
     </div>
     ${body}`;
 }

@@ -1,5 +1,24 @@
-// AI 입고 스캔 — 영수증/장본 식재료 사진 → 품목 리스트 (Claude API, 본인 키 사용)
+// AI 입고 스캔 + 유튜브 레시피 정리 — Claude API (본인 키 사용)
 // 키는 이 기기의 localStorage에만 저장되며 동기화되지 않는다 (store.exportForSync에서 제거).
+
+const aiHeaders = (settings) => ({
+  'content-type': 'application/json',
+  'x-api-key': settings.aiKey,
+  'anthropic-version': '2023-06-01',
+  'anthropic-dangerous-direct-browser-access': 'true',
+});
+
+const STATUS_MSG = {
+  401: 'API 키가 올바르지 않습니다. 설정에서 확인해 주세요.',
+  429: '요청이 너무 잦습니다. 잠시 후 다시 시도해 주세요.',
+  529: '서비스가 혼잡합니다. 잠시 후 다시 시도해 주세요.',
+};
+
+async function throwApiError(res) {
+  let detail = '';
+  try { detail = (await res.json()).error?.message || ''; } catch { /* ignore */ }
+  throw new Error(STATUS_MSG[res.status] || `AI 호출 실패 (${res.status}) ${detail}`);
+}
 
 const SCHEMA = {
   type: 'object',
@@ -54,12 +73,7 @@ export async function scanImage(file, settings) {
 
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'x-api-key': settings.aiKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true',
-    },
+    headers: aiHeaders(settings),
     body: JSON.stringify({
       model: settings.aiModel || 'claude-opus-4-8',
       max_tokens: 2048,
@@ -74,16 +88,7 @@ export async function scanImage(file, settings) {
     }),
   });
 
-  if (!res.ok) {
-    const msgByStatus = {
-      401: 'API 키가 올바르지 않습니다. 설정에서 확인해 주세요.',
-      429: '요청이 너무 잦습니다. 잠시 후 다시 시도해 주세요.',
-      529: '서비스가 혼잡합니다. 잠시 후 다시 시도해 주세요.',
-    };
-    let detail = '';
-    try { detail = (await res.json()).error?.message || ''; } catch { /* ignore */ }
-    throw new Error(msgByStatus[res.status] || `AI 호출 실패 (${res.status}) ${detail}`);
-  }
+  if (!res.ok) await throwApiError(res);
 
   const msg = await res.json();
   if (msg.stop_reason === 'refusal') throw new Error('이미지를 분석할 수 없습니다. 다른 사진으로 시도해 주세요.');
@@ -93,4 +98,66 @@ export async function scanImage(file, settings) {
     throw new Error('사진에서 식재료를 찾지 못했습니다. 더 선명한 사진으로 시도해 주세요.');
   }
   return parsed.items;
+}
+
+/* ── 빠른 레시피 보기 — 유튜브 영상을 보지 않고 AI가 재료·순서 정리 ──
+   Claude의 서버측 웹 도구(web_fetch/web_search)가 영상 페이지의 제목·설명란을 읽고
+   부족하면 검색으로 보완해 구조화한다. 자막 직접 수집보다 가볍고 브라우저 CORS 제약이 없다. */
+const YT_PROMPT = (url) => `유튜브 요리 영상에서 레시피를 정리하는 작업입니다.
+영상: ${url}
+
+1) web_fetch로 위 영상 페이지를 열어 제목과 설명란을 읽으세요. 설명란에 재료·만드는 법이 있으면 그것을 우선 사용합니다.
+2) 부족하면 web_search로 "영상 제목 + 레시피"를 검색해 보완하세요.
+3) 재료명은 한국 마트의 일반 명칭으로 정규화하세요 (예: "서울우유 1L" → 우유, "대패삼겹" → 삼겹살). 간장·소금·설탕·식용유·참기름·고춧가루 같은 기본 양념은 seasoning을 true로 표시하세요.
+4) 분량은 1인분 기준으로 환산하고, 환산이 어려우면 영상 기준 그대로 두세요.
+5) tags는 다음 중에서만 고르세요: 반찬, 고단백, 운동, 자취, 초간단, 국물, 집밥, 도시락, 다이어트, 순한맛, 매콤, 아침
+
+마지막 응답은 설명 없이 아래 형태의 JSON 하나만 출력하세요:
+{"ok":true,"title":"요리명","time":15,"kcal":400,"protein":20,"tags":["국물"],"ingredients":[{"name":"두부","amount":0.5,"unit":"모","seasoning":false}],"steps":["1단계 설명","2단계 설명"]}
+레시피를 찾지 못하면 {"ok":false,"reason":"이유"} 만 출력하세요.`;
+
+export async function extractRecipeFromYouTube(url, settings) {
+  if (!settings.aiKey) throw new Error('설정에서 Claude API 키를 먼저 등록해 주세요.');
+  const tools = [
+    { type: 'web_fetch_20260209', name: 'web_fetch' },
+    { type: 'web_search_20260209', name: 'web_search' },
+  ];
+  let messages = [{ role: 'user', content: YT_PROMPT(url) }];
+  let msg = null;
+
+  // 서버측 도구 루프가 길어지면 pause_turn으로 끊겨 돌아온다 → 그대로 이어서 재호출 (최대 3회)
+  for (let i = 0; i < 4; i++) {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: aiHeaders(settings),
+      body: JSON.stringify({
+        model: settings.aiModel || 'claude-opus-4-8',
+        max_tokens: 4096,
+        tools,
+        messages,
+      }),
+    });
+    if (!res.ok) await throwApiError(res);
+    msg = await res.json();
+    if (msg.stop_reason === 'pause_turn') {
+      messages = [...messages, { role: 'assistant', content: msg.content }];
+      continue;
+    }
+    break;
+  }
+
+  if (!msg) throw new Error('AI 응답이 없어요. 다시 시도해 주세요.');
+  if (msg.stop_reason === 'refusal') throw new Error('이 영상은 분석할 수 없어요.');
+
+  const text = msg.content.filter((b) => b.type === 'text').map((b) => b.text).join('\n');
+  const start = text.lastIndexOf('{"ok"');
+  const end = text.lastIndexOf('}');
+  if (start < 0 || end <= start) throw new Error('레시피를 정리하지 못했어요. 다른 영상으로 시도해 주세요.');
+
+  let data;
+  try { data = JSON.parse(text.slice(start, end + 1)); }
+  catch { throw new Error('정리 결과를 읽지 못했어요. 한 번 더 시도해 주세요.'); }
+  if (!data.ok) throw new Error(data.reason || '이 영상에서 레시피를 찾지 못했어요.');
+  if (!Array.isArray(data.ingredients) || !data.ingredients.length) throw new Error('재료를 찾지 못했어요.');
+  return data;
 }

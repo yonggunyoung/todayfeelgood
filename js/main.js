@@ -2,7 +2,7 @@
 import { S, save, uid, today, addDays, daysLeft, won } from './store.js';
 import { ING, findIng, defaultShelf, defaultLocation } from './data/ingredients.js';
 import { recommend, recipesUsing, expiringItems, activeLeftovers, deductionPlan, modeList, getMode, allRecipes } from './engine.js';
-import { scanImage } from './ai.js';
+import { scanImage, extractRecipeFromYouTube } from './ai.js';
 import { initSync, sync, makeSpaceCode } from './sync.js';
 
 let tab = 'home';
@@ -14,6 +14,7 @@ let scanFile = null;
 let scanResults = null;
 let deductCtx = null;
 let draft = null; // 레시피/모드 작성 임시 객체
+let detailServings = 1; // 레시피 상세에서 고른 인분 수 (차감으로 이어짐)
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => [...document.querySelectorAll(sel)];
@@ -545,26 +546,34 @@ UI.setMode = (k) => {
   toast(`${m.emoji} ${m.label} 모드 — 추천이 달라졌어요`);
 };
 
+const fmtAmt = (x) => String(Math.round(x * 100) / 100);
+
 UI.openRecipe = (rid) => {
   const r = allRecipes(S).find((x) => x.id === rid);
   if (!r) return;
+  detailServings = 1;
   const a = recommend(S, S.settings.mode).find((x) => x.recipe.id === rid) ||
             { missing: [], have: 0, total: 1, cookable: false, fav: S.favs.includes(rid) };
   openSheet(`
-    ${r.yt ? `<div class="ytwrap"><iframe src="https://www.youtube-nocookie.com/embed/${r.yt}" allow="accelerometer; encrypted-media; picture-in-picture" allowfullscreen title="${esc(r.title)}"></iframe></div>`
+    ${r.yt ? `<div class="ytwrap"><iframe src="https://www.youtube-nocookie.com/embed/${r.yt}?rel=0&playsinline=1" allow="accelerometer; encrypted-media; picture-in-picture" allowfullscreen title="${esc(r.title)}"></iframe></div>
+      <div class="row" style="justify-content:flex-end;margin:-4px 0 8px">
+        <a class="btn btn-soft btn-sm" href="https://youtu.be/${r.yt}" target="_blank" rel="noreferrer">↗ 유튜브 앱에서 크게 보기</a></div>`
       : r.photo ? `<img src="${r.photo}" style="width:100%;border-radius:16px;margin-bottom:12px;max-height:230px;object-fit:cover" />` : ''}
     <div class="row">
       <div class="grow"><h2>${r.emoji || '🍳'} ${esc(r.title)}</h2>
-        <p class="sub" style="margin:2px 0 0">${r.time ? `⏱ ${r.time}분 · ` : ''}${r.kcal ? `${r.kcal}kcal · ` : ''}${r.protein ? `단백질 ${r.protein}g · ` : ''}1인분 기준</p></div>
-      <button class="heart ${a.fav ? 'on' : ''}" onclick="UI.toggleFav('${r.id}');UI.openRecipe('${r.id}')">❤️</button>
+        <p class="sub" style="margin:2px 0 0">${r.time ? `⏱ ${r.time}분 · ` : ''}${r.kcal ? `${r.kcal}kcal · ` : ''}${r.protein ? `단백질 ${r.protein}g` : ''}</p></div>
+      <button class="heart ${a.fav ? 'on' : ''}" onclick="UI.toggleFav('${r.id}');this.classList.toggle('on')">❤️</button>
     </div>
     ${r.caution ? `<div class="banner warn">⚠️ ${esc(r.caution)}</div>` : ''}
-    <div class="section-title" style="margin-top:10px"><h2>재료</h2><small>${a.have}/${a.total} 보유</small></div>
+    <div class="section-title" style="margin-top:12px"><h2>재료</h2><small>${a.have}/${a.total} 보유 · 인분을 바꾸면 양이 환산돼요</small></div>
+    <div class="seg" id="dt-serv" style="margin:2px 0 10px">
+      ${[1, 2, 3, 4].map((n) => `<button class="${n === 1 ? 'on' : ''}" onclick="UI.dtServ(${n})">${n}인분</button>`).join('')}
+    </div>
     <div>
       ${r.ingredients.map((g) => {
         if (g.st) return `<span class="chip">${esc(g.n)} (양념)</span>`;
         const miss = a.missing.includes(g.n);
-        return `<span class="chip ${miss ? 'miss' : 'have'}" ${miss ? `onclick="UI.addShopping('${esc(g.n)}')"` : ''}>${miss ? '＋ ' : '✓ '}${esc(g.n)} ${g.a || ''}${g.u || ''}</span>`;
+        return `<span class="chip ${miss ? 'miss' : 'have'}" ${miss ? `onclick="UI.addShopping('${esc(g.n)}')"` : ''}>${miss ? '＋ ' : '✓ '}${esc(g.n)} <b class="amt" data-b="${g.a || 0}" data-u="${esc(g.u || '')}">${g.a ? fmtAmt(g.a) + (g.u || '') : ''}</b></span>`;
       }).join('')}
     </div>
     ${r.steps?.length ? `<div class="section-title"><h2>만드는 법</h2></div>
@@ -578,6 +587,15 @@ UI.openRecipe = (rid) => {
       ${a.missing.length ? `<button class="btn" onclick="UI.addMissing('${r.id}')">🧺 부족 재료 ${a.missing.length}개 담기</button>` : ''}
       <button class="btn btn-primary" onclick="UI.openDeduct('${r.id}')">🍳 요리 완료</button>
     </div>`);
+};
+
+UI.dtServ = (n) => {
+  detailServings = n;
+  $$('#dt-serv button').forEach((b, i) => b.classList.toggle('on', i + 1 === n));
+  $$('#modal-root .amt').forEach((el) => {
+    const b = parseFloat(el.dataset.b) || 0;
+    el.textContent = b ? fmtAmt(b * n) + (el.dataset.u || '') : '';
+  });
 };
 
 UI.addMissing = (rid) => {
@@ -594,13 +612,21 @@ UI.openRecipeForm = (editId) => {
     time: '', kcal: '', protein: '', tags: [], steps: [],
     ingredients: [{ n: '', a: 1, u: '' }],
   };
+  renderRecipeForm(!!ex);
+};
+
+function renderRecipeForm(isEdit) {
   openSheet(`
-    <h2>${ex ? '레시피 수정' : '📒 나만의 레시피'}</h2>
+    <h2>${isEdit ? '레시피 수정' : '📒 나만의 레시피'}</h2>
     <p class="sub">유튜브에서 본 요리, 우리집 비법 — 저장하면 내 냉장고와 자동 매칭돼요</p>
-    <div class="field"><label>이름 *</label><input id="rf-title" placeholder="예: 백종원 김치찜" value="${esc(draft.title)}" /></div>
-    <div class="field"><label>유튜브 링크 (붙여넣으면 영상·실사 썸네일 자동 연결)</label>
+    <div class="field"><label>유튜브 링크 — 붙여넣으면 영상·실사 썸네일 자동 연결</label>
       <input id="rf-yt" placeholder="https://youtu.be/…" value="${draft.yt ? 'https://youtu.be/' + draft.yt : ''}" onchange="UI.rfYt(this.value)" />
-      <div id="rf-ytprev">${draft.yt ? `<img src="${ytThumb(draft.yt)}" style="width:100%;border-radius:14px;margin-top:8px" />` : ''}</div></div>
+      <div id="rf-ytprev">${draft.yt ? `<img src="${ytThumb(draft.yt)}" style="width:100%;border-radius:14px;margin-top:8px" />` : ''}</div>
+      <button id="rf-auto" class="btn btn-tint btn-block" style="margin-top:9px" onclick="UI.rfAuto()">🤖 빠른 레시피 — 영상 안 보고 재료·순서 자동 정리</button>
+      <p class="hint">${S.settings.aiKey
+        ? 'AI가 영상 페이지의 설명란과 웹을 읽어 정리해요 (약 20~40초 · 사진 스캔보다 토큰을 조금 더 씁니다)'
+        : '자동 정리는 설정 → AI 스캔에서 Claude API 키 등록 후 사용할 수 있어요'}</p></div>
+    <div class="field"><label>이름 *</label><input id="rf-title" placeholder="예: 백종원 김치찜" value="${esc(draft.title)}" /></div>
     <div class="field"><label>또는 완성 사진</label>
       <div class="btn-row" style="margin-top:0">
         <label class="btn btn-soft">📸 사진 ${draft.photo ? '바꾸기' : '추가'}<input type="file" accept="image/*" style="display:none" onchange="UI.rfPhoto(this)" /></label>
@@ -623,6 +649,54 @@ UI.openRecipeForm = (editId) => {
     <div class="btn-row">
       <button class="btn" onclick="UI.closeSheet()">취소</button>
       <button class="btn btn-primary" onclick="UI.saveRecipeForm()">저장</button></div>`);
+}
+
+// 화면의 현재 입력값을 draft로 회수 (자동 정리 전·저장 전 공용)
+function collectForm() {
+  if (!draft) return;
+  if ($('#rf-title')) draft.title = $('#rf-title').value.trim();
+  if ($('#rf-time')) draft.time = Number($('#rf-time').value) || null;
+  if ($('#rf-kcal')) draft.kcal = Number($('#rf-kcal').value) || null;
+  if ($('#rf-protein')) draft.protein = Number($('#rf-protein').value) || null;
+  if ($('#rf-steps')) draft.steps = $('#rf-steps').value.split('\n').map((s2) => s2.trim()).filter(Boolean);
+  const rows = $$('#rf-ings .ing-row');
+  if (rows.length) {
+    draft.ingredients = rows.map((row) => ({
+      n: row.querySelector('.i-name').value.trim(),
+      a: Number(row.querySelector('.i-amt').value) || 1,
+      u: row.querySelector('.i-unit').value.trim(),
+      ...(row.querySelector('.i-st').classList.contains('on') ? { st: 1 } : {}),
+    })).filter((g) => g.n);
+  }
+}
+
+// 빠른 레시피: 영상을 보지 않고 AI가 재료·순서를 채워준다
+UI.rfAuto = async () => {
+  const url = $('#rf-yt').value.trim();
+  if (!ytId(url)) { toast('유튜브 링크를 먼저 붙여넣어 주세요'); return; }
+  if (!S.settings.aiKey) { toast('설정 → AI 스캔에서 API 키를 먼저 등록해 주세요'); return; }
+  collectForm();
+  const btn = $('#rf-auto');
+  btn.disabled = true; btn.textContent = '🤖 영상 내용 정리 중… (20~40초)';
+  try {
+    const data = await extractRecipeFromYouTube(url, S.settings);
+    draft.yt = ytId(url);
+    if (!draft.title) draft.title = data.title || '';
+    draft.time = data.time || draft.time;
+    draft.kcal = data.kcal || draft.kcal;
+    draft.protein = data.protein || draft.protein;
+    draft.tags = [...new Set([...(draft.tags || []), ...(data.tags || []).filter((t) => TAGS.includes(t))])];
+    draft.ingredients = data.ingredients.map((g) => ({
+      n: g.name, a: g.amount || 1, u: g.unit || '', ...(g.seasoning ? { st: 1 } : {}),
+    }));
+    draft.steps = data.steps || [];
+    renderRecipeForm(true);
+    toast('정리 완료 ✨ 내용 확인하고 저장하세요');
+  } catch (e) {
+    toast(e.message || '정리에 실패했어요');
+    const b = $('#rf-auto');
+    if (b) { b.disabled = false; b.textContent = '🤖 빠른 레시피 — 영상 안 보고 재료·순서 자동 정리'; }
+  }
 };
 
 function rfIngRow(g, idx) {
@@ -653,23 +727,9 @@ UI.rfPhoto = async (input) => {
   $('#rf-photoprev').innerHTML = `<img src="${draft.photo}" style="width:100%;border-radius:14px;margin-top:8px;max-height:180px;object-fit:cover" />`;
 };
 UI.saveRecipeForm = () => {
-  const title = $('#rf-title').value.trim();
-  if (!title) { toast('레시피 이름을 적어주세요'); return; }
-  const ings = $$('#rf-ings .ing-row').map((row) => ({
-    n: row.querySelector('.i-name').value.trim(),
-    a: Number(row.querySelector('.i-amt').value) || 1,
-    u: row.querySelector('.i-unit').value.trim(),
-    ...(row.querySelector('.i-st').classList.contains('on') ? { st: 1 } : {}),
-  })).filter((g) => g.n);
-  if (!ings.length) { toast('재료를 1개 이상 넣어주세요'); return; }
-  Object.assign(draft, {
-    title,
-    time: Number($('#rf-time').value) || null,
-    kcal: Number($('#rf-kcal').value) || null,
-    protein: Number($('#rf-protein').value) || null,
-    ingredients: ings,
-    steps: $('#rf-steps').value.split('\n').map((s2) => s2.trim()).filter(Boolean),
-  });
+  collectForm();
+  if (!draft.title) { toast('레시피 이름을 적어주세요'); return; }
+  if (!draft.ingredients.length || !draft.ingredients.some((g) => g.n)) { toast('재료를 1개 이상 넣어주세요'); return; }
   const i = S.myRecipes.findIndex((r) => r.id === draft.id);
   if (i >= 0) S.myRecipes[i] = draft; else S.myRecipes.push(draft);
   save();
@@ -790,7 +850,7 @@ function handleShareCode(code) {
 /* ── 요리 완료 → 차감 ─────────────────────── */
 UI.openDeduct = (rid) => {
   const r = allRecipes(S).find((x) => x.id === rid);
-  deductCtx = { recipe: r, servings: 1, skips: new Set() };
+  deductCtx = { recipe: r, servings: detailServings || 1, skips: new Set() };
   renderDeduct();
 };
 

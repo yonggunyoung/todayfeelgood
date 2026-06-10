@@ -1,9 +1,33 @@
 // 추천 엔진 — 전부 비AI(정렬·필터). 변동비 0원으로 무제한 동작하는 코어.
+// 프리셋 모드 + 사용자가 만든 맞춤 모드를 같은 파이프라인으로 처리한다.
 import { RECIPES } from './data/recipes.js';
 import { findIng } from './data/ingredients.js';
 import { daysLeft } from './store.js';
 
-// 보유 판단: 팬트리에서 재료명 매칭 (마스터 기준 정규화)
+/* ── 모드 정의 ───────────────────────────── */
+export const PRESET_MODES = [
+  { key: 'none',      label: '기본',     emoji: '🍽️', desc: '지금 만들 수 있는 요리부터' },
+  { key: 'fitness',   label: '운동',     emoji: '💪', desc: '단백질 우선 · 매크로 표시', protein: true },
+  { key: 'frugal',    label: '자린고비', emoji: '🪙', desc: '임박 재료 소진 · 추가 지출 0원', expiring: true, zeroExtra: true },
+  { key: 'banchan',   label: '반찬',     emoji: '🥢', desc: '밑반찬·도시락 곁들임 우선', prefTags: ['반찬', '도시락'] },
+  { key: 'maternity', label: '산모',     emoji: '🤰', desc: '주의 재료 자동 제외 · 순한 요리', blockCaution: true, prefTags: ['순한맛', '국물'] },
+];
+
+export function modeList(state) {
+  const customs = (state.settings?.customModes || []).map((c) => ({ ...c, custom: true }));
+  return [...PRESET_MODES, ...customs];
+}
+
+export function getMode(state, key) {
+  return modeList(state).find((m) => m.key === key) || PRESET_MODES[0];
+}
+
+/* ── 레시피 풀: 내장 + 내 레시피 ─────────── */
+export function allRecipes(state) {
+  return [...RECIPES, ...(state.myRecipes || [])];
+}
+
+/* ── 보유 판단 ───────────────────────────── */
 function findPantryItem(pantry, name) {
   const target = findIng(name);
   return pantry.find((p) => {
@@ -19,8 +43,15 @@ function hasEnough(item) {
   return (item.qty ?? 0) > 0;
 }
 
-// 레시피 1개 분석: 보유/부족/임박활용/점수
-export function analyzeRecipe(recipe, state, mode) {
+function sameIng(a, b) {
+  if (a === b) return true;
+  const ia = findIng(a), ib = findIng(b);
+  return !!(ia && ib && ia.name === ib.name);
+}
+
+/* ── 레시피 분석 + 모드 점수 ─────────────── */
+export function analyzeRecipe(recipe, state, modeOrKey) {
+  const mode = typeof modeOrKey === 'string' ? getMode(state, modeOrKey) : (modeOrKey || PRESET_MODES[0]);
   const required = recipe.ingredients.filter((g) => !g.st);
   const missing = [];
   let have = 0;
@@ -38,56 +69,70 @@ export function analyzeRecipe(recipe, state, mode) {
   }
 
   const coverage = required.length ? have / required.length : 0;
-  let modeScore = 0;
-  if (mode === 'fitness') modeScore = Math.min(1, (recipe.protein || 0) / 40);
-  else if (mode === 'frugal') modeScore = (missing.length === 0 ? 0.6 : 0) + Math.min(0.4, expiringBoost * 0.2);
-  else if (mode === 'maternity') modeScore = recipe.tags.includes('순한맛') || recipe.tags.includes('국물') ? 0.5 : 0.2;
+
+  let m = 0;
+  if (mode.protein) m += Math.min(1, (recipe.protein || 0) / 40);
+  if (mode.expiring) m += Math.min(1, expiringBoost);
+  if (mode.zeroExtra && missing.length === 0) m += 0.6;
+  if (mode.prefTags?.length) m += recipe.tags?.some((t) => mode.prefTags.includes(t)) ? 0.8 : 0;
+  const modeScore = Math.min(1, m);
+
+  const fav = (state.favs || []).includes(recipe.id);
 
   const score =
-    coverage * 0.45 +
-    Math.min(1, expiringBoost / 2) * 0.25 +
-    (missing.length === 0 ? 0.15 : missing.length === 1 ? 0.05 : 0) +
-    modeScore * 0.15;
+    coverage * 0.42 +
+    Math.min(1, expiringBoost / 2) * 0.2 +
+    (missing.length === 0 ? 0.12 : missing.length === 1 ? 0.04 : 0) +
+    (fav ? 0.06 : 0) +
+    modeScore * 0.2;
 
   return {
-    recipe,
-    have,
-    total: required.length,
-    missing,
+    recipe, have, total: required.length, missing,
     cookable: missing.length === 0,
     almostCookable: missing.length === 1,
     usesExpiring: expiringBoost > 0,
-    score,
+    fav, score,
   };
 }
 
-// 모드 반영 전체 추천 목록
-export function recommend(state, mode, { includeBlocked = false } = {}) {
-  let list = RECIPES;
-  let blocked = [];
-  if (mode === 'maternity') {
-    blocked = RECIPES.filter((r) => r.caution);
-    list = RECIPES.filter((r) => !r.caution);
-  }
+/* ── 모드 반영 전체 추천 ─────────────────── */
+export function recommend(state, modeKey, { includeBlocked = false } = {}) {
+  const mode = getMode(state, modeKey);
+  const pool = allRecipes(state);
+  const blocked = [];
+  const list = pool.filter((r) => {
+    if (mode.blockCaution && r.caution) { blocked.push(r); return false; }
+    if (mode.exclude?.length && r.ingredients.some((g) => !g.st && mode.exclude.some((x) => sameIng(g.n, x)))) {
+      blocked.push(r); return false;
+    }
+    return true;
+  });
   const analyzed = list.map((r) => analyzeRecipe(r, state, mode)).sort((a, b) => b.score - a.score);
   return includeBlocked ? { analyzed, blocked } : analyzed;
 }
 
-// 임박 재료 (D-day 이하)
+/* ── 재료 활용 추천: 이 재료로 뭐 하지? ──── */
+export function recipesUsing(state, name, modeKey) {
+  return allRecipes(state)
+    .filter((r) => r.ingredients.some((g) => !g.st && sameIng(g.n, name)))
+    .map((r) => analyzeRecipe(r, state, modeKey))
+    .sort((a, b) => b.score - a.score);
+}
+
+/* ── 임박/잔반 ───────────────────────────── */
 export function expiringItems(state, days = 3) {
   return state.pantry
     .filter((p) => daysLeft(p.expiresAt) <= days)
     .sort((a, b) => daysLeft(a.expiresAt) - daysLeft(b.expiresAt));
 }
 
-// 활성 잔반 (임박순)
 export function activeLeftovers(state) {
   return state.leftovers
     .filter((l) => l.status === 'active')
     .sort((a, b) => daysLeft(a.expiresAt) - daysLeft(b.expiresAt));
 }
 
-// 요리 완료 시 차감 계획 산출 — count/bundle만 차감, level(양념)은 건드리지 않음
+/* ── 요리 완료 차감 계획 ─────────────────── */
 export function deductionPlan(recipe, state, servings = 1) {
   const plan = [];
   for (const g of recipe.ingredients) {

@@ -1,30 +1,37 @@
 // 상태 저장소 — localStorage 영속화 + 변경 이벤트 버스 (동기화 모듈이 구독)
 const KEY = 'naengbiseo.v1';
 
-export const MODES = {
-  none:      { label: '기본',     emoji: '🍚', desc: '있는 재료로 만들 수 있는 요리부터' },
-  fitness:   { label: '운동',     emoji: '💪', desc: '단백질 위주로 추천 · 매크로 표시' },
-  frugal:    { label: '자린고비', emoji: '🪙', desc: '임박 재료 소진 · 추가 지출 0원 우선' },
-  maternity: { label: '산모',     emoji: '🤰', desc: '주의 재료 자동 제외 · 순한 요리 우선' },
-};
-
 const DEFAULT = () => ({
   meta: { updatedAt: 0, createdAt: Date.now() },
-  settings: { mode: 'none', coupangId: '', aiKey: '', aiModel: 'claude-opus-4-8', spaceCode: '', firebaseConfig: '' },
-  pantry: [],     // {id, name, emoji, qtyType, unit, qty, level, location, expiresAt, price}
+  settings: {
+    mode: 'none', coupangId: '', aiKey: '', aiModel: 'claude-opus-4-8',
+    spaceCode: '', firebaseConfig: '',
+    customModes: [], // {key, label, emoji, desc, protein, expiring, zeroExtra, prefTags:[], exclude:[]}
+  },
+  pantry: [],     // {id, name, emoji, photo?, qtyType, unit, qty, level, location, expiresAt, price}
   leftovers: [],  // {id, name, location, expiresAt, createdAt, status}
   shopping: [],   // {id, name, reason, done}
+  myRecipes: [],  // 내가 만든/유튜브에서 저장한 레시피 (RECIPES와 동일 구조 + yt, photo, mine)
+  favs: [],       // 즐겨찾기 레시피 id
   ledger: { saved: 0, wasted: 0, cooked: 0, leftoverEaten: 0, leftoverWasted: 0 },
   onboarded: false,
 });
 
 function load() {
+  const d = DEFAULT();
   try {
     const raw = localStorage.getItem(KEY);
-    if (!raw) return DEFAULT();
-    return { ...DEFAULT(), ...JSON.parse(raw) };
+    if (!raw) return d;
+    const p = JSON.parse(raw);
+    return {
+      ...d, ...p,
+      settings: { ...d.settings, ...(p.settings || {}) },
+      ledger: { ...d.ledger, ...(p.ledger || {}) },
+      myRecipes: p.myRecipes || [],
+      favs: p.favs || [],
+    };
   } catch {
-    return DEFAULT();
+    return d;
   }
 }
 
@@ -47,7 +54,7 @@ export function replaceState(remote) {
   const keepKey = S.settings.aiKey;
   const keepFb = S.settings.firebaseConfig;
   const keepCode = S.settings.spaceCode;
-  for (const k of ['meta', 'settings', 'pantry', 'leftovers', 'shopping', 'ledger', 'onboarded']) {
+  for (const k of ['meta', 'settings', 'pantry', 'leftovers', 'shopping', 'myRecipes', 'favs', 'ledger', 'onboarded']) {
     if (remote[k] !== undefined) S[k] = remote[k];
   }
   S.settings.aiKey = keepKey;

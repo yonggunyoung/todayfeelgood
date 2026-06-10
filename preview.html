@@ -1,353 +1,430 @@
 <!DOCTYPE html>
 <html lang="ko"><head>
 <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>냉비서 — 디자인 미리보기</title>
-<link rel="preconnect" href="https://fonts.googleapis.com" /><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet" />
+<title>냉비서 — 디자인 미리보기 v2</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
 <style>
 /* ===== 실제 앱 스타일시트 (css/styles.css) 인라인 ===== */
 /* ───────────────────────────────────────────────
-   냉비서 디자인 시스템 — "신선식료품점 × 종이 가계부"
-   크림 종이 위에 딥그린 잉크, 감귤빛 포인트, 도장 뱃지.
+   냉비서 디자인 시스템 v2 — iOS 네이티브 감성
+   화이트 그루핑 배경 · 프로스트 블러 바 · 파스텔 카테고리 틴트
+   헤어라인 구분선 · 부드러운 스쿼클 · 절제된 위트
    ─────────────────────────────────────────────── */
 :root {
-  --paper: #f7f2e7;          /* 크림 종이 */
-  --paper-deep: #efe7d4;
-  --card: #fffdf6;
-  --ink: #20312a;            /* 딥그린 잉크 */
-  --ink-soft: #5c6b61;
-  --line: #d8cfba;
-  --green: #1e5a3c;          /* 마켓 그린 */
-  --green-soft: #e3eee5;
-  --orange: #e8662c;         /* 감귤 포인트 */
-  --orange-soft: #fdeadd;
-  --yellow: #f5c649;         /* 가격표 노랑 */
-  --red: #c0392b;            /* 도장 레드 */
-  --serif: 'Gowun Batang', 'Nanum Myeongjo', serif;
-  --sans: 'Pretendard Variable', Pretendard, -apple-system, 'Noto Sans KR', sans-serif;
-  --radius: 14px;
-  --shadow: 0 2px 0 rgba(32, 49, 42, 0.14);
+  --bg: #f2f3f7;
+  --card: #ffffff;
+  --label: #17181c;
+  --label-2: #6e7077;
+  --label-3: #a3a5ad;
+  --hairline: rgba(60, 60, 67, 0.1);
+  --green: #2fae5f;          /* 프레시 그린 (프라이머리) */
+  --green-bg: #e9f7ee;
+  --orange: #ff8a3d;
+  --orange-bg: #fff1e7;
+  --red: #ff453a;
+  --red-bg: #ffeceb;
+  --amber: #d9930d;
+  --amber-bg: #fdf3dd;
+  --blue: #3478f6;
+  --blue-bg: #eaf1fe;
+  --tint-veg: #eaf7ec;       /* 카테고리 파스텔 */
+  --tint-meat: #fdeeea;
+  --tint-fish: #e9f3fb;
+  --tint-dairy: #fdf6e3;
+  --tint-grain: #f4efe6;
+  --tint-etc: #f1f0f6;
+  --sans: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Noto Sans KR', sans-serif;
+  --r-lg: 22px;
+  --r-md: 16px;
+  --r-sm: 12px;
+  --shadow-card: 0 1px 2px rgba(20, 24, 33, 0.04), 0 6px 20px rgba(20, 24, 33, 0.05);
+  --shadow-float: 0 8px 28px rgba(20, 24, 33, 0.16);
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html { font-size: 16px; }
 body {
   font-family: var(--sans);
-  background:
-    radial-gradient(circle at 12% -4%, #fbf7ee 0 38%, transparent 40%),
-    repeating-linear-gradient(0deg, transparent 0 31px, rgba(32, 49, 42, 0.03) 31px 32px),
-    var(--paper);
-  color: var(--ink);
+  background: var(--bg);
+  color: var(--label);
   min-height: 100dvh;
+  -webkit-font-smoothing: antialiased;
 }
 button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
 input, select, textarea {
-  font-family: inherit; font-size: 0.95rem; color: var(--ink);
-  background: var(--card); border: 1.5px solid var(--line); border-radius: 10px; padding: 10px 12px;
-  width: 100%;
+  font-family: inherit; font-size: 0.95rem; color: var(--label);
+  background: rgba(118, 118, 128, 0.08); border: none; border-radius: var(--r-sm);
+  padding: 12px 14px; width: 100%;
 }
-input:focus, select:focus, textarea:focus { outline: 2px solid var(--green); outline-offset: 1px; border-color: var(--green); }
+input::placeholder, textarea::placeholder { color: var(--label-3); }
+input:focus, select:focus, textarea:focus { outline: 2px solid var(--green); outline-offset: 0; background: var(--card); }
+a { color: var(--blue); text-decoration: none; }
 
 #shell { max-width: 480px; margin: 0 auto; min-height: 100dvh; display: flex; flex-direction: column; position: relative; }
 
-/* ── 상단바 ─────────────────────────── */
+/* ── 상단바 (프로스트) ─────────────────── */
 #topbar {
   display: flex; justify-content: space-between; align-items: center;
-  padding: 14px 18px 10px; position: sticky; top: 0; z-index: 20;
-  background: linear-gradient(var(--paper) 82%, transparent);
+  padding: 13px 18px 11px; position: sticky; top: 0; z-index: 20;
+  background: rgba(242, 243, 247, 0.78);
+  backdrop-filter: blur(22px) saturate(180%); -webkit-backdrop-filter: blur(22px) saturate(180%);
+  border-bottom: 0.5px solid var(--hairline);
 }
 .brand { display: flex; align-items: center; gap: 9px; }
 .brand-mark {
-  width: 38px; height: 38px; display: grid; place-items: center;
-  background: var(--green); color: #fdf9ee; font-family: var(--serif); font-weight: 700; font-size: 1.15rem;
-  border-radius: 11px; border: 1.5px solid var(--ink); box-shadow: var(--shadow);
-  transform: rotate(-3deg);
+  width: 36px; height: 36px; display: grid; place-items: center;
+  background: linear-gradient(145deg, #3fc171, #1f9a4f); color: #fff;
+  font-weight: 800; font-size: 1.05rem; border-radius: 11px;
+  box-shadow: 0 3px 8px rgba(47, 174, 95, 0.32);
 }
-.brand-text strong { font-family: var(--serif); font-size: 1.12rem; letter-spacing: 0.02em; display: block; line-height: 1.1; }
-.brand-text small { color: var(--ink-soft); font-size: 0.7rem; }
+.brand-text strong { font-size: 1.05rem; font-weight: 800; letter-spacing: -0.02em; display: block; line-height: 1.15; }
+.brand-text small { color: var(--label-2); font-size: 0.69rem; font-weight: 500; }
 .top-right { display: flex; gap: 6px; }
 .pill {
-  font-size: 0.72rem; font-weight: 700; padding: 5px 10px; border-radius: 99px;
-  border: 1.5px solid var(--ink); background: var(--card); box-shadow: var(--shadow);
+  font-size: 0.71rem; font-weight: 700; padding: 6px 11px; border-radius: 99px;
+  background: var(--card); box-shadow: var(--shadow-card);
 }
-.pill-muted { color: var(--ink-soft); border-color: var(--line); box-shadow: none; }
-.pill-save { background: var(--yellow); }
-.pill-on { background: var(--green-soft); color: var(--green); }
-.pill-err { background: var(--orange-soft); color: var(--red); }
+.pill-muted { color: var(--label-2); }
+.pill-save { background: var(--amber-bg); color: var(--amber); }
+.pill-on { background: var(--green-bg); color: var(--green); }
+.pill-err { background: var(--red-bg); color: var(--red); }
 
-/* ── 메인/탭 ─────────────────────────── */
-#view { flex: 1; padding: 4px 18px 110px; }
+/* ── 메인/탭바 ─────────────────────────── */
+#view { flex: 1; padding: 2px 16px 116px; }
 #tabbar {
   position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
   width: min(480px, 100%); display: flex; z-index: 30;
-  background: var(--card); border-top: 1.5px solid var(--ink);
+  background: rgba(250, 250, 252, 0.82);
+  backdrop-filter: blur(24px) saturate(180%); -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border-top: 0.5px solid var(--hairline);
   padding-bottom: env(safe-area-inset-bottom);
 }
 #tabbar button {
   flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px;
-  padding: 9px 0 7px; font-size: 0.68rem; font-weight: 600; color: var(--ink-soft);
+  padding: 8px 0 7px; font-size: 0.66rem; font-weight: 600; color: var(--label-3);
   transition: transform 0.12s;
 }
-#tabbar button span { font-size: 1.25rem; filter: grayscale(0.7); transition: filter 0.15s; }
+#tabbar button span { font-size: 1.3rem; filter: grayscale(1) opacity(0.55); transition: filter 0.15s; }
 #tabbar button.active { color: var(--green); }
 #tabbar button.active span { filter: none; }
-#tabbar button:active { transform: scale(0.92); }
+#tabbar button:active { transform: scale(0.9); }
 
 /* ── 타이포 ─────────────────────────── */
-.hero { padding: 18px 2px 6px; }
-.hero h1 { font-family: var(--serif); font-size: 1.62rem; line-height: 1.32; font-weight: 700; }
-.hero h1 em { font-style: normal; color: var(--orange); }
-.hero p { color: var(--ink-soft); font-size: 0.86rem; margin-top: 6px; }
+.hero { padding: 20px 4px 4px; }
+.hero h1 { font-size: 1.72rem; line-height: 1.28; font-weight: 800; letter-spacing: -0.03em; }
+.hero h1 em { font-style: normal; color: var(--green); }
+.hero p { color: var(--label-2); font-size: 0.85rem; margin-top: 6px; font-weight: 500; }
 .section-title {
   display: flex; align-items: baseline; justify-content: space-between;
-  margin: 22px 2px 10px; padding-bottom: 6px; border-bottom: 1.5px dashed var(--line);
+  margin: 24px 4px 10px;
 }
-.section-title h2 { font-family: var(--serif); font-size: 1.05rem; font-weight: 700; }
-.section-title small { color: var(--ink-soft); font-size: 0.74rem; }
+.section-title h2 { font-size: 0.98rem; font-weight: 800; letter-spacing: -0.02em; }
+.section-title small { color: var(--label-3); font-size: 0.74rem; font-weight: 600; }
 
 /* ── 카드 ─────────────────────────── */
 .card {
-  background: var(--card); border: 1.5px solid var(--ink); border-radius: var(--radius);
-  box-shadow: var(--shadow); padding: 14px; margin-bottom: 10px;
+  background: var(--card); border-radius: var(--r-lg);
+  box-shadow: var(--shadow-card); padding: 15px; margin-bottom: 11px;
 }
-.card.flat { border-color: var(--line); box-shadow: none; }
+.card.flat { box-shadow: none; border: 0.5px solid var(--hairline); }
 .row { display: flex; align-items: center; gap: 11px; }
 .grow { flex: 1; min-width: 0; }
 
-/* 도장 D-day 뱃지 */
+/* D-day 뱃지 */
 .stamp {
-  font-size: 0.66rem; font-weight: 800; padding: 3px 7px; border-radius: 6px;
-  border: 1.5px solid currentColor; transform: rotate(-4deg); display: inline-block;
-  letter-spacing: 0.04em; background: transparent;
+  font-size: 0.66rem; font-weight: 800; padding: 4px 9px; border-radius: 8px;
+  display: inline-block; letter-spacing: 0.02em;
 }
-.stamp-danger { color: var(--red); background: #fff3f0; }
-.stamp-warn { color: #a06a00; background: #fdf4dd; }
-.stamp-ok { color: var(--green); background: var(--green-soft); transform: rotate(0); border-style: dashed; }
+.stamp-danger { color: #fff; background: var(--red); }
+.stamp-warn { color: var(--amber); background: var(--amber-bg); }
+.stamp-ok { color: var(--green); background: var(--green-bg); }
 
 .chip {
   display: inline-flex; align-items: center; gap: 4px;
-  font-size: 0.72rem; font-weight: 600; padding: 4px 9px; margin: 2px 3px 2px 0;
-  background: var(--paper-deep); border: 1px solid var(--line); border-radius: 99px; color: var(--ink-soft);
+  font-size: 0.73rem; font-weight: 600; padding: 6px 11px; margin: 2px 4px 2px 0;
+  background: rgba(118, 118, 128, 0.08); border-radius: 99px; color: var(--label-2);
 }
-.chip.miss { background: var(--orange-soft); color: var(--orange); border-color: var(--orange); }
-.chip.have { background: var(--green-soft); color: var(--green); border-color: transparent; }
+.chip.miss { background: var(--orange-bg); color: var(--orange); }
+.chip.have { background: var(--green-bg); color: var(--green); }
 
 /* ── 버튼 ─────────────────────────── */
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-  font-weight: 700; font-size: 0.92rem; padding: 12px 16px; border-radius: 12px;
-  border: 1.5px solid var(--ink); background: var(--card); box-shadow: var(--shadow);
-  transition: transform 0.1s, box-shadow 0.1s; white-space: nowrap;
+  font-weight: 700; font-size: 0.92rem; padding: 13px 16px; border-radius: var(--r-md);
+  background: var(--card); box-shadow: var(--shadow-card);
+  transition: transform 0.1s, opacity 0.1s; white-space: nowrap; color: var(--label);
 }
-.btn:active { transform: translateY(2px); box-shadow: none; }
-.btn-primary { background: var(--green); color: #fdf9ee; }
-.btn-accent { background: var(--orange); color: #fff; }
-.btn-soft { border-color: var(--line); box-shadow: none; background: var(--paper-deep); font-size: 0.82rem; padding: 9px 12px; }
+.btn:active { transform: scale(0.97); opacity: 0.82; }
+.btn-primary { background: var(--green); color: #fff; box-shadow: 0 4px 14px rgba(47, 174, 95, 0.32); }
+.btn-accent { background: var(--orange); color: #fff; box-shadow: 0 4px 14px rgba(255, 138, 61, 0.32); }
+.btn-tint { background: var(--green-bg); color: var(--green); box-shadow: none; }
+.btn-soft { box-shadow: none; background: rgba(118, 118, 128, 0.1); font-size: 0.84rem; padding: 10px 13px; color: var(--label-2); }
 .btn-block { width: 100%; }
-.btn-sm { font-size: 0.78rem; padding: 8px 11px; border-radius: 10px; }
-.btn-row { display: flex; gap: 8px; margin-top: 10px; }
+.btn-sm { font-size: 0.77rem; padding: 8px 12px; border-radius: 11px; }
+.btn-row { display: flex; gap: 9px; margin-top: 11px; }
 .btn-row .btn { flex: 1; }
 
-/* 큰 액션 버튼 (홈 상단) */
-.action-strip { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-top: 14px; }
-.action-strip .btn { flex-direction: column; gap: 3px; padding: 13px 8px; }
+.action-strip { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
+.action-strip .btn { flex-direction: column; gap: 3px; padding: 14px 8px; border-radius: 18px; }
 .action-strip .btn b { font-size: 0.95rem; }
-.action-strip .btn small { font-size: 0.68rem; font-weight: 500; opacity: 0.85; }
+.action-strip .btn small { font-size: 0.68rem; font-weight: 500; opacity: 0.8; }
 
 /* ── 리스트 아이템 ─────────────────── */
 .item {
-  display: flex; align-items: center; gap: 11px;
-  background: var(--card); border: 1.5px solid var(--line); border-radius: 12px;
-  padding: 11px 12px; margin-bottom: 7px; transition: transform 0.1s;
+  display: flex; align-items: center; gap: 12px;
+  background: var(--card); border-radius: var(--r-md);
+  padding: 11px 13px; margin-bottom: 8px; box-shadow: var(--shadow-card);
+  transition: transform 0.1s;
 }
 .item:active { transform: scale(0.985); }
-.item .emoji { font-size: 1.45rem; width: 34px; text-align: center; }
-.item .name { font-weight: 700; font-size: 0.93rem; }
-.item .sub { color: var(--ink-soft); font-size: 0.73rem; margin-top: 1px; }
-.item.danger { border-color: var(--red); background: #fffaf8; }
+.item .emoji {
+  font-size: 1.3rem; width: 42px; height: 42px; flex-shrink: 0;
+  display: grid; place-items: center; border-radius: 13px; background: var(--tint-etc);
+  overflow: hidden;
+}
+.item .emoji img { width: 100%; height: 100%; object-fit: cover; }
+.item .name { font-weight: 700; font-size: 0.92rem; letter-spacing: -0.01em; }
+.item .sub { color: var(--label-2); font-size: 0.72rem; margin-top: 2px; font-weight: 500; }
+.item.danger { background: linear-gradient(0deg, rgba(255, 69, 58, 0.05), rgba(255, 69, 58, 0.05)), var(--card); }
+
+/* 카테고리 틴트 */
+.t-채소, .t-과일 { background: var(--tint-veg); }
+.t-육류 { background: var(--tint-meat); }
+.t-수산 { background: var(--tint-fish); }
+.t-유제품, .t-양념 { background: var(--tint-dairy); }
+.t-주식, .t-가공 { background: var(--tint-grain); }
+.t-신선 { background: var(--tint-veg); }
+.t-기타 { background: var(--tint-etc); }
+
+/* ── 냉장고 선반 뷰 ─────────────────── */
+.shelf { background: var(--card); border-radius: var(--r-lg); box-shadow: var(--shadow-card); padding: 13px 13px 6px; margin-bottom: 12px; }
+.shelf-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding: 0 2px; }
+.shelf-head b { font-size: 0.86rem; font-weight: 800; }
+.shelf-head small { color: var(--label-3); font-size: 0.7rem; font-weight: 600; }
+.shelf-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 9px; padding-bottom: 9px; border-bottom: 2px solid rgba(118, 118, 128, 0.08); margin-bottom: 9px; }
+.shelf-grid:last-child { border-bottom: none; margin-bottom: 0; }
+.tile {
+  position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 11px 3px 8px; border-radius: 15px; transition: transform 0.1s; overflow: hidden;
+}
+.tile:active { transform: scale(0.92); }
+.tile .t-face { font-size: 1.65rem; line-height: 1; width: 44px; height: 44px; display: grid; place-items: center; border-radius: 12px; overflow: hidden; }
+.tile .t-face img { width: 100%; height: 100%; object-fit: cover; border-radius: 12px; }
+.tile .t-name { font-size: 0.68rem; font-weight: 700; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tile .t-qty { font-size: 0.62rem; font-weight: 600; color: var(--label-2); }
+.tile .t-dot { position: absolute; top: 7px; right: 7px; width: 9px; height: 9px; border-radius: 99px; }
+.dot-red { background: var(--red); box-shadow: 0 0 0 3px var(--red-bg); }
+.dot-amber { background: #f0a818; box-shadow: 0 0 0 3px var(--amber-bg); }
+.dot-green { background: var(--green); opacity: 0.5; }
 
 /* 수량 스테퍼 */
-.stepper { display: inline-flex; align-items: center; border: 1.5px solid var(--ink); border-radius: 10px; overflow: hidden; background: var(--card); }
-.stepper button { width: 34px; height: 34px; font-size: 1.05rem; font-weight: 800; background: var(--paper-deep); }
-.stepper button:active { background: var(--line); }
-.stepper b { min-width: 44px; text-align: center; font-size: 0.88rem; }
+.stepper { display: inline-flex; align-items: center; border-radius: var(--r-sm); overflow: hidden; background: rgba(118, 118, 128, 0.08); }
+.stepper button { width: 40px; height: 38px; font-size: 1.1rem; font-weight: 800; color: var(--green); }
+.stepper button:active { background: rgba(118, 118, 128, 0.12); }
+.stepper b { min-width: 50px; text-align: center; font-size: 0.9rem; }
 
 /* 레벨 선택 */
-.level-row { display: flex; gap: 5px; }
+.level-row { display: flex; gap: 6px; }
 .level-row button {
-  flex: 1; font-size: 0.74rem; font-weight: 700; padding: 8px 2px;
-  border: 1.5px solid var(--line); border-radius: 9px; background: var(--card); color: var(--ink-soft);
+  flex: 1; font-size: 0.75rem; font-weight: 700; padding: 10px 2px;
+  border-radius: 11px; background: rgba(118, 118, 128, 0.08); color: var(--label-2);
 }
-.level-row button.on { background: var(--green); color: #fff; border-color: var(--ink); }
+.level-row button.on { background: var(--green); color: #fff; }
 
-/* 위치 탭 */
-.seg { display: flex; background: var(--paper-deep); border: 1.5px solid var(--line); border-radius: 11px; padding: 3px; margin: 12px 0; }
-.seg button { flex: 1; padding: 8px 0; font-size: 0.82rem; font-weight: 700; color: var(--ink-soft); border-radius: 8px; }
-.seg button.on { background: var(--card); color: var(--green); border: 1.5px solid var(--ink); box-shadow: var(--shadow); }
+/* iOS 세그먼트 */
+.seg { display: flex; background: rgba(118, 118, 128, 0.12); border-radius: 12px; padding: 2.5px; margin: 13px 0; }
+.seg button { flex: 1; padding: 8px 0; font-size: 0.8rem; font-weight: 700; color: var(--label-2); border-radius: 10px; transition: all 0.15s; }
+.seg button.on { background: var(--card); color: var(--label); box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1); }
+
+/* 모드 칩 가로 스크롤 */
+.mode-chips { display: flex; gap: 7px; overflow-x: auto; padding: 4px 2px 8px; scrollbar-width: none; }
+.mode-chips::-webkit-scrollbar { display: none; }
+.mode-chip {
+  flex-shrink: 0; display: inline-flex; align-items: center; gap: 5px;
+  font-size: 0.78rem; font-weight: 700; padding: 9px 14px; border-radius: 99px;
+  background: var(--card); color: var(--label-2); box-shadow: var(--shadow-card);
+}
+.mode-chip.on { background: var(--label); color: #fff; }
+.mode-chip.add { background: var(--green-bg); color: var(--green); }
 
 /* ── 레시피 카드 ─────────────────── */
-.recipe-card { position: relative; overflow: hidden; }
-.recipe-card .r-head { display: flex; gap: 12px; align-items: flex-start; }
+.recipe-card { position: relative; overflow: hidden; padding: 0; }
+.recipe-card .r-photo { width: 100%; aspect-ratio: 16/8.2; object-fit: cover; display: block; background: var(--tint-grain); }
+.recipe-card .r-body { padding: 13px 15px 14px; }
+.recipe-card .r-head { display: flex; gap: 12px; align-items: center; }
 .recipe-card .r-emoji {
-  font-size: 1.9rem; width: 52px; height: 52px; display: grid; place-items: center;
-  background: var(--paper-deep); border: 1.5px solid var(--line); border-radius: 13px; flex-shrink: 0;
+  font-size: 1.7rem; width: 50px; height: 50px; display: grid; place-items: center;
+  background: var(--tint-grain); border-radius: 15px; flex-shrink: 0;
 }
-.recipe-card h3 { font-family: var(--serif); font-size: 1.04rem; }
-.recipe-card .meta { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 4px; color: var(--ink-soft); font-size: 0.74rem; font-weight: 600; }
+.recipe-card h3 { font-size: 1.02rem; font-weight: 800; letter-spacing: -0.02em; }
+.recipe-card .meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 3px; color: var(--label-2); font-size: 0.73rem; font-weight: 600; }
 .recipe-card .meta b { color: var(--orange); }
+.heart { font-size: 1.15rem; padding: 6px; flex-shrink: 0; filter: grayscale(1) opacity(0.4); transition: all 0.15s; }
+.heart.on { filter: none; transform: scale(1.08); }
 .ready-flag {
-  position: absolute; top: 11px; right: -32px; transform: rotate(38deg);
-  background: var(--green); color: #fdf9ee; font-size: 0.62rem; font-weight: 800;
-  padding: 4px 36px; letter-spacing: 0.06em;
+  position: absolute; top: 10px; left: 10px; z-index: 2;
+  background: rgba(47, 174, 95, 0.95); color: #fff; font-size: 0.64rem; font-weight: 800;
+  padding: 5px 10px; border-radius: 99px; letter-spacing: 0.02em; backdrop-filter: blur(4px);
 }
-.match-bar { height: 6px; border-radius: 99px; background: var(--paper-deep); border: 1px solid var(--line); margin-top: 10px; overflow: hidden; }
-.match-bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--green), #4d8b63); border-radius: 99px; }
+.yt-flag { position: absolute; top: 10px; right: 10px; z-index: 2; background: rgba(0,0,0,.62); color:#fff; font-size: 0.62rem; font-weight: 700; padding: 5px 9px; border-radius: 99px; backdrop-filter: blur(4px); }
+.match-bar { height: 5px; border-radius: 99px; background: rgba(118, 118, 128, 0.12); margin-top: 11px; overflow: hidden; }
+.match-bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--green), #5fce8b); border-radius: 99px; }
 
-/* ── 모달 ─────────────────────────── */
+/* 유튜브 임베드 */
+.ytwrap { position: relative; width: 100%; aspect-ratio: 16/9; border-radius: var(--r-md); overflow: hidden; background: #000; margin-bottom: 12px; }
+.ytwrap iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+
+/* ── 모달/시트 ─────────────────────── */
 #modal-root .overlay {
-  position: fixed; inset: 0; background: rgba(32, 49, 42, 0.45); z-index: 50;
+  position: fixed; inset: 0; background: rgba(20, 24, 33, 0.42); z-index: 50;
   display: flex; align-items: flex-end; justify-content: center;
-  animation: fade 0.18s ease;
+  animation: fade 0.18s ease; backdrop-filter: blur(2px);
 }
 .sheet {
-  width: min(480px, 100%); max-height: 88dvh; overflow-y: auto;
-  background: var(--paper); border-radius: 22px 22px 0 0; border: 1.5px solid var(--ink); border-bottom: none;
-  padding: 10px 18px calc(22px + env(safe-area-inset-bottom));
-  animation: rise 0.22s cubic-bezier(0.2, 0.9, 0.3, 1);
+  width: min(480px, 100%); max-height: 90dvh; overflow-y: auto;
+  background: var(--bg); border-radius: 26px 26px 0 0;
+  padding: 8px 18px calc(24px + env(safe-area-inset-bottom));
+  animation: rise 0.24s cubic-bezier(0.2, 0.9, 0.3, 1);
 }
-.sheet .grip { width: 44px; height: 4px; border-radius: 99px; background: var(--line); margin: 4px auto 12px; }
-.sheet h2 { font-family: var(--serif); font-size: 1.18rem; margin-bottom: 4px; }
-.sheet .sub { color: var(--ink-soft); font-size: 0.8rem; margin-bottom: 12px; }
-@keyframes rise { from { transform: translateY(40px); opacity: 0.4; } to { transform: none; opacity: 1; } }
+.sheet .grip { width: 38px; height: 5px; border-radius: 99px; background: rgba(118, 118, 128, 0.28); margin: 6px auto 14px; }
+.sheet h2 { font-size: 1.22rem; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 4px; }
+.sheet .sub { color: var(--label-2); font-size: 0.8rem; margin-bottom: 13px; font-weight: 500; }
+@keyframes rise { from { transform: translateY(46px); opacity: 0.4; } to { transform: none; opacity: 1; } }
 @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
 
-/* 영수증 스타일 차감표 */
-.receipt {
-  background: var(--card); border: 1.5px solid var(--ink); border-radius: 4px;
-  padding: 14px; font-size: 0.86rem; position: relative;
-  box-shadow: var(--shadow);
-}
-.receipt::before, .receipt::after {
-  content: ''; position: absolute; left: 0; right: 0; height: 7px;
-  background: radial-gradient(circle, transparent 0 3.5px, var(--card) 4px) -3px 0 / 12px 7px repeat-x;
-}
-.receipt::before { top: -6px; transform: rotate(180deg); }
-.receipt::after { bottom: -6px; }
-.receipt .r-line { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px dashed var(--line); align-items: center; gap: 8px; }
+/* 차감 전표 (그루핑 리스트) */
+.receipt { background: var(--card); border-radius: var(--r-md); padding: 4px 15px; box-shadow: var(--shadow-card); }
+.receipt .r-line { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 0.5px solid var(--hairline); align-items: center; gap: 8px; font-size: 0.88rem; }
 .receipt .r-line:last-child { border-bottom: none; }
-.receipt .r-total { font-weight: 800; font-family: var(--serif); }
+.receipt .r-total { font-weight: 800; }
 
 /* 단계(조리법) */
 .steps { counter-reset: st; }
 .steps li {
-  list-style: none; display: flex; gap: 11px; padding: 9px 0; border-bottom: 1px dashed var(--line);
-  font-size: 0.9rem; line-height: 1.5;
+  list-style: none; display: flex; gap: 12px; padding: 10px 0; border-bottom: 0.5px solid var(--hairline);
+  font-size: 0.9rem; line-height: 1.55;
 }
+.steps li:last-child { border-bottom: none; }
 .steps li::before {
   counter-increment: st; content: counter(st);
   width: 24px; height: 24px; flex-shrink: 0; display: grid; place-items: center;
-  background: var(--green); color: #fff; font-size: 0.75rem; font-weight: 800; border-radius: 8px;
+  background: var(--green-bg); color: var(--green); font-size: 0.74rem; font-weight: 800; border-radius: 99px;
 }
 
 /* 모드 카드 */
-.mode-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+.mode-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .mode-card {
-  border: 1.5px solid var(--line); border-radius: 13px; background: var(--card);
-  padding: 13px 12px; text-align: left; transition: transform 0.1s;
+  border-radius: var(--r-md); background: var(--card); box-shadow: var(--shadow-card);
+  padding: 14px 13px; text-align: left; transition: transform 0.1s; position: relative;
 }
-.mode-card:active { transform: scale(0.97); }
-.mode-card.on { border-color: var(--ink); background: var(--green-soft); box-shadow: var(--shadow); }
+.mode-card:active { transform: scale(0.96); }
+.mode-card.on { outline: 2.5px solid var(--green); }
+.mode-card.on::after { content: '✓'; position: absolute; top: 10px; right: 12px; color: var(--green); font-weight: 800; }
 .mode-card .m-emoji { font-size: 1.5rem; }
-.mode-card b { display: block; margin-top: 5px; font-size: 0.92rem; }
-.mode-card small { color: var(--ink-soft); font-size: 0.7rem; line-height: 1.35; display: block; margin-top: 2px; }
+.mode-card b { display: block; margin-top: 6px; font-size: 0.9rem; letter-spacing: -0.01em; }
+.mode-card small { color: var(--label-2); font-size: 0.69rem; line-height: 1.4; display: block; margin-top: 2px; font-weight: 500; }
+
+/* 태그 토글 */
+.tag-toggles { display: flex; flex-wrap: wrap; gap: 7px; }
+.tag-toggles button { font-size: 0.76rem; font-weight: 700; padding: 8px 13px; border-radius: 99px; background: rgba(118, 118, 128, 0.08); color: var(--label-2); }
+.tag-toggles button.on { background: var(--green); color: #fff; }
 
 /* 절약 장부 위젯 */
 .ledger-card { display: grid; grid-template-columns: 1fr 1fr; gap: 0; overflow: hidden; padding: 0; }
-.ledger-card > div { padding: 14px; }
-.ledger-card > div:first-child { border-right: 1.5px dashed var(--line); }
-.ledger-card .l-label { font-size: 0.72rem; color: var(--ink-soft); font-weight: 700; }
-.ledger-card .l-val { font-family: var(--serif); font-size: 1.35rem; font-weight: 700; margin-top: 3px; }
+.ledger-card > div { padding: 16px; }
+.ledger-card > div:first-child { border-right: 0.5px solid var(--hairline); }
+.ledger-card .l-label { font-size: 0.71rem; color: var(--label-2); font-weight: 700; }
+.ledger-card .l-val { font-size: 1.42rem; font-weight: 800; margin-top: 3px; letter-spacing: -0.03em; }
 .ledger-card .save .l-val { color: var(--green); }
 .ledger-card .waste .l-val { color: var(--red); }
 
 /* 빈 상태 */
 .empty {
-  text-align: center; padding: 34px 16px; color: var(--ink-soft);
-  border: 1.5px dashed var(--line); border-radius: var(--radius); margin-top: 8px; background: rgba(255, 253, 246, 0.6);
+  text-align: center; padding: 36px 18px; color: var(--label-2);
+  border-radius: var(--r-lg); margin-top: 8px; background: var(--card); box-shadow: var(--shadow-card);
 }
-.empty .e-emoji { font-size: 2.2rem; display: block; margin-bottom: 8px; }
-.empty b { color: var(--ink); display: block; margin-bottom: 3px; font-family: var(--serif); }
-.empty small { font-size: 0.78rem; line-height: 1.5; }
+.empty .e-emoji { font-size: 2.4rem; display: block; margin-bottom: 10px; }
+.empty b { color: var(--label); display: block; margin-bottom: 4px; font-size: 0.98rem; font-weight: 800; }
+.empty small { font-size: 0.78rem; line-height: 1.55; font-weight: 500; }
 
 /* 토스트 */
-#toast-root { position: fixed; bottom: 86px; left: 50%; transform: translateX(-50%); z-index: 99; width: min(440px, 92%); }
+#toast-root { position: fixed; bottom: 92px; left: 50%; transform: translateX(-50%); z-index: 99; width: min(420px, 90%); }
 .toast {
-  background: var(--ink); color: var(--paper); font-size: 0.85rem; font-weight: 600;
-  padding: 12px 16px; border-radius: 12px; margin-top: 8px; text-align: center;
-  animation: rise 0.25s ease; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+  background: rgba(23, 24, 28, 0.92); color: #fff; font-size: 0.84rem; font-weight: 600;
+  padding: 13px 18px; border-radius: 14px; margin-top: 8px; text-align: center;
+  animation: rise 0.25s ease; box-shadow: var(--shadow-float); backdrop-filter: blur(8px);
 }
 
 /* 폼 */
-.field { margin-bottom: 13px; }
-.field label { display: block; font-size: 0.78rem; font-weight: 700; margin-bottom: 5px; color: var(--ink-soft); }
-.hint { font-size: 0.72rem; color: var(--ink-soft); line-height: 1.5; margin-top: 5px; }
-.divider { border: none; border-top: 1.5px dashed var(--line); margin: 18px 0; }
+.field { margin-bottom: 14px; }
+.field label { display: block; font-size: 0.76rem; font-weight: 700; margin-bottom: 6px; color: var(--label-2); }
+.hint { font-size: 0.72rem; color: var(--label-3); line-height: 1.55; margin-top: 6px; font-weight: 500; }
+.divider { border: none; border-top: 0.5px solid var(--hairline); margin: 18px 0; }
 
 .search-row { display: flex; gap: 8px; margin-bottom: 10px; }
-.ing-pick-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; max-height: 44dvh; overflow-y: auto; padding: 2px; }
+.ing-pick-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; max-height: 42dvh; overflow-y: auto; padding: 2px; }
 .ing-pick {
-  display: flex; flex-direction: column; align-items: center; gap: 3px;
-  background: var(--card); border: 1.5px solid var(--line); border-radius: 11px; padding: 10px 2px;
-  font-size: 0.72rem; font-weight: 600; transition: transform 0.1s;
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  background: var(--card); border-radius: 14px; padding: 11px 2px;
+  font-size: 0.71rem; font-weight: 700; transition: transform 0.1s; box-shadow: var(--shadow-card);
 }
-.ing-pick:active { transform: scale(0.93); background: var(--green-soft); }
-.ing-pick span { font-size: 1.35rem; }
+.ing-pick:active { transform: scale(0.92); }
+.ing-pick span { font-size: 1.4rem; }
+.ing-pick small { color: var(--green); font-size: 0.6rem; font-weight: 700; }
 
 .banner {
-  display: flex; gap: 10px; align-items: center; font-size: 0.78rem; line-height: 1.5;
-  background: var(--orange-soft); border: 1.5px solid var(--orange); border-radius: 12px; padding: 11px 13px; margin: 10px 0;
+  display: flex; gap: 10px; align-items: flex-start; font-size: 0.78rem; line-height: 1.55; font-weight: 500;
+  background: var(--blue-bg); color: #2d4a86; border-radius: var(--r-md); padding: 12px 14px; margin: 10px 0;
 }
+.banner.warn { background: var(--amber-bg); color: #7a5b10; }
+
+/* 재료 행 (레시피 만들기) */
+.ing-row { display: flex; gap: 7px; align-items: center; margin-bottom: 7px; }
+.ing-row input.i-name { flex: 2.2; }
+.ing-row input.i-amt { flex: 1; }
+.ing-row input.i-unit { flex: 0.9; }
+.ing-row .i-st { font-size: 0.66rem; font-weight: 700; padding: 8px 9px; border-radius: 9px; background: rgba(118,118,128,.08); color: var(--label-3); flex-shrink: 0; }
+.ing-row .i-st.on { background: var(--amber-bg); color: var(--amber); }
 
 @media (min-width: 520px) {
-  #shell { border-left: 1.5px solid var(--line); border-right: 1.5px solid var(--line); }
+  #shell { border-left: 0.5px solid var(--hairline); border-right: 0.5px solid var(--hairline); }
 }
 
 /* ===== 미리보기 갤러리 전용 레이아웃 ===== */
 
-  .pv-body{margin:0;background:var(--paper);padding:28px 16px 48px;display:flex;flex-wrap:wrap;gap:30px;justify-content:center;align-items:flex-start;font-family:var(--sans)}
-  .pv-title{flex-basis:100%;text-align:center;margin-bottom:6px}
-  .pv-title h1{font-family:var(--serif);font-size:1.5rem;color:var(--ink)}
-  .pv-title p{color:var(--ink-soft);font-size:.86rem;margin-top:6px}
-  .pv-frame{width:380px;max-width:92vw}
-  .pv-cap{font-family:var(--serif);font-weight:700;color:var(--ink);text-align:center;margin-bottom:11px;font-size:1.02rem}
-  .pv-cap small{display:block;color:var(--ink-soft);font-weight:400;font-size:.78rem;margin-top:2px}
-  .pv-phone{height:812px;border:3px solid var(--ink);border-radius:36px;overflow:hidden;display:flex;flex-direction:column;background:var(--paper);box-shadow:0 20px 44px rgba(32,49,42,.2);position:relative}
-  .pv-top{display:flex;justify-content:space-between;align-items:center;padding:16px 18px 10px;background:var(--paper)}
-  .pv-view{flex:1;overflow:hidden;padding:0 18px 12px;position:relative}
-  .pv-tab{display:flex;background:var(--card);border-top:1.5px solid var(--ink)}
-  .pv-tab button{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:9px 0 7px;font-size:.68rem;font-weight:600;color:var(--ink-soft);background:none;border:none}
-  .pv-tab button span{font-size:1.25rem;filter:grayscale(.7)}
+  .pv-body{margin:0;background:#e6e8ee;padding:30px 16px 50px;display:flex;flex-wrap:wrap;gap:32px;justify-content:center;align-items:flex-start;font-family:var(--sans)}
+  .pv-title{flex-basis:100%;text-align:center;margin-bottom:4px}
+  .pv-title h1{font-size:1.5rem;font-weight:800;letter-spacing:-.02em;color:var(--label)}
+  .pv-title p{color:var(--label-2);font-size:.86rem;margin-top:6px;font-weight:500}
+  .pv-frame{width:384px;max-width:93vw}
+  .pv-cap{font-weight:800;color:var(--label);text-align:center;margin-bottom:11px;font-size:1rem;letter-spacing:-.01em}
+  .pv-cap small{display:block;color:var(--label-2);font-weight:500;font-size:.77rem;margin-top:2px}
+  .pv-phone{height:820px;border-radius:44px;overflow:hidden;display:flex;flex-direction:column;background:var(--bg);box-shadow:0 0 0 10px #17181c,0 0 0 12px #3a3b40,0 26px 60px rgba(20,24,33,.35);position:relative}
+  .pv-top{display:flex;justify-content:space-between;align-items:center;padding:18px 18px 10px;background:rgba(242,243,247,.9)}
+  .pv-view{flex:1;overflow:hidden;padding:0 16px 12px;position:relative}
+  .pv-tab{display:flex;background:rgba(250,250,252,.92);border-top:.5px solid var(--hairline)}
+  .pv-tab button{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:9px 0 10px;font-size:.66rem;font-weight:600;color:var(--label-3);background:none;border:none}
+  .pv-tab button span{font-size:1.3rem;filter:grayscale(1) opacity(.55)}
   .pv-tab button.active{color:var(--green)}
   .pv-tab button.active span{filter:none}
-  .pv-overlay{position:absolute;inset:0;background:rgba(32,49,42,.45);display:flex;align-items:flex-end}
+  .pv-overlay{position:absolute;inset:0;background:rgba(20,24,33,.42);display:flex;align-items:flex-end;z-index:5}
   .pv-overlay .sheet{width:100%;max-height:none}
-  .pv-foot{flex-basis:100%;text-align:center;color:var(--ink-soft);font-size:.8rem;margin-top:10px;line-height:1.6}
+  .pv-foot{flex-basis:100%;text-align:center;color:var(--label-2);font-size:.8rem;margin-top:8px;line-height:1.65;font-weight:500}
 </style></head>
 <body class="pv-body">
-  <div class="pv-title"><h1>🧊 냉비서 — 화면 미리보기</h1>
-    <p>실제 스타일시트로 렌더링된 4개 핵심 화면입니다 (가짜 목업 아님). 휴대폰 폭(480px)에 맞춰져 있어요.</p></div>
+  <div class="pv-title"><h1>🧊 냉비서 — 디자인 v2 미리보기</h1>
+    <p>iOS 네이티브 감성 · 실제 스타일시트로 렌더링된 4개 핵심 화면 (실제 앱은 모든 버튼이 동작합니다)</p></div>
   <div class="pv-frame">
-    <div class="pv-cap">① 홈<small>먼저 먹기 · 모드별 추천 · 절약 장부</small></div>
+    <div class="pv-cap">① 홈<small>먼저 먹기 · 임박 재료 "활용 →" · 절약 장부</small></div>
     <div class="pv-phone">
   <header class="pv-top">
     <div class="brand"><span class="brand-mark">냉</span>
-      <div class="brand-text"><strong>냉비서</strong><small>6월 10일 · 수요일</small></div></div>
-    <div class="top-right"><span class="pill pill-on">동기화 ON</span><span class="pill pill-save">₩31,000</span></div>
+      <div class="brand-text"><strong>냉비서</strong><small>6월 10일 수요일</small></div></div>
+    <div class="top-right"><span class="pill pill-on">동기화 ✓</span><span class="pill pill-save">₩31,000</span></div>
   </header><div class="pv-view">
   <div class="hero">
     <h1>오늘 저녁,<br><em>오늘 뭐 해먹지?</em></h1>
-    <p>모드: 💪 운동 — 단백질 위주로 추천 · 매크로 표시</p>
+    <p>💪 운동 모드 — 단백질 우선 · 매크로 표시</p>
   </div>
   <div class="action-strip">
     <button class="btn btn-primary"><b>📷 AI 입고 스캔</b><small>영수증·장본 사진 한 장</small></button>
@@ -355,34 +432,28 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--green); out
   </div>
   <div class="section-title"><h2>🔥 먼저 먹어요</h2><small>잔반과 임박 재료</small></div>
   <div class="item danger">
-    <span class="emoji">🍱</span>
+    <span class="emoji t-가공">🍱</span>
     <div class="grow"><div class="name">어제 만든 김치찌개</div><div class="sub">남은 음식 · 냉장 <span class="stamp stamp-danger">D-1</span></div></div>
     <button class="btn btn-sm btn-primary">먹었어요</button>
-    <button class="btn btn-sm btn-soft">버림</button>
   </div>
   <div class="item">
-    <span class="emoji">⬜</span>
-    <div class="grow"><div class="name">두부</div><div class="sub">1모 · 냉장</div></div><span class="stamp stamp-warn">D-2</span>
+    <span class="emoji t-신선">⬜</span>
+    <div class="grow"><div class="name">두부</div><div class="sub">1모 · 냉장</div></div>
+    <span class="stamp stamp-warn">D-2</span><button class="btn btn-sm btn-tint">활용 →</button>
   </div>
   <div class="section-title"><h2>💪 오늘의 추천</h2><small>전체 보기 →</small></div>
   <div class="card recipe-card">
-    <div class="ready-flag">지금 가능</div>
-    <div class="r-head">
-      <div class="r-emoji">🍗</div>
-      <div class="grow"><h3>닭가슴살 덮밥</h3>
-        <div class="meta"><span>⏱ 15분</span><span>🔥 480kcal</span><span>단백질 <b>42g</b></span></div></div>
+    <div class="ready-flag">✓ 지금 가능</div>
+    <div class="r-body">
+      <div class="r-head">
+        <div class="r-emoji">🍗</div>
+        <div class="grow"><h3>닭가슴살 덮밥</h3>
+          <div class="meta"><span>⏱ 15분</span><span>🔥 480kcal</span><span>단백질 <b>42g</b></span></div></div>
+        <button class="heart on">❤️</button>
+      </div>
+      <div class="match-bar"><i style="width:100%"></i></div>
+      <div style="margin-top:9px"><span class="chip have">재료 4/4</span></div>
     </div>
-    <div class="match-bar"><i style="width:100%"></i></div>
-    <div style="margin-top:8px"><span class="chip have">재료 4/4</span></div>
-  </div>
-  <div class="card recipe-card">
-    <div class="r-head">
-      <div class="r-emoji">⬜</div>
-      <div class="grow"><h3>두부 스크램블</h3>
-        <div class="meta"><span>⏱ 10분</span><span>🔥 280kcal</span><span>단백질 <b>26g</b></span><span style="color:var(--red)">🔥 임박재료 소진</span></div></div>
-    </div>
-    <div class="match-bar"><i style="width:66%"></i></div>
-    <div style="margin-top:8px"><span class="chip have">재료 2/3</span><span class="chip miss">＋ 대파</span></div>
   </div>
   <div class="section-title"><h2>🧾 절약 장부</h2><small>요리 12회 · 잔반 해결 5회</small></div>
   <div class="card ledger-card">
@@ -394,53 +465,186 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--green); out
   </nav></div>
   </div>
   <div class="pv-frame">
-    <div class="pv-cap">② 레시피 (운동 모드)<small>내 냉장고 기준 정렬 · 매칭 막대</small></div>
+    <div class="pv-cap">② 냉장고 — 선반 보기<small>재료 한눈에 · 카테고리 파스텔 타일 · 임박 신호등 점 · 실사 사진 첨부 가능</small></div>
     <div class="pv-phone">
   <header class="pv-top">
     <div class="brand"><span class="brand-mark">냉</span>
-      <div class="brand-text"><strong>냉비서</strong><small>6월 10일 · 수요일</small></div></div>
-    <div class="top-right"><span class="pill pill-on">동기화 ON</span><span class="pill pill-save">₩31,000</span></div>
+      <div class="brand-text"><strong>냉비서</strong><small>6월 10일 수요일</small></div></div>
+    <div class="top-right"><span class="pill pill-on">동기화 ✓</span><span class="pill pill-save">₩31,000</span></div>
   </header><div class="pv-view">
-  <div class="hero"><h1>💪 <em>운동</em> 레시피</h1><p>단백질 위주로 추천 · 내 냉장고 기준으로 정렬했어요</p></div>
-  <div class="search-row"><input placeholder="요리 이름·태그 검색" /><button class="btn btn-soft">모드 변경</button></div>
+  <div class="hero"><h1>한눈에 보는 <em>냉장고</em></h1><p>14개 보관 중 · 임박 2개 — 빨간 점부터 드세요</p></div>
+  <div class="seg" style="margin-top:14px">
+    <button class="on">🧊 선반 보기</button><button>📋 목록 보기</button>
+  </div>
+  <div class="shelf">
+    <div class="shelf-head"><b>🧊 냉장실</b><small>8개 · 임박 2</small></div>
+    <div class="shelf-grid">
+      
+  <button class="tile t-신선">
+    <span class="t-dot dot-green"></span>
+    <span class="t-face">🥚</span>
+    <span class="t-name">계란</span>
+    <span class="t-qty">6개</span>
+  </button>
+  <button class="tile t-신선">
+    <span class="t-dot dot-amber"></span>
+    <span class="t-face">⬜</span>
+    <span class="t-name">두부</span>
+    <span class="t-qty">1모</span>
+  </button>
+      
+  <button class="tile t-가공">
+    <span class="t-dot dot-green"></span>
+    <span class="t-face">🥬</span>
+    <span class="t-name">김치</span>
+    <span class="t-qty">절반</span>
+  </button>
+  <button class="tile t-유제품">
+    <span class="t-dot dot-red"></span>
+    <span class="t-face">🥛</span>
+    <span class="t-name">우유</span>
+    <span class="t-qty">1팩</span>
+  </button>
+      
+  <button class="tile t-채소">
+    <span class="t-dot dot-green"></span>
+    <span class="t-face">🥬</span>
+    <span class="t-name">대파</span>
+    <span class="t-qty">1단</span>
+  </button>
+  <button class="tile t-채소">
+    <span class="t-dot dot-green"></span>
+    <span class="t-face">🍅</span>
+    <span class="t-name">토마토</span>
+    <span class="t-qty">3개</span>
+  </button>
+      
+  <button class="tile t-육류">
+    <span class="t-dot dot-amber"></span>
+    <span class="t-face">🍗</span>
+    <span class="t-name">닭가슴살</span>
+    <span class="t-qty">2팩</span>
+  </button>
+  <button class="tile t-유제품">
+    <span class="t-dot dot-green"></span>
+    <span class="t-face">🧀</span>
+    <span class="t-name">치즈</span>
+    <span class="t-qty">8장</span>
+  </button>
+    </div>
+  </div>
+  <div class="shelf">
+    <div class="shelf-head"><b>❄️ 냉동실</b><small>3개</small></div>
+    <div class="shelf-grid">
+      
+  <button class="tile t-가공">
+    <span class="t-dot dot-green"></span>
+    <span class="t-face">🥟</span>
+    <span class="t-name">만두</span>
+    <span class="t-qty">1봉</span>
+  </button>
+  <button class="tile t-수산">
+    <span class="t-dot dot-green"></span>
+    <span class="t-face">🦐</span>
+    <span class="t-name">새우</span>
+    <span class="t-qty">0.5팩</span>
+  </button>
+  <button class="tile t-육류">
+    <span class="t-dot dot-green"></span>
+    <span class="t-face">🥓</span>
+    <span class="t-name">삼겹살</span>
+    <span class="t-qty">1근</span>
+  </button>
+    </div>
+  </div>
+  <div class="shelf">
+    <div class="shelf-head"><b>🧺 실온 선반</b><small>3개</small></div>
+    <div class="shelf-grid">
+      
+  <button class="tile t-주식">
+    <span class="t-dot dot-green"></span>
+    <span class="t-face">🍚</span>
+    <span class="t-name">즉석밥</span>
+    <span class="t-qty">4개</span>
+  </button>
+  <button class="tile t-채소">
+    <span class="t-dot dot-green"></span>
+    <span class="t-face">🧅</span>
+    <span class="t-name">양파</span>
+    <span class="t-qty">3개</span>
+  </button>
+  <button class="tile t-주식">
+    <span class="t-dot dot-green"></span>
+    <span class="t-face">🍜</span>
+    <span class="t-name">라면</span>
+    <span class="t-qty">5개</span>
+  </button>
+    </div>
+  </div></div>
+  <nav class="pv-tab">
+    <button class=""><span>🏠</span>홈</button><button class="active"><span>🧊</span>냉장고</button><button class=""><span>🍳</span>레시피</button><button class=""><span>🧺</span>장보기</button><button class=""><span>⚙️</span>설정</button>
+  </nav></div>
+  </div>
+  <div class="pv-frame">
+    <div class="pv-cap">③ 레시피<small>맞춤 모드 칩 · 유튜브 저장(실사 썸네일) · 내 레시피 · ❤️ 찜</small></div>
+    <div class="pv-phone">
+  <header class="pv-top">
+    <div class="brand"><span class="brand-mark">냉</span>
+      <div class="brand-text"><strong>냉비서</strong><small>6월 10일 수요일</small></div></div>
+    <div class="top-right"><span class="pill pill-on">동기화 ✓</span><span class="pill pill-save">₩31,000</span></div>
+  </header><div class="pv-view">
+  <div class="hero"><h1>🌙 <em>야식</em> 레시피</h1><p>늦은 밤엔 가볍고 빠르게 — 내가 만든 모드</p></div>
+  <div class="mode-chips">
+    <span class="mode-chip">🍽️ 기본</span><span class="mode-chip">💪 운동</span>
+    <span class="mode-chip">🪙 자린고비</span><span class="mode-chip">🥢 반찬</span>
+    <span class="mode-chip on">🌙 야식 ✎</span><span class="mode-chip add">＋ 모드 만들기</span>
+  </div>
+  <div class="search-row"><input placeholder="요리 이름·태그 검색" /><button class="btn btn-tint">＋ 레시피</button></div>
+  <div class="seg" style="margin-top:4px"><button class="on">추천</button><button>📒 내 레시피</button><button>❤️ 찜</button></div>
   <div class="card recipe-card">
-    <div class="ready-flag">지금 가능</div>
-    <div class="r-head"><div class="r-emoji">🥤</div>
-      <div class="grow"><h3>바나나 프로틴 쉐이크</h3>
-        <div class="meta"><span>⏱ 3분</span><span>🔥 280kcal</span><span>단백질 <b>30g</b></span></div></div></div>
-    <div class="match-bar"><i style="width:100%"></i></div>
-    <div style="margin-top:8px"><span class="chip have">재료 3/3</span></div>
+    <div class="yt-flag">▶ YouTube</div>
+    <div class="r-photo" style="display:grid;place-items:center;background:linear-gradient(120deg,#2b2118,#6b3f23 55%,#a3582c);color:#fff">
+      <span style="font-size:2.4rem">▶</span>
+      <span style="position:absolute;bottom:10px;left:12px;font-size:.72rem;font-weight:700;opacity:.85">유튜브 실사 썸네일 자동 연결</span>
+    </div>
+    <div class="r-body">
+      <div class="r-head">
+        <div class="grow"><h3>백종원 김치찜 (내가 저장)</h3>
+          <div class="meta"><span>⏱ 40분</span><span>단백질 <b>28g</b></span><span>📒 내 레시피</span></div></div>
+        <button class="heart on">❤️</button>
+      </div>
+      <div class="match-bar"><i style="width:80%"></i></div>
+      <div style="margin-top:9px"><span class="chip have">재료 4/5</span><span class="chip miss">＋ 돼지목살</span></div>
+    </div>
   </div>
   <div class="card recipe-card">
-    <div class="ready-flag">지금 가능</div>
-    <div class="r-head"><div class="r-emoji">🥗</div>
-      <div class="grow"><h3>닭가슴살 샐러드</h3>
-        <div class="meta"><span>⏱ 10분</span><span>🔥 320kcal</span><span>단백질 <b>38g</b></span></div></div></div>
-    <div class="match-bar"><i style="width:100%"></i></div>
-    <div style="margin-top:8px"><span class="chip have">재료 4/4</span></div>
-  </div>
-  <div class="card recipe-card">
-    <div class="r-head"><div class="r-emoji">🍗</div>
-      <div class="grow"><h3>닭다리 간장조림</h3>
-        <div class="meta"><span>⏱ 30분</span><span>🔥 450kcal</span><span>단백질 <b>38g</b></span></div></div></div>
-    <div class="match-bar"><i style="width:75%"></i></div>
-    <div style="margin-top:8px"><span class="chip have">재료 3/4</span><span class="chip miss">＋ 당근</span></div>
+    <div class="ready-flag">✓ 지금 가능</div>
+    <div class="r-body">
+      <div class="r-head">
+        <div class="r-emoji">🍜</div>
+        <div class="grow"><h3>계란 콩나물라면</h3>
+          <div class="meta"><span>⏱ 8분</span><span>🔥 560kcal</span><span style="color:var(--red)">임박재료 소진</span></div></div>
+        <button class="heart">❤️</button>
+      </div>
+      <div class="match-bar"><i style="width:100%"></i></div>
+      <div style="margin-top:9px"><span class="chip have">재료 4/4</span></div>
+    </div>
   </div></div>
   <nav class="pv-tab">
     <button class=""><span>🏠</span>홈</button><button class=""><span>🧊</span>냉장고</button><button class="active"><span>🍳</span>레시피</button><button class=""><span>🧺</span>장보기</button><button class=""><span>⚙️</span>설정</button>
   </nav></div>
   </div>
   <div class="pv-frame">
-    <div class="pv-cap">③ 요리 완료 → 차감 전표<small>인분 선택 후 1탭 · 양념은 차감 제외</small></div>
+    <div class="pv-cap">④ 나만의 모드 만들기<small>추천 기준 직접 설계 · 공유 코드로 친구에게 전달</small></div>
     <div class="pv-phone">
   <header class="pv-top">
     <div class="brand"><span class="brand-mark">냉</span>
-      <div class="brand-text"><strong>냉비서</strong><small>6월 10일 · 수요일</small></div></div>
-    <div class="top-right"><span class="pill pill-on">동기화 ON</span><span class="pill pill-save">₩31,000</span></div>
+      <div class="brand-text"><strong>냉비서</strong><small>6월 10일 수요일</small></div></div>
+    <div class="top-right"><span class="pill pill-on">동기화 ✓</span><span class="pill pill-save">₩31,000</span></div>
   </header><div class="pv-view">
   <div class="hero">
     <h1>오늘 저녁,<br><em>오늘 뭐 해먹지?</em></h1>
-    <p>모드: 💪 운동 — 단백질 위주로 추천 · 매크로 표시</p>
+    <p>💪 운동 모드 — 단백질 우선 · 매크로 표시</p>
   </div>
   <div class="action-strip">
     <button class="btn btn-primary"><b>📷 AI 입고 스캔</b><small>영수증·장본 사진 한 장</small></button>
@@ -448,34 +652,28 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--green); out
   </div>
   <div class="section-title"><h2>🔥 먼저 먹어요</h2><small>잔반과 임박 재료</small></div>
   <div class="item danger">
-    <span class="emoji">🍱</span>
+    <span class="emoji t-가공">🍱</span>
     <div class="grow"><div class="name">어제 만든 김치찌개</div><div class="sub">남은 음식 · 냉장 <span class="stamp stamp-danger">D-1</span></div></div>
     <button class="btn btn-sm btn-primary">먹었어요</button>
-    <button class="btn btn-sm btn-soft">버림</button>
   </div>
   <div class="item">
-    <span class="emoji">⬜</span>
-    <div class="grow"><div class="name">두부</div><div class="sub">1모 · 냉장</div></div><span class="stamp stamp-warn">D-2</span>
+    <span class="emoji t-신선">⬜</span>
+    <div class="grow"><div class="name">두부</div><div class="sub">1모 · 냉장</div></div>
+    <span class="stamp stamp-warn">D-2</span><button class="btn btn-sm btn-tint">활용 →</button>
   </div>
   <div class="section-title"><h2>💪 오늘의 추천</h2><small>전체 보기 →</small></div>
   <div class="card recipe-card">
-    <div class="ready-flag">지금 가능</div>
-    <div class="r-head">
-      <div class="r-emoji">🍗</div>
-      <div class="grow"><h3>닭가슴살 덮밥</h3>
-        <div class="meta"><span>⏱ 15분</span><span>🔥 480kcal</span><span>단백질 <b>42g</b></span></div></div>
+    <div class="ready-flag">✓ 지금 가능</div>
+    <div class="r-body">
+      <div class="r-head">
+        <div class="r-emoji">🍗</div>
+        <div class="grow"><h3>닭가슴살 덮밥</h3>
+          <div class="meta"><span>⏱ 15분</span><span>🔥 480kcal</span><span>단백질 <b>42g</b></span></div></div>
+        <button class="heart on">❤️</button>
+      </div>
+      <div class="match-bar"><i style="width:100%"></i></div>
+      <div style="margin-top:9px"><span class="chip have">재료 4/4</span></div>
     </div>
-    <div class="match-bar"><i style="width:100%"></i></div>
-    <div style="margin-top:8px"><span class="chip have">재료 4/4</span></div>
-  </div>
-  <div class="card recipe-card">
-    <div class="r-head">
-      <div class="r-emoji">⬜</div>
-      <div class="grow"><h3>두부 스크램블</h3>
-        <div class="meta"><span>⏱ 10분</span><span>🔥 280kcal</span><span>단백질 <b>26g</b></span><span style="color:var(--red)">🔥 임박재료 소진</span></div></div>
-    </div>
-    <div class="match-bar"><i style="width:66%"></i></div>
-    <div style="margin-top:8px"><span class="chip have">재료 2/3</span><span class="chip miss">＋ 대파</span></div>
   </div>
   <div class="section-title"><h2>🧾 절약 장부</h2><small>요리 12회 · 잔반 해결 5회</small></div>
   <div class="card ledger-card">
@@ -488,50 +686,26 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--green); out
   <div class="pv-overlay">
     <div class="sheet" style="animation:none">
       <div class="grip"></div>
-      <h2>🧾 재고 차감 전표</h2>
-      <p class="sub">닭가슴살 덮밥 — 몇 인분 하셨어요? 확인만 누르면 끝나요.</p>
-      <div class="seg" style="margin-top:0">
-        <button>1인분</button><button class="on">2인분</button><button>3인분</button><button>4인분</button>
+      <h2>⭐ 나만의 모드 만들기</h2>
+      <p class="sub">예: "야식 모드", "아빠 도시락" — 추천 기준을 직접 설계하세요</p>
+      <div style="display:flex;gap:8px">
+        <div class="field" style="flex:0 0 76px"><label>이모지</label><input value="🌙" style="text-align:center;font-size:1.3rem" /></div>
+        <div class="field" style="flex:1"><label>모드 이름 *</label><input value="야식" /></div>
       </div>
-      <div class="receipt">
-        <div class="r-line"><span>🍗 닭가슴살</span><span>2팩 → <b>0팩</b> <button style="margin-left:6px;font-size:.7rem;color:var(--ink-soft)">건너뛰기</button></span></div>
-        <div class="r-line"><span>🍚 즉석밥</span><span>4개 → <b>2개</b></span></div>
-        <div class="r-line"><span>🧅 양파</span><span>3개 → <b>2개</b></span></div>
-        <div class="r-line" style="color:var(--ink-soft)"><span>🍶 간장</span><small>양념 — 차감 안 함</small></div>
-        <div class="r-line r-total"><span>합계</span><span>3개 품목 차감</span></div>
-      </div>
+      <div class="field"><label>추천 기준</label>
+        <div class="tag-toggles">
+          <button>💪 단백질 우선</button><button class="on">⏳ 임박 재료 우선</button><button class="on">🪙 추가 지출 0원 우선</button>
+        </div></div>
+      <div class="field"><label>좋아하는 태그</label>
+        <div class="tag-toggles">
+          <button class="on">초간단</button><button>반찬</button><button class="on">국물</button><button>자취</button><button>매콤</button>
+        </div></div>
+      <div class="field"><label>빼고 싶은 재료</label><input value="오이" /></div>
       <div class="btn-row">
-        <button class="btn">취소</button>
-        <button class="btn btn-primary">✓ 확인 (차감)</button>
-      </div>
+        <button class="btn btn-soft">📤 공유</button>
+        <button class="btn btn-primary">저장하고 적용</button></div>
     </div>
   </div></div>
   </div>
-  <div class="pv-frame">
-    <div class="pv-cap">④ 설정 (모드 · 기기 연동)<small>모드 전환 · 가족 공유 동기화</small></div>
-    <div class="pv-phone">
-  <header class="pv-top">
-    <div class="brand"><span class="brand-mark">냉</span>
-      <div class="brand-text"><strong>냉비서</strong><small>6월 10일 · 수요일</small></div></div>
-    <div class="top-right"><span class="pill pill-on">동기화 ON</span><span class="pill pill-save">₩31,000</span></div>
-  </header><div class="pv-view">
-  <div class="hero"><h1>내 <em>모드</em>와 설정</h1><p>모드를 바꾸면 추천이 통째로 달라져요</p></div>
-  <div class="mode-grid">
-    <button class="mode-card"><span class="m-emoji">🍚</span><b>기본 모드</b><small>있는 재료로 만들 수 있는 요리부터</small></button>
-    <button class="mode-card on"><span class="m-emoji">💪</span><b>운동 모드</b><small>단백질 위주로 추천 · 매크로 표시</small></button>
-    <button class="mode-card"><span class="m-emoji">🪙</span><b>자린고비 모드</b><small>임박 재료 소진 · 추가 지출 0원 우선</small></button>
-    <button class="mode-card"><span class="m-emoji">🤰</span><b>산모 모드</b><small>주의 재료 자동 제외 · 순한 요리 우선</small></button>
-  </div>
-  <div class="section-title"><h2>🔄 기기 연동 · 가족 공유</h2><small>같은 코드 = 같은 냉장고</small></div>
-  <div class="card flat">
-    <div class="field"><label>동기화 코드</label>
-      <div class="search-row" style="margin:0"><input value="두부-x3k9" /><button class="btn btn-soft">생성</button></div></div>
-    <button class="btn btn-primary btn-block">연결</button>
-    <p class="hint" style="color:var(--green)">✓ 동기화 작동 중 — 다른 기기에서 같은 코드를 입력하면 냉장고가 합쳐져요</p>
-  </div></div>
-  <nav class="pv-tab">
-    <button class=""><span>🏠</span>홈</button><button class=""><span>🧊</span>냉장고</button><button class=""><span>🍳</span>레시피</button><button class=""><span>🧺</span>장보기</button><button class="active"><span>⚙️</span>설정</button>
-  </nav></div>
-  </div>
-  <div class="pv-foot">이 파일은 디자인 공유용 정적 미리보기입니다. 실제 앱은 탭 이동·AI 스캔·차감·동기화가 모두 동작합니다.<br>배포: GitHub Pages → 발급 주소를 뚝딱 사이트에 연결</div>
+  <div class="pv-foot">유튜브 레시피를 저장하면 영상 실사 썸네일이 카드에 자동으로 붙고, 재료에 내 사진을 찍어 붙이면 선반에 실사로 보입니다.<br>모드·레시피는 공유 코드(NB1.…)로 카톡 등에서 주고받을 수 있어요.</div>
 </body></html>

@@ -25,6 +25,17 @@ const TAGS = ['반찬', '고단백', '운동', '자취', '초간단', '국물', 
 
 window.UI = {};
 
+// AI 사용 가능 여부 (byok=내 키 / server=운영자 서버 경유)
+function aiReady() {
+  const st = S.settings;
+  if (st.aiMode === 'server') {
+    if (!st.aiEndpoint) return { ok: false, msg: '설정 → AI에서 서버 AI 주소를 입력해 주세요.' };
+    if (!st.firebaseConfig || !st.spaceCode) return { ok: false, msg: '서버 AI는 설정의 "기기 연동"을 먼저 연결해야 해요.' };
+    return { ok: true };
+  }
+  return st.aiKey ? { ok: true } : { ok: false, msg: '설정 → AI에서 Claude API 키를 등록해 주세요.' };
+}
+
 /* ── 공용 도우미 ─────────────────────────── */
 function toast(msg) {
   const el = document.createElement('div');
@@ -379,11 +390,12 @@ UI.refresh = () => render();
 
 /* ── AI 스캔 ─────────────────────────────── */
 UI.openScan = () => {
-  if (!S.settings.aiKey) {
+  const ready = aiReady();
+  if (!ready.ok) {
     openSheet(`
       <h2>📷 AI 입고 스캔</h2>
       <p class="sub">영수증이나 장 봐온 식재료 사진 한 장이면 AI가 품목을 읽어 냉장고에 등록해 드려요.</p>
-      <div class="banner">🔑 <span>먼저 <b>설정 → AI 스캔</b>에서 본인의 Claude API 키를 등록해 주세요. 키는 이 기기에만 저장됩니다.</span></div>
+      <div class="banner">🔑 <span>${esc(ready.msg)}</span></div>
       <div class="btn-row">
         <button class="btn" onclick="UI.closeSheet()">나중에</button>
         <button class="btn btn-primary" onclick="UI.closeSheet();UI.go('settings')">설정으로 가기</button></div>`);
@@ -623,9 +635,9 @@ function renderRecipeForm(isEdit) {
       <input id="rf-yt" placeholder="https://youtu.be/…" value="${draft.yt ? 'https://youtu.be/' + draft.yt : ''}" onchange="UI.rfYt(this.value)" />
       <div id="rf-ytprev">${draft.yt ? `<img src="${ytThumb(draft.yt)}" style="width:100%;border-radius:14px;margin-top:8px" />` : ''}</div>
       <button id="rf-auto" class="btn btn-tint btn-block" style="margin-top:9px" onclick="UI.rfAuto()">🤖 빠른 레시피 — 영상 안 보고 재료·순서 자동 정리</button>
-      <p class="hint">${S.settings.aiKey
+      <p class="hint">${aiReady().ok
         ? 'AI가 영상 페이지의 설명란과 웹을 읽어 정리해요 (약 20~40초 · 사진 스캔보다 토큰을 조금 더 씁니다)'
-        : '자동 정리는 설정 → AI 스캔에서 Claude API 키 등록 후 사용할 수 있어요'}</p></div>
+        : '자동 정리는 설정 → AI 설정을 마친 뒤 사용할 수 있어요'}</p></div>
     <div class="field"><label>이름 *</label><input id="rf-title" placeholder="예: 백종원 김치찜" value="${esc(draft.title)}" /></div>
     <div class="field"><label>또는 완성 사진</label>
       <div class="btn-row" style="margin-top:0">
@@ -674,7 +686,8 @@ function collectForm() {
 UI.rfAuto = async () => {
   const url = $('#rf-yt').value.trim();
   if (!ytId(url)) { toast('유튜브 링크를 먼저 붙여넣어 주세요'); return; }
-  if (!S.settings.aiKey) { toast('설정 → AI 스캔에서 API 키를 먼저 등록해 주세요'); return; }
+  const ready = aiReady();
+  if (!ready.ok) { toast(ready.msg); return; }
   collectForm();
   const btn = $('#rf-auto');
   btn.disabled = true; btn.textContent = '🤖 영상 내용 정리 중… (20~40초)';
@@ -1022,8 +1035,17 @@ function renderSettings() {
         <span class="m-emoji">＋</span><b>새 모드 만들기</b><small>나만의 추천 기준 설계</small></button>
     </div>
 
-    <div class="section-title"><h2>🤖 AI 스캔</h2><small>영수증·사진 인식</small></div>
+    <div class="section-title"><h2>🤖 AI 기능</h2><small>영수증 스캔 · 빠른 레시피</small></div>
     <div class="card flat">
+      <div class="seg" style="margin-top:0">
+        <button class="${st.aiMode !== 'server' ? 'on' : ''}" onclick="UI.setAiMode('byok')">🔑 내 키 (베타)</button>
+        <button class="${st.aiMode === 'server' ? 'on' : ''}" onclick="UI.setAiMode('server')">☁️ 서버 (유료화)</button>
+      </div>
+      ${st.aiMode === 'server' ? `
+      <div class="field"><label>서버 AI 주소 (Functions 배포 URL)</label>
+        <input id="set-aiendpoint" placeholder="https://ai-xxxxxxxx.a.run.app" value="${esc(st.aiEndpoint)}" /></div>
+      <p class="hint">운영 모드 — 사용자는 키 없이 가입만으로 AI를 쓰고, 운영자 키는 서버에만 저장되며 무료 월 한도(기본 10회)가 자동 집계돼요. 위 "기기 연동" 연결이 먼저 필요하고, 서버 배포 방법은 레포의 <b>docs/07</b> 문서에 있어요.</p>`
+      : `
       <div class="field"><label>Claude API 키 (이 기기에만 저장 · 동기화 안 됨)</label>
         <input id="set-aikey" type="password" placeholder="sk-ant-…" value="${esc(st.aiKey)}" /></div>
       <div class="field"><label>모델</label>
@@ -1031,7 +1053,7 @@ function renderSettings() {
           ${[['claude-opus-4-8', 'Opus 4.8 — 가장 정확 (기본)'], ['claude-sonnet-4-6', 'Sonnet 4.6 — 균형'], ['claude-haiku-4-5', 'Haiku 4.5 — 가장 저렴']]
             .map(([v, l]) => `<option value="${v}" ${st.aiModel === v ? 'selected' : ''}>${l}</option>`).join('')}
         </select></div>
-      <p class="hint">키는 console.anthropic.com에서 발급해요. 비용은 본인 계정 과금 (영수증 1장 수~수십 원). 공용 기기에서는 등록하지 마세요.</p>
+      <p class="hint">개발·베타용. 키는 console.anthropic.com에서 발급, 비용은 본인 계정 과금 (영수증 1장 수~수십 원). 공용 기기에서는 등록하지 마세요.</p>`}
       <button class="btn btn-block btn-tint" style="margin-top:6px" onclick="UI.saveAI()">저장</button>
     </div>
 
@@ -1061,9 +1083,14 @@ function renderSettings() {
     </div>
     <p class="hint" style="margin-top:16px;text-align:center">냉비서 v0.2 · 데이터는 내 기기(와 내 Firebase)에만 저장됩니다<br>제품 설계 문서: 레포 docs/ 폴더</p>`;
 }
+UI.setAiMode = (m) => { S.settings.aiMode = m; save(); renderSettings(); };
 UI.saveAI = () => {
-  S.settings.aiKey = $('#set-aikey').value.trim();
-  S.settings.aiModel = $('#set-aimodel').value;
+  if (S.settings.aiMode === 'server') {
+    S.settings.aiEndpoint = $('#set-aiendpoint').value.trim();
+  } else {
+    S.settings.aiKey = $('#set-aikey').value.trim();
+    S.settings.aiModel = $('#set-aimodel').value;
+  }
   save(); toast('AI 설정 저장 완료');
 };
 UI.genCode = () => { $('#set-code').value = makeSpaceCode(); };

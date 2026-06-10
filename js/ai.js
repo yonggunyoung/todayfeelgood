@@ -20,6 +20,26 @@ async function throwApiError(res) {
   throw new Error(STATUS_MSG[res.status] || `AI 호출 실패 (${res.status}) ${detail}`);
 }
 
+/* ── 서버 경유 모드 (유료화) — 운영자 서버가 키·한도를 관리 ── */
+const isServer = (settings) => settings.aiMode === 'server' && !!settings.aiEndpoint;
+
+async function serverPost(path, payload, settings) {
+  const { getIdToken } = await import('./sync.js');
+  const token = await getIdToken();
+  if (!token) throw new Error('서버 AI는 설정의 "기기 연동"을 먼저 연결해야 사용자를 구분할 수 있어요.');
+  const res = await fetch(settings.aiEndpoint.replace(/\/+$/, '') + path, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: 'Bearer ' + token },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    let detail = '';
+    try { detail = (await res.json()).error || ''; } catch { /* ignore */ }
+    throw new Error(detail || `서버 호출 실패 (${res.status})`);
+  }
+  return res.json();
+}
+
 const SCHEMA = {
   type: 'object',
   properties: {
@@ -68,6 +88,12 @@ async function downscale(file, max = 1280) {
 }
 
 export async function scanImage(file, settings) {
+  if (isServer(settings)) {
+    const b64 = await downscale(file);
+    const out = await serverPost('/scan', { image: b64 }, settings);
+    if (!Array.isArray(out.items) || !out.items.length) throw new Error('사진에서 식재료를 찾지 못했습니다.');
+    return out.items;
+  }
   if (!settings.aiKey) throw new Error('설정에서 Claude API 키를 먼저 등록해 주세요.');
   const b64 = await downscale(file);
 
@@ -117,6 +143,13 @@ const YT_PROMPT = (url) => `유튜브 요리 영상에서 레시피를 정리하
 레시피를 찾지 못하면 {"ok":false,"reason":"이유"} 만 출력하세요.`;
 
 export async function extractRecipeFromYouTube(url, settings) {
+  if (isServer(settings)) {
+    const data = await serverPost('/ytrecipe', { url }, settings);
+    if (!data.ok || !Array.isArray(data.ingredients) || !data.ingredients.length) {
+      throw new Error(data.reason || '이 영상에서 레시피를 찾지 못했어요.');
+    }
+    return data;
+  }
   if (!settings.aiKey) throw new Error('설정에서 Claude API 키를 먼저 등록해 주세요.');
   const tools = [
     { type: 'web_fetch_20260209', name: 'web_fetch' },

@@ -5,6 +5,7 @@ const DEFAULT = () => ({
   meta: { updatedAt: 0, createdAt: Date.now() },
   settings: {
     mode: 'none', coupangId: '', aiKey: '', aiModel: 'claude-opus-4-8',
+    aiMode: 'byok', aiEndpoint: '', // byok=내 키(베타) | server=운영자 서버 경유(유료화)
     spaceCode: '', firebaseConfig: '',
     customModes: [], // {key, label, emoji, desc, protein, expiring, zeroExtra, prefTags:[], exclude:[]}
   },

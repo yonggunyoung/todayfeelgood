@@ -1,0 +1,12 @@
+{
+  "name": "naengbiseo-functions",
+  "version": "1.0.0",
+  "private": true,
+  "description": "냉비서 서버 경유 AI 프록시 — 운영자 키 1개로 전 사용자 AI 제공 + 월 무료 한도 관리",
+  "engines": { "node": "20" },
+  "main": "index.js",
+  "dependencies": {
+    "firebase-admin": "^12.0.0",
+    "firebase-functions": "^5.0.0"
+  }
+}

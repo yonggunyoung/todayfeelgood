@@ -9,6 +9,13 @@ let docRef = null;
 let setDocFn = null;
 let pushTimer = null;
 let applyingRemote = false;
+let authObj = null; // 서버 경유 AI가 사용자 식별 토큰을 얻는 데도 쓰인다
+
+// 서버 경유 AI 호출용 ID 토큰 (기기 연동이 연결돼 있어야 발급됨)
+export async function getIdToken() {
+  try { return authObj?.currentUser ? await authObj.currentUser.getIdToken() : null; }
+  catch { return null; }
+}
 
 export async function initSync(onStatus) {
   const cfgRaw = (S.settings.firebaseConfig || '').trim();
@@ -24,7 +31,8 @@ export async function initSync(onStatus) {
       import('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js'),
     ]);
     const app = initializeApp(cfg);
-    await signInAnonymously(getAuth(app));
+    authObj = getAuth(app);
+    await signInAnonymously(authObj);
     const db = fs.getFirestore(app);
     docRef = fs.doc(db, 'spaces', code);
     setDocFn = fs.setDoc;

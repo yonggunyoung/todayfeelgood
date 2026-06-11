@@ -225,8 +225,9 @@ function renderHome() {
       </div>` : ''}
     ${firstEat}
     ${recoHtml}
-    <div class="section-title"><h2>🧾 절약 장부</h2><small>요리 ${S.ledger.cooked}회 · 잔반 해결 ${S.ledger.leftoverEaten}회</small></div>
-    <div class="card ledger-card">
+    <div class="section-title"><h2>🧾 절약 장부</h2>
+      <small style="cursor:pointer" onclick="UI.explainLedger()">계산법 ⓘ</small></div>
+    <div class="card ledger-card" style="cursor:pointer" onclick="UI.explainLedger()">
       <div class="save"><div class="l-label">아낀 돈 (누적)</div><div class="l-val">${won(S.ledger.saved)}</div></div>
       <div class="waste"><div class="l-label">버린 돈 (누적)</div><div class="l-val">${won(S.ledger.wasted)}</div></div>
     </div>`;
@@ -448,8 +449,10 @@ function renderQuickAddGrid() {
     return `<button class="ing-pick" onclick="UI.addPantryByName('${it.name}')">
       <span>${it.emoji}</span>${it.name}${owned ? `<small>보유 ${qtyLabel(owned)}</small>` : ''}</button>`;
   }).join('');
-  $('#qa-custom').innerHTML = (q && list.length === 0)
-    ? `<button class="btn btn-soft btn-block" style="margin-top:8px" onclick="UI.addPantryByName('${esc(q)}')">＂${esc(q)}＂ 직접 추가</button>` : '';
+  // 사전에 없어도 막히지 않도록 — 정확히 같은 이름이 없으면 직접 추가를 항상 제안
+  const exact = list.some((it) => it.name === q);
+  $('#qa-custom').innerHTML = (q && !exact)
+    ? `<button class="btn btn-soft btn-block" style="margin-top:8px" onclick="UI.addPantryByName('${esc(q)}')">＂${esc(q)}＂ 그대로 직접 추가 — 사전에 없어도 담겨요</button>` : '';
 }
 UI.qaFilter = renderQuickAddGrid;
 
@@ -591,6 +594,46 @@ UI.scanCommit = () => {
   for (const r of scanResults || []) addPantryByName(r.name, { qty: r.qty, location: r.location, silentToast: true });
   UI.closeSheet(); render();
   toast(`${n}개 품목을 입고했어요 🧊`);
+};
+
+/* ── 상단 배지 설명 — 눌러보면 다 알려준다 ── */
+UI.explainLedger = () => {
+  openSheet(`
+    <h2>🧾 이 금액이 뭐예요?</h2>
+    <p class="sub">냉비서가 지켜준 돈과 새어나간 돈의 추정치예요</p>
+    <div class="card flat">
+      <b style="color:var(--green)">아낀 돈 ${won(S.ledger.saved)}</b>
+      <p class="hint" style="margin-top:6px">이렇게 쌓여요:<br>
+      · 유통기한 임박 재료를 버리기 전에 요리에 쓰면 → 그 재료 평균 가격의 절반 적립<br>
+      · 남은 음식(잔반·반찬·배달)을 버리지 않고 드시면 → 한 끼 추정 ₩4,000 적립</p>
+    </div>
+    <div class="card flat">
+      <b style="color:var(--red)">버린 돈 ${won(S.ledger.wasted)}</b>
+      <p class="hint" style="margin-top:6px">기한이 지나 폐기한 재료·음식의 평균 가격 합계예요</p>
+    </div>
+    <p class="hint">※ 정확한 가계부가 아니라 평균 시세 기반 <b>동기부여용 추정치</b>입니다.<br>
+    지금까지: 요리 완료 ${S.ledger.cooked}회 · 잔반 해결 ${S.ledger.leftoverEaten}회 · 음식 폐기 ${S.ledger.leftoverWasted}회</p>
+    <div class="btn-row"><button class="btn btn-block" onclick="UI.closeSheet()">알겠어요</button></div>`);
+};
+
+UI.explainSync = () => {
+  const st = sync.status;
+  const body = st === 'on'
+    ? `<div class="card flat"><b style="color:var(--green)">동기화 ✓ 작동 중</b>
+       <p class="hint" style="margin-top:6px">같은 동기화 코드를 넣은 기기·가족과 냉장고가 실시간으로 합쳐져 있어요.</p></div>`
+    : st === 'error'
+      ? `<div class="card flat"><b style="color:var(--red)">동기화 오류</b>
+         <p class="hint" style="margin-top:6px">${esc(sync.error || '연결에 실패했어요')} — 설정에서 다시 연결해 보세요.</p></div>`
+      : `<div class="card flat"><b>이 기기 (로컬 모드)</b>
+         <p class="hint" style="margin-top:6px">지금 냉장고 데이터는 <b>이 기기 안에만</b> 저장되고 있어요. 외부로 전송되지 않아 프라이버시는 좋지만, 폰을 바꾸거나 다른 기기에서 보려면 연동이 필요해요.</p></div>
+       <p class="hint">폰↔PC 연동·가족 공유를 원하면 설정의 "기기 연동"에서 동기화 코드를 만들면 됩니다 (무료).</p>`;
+  openSheet(`
+    <h2>📡 이 표시가 뭐예요?</h2>
+    <p class="sub">내 냉장고 데이터가 어디에 저장되는지 알려주는 상태예요</p>
+    ${body}
+    <div class="btn-row">
+      <button class="btn" onclick="UI.closeSheet()">닫기</button>
+      <button class="btn btn-primary" onclick="UI.closeSheet();UI.go('settings')">설정 열기</button></div>`);
 };
 
 /* ── 무료 한도 소진 → 광고 충전 / 구독 유도 ── */

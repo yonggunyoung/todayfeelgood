@@ -92,8 +92,10 @@ async function runYt(url) {
 3) 재료명은 한국 마트 일반 명칭으로 정규화, 기본 양념은 seasoning: true.
 4) 분량은 1인분 기준 환산.
 
+5) steps는 5~9개(불 세기·시간·계량 포함), tips에는 키포인트 최대 3개.
+
 마지막 응답은 JSON 하나만:
-{"ok":true,"title":"...","time":15,"kcal":400,"protein":20,"tags":["국물"],"ingredients":[{"name":"두부","amount":0.5,"unit":"모","seasoning":false}],"steps":["..."]}
+{"ok":true,"title":"...","time":15,"kcal":400,"protein":20,"tags":["국물"],"ingredients":[{"name":"두부","amount":0.5,"unit":"모","seasoning":false}],"steps":["..."],"tips":["..."]}
 못 찾으면 {"ok":false,"reason":"이유"}`;
 
   const tools = [
@@ -123,6 +125,7 @@ async function runYt(url) {
   for (const g of data.ingredients) console.log(`   · ${g.name} ${g.amount || ''}${g.unit || ''}${g.seasoning ? ' (양념)' : ''}`);
   console.log('   [순서]');
   data.steps.forEach((s, i) => console.log(`   ${i + 1}. ${s}`));
+  if (data.tips?.length) { console.log('   [키포인트]'); data.tips.forEach((t2) => console.log(`   💡 ${t2}`)); }
   console.log(usageLine(msg));
 }
 

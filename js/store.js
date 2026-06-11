@@ -6,6 +6,7 @@ const DEFAULT = () => ({
   settings: {
     mode: 'none', coupangId: '', aiKey: '', aiModel: 'claude-opus-4-8',
     aiMode: 'byok', aiEndpoint: '', // byok=내 키(베타) | server=운영자 서버 경유(유료화)
+    ytKey: '', // 유튜브 검색용 Data API 키 (선택 · 이 기기에만)
     adminPin: '', // 관리자 잠금 PIN (이 기기에만 — 동기화 제외)
     spaceCode: '', firebaseConfig: '',
     customModes: [], // {key, label, emoji, desc, protein, expiring, zeroExtra, prefTags:[], exclude:[]}
@@ -73,6 +74,7 @@ export function exportForSync() {
   clone.settings.aiKey = '';
   clone.settings.firebaseConfig = '';
   clone.settings.adminPin = '';
+  clone.settings.ytKey = '';
   return clone;
 }
 

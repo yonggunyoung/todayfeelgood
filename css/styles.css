@@ -504,3 +504,28 @@ a { color: var(--blue); text-decoration: none; }
   filter: drop-shadow(0 10px 16px rgba(20, 24, 33, 0.3));
 }
 .move-mode .f-add { opacity: 0.25; }
+
+/* ── 미니 캐릭터 v2: 눈 + 검은 선 팔다리 + 눈물 (식품에 붙는 친구들) ── */
+.chr { position: absolute; left: 50%; top: 5px; width: 48px; height: 48px; transform: translateX(-50%); pointer-events: none; z-index: 2; }
+.chr i { position: absolute; background: #20242a; border-radius: 4px; }
+.chr .e { width: 8.5px; height: 9.5px; background: #fff; border: 1.6px solid #20242a; border-radius: 50%; top: 30%; }
+.chr .e::after { content: ''; position: absolute; width: 3.4px; height: 3.4px; background: #20242a; border-radius: 50%; left: 1.7px; top: 2.6px; }
+.chr .e.l { left: 8px; } .chr .e.r { right: 8px; }
+.soon .chr .e::after { animation: chr-blink 3.2s infinite; }
+.chr .arm { width: 14px; height: 2.6px; top: 56%; }
+.chr .arm.l { left: -8px; transform-origin: right center; transform: rotate(40deg); }
+.chr .arm.r { right: -8px; transform-origin: left center; transform: rotate(-40deg); }
+.soon .chr .arm.r { animation: chr-wave2 0.85s ease-in-out infinite; }
+.urgent .chr .arm.l { transform: rotate(75deg); }
+.urgent .chr .arm.r { transform: rotate(-75deg); animation: none; }
+.chr .leg { width: 2.6px; height: 10px; bottom: -8px; }
+.chr .leg.l { left: 15px; } .chr .leg.r { right: 15px; }
+.soon .chr .leg.l { animation: chr-kick 0.85s ease-in-out infinite; transform-origin: top center; }
+.chr .tear { width: 5.5px; height: 8px; background: #5fb9f5; border-radius: 50% 50% 60% 60%; left: 7px; top: 50%; animation: chr-tear 1.15s ease-in infinite; }
+.urgent .chr .e { height: 7px; border-radius: 50% 50% 40% 40%; } /* 슬픈 처진 눈 */
+@keyframes chr-blink { 0%, 93%, 100% { transform: scaleY(1); } 96% { transform: scaleY(0.12); } }
+@keyframes chr-wave2 { 0%, 100% { transform: rotate(-40deg); } 50% { transform: rotate(-85deg); } }
+@keyframes chr-kick { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(18deg); } }
+@keyframes chr-tear { 0% { transform: translateY(0); opacity: 0; } 25% { opacity: 1; } 100% { transform: translateY(11px); opacity: 0; } }
+.f-pocket .chr { display: none; }
+@media (prefers-reduced-motion: reduce) { .chr i { animation: none !important; } .chr .tear { display: none; } }

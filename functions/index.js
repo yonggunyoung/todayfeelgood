@@ -14,34 +14,55 @@ const ANTHROPIC_API_KEY = defineSecret('ANTHROPIC_API_KEY');
 const SCAN_MODEL = process.env.SCAN_MODEL || 'claude-haiku-4-5';
 const RECIPE_MODEL = process.env.RECIPE_MODEL || 'claude-sonnet-4-6';
 const FREE_QUOTA = Number(process.env.FREE_QUOTA || 10); // 월 무료 횟수
+const PREMIUM_QUOTA = Number(process.env.PREMIUM_QUOTA || 200); // 프리미엄 남용 방지 상한
 const REWARD_DAILY_CAP = Number(process.env.REWARD_DAILY_CAP || 3); // 광고 충전 일일 상한
 
-/* ── 한도 집계 (무료 + 광고 보너스) ─────────── */
+/* ── 구독 상태 — 결제 성공 시 users/{uid}에 plan:'premium' 기록 (G2 결제 연동 또는 수동 부여) ── */
+function isPremium(u) {
+  if (!u || u.plan !== 'premium') return false;
+  const until = u.premiumUntil;
+  if (!until) return true; // 만료일 없으면 영구(수동 부여)
+  const ms = until.toMillis ? until.toMillis() : new Date(until).getTime();
+  return ms > Date.now();
+}
+
+/* ── 한도 집계 (무료 + 광고 보너스 / 프리미엄은 상한만) ── */
 const usageRef = (uid) => db.collection('ai_usage').doc(`${uid}_${new Date().toISOString().slice(0, 7)}`);
 
 async function consumeQuota(uid, type) {
   const ref = usageRef(uid);
+  const userRef = db.collection('users').doc(uid);
   await db.runTransaction(async (tx) => {
-    const snap = await tx.get(ref);
+    const [snap, uSnap] = await Promise.all([tx.get(ref), tx.get(userRef)]);
     const d = snap.exists ? snap.data() : {};
+    const premium = isPremium(uSnap.exists ? uSnap.data() : null);
     const count = d.count || 0;
-    const allowed = FREE_QUOTA + (d.bonus || 0);
+    const allowed = premium ? PREMIUM_QUOTA : FREE_QUOTA + (d.bonus || 0);
     if (count >= allowed) {
-      const err = new Error('이번 달 무료 AI를 모두 사용했어요. 광고를 보면 1회씩 충전돼요!');
+      const err = new Error(premium
+        ? `이번 달 사용량이 비정상 사용 방지 상한(${PREMIUM_QUOTA}회)에 도달했어요. 문의 주시면 풀어드릴게요!`
+        : '이번 달 무료 AI를 모두 사용했어요. 광고를 보면 1회씩 충전돼요!');
       err.code = 429;
       throw err;
     }
     tx.set(ref, {
       count: count + 1,
       [`by_${type}`]: admin.firestore.FieldValue.increment(1),
+      premium,
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     }, { merge: true });
   });
 }
 
-// 보상형 광고 시청 → +1회 충전 (일일 상한으로 어뷰징 방지)
+// 보상형 광고 시청 → +1회 충전 (일일 상한으로 어뷰징 방지) — 프리미엄은 광고가 필요 없다
 async function grantReward(uid) {
   const ref = usageRef(uid);
+  const uSnap = await db.collection('users').doc(uid).get();
+  if (isPremium(uSnap.exists ? uSnap.data() : null)) {
+    const err = new Error('프리미엄은 광고 없이 무제한이에요 🎉 충전이 필요 없습니다.');
+    err.code = 409;
+    throw err;
+  }
   const today = new Date().toISOString().slice(0, 10);
   let bonus = 0;
   await db.runTransaction(async (tx) => {

@@ -203,3 +203,9 @@ export async function extractRecipeFromYouTube(url, settings) {
   if (!Array.isArray(data.ingredients) || !data.ingredients.length) throw new Error('재료를 찾지 못했어요.');
   return data;
 }
+
+// 서버 경유 유튜브 검색 — 사용자는 키 없이도 앱 안에서 검색 (운영자 YT_API_KEY 사용)
+export async function searchYouTube(q, settings) {
+  const out = await serverPost('/ytsearch', { q }, settings);
+  return out.items || [];
+}

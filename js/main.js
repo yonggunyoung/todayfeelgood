@@ -2,7 +2,7 @@
 import { S, save, uid, today, addDays, daysLeft, won } from './store.js';
 import { ING, findIng, defaultShelf, defaultLocation } from './data/ingredients.js';
 import { recommend, recipesUsing, expiringItems, activeLeftovers, deductionPlan, modeList, getMode, allRecipes } from './engine.js';
-import { scanImage, extractRecipeFromYouTube, claimReward } from './ai.js';
+import { scanImage, extractRecipeFromYouTube, claimReward, searchYouTube } from './ai.js';
 import { initSync, sync, makeSpaceCode } from './sync.js';
 
 let tab = 'home';
@@ -305,6 +305,12 @@ function fridgeHtml(all) {
       </div>
       <div class="f-divider"></div>
       <div class="fridge-inner freezer" data-loc="freezer">
+        <div class="f-led dim"></div>
+        <span class="mist cold" style="left:22%;animation-delay:.8s"></span>
+        <span class="mist cold" style="left:60%;animation-delay:3.6s;--dx:-12px"></span>
+        <span class="frost-spark" style="top:18px;left:12%">✦</span>
+        <span class="frost-spark" style="top:30px;right:14%;animation-delay:1.4s">✦</span>
+        <span class="frost-spark" style="bottom:18px;left:46%;animation-delay:2.3s">✦</span>
         <div class="f-sec-label" onclick="UI.openLocList('freezer')" style="cursor:pointer"><span>냉동실</span><span>${fz.length ? fz.length + '개 ' : ''}›</span></div>
         ${shelfRows(fz, 'freezer')}
         ${fzFoods.length ? `<div class="f-sec-label" style="padding-top:2px"><span>🍱 얼려둔 음식</span><span>${fzFoods.length}개</span></div>${foodRows(fzFoods)}` : ''}
@@ -699,7 +705,7 @@ function renderRecipes() {
       <button class="${rTab === 'fav' ? 'on' : ''}" onclick="UI.setRTab('fav')">❤️ 찜</button>
     </div>
     ${mode.blockCaution && blocked.length
-      ? `<div class="banner warn">🤰 주의 재료가 든 레시피 ${blocked.length}개를 자동으로 숨겼어요. 본 정보는 의학적 조언이 아니며, 식단은 담당 의료진과 상의하세요.</div>` : ''}
+      ? `<div class="banner warn">🤰 임신 중 <b>섭취 주의 재료</b>(참치의 수은 등)가 든 레시피 ${blocked.length}개를 가렸어요 — 상해서가 아니라 안 드시는 게 좋은 재료라서예요. 다른 모드로 바꾸면 그대로 보입니다. (의학적 조언 아님 · 식단은 의료진과 상의)</div>` : ''}
     <div id="recipe-list">${recipeListHtml()}</div>`;
 }
 // 입력 중엔 목록만 갈아끼운다 — 화면 전체를 다시 그리면 한글 조합이 끊긴다
@@ -728,9 +734,17 @@ UI.openRecipe = (rid) => {
   detailServings = 1;
   const a = recommend(S, S.settings.mode).find((x) => x.recipe.id === rid) ||
             { missing: [], have: 0, total: 1, cookable: false, fav: S.favs.includes(rid) };
+  const ytSrc = r.yt ? `https://www.youtube-nocookie.com/embed/${r.yt}?rel=0&playsinline=1` : '';
+  const startInRecipe = !!(r.yt && r.steps?.length); // 영상+레시피 둘 다 있으면 간편 보기로 시작
   openSheet(`
-    ${r.yt ? `<div class="ytwrap"><iframe src="https://www.youtube-nocookie.com/embed/${r.yt}?rel=0&playsinline=1" allow="accelerometer; encrypted-media; picture-in-picture" allowfullscreen title="${esc(r.title)}"></iframe></div>
-      <div class="row" style="justify-content:flex-end;margin:-4px 0 8px">
+    ${r.yt ? `
+      ${startInRecipe ? `<div class="seg" style="margin:2px 0 10px" id="dt-vseg">
+        <button onclick="UI.dtView('video')">▶ 영상 보며</button>
+        <button class="on" onclick="UI.dtView('recipe')">📒 레시피만</button>
+      </div>` : ''}
+      <div class="ytwrap" id="dt-yt" data-src="${ytSrc}" style="${startInRecipe ? 'display:none' : ''}">
+        <iframe src="${startInRecipe ? '' : ytSrc}" allow="accelerometer; encrypted-media; picture-in-picture" allowfullscreen title="${esc(r.title)}"></iframe></div>
+      <div class="row" id="dt-ytlink" style="justify-content:flex-end;margin:-4px 0 8px;${startInRecipe ? 'display:none' : ''}">
         <a class="btn btn-soft btn-sm" href="https://youtu.be/${r.yt}" target="_blank" rel="noreferrer">↗ 유튜브 앱에서 크게 보기</a></div>`
       : r.photo ? `<img src="${r.photo}" style="width:100%;border-radius:16px;margin-bottom:12px;max-height:230px;object-fit:cover" />` : ''}
     <div class="row">
@@ -764,6 +778,20 @@ UI.openRecipe = (rid) => {
         ? `<button class="btn btn-primary" onclick="UI.openRecipeForm('${r.id}')">✎ 재료 채우기</button>`
         : `<button class="btn btn-primary" onclick="UI.openDeduct('${r.id}')">🍳 요리 완료</button>`}
     </div>`);
+};
+
+// 영상 보며 ↔ 레시피만 — 전환 시 영상은 정지(언로드)되고, 레시피 읽기에 집중
+UI.dtView = (m) => {
+  const wrap = $('#dt-yt');
+  const link = $('#dt-ytlink');
+  const seg = $('#dt-vseg');
+  if (!wrap) return;
+  const video = m === 'video';
+  const iframe = wrap.querySelector('iframe');
+  iframe.src = video ? wrap.dataset.src : '';
+  wrap.style.display = video ? '' : 'none';
+  if (link) link.style.display = video ? '' : 'none';
+  if (seg) [...seg.children].forEach((b, i) => b.classList.toggle('on', video ? i === 0 : i === 1));
 };
 
 UI.dtServ = (n) => {
@@ -942,7 +970,8 @@ UI.openYtSearch = () => {
 UI.ytSearch = async () => {
   const q = $('#yts-q').value.trim();
   if (!q) return;
-  if (!S.settings.ytKey) {
+  const canServer = S.settings.aiMode === 'server' && S.settings.aiEndpoint;
+  if (!S.settings.ytKey && !canServer) {
     const a = $('#yts-ext');
     if (a) a.href = 'https://www.youtube.com/results?search_query=' + encodeURIComponent(q + ' 레시피');
     toast('아래 "유튜브에서 검색하기"를 눌러주세요');
@@ -951,17 +980,23 @@ UI.ytSearch = async () => {
   const out = $('#yts-out');
   out.innerHTML = '<p class="hint">검색 중…</p>';
   try {
-    const res = await fetch(
-      `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=8&regionCode=KR&relevanceLanguage=ko&videoEmbeddable=true&q=${encodeURIComponent(q + ' 레시피')}&key=${encodeURIComponent(S.settings.ytKey)}`);
-    const j = await res.json();
-    if (!res.ok) throw new Error(j.error?.message || '검색에 실패했어요');
-    const items = (j.items || []).filter((x) => x.id?.videoId);
+    let items;
+    if (S.settings.ytKey) {
+      const res = await fetch(
+        `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=8&regionCode=KR&relevanceLanguage=ko&videoEmbeddable=true&q=${encodeURIComponent(q + ' 레시피')}&key=${encodeURIComponent(S.settings.ytKey)}`);
+      const j = await res.json();
+      if (!res.ok) throw new Error(j.error?.message || '검색에 실패했어요');
+      items = (j.items || []).filter((x) => x.id?.videoId)
+        .map((x) => ({ id: x.id.videoId, title: x.snippet?.title || '', channel: x.snippet?.channelTitle || '' }));
+    } else {
+      items = await searchYouTube(q, S.settings); // 서버 경유 — 사용자는 키 없이도 앱 안 검색
+    }
     out.innerHTML = items.length
       ? items.map((x) => `
-        <div class="item" onclick="UI.ytPick('${x.id.videoId}','${esc(String(x.snippet?.title || '').replace(/'/g, '’'))}')">
-          <img src="https://i.ytimg.com/vi/${x.id.videoId}/mqdefault.jpg" style="width:86px;border-radius:10px;flex-shrink:0" alt="" />
-          <div class="grow"><div class="name" style="font-size:.83rem;line-height:1.35">${x.snippet?.title || ''}</div>
-            <div class="sub">${esc(x.snippet?.channelTitle || '')}</div></div>
+        <div class="item" onclick="UI.ytPick('${x.id}','${esc(String(x.title).replace(/'/g, '’'))}')">
+          <img src="https://i.ytimg.com/vi/${x.id}/mqdefault.jpg" style="width:86px;border-radius:10px;flex-shrink:0" alt="" />
+          <div class="grow"><div class="name" style="font-size:.83rem;line-height:1.35">${x.title}</div>
+            <div class="sub">${esc(x.channel)}</div></div>
         </div>`).join('')
       : '<p class="hint">결과가 없어요 — 다른 키워드로 검색해 보세요</p>';
   } catch (e) {
@@ -979,9 +1014,10 @@ UI.ytPick = (id, title) => {
     <h2 style="font-size:1.05rem">${esc(t || '유튜브 레시피')}</h2>
     <p class="sub">앱 안에서 바로 보고, 마음에 들면 저장하세요</p>
     <div class="btn-row" style="margin-top:4px">
-      <button class="btn btn-primary" onclick="UI.ytToRecipe('${id}','${esc(t.replace(/'/g, '’'))}')">🤖 레시피로 정리</button>
+      <button class="btn btn-primary" onclick="UI.ytToRecipe('${id}','${esc(t.replace(/'/g, '’'))}')">🤖 영상+레시피로 저장</button>
       <button class="btn btn-tint" onclick="UI.ytSaveOnly('${id}','${esc(t.replace(/'/g, '’'))}')">⭐ 영상만 저장</button>
     </div>
+    <p class="hint" style="text-align:center;margin-top:6px">둘 다 저장돼요 — "영상+레시피"는 나중에 [▶영상 보며 / 📒레시피만]을 골라 볼 수 있어요</p>
     <a class="btn btn-soft btn-block" style="margin-top:9px" href="https://youtu.be/${id}" target="_blank" rel="noreferrer">↗ 유튜브 앱에서 보기</a>`);
 };
 UI.ytToRecipe = (id, title) => {
@@ -1279,6 +1315,28 @@ UI.addShopping = (name, silent = false, reason = '레시피 재료') => {
 
 const coupangUrl = (name) => `https://www.coupang.com/np/search?q=${encodeURIComponent(name)}`;
 
+// 마트 코너별 묶음 — 앱 안에서 장보기 동선이 끝나도록 (채소 코너 → 정육 코너 → …)
+const SHOP_CAT_ORDER = ['채소', '과일', '신선', '육류', '수산', '유제품', '가공', '주식', '양념', '기타'];
+const SHOP_CAT_EMOJI = { 채소: '🥬', 과일: '🍎', 신선: '🥚', 육류: '🥩', 수산: '🐟', 유제품: '🥛', 가공: '🥫', 주식: '🍚', 양념: '🧂', 기타: '🧺' };
+
+function shopGroupsHtml(open) {
+  if (!open.length) return '';
+  const groups = {};
+  for (const x of open) {
+    const c = findIng(x.name)?.cat || '기타';
+    (groups[c] = groups[c] || []).push(x);
+  }
+  return SHOP_CAT_ORDER.filter((c) => groups[c]).map((c) => `
+    <div class="section-title" style="margin:14px 4px 8px"><h2 style="font-size:.86rem">${SHOP_CAT_EMOJI[c]} ${c} 코너</h2><small>${groups[c].length}개</small></div>
+    ${groups[c].map((x) => `
+      <div class="item">
+        <button style="font-size:1.25rem" onclick="UI.shopToggle('${x.id}')">⚪</button>
+        <div class="grow"><div class="name">${esc(x.name)}</div><div class="sub">${esc(x.reason)}</div></div>
+        <a class="btn btn-sm btn-accent" href="${coupangUrl(x.name)}" target="_blank" rel="noreferrer">쿠팡 🛒</a>
+        <button style="color:var(--label-3)" onclick="UI.shopRemove('${x.id}')">✕</button>
+      </div>`).join('')}`).join('');
+}
+
 function renderShopping() {
   const open = S.shopping.filter((x) => !x.done);
   const done = S.shopping.filter((x) => x.done);
@@ -1292,13 +1350,7 @@ function renderShopping() {
     ${open.length ? `<button class="btn btn-soft btn-block" style="margin-bottom:10px" onclick="UI.copyShopList()">📋 목록 전체 복사 — 마트 메모·다른 앱에서 쓰기</button>` : ''}
     ${open.length === 0 && done.length === 0
       ? `<div class="empty"><span class="e-emoji">🧺</span><b>장보기 바구니가 비었어요</b><small>레시피의 부족 재료를 탭하거나<br>재료가 다 떨어지면 자동으로 담겨요</small></div>` : ''}
-    ${open.map((x) => `
-      <div class="item">
-        <button style="font-size:1.25rem" onclick="UI.shopToggle('${x.id}')">⚪</button>
-        <div class="grow"><div class="name">${esc(x.name)}</div><div class="sub">${esc(x.reason)}</div></div>
-        <a class="btn btn-sm btn-accent" href="${coupangUrl(x.name)}" target="_blank" rel="noreferrer">쿠팡 🛒</a>
-        <button style="color:var(--label-3)" onclick="UI.shopRemove('${x.id}')">✕</button>
-      </div>`).join('')}
+    ${shopGroupsHtml(open)}
     ${done.length ? `
       <div class="section-title"><h2>✓ 샀어요 (${done.length})</h2><small>입고하면 냉장고로 들어가요</small></div>
       ${done.map((x) => `

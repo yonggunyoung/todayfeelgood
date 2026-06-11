@@ -552,3 +552,62 @@ a { color: var(--blue); text-decoration: none; }
 @keyframes chr-blink-sadr { 0%, 86%, 95%, 100% { transform: rotate(-10deg) scaleY(1); } 90% { transform: rotate(-10deg) scaleY(0.08); } }
 @keyframes chr-tear2 { 0%, 88% { opacity: 0; transform: translateY(0); } 91% { opacity: 0.95; } 100% { transform: translateY(13px); opacity: 0; } }
 @keyframes chr-look { 0%, 40%, 100% { transform: translateX(0); } 15% { transform: translateX(1.7px); } 60% { transform: translateX(-1.7px); } }
+
+/* ── 모션 폴리시 v4 — 부드럽고 세련되게 ── */
+.sheet { animation: rise 0.34s cubic-bezier(0.16, 1, 0.3, 1); }
+#modal-root .overlay { animation: fade 0.22s ease; }
+.btn { transition: transform 0.18s cubic-bezier(0.3, 1.4, 0.5, 1), opacity 0.15s, box-shadow 0.2s; }
+.btn:active { transform: scale(0.96); }
+.f-item { transition: transform 0.2s cubic-bezier(0.34, 1.45, 0.64, 1); }
+.item { transition: transform 0.18s cubic-bezier(0.34, 1.45, 0.64, 1), box-shadow 0.2s; }
+.match-bar i { transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1); }
+.toast { animation: toast-in 0.32s cubic-bezier(0.18, 1.1, 0.3, 1); }
+@keyframes toast-in { 0% { transform: translateY(16px); opacity: 0; } 70% { transform: translateY(-2px); opacity: 1; } 100% { transform: translateY(0); } }
+.heart.on { animation: heart-pop 0.38s cubic-bezier(0.3, 1.6, 0.5, 1); }
+@keyframes heart-pop { 0% { transform: scale(0.7); } 55% { transform: scale(1.28); } 100% { transform: scale(1.08); } }
+.seg button { transition: color 0.18s, background 0.22s cubic-bezier(0.2, 0.9, 0.3, 1), box-shadow 0.22s; }
+
+/* 냉기·조명 디테일 — 칸마다 다르게 */
+.f-led { animation: led-breathe 4.6s ease-in-out infinite; }
+@keyframes led-breathe {
+  0%, 100% { box-shadow: 0 2px 16px 3px rgba(150, 205, 255, 0.6); opacity: 1; }
+  50% { box-shadow: 0 2px 11px 2px rgba(150, 205, 255, 0.38); opacity: 0.85; }
+}
+.f-led.dim { opacity: 0.55; box-shadow: 0 2px 9px 1px rgba(170, 215, 255, 0.4); animation-duration: 6s; }
+.mist { animation-duration: 6.8s; filter: blur(6px); }
+@keyframes mist {
+  0% { transform: translate(0, 0) scale(0.6); opacity: 0; }
+  18% { opacity: 0.62; }
+  100% { transform: translate(var(--dx, 14px), 56px) scale(1.9); opacity: 0; }
+}
+.mist.cold {
+  background: radial-gradient(ellipse, rgba(208, 233, 255, 0.95), rgba(208, 233, 255, 0) 70%);
+  width: 60px; animation-duration: 8.2s;
+}
+.frost-spark {
+  position: absolute; color: #b9dcff; font-size: 0.55rem; pointer-events: none;
+  animation: spark 3.4s ease-in-out infinite; opacity: 0; text-shadow: 0 0 6px rgba(185, 220, 255, 0.9);
+}
+@keyframes spark { 0%, 100% { opacity: 0; transform: scale(0.6) rotate(0deg); } 50% { opacity: 0.9; transform: scale(1.15) rotate(40deg); } }
+
+/* 눈물 또르르 v4 — 맺혔다가 천천히 흘러내린다 */
+.urgent .chr .e.l { animation-duration: 3.4s; }
+.urgent .chr .e.r { animation-duration: 3.4s; }
+.chr .tear {
+  animation: chr-tear3 3.4s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  width: 4.6px; height: 6.8px;
+  background: linear-gradient(180deg, #8fcdf8, #57b1f2);
+  box-shadow: 0 1px 2px rgba(87, 177, 242, 0.35);
+}
+@keyframes chr-tear3 {
+  0%, 55% { opacity: 0; transform: translate(0, 0) scale(0.3); }
+  60% { opacity: 0.95; transform: translate(0, 0) scale(0.55); }   /* 눈가에 맺힘 */
+  66% { transform: translate(0, 1px) scale(0.85); }                 /* 그렁그렁 */
+  74% { transform: translate(0.5px, 5px) scale(1); }                /* 또르르… */
+  84% { transform: translate(-0.4px, 9px) scale(0.96); }
+  94% { opacity: 0.85; transform: translate(0.3px, 13px) scale(0.9); }
+  100% { opacity: 0; transform: translate(0, 15px) scale(0.85); }
+}
+@keyframes chr-blink-sadl { 0%, 88%, 96%, 100% { transform: rotate(10deg) scaleY(1); } 92% { transform: rotate(10deg) scaleY(0.07) scaleX(1.12); } }
+@keyframes chr-blink-sadr { 0%, 88%, 96%, 100% { transform: rotate(-10deg) scaleY(1); } 92% { transform: rotate(-10deg) scaleY(0.07) scaleX(1.12); } }
+@keyframes chr-blink2 { 0%, 90%, 97%, 100% { transform: scaleY(1); } 93.5% { transform: scaleY(0.07) scaleX(1.12); } }

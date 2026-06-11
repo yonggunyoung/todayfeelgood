@@ -214,7 +214,25 @@ exports.ai = onRequest(
         return;
       }
 
-      res.status(404).json({ error: '알 수 없는 경로입니다 (/scan, /ytrecipe, /reward)' });
+      // 인앱 유튜브 검색 — 운영자 YT_API_KEY로 전 사용자에게 제공 (AI 한도 미차감, 무료 기능)
+      if (path.endsWith('/ytsearch')) {
+        const q = String((req.body || {}).q || '').trim().slice(0, 60);
+        if (!q) { res.status(400).json({ error: '검색어가 필요합니다' }); return; }
+        const ytKey = process.env.YT_API_KEY;
+        if (!ytKey) { res.status(501).json({ error: '서버에 유튜브 검색 키가 아직 설정되지 않았어요' }); return; }
+        const r = await fetch(
+          `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=8&regionCode=KR&relevanceLanguage=ko&videoEmbeddable=true&q=${encodeURIComponent(q + ' 레시피')}&key=${encodeURIComponent(ytKey)}`);
+        const j = await r.json();
+        if (!r.ok) { res.status(502).json({ error: j.error?.message || '유튜브 검색 실패' }); return; }
+        res.json({
+          items: (j.items || []).filter((x) => x.id?.videoId).map((x) => ({
+            id: x.id.videoId, title: x.snippet?.title || '', channel: x.snippet?.channelTitle || '',
+          })),
+        });
+        return;
+      }
+
+      res.status(404).json({ error: '알 수 없는 경로입니다 (/scan, /ytrecipe, /reward, /ytsearch)' });
     } catch (e) {
       res.status(e.code && e.code >= 400 && e.code < 600 ? e.code : 500).json({ error: e.message || '서버 오류' });
     }

@@ -14,16 +14,20 @@ const ANTHROPIC_API_KEY = defineSecret('ANTHROPIC_API_KEY');
 const SCAN_MODEL = process.env.SCAN_MODEL || 'claude-haiku-4-5';
 const RECIPE_MODEL = process.env.RECIPE_MODEL || 'claude-sonnet-4-6';
 const FREE_QUOTA = Number(process.env.FREE_QUOTA || 10); // 월 무료 횟수
+const REWARD_DAILY_CAP = Number(process.env.REWARD_DAILY_CAP || 3); // 광고 충전 일일 상한
 
-/* ── 한도 집계 ───────────────────────────── */
+/* ── 한도 집계 (무료 + 광고 보너스) ─────────── */
+const usageRef = (uid) => db.collection('ai_usage').doc(`${uid}_${new Date().toISOString().slice(0, 7)}`);
+
 async function consumeQuota(uid, type) {
-  const ym = new Date().toISOString().slice(0, 7);
-  const ref = db.collection('ai_usage').doc(`${uid}_${ym}`);
+  const ref = usageRef(uid);
   await db.runTransaction(async (tx) => {
     const snap = await tx.get(ref);
-    const count = snap.exists ? snap.data().count || 0 : 0;
-    if (count >= FREE_QUOTA) {
-      const err = new Error(`이번 달 무료 AI ${FREE_QUOTA}회를 모두 사용했어요. 다음 달에 다시 충전돼요!`);
+    const d = snap.exists ? snap.data() : {};
+    const count = d.count || 0;
+    const allowed = FREE_QUOTA + (d.bonus || 0);
+    if (count >= allowed) {
+      const err = new Error('이번 달 무료 AI를 모두 사용했어요. 광고를 보면 1회씩 충전돼요!');
       err.code = 429;
       throw err;
     }
@@ -33,6 +37,29 @@ async function consumeQuota(uid, type) {
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     }, { merge: true });
   });
+}
+
+// 보상형 광고 시청 → +1회 충전 (일일 상한으로 어뷰징 방지)
+async function grantReward(uid) {
+  const ref = usageRef(uid);
+  const today = new Date().toISOString().slice(0, 10);
+  let bonus = 0;
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    const d = snap.exists ? snap.data() : {};
+    const todayCount = d.rewardDay === today ? (d.rewardToday || 0) : 0;
+    if (todayCount >= REWARD_DAILY_CAP) {
+      const err = new Error(`오늘 광고 충전 한도(${REWARD_DAILY_CAP}회)를 모두 썼어요. 내일 다시 충전돼요!`);
+      err.code = 429;
+      throw err;
+    }
+    bonus = (d.bonus || 0) + 1;
+    tx.set(ref, {
+      bonus, rewardDay: today, rewardToday: todayCount + 1,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true });
+  });
+  return { bonus };
 }
 
 /* ── Anthropic 호출 ──────────────────────── */
@@ -180,7 +207,12 @@ exports.ai = onRequest(
         return;
       }
 
-      res.status(404).json({ error: '알 수 없는 경로입니다 (/scan, /ytrecipe)' });
+      if (path.endsWith('/reward')) {
+        res.json(await grantReward(uid));
+        return;
+      }
+
+      res.status(404).json({ error: '알 수 없는 경로입니다 (/scan, /ytrecipe, /reward)' });
     } catch (e) {
       res.status(e.code && e.code >= 400 && e.code < 600 ? e.code : 500).json({ error: e.message || '서버 오류' });
     }

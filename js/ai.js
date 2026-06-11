@@ -35,9 +35,16 @@ async function serverPost(path, payload, settings) {
   if (!res.ok) {
     let detail = '';
     try { detail = (await res.json()).error || ''; } catch { /* ignore */ }
-    throw new Error(detail || `서버 호출 실패 (${res.status})`);
+    const err = new Error(detail || `서버 호출 실패 (${res.status})`);
+    err.status = res.status;
+    throw err;
   }
   return res.json();
+}
+
+// 광고 시청 보상 → 서버에 +1회 충전 요청
+export async function claimReward(settings) {
+  return serverPost('/reward', {}, settings);
 }
 
 const SCHEMA = {

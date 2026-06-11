@@ -2,7 +2,7 @@
 import { S, save, uid, today, addDays, daysLeft, won } from './store.js';
 import { ING, findIng, defaultShelf, defaultLocation } from './data/ingredients.js';
 import { recommend, recipesUsing, expiringItems, activeLeftovers, deductionPlan, modeList, getMode, allRecipes } from './engine.js';
-import { scanImage, extractRecipeFromYouTube } from './ai.js';
+import { scanImage, extractRecipeFromYouTube, claimReward } from './ai.js';
 import { initSync, sync, makeSpaceCode } from './sync.js';
 
 let tab = 'home';
@@ -67,7 +67,7 @@ function openSheet(html) {
        <div class="sheet"><div class="grip"></div>${html}</div>
      </div>`;
 }
-UI.closeSheet = () => { $('#modal-root').innerHTML = ''; scanFile = null; scanResults = null; deductCtx = null; draft = null; };
+UI.closeSheet = () => { $('#modal-root').innerHTML = ''; scanFile = null; scanResults = null; deductCtx = null; draft = null; qaLoc = null; };
 
 function stampFor(days) {
   if (days <= 1) return `<span class="stamp stamp-danger">${days < 0 ? '기한지남' : 'D-' + Math.max(0, days)}</span>`;
@@ -220,24 +220,42 @@ UI.useIdeas = (name) => {
 };
 
 /* ── 냉장고 (프리미엄 내부 뷰) ───────────── */
+let bubbleKey = ''; // 가장 급한 재료 1개가 말풍선으로 조른다 (무료 캐릭터 모션)
+
+function chrBits(d, key) {
+  const cls = d <= 1 ? ' urgent' : d <= 3 ? ' soon' : '';
+  const hand = d <= 3 ? '<span class="chr-hand">👋</span>' : '';
+  const bubble = key === bubbleKey
+    ? `<span class="chr-bubble">${d <= 1 ? '오늘 안 먹으면 끝이야!' : '나 먼저 먹어줘~'}</span>` : '';
+  return { cls, hand, bubble };
+}
+
 function fItem(p) {
   const d = daysLeft(p.expiresAt);
+  const c = chrBits(d, 'p:' + p.id);
   return `
-    <button class="f-item" onclick="UI.editPantry('${p.id}')">
+    <button class="f-item${c.cls}" data-move="p:${p.id}" onclick="UI.editPantry('${p.id}')">
+      ${c.bubble}${c.hand}
       ${d <= 3 ? `<span class="fi-dot ${d <= 1 ? 'dot-red' : 'dot-amber'}"></span>` : ''}
       <span class="fi-face">${p.photo ? `<img src="${p.photo}" alt="" />` : p.emoji}</span>
       <span class="fi-name">${esc(p.name)}</span>
     </button>`;
 }
 const chunk = (arr, n) => arr.reduce((acc, x, i) => (i % n ? acc[acc.length - 1].push(x) : acc.push([x]), acc), []);
-const shelfRows = (items) => items.length
-  ? chunk(items, 4).map((row) => `<div class="f-row">${row.map(fItem).join('')}</div><div class="f-shelf"></div>`).join('')
-  : `<p class="f-empty">텅 비었어요</p>`;
+const addTile = (loc) => `<button class="f-item f-add" onclick="UI.quickAddAt('${loc}')" title="이 칸에 추가">＋</button>`;
+const shelfRows = (items, loc) => {
+  const cells = items.map(fItem);
+  if (loc) cells.push(addTile(loc));
+  if (!cells.length) return `<p class="f-empty">텅 비었어요</p>`;
+  return chunk(cells, 4).map((row) => `<div class="f-row">${row.join('')}</div><div class="f-shelf"></div>`).join('');
+};
 
 function foodTile(l) {
   const d = daysLeft(l.expiresAt);
+  const c = chrBits(d, 'f:' + l.id);
   return `
-    <button class="f-item" onclick="UI.openFood('${l.id}')">
+    <button class="f-item${c.cls}" data-move="f:${l.id}" onclick="UI.openFood('${l.id}')">
+      ${c.bubble}${c.hand}
       ${d <= 3 ? `<span class="fi-dot ${d <= 1 ? 'dot-red' : 'dot-amber'}"></span>` : ''}
       <span class="fi-face">${l.photo ? `<img src="${l.photo}" alt="" />` : foodKind(l).emoji}</span>
       <span class="fi-name">${esc(l.name)}</span>
@@ -255,27 +273,37 @@ function fridgeHtml(all) {
   const foods = activeLeftovers(S);
   const frFoods = foods.filter((l) => l.location === 'fridge');
   const fzFoods = foods.filter((l) => l.location === 'freezer');
+
+  // 가장 급한 1개만 말풍선으로 조르기 (시끄럽지 않게)
+  bubbleKey = '';
+  let best = 4;
+  for (const p of all) { const d = daysLeft(p.expiresAt); if (d <= 3 && d < best) { best = d; bubbleKey = 'p:' + p.id; } }
+  for (const l of foods) { const d = daysLeft(l.expiresAt); if (d <= 3 && d < best) { best = d; bubbleKey = 'f:' + l.id; } }
   return `
     <div class="fridge">
-      <div class="fridge-inner">
+      <div class="fridge-inner" data-loc="fridge">
         <div class="f-led"></div>
         <div class="f-vent"><i></i><i></i><i></i><i></i></div>
         <span class="mist" style="left:16%"></span>
         <span class="mist" style="left:46%;animation-delay:1.7s;--dx:-16px"></span>
         <span class="mist" style="left:71%;animation-delay:3.2s;--dx:9px"></span>
         <div class="f-sec-label"><span>냉장실</span><span>${fr.length ? fr.length + '개' : ''}</span></div>
-        ${shelfRows(frMain)}
+        ${shelfRows(frMain, 'fridge')}
         ${frFoods.length ? `<div class="f-sec-label" style="padding-top:2px"><span>🍱 반찬·조리음식 칸</span><span>${frFoods.length}개</span></div>${foodRows(frFoods)}` : ''}
         ${frDoor.length ? `<div class="f-pocket"><div class="fp-label">도어 포켓 · 소스</div><div class="fp-row">${frDoor.map(fItem).join('')}</div></div>` : ''}
       </div>
       <div class="f-divider"></div>
-      <div class="fridge-inner freezer">
+      <div class="fridge-inner freezer" data-loc="freezer">
         <div class="f-sec-label"><span>냉동실</span><span>${fz.length ? fz.length + '개' : ''}</span></div>
-        ${shelfRows(fz)}
+        ${shelfRows(fz, 'freezer')}
         ${fzFoods.length ? `<div class="f-sec-label" style="padding-top:2px"><span>🍱 얼려둔 음식</span><span>${fzFoods.length}개</span></div>${foodRows(fzFoods)}` : ''}
       </div>
     </div>
-    ${rm.length ? `<div class="basket"><div class="f-sec-label"><span>실온 선반</span><span>${rm.length}개</span></div>${shelfRows(rm)}</div>` : ''}`;
+    <div class="basket" data-loc="room">
+      <div class="f-sec-label"><span>실온 선반</span><span>${rm.length ? rm.length + '개' : ''}</span></div>
+      ${shelfRows(rm, 'room')}
+    </div>
+    <p class="hint" style="text-align:center;margin-top:2px">길게 누르면 칸 이동 · ＋를 누르면 그 칸에 추가돼요</p>`;
 }
 
 function renderPantry() {
@@ -319,10 +347,13 @@ function renderPantry() {
 UI.setLoc = (l) => { pantryLoc = l; render(); };
 UI.setPantryView = (v) => { pantryView = v; render(); };
 
+let qaLoc = null; // 냉장고 ＋타일로 들어온 경우 그 칸으로 바로 담기
+UI.quickAddAt = (loc) => { qaLoc = loc; UI.openQuickAdd(); };
+
 function addPantryByName(rawName, { qty = 1, location, silentToast = false } = {}) {
   const ing = findIng(rawName);
   const name = ing ? ing.name : rawName;
-  const loc = location || defaultLocation(ing);
+  const loc = location || qaLoc || defaultLocation(ing);
   const existing = S.pantry.find((p) => p.name === name && p.location === loc);
   if (existing && existing.qtyType !== 'level') {
     existing.qty = Math.round((existing.qty + qty) * 100) / 100;
@@ -472,6 +503,7 @@ UI.runScan = async () => {
     btn.textContent = '다시 분석';
     btn.disabled = false;
   } catch (e) {
+    if (e.status === 429 && S.settings.aiMode === 'server') { UI.openRecharge(); return; }
     toast(e.message || 'AI 분석에 실패했어요');
     btn.textContent = '🤖 AI 분석';
     btn.disabled = false;
@@ -501,6 +533,60 @@ UI.scanCommit = () => {
   for (const r of scanResults || []) addPantryByName(r.name, { qty: r.qty, location: r.location, silentToast: true });
   UI.closeSheet(); render();
   toast(`${n}개 품목을 입고했어요 🧊`);
+};
+
+/* ── 무료 한도 소진 → 광고 충전 / 구독 유도 ── */
+UI.openRecharge = () => {
+  openSheet(`
+    <h2>🔋 무료 횟수를 다 썼어요</h2>
+    <p class="sub">이번 달 무료 AI를 모두 사용했어요 — 두 가지 방법으로 계속 쓸 수 있어요</p>
+    <div class="card flat row" style="gap:12px">
+      <div style="font-size:1.7rem">📺</div>
+      <div class="grow"><b>광고 보고 +1회 충전</b>
+        <p class="hint" style="margin:2px 0 0">15초 시청 · 하루 3회까지</p></div>
+      <button class="btn btn-sm btn-primary" onclick="UI.watchAd()">시청</button>
+    </div>
+    <div class="card flat row" style="gap:12px">
+      <div style="font-size:1.7rem">⭐</div>
+      <div class="grow"><b>프리미엄 — AI 무제한</b>
+        <p class="hint" style="margin:2px 0 0">월 3,900원 · 살아있는 캐릭터팩 · 가족 공유 (출시 준비 중)</p></div>
+      <button class="btn btn-sm btn-tint" onclick="UI.premiumInterest()">알림받기</button>
+    </div>
+    <div class="btn-row"><button class="btn btn-block" onclick="UI.closeSheet()">닫기</button></div>`);
+};
+UI.watchAd = () => {
+  openSheet(`
+    <h2>📺 광고</h2><p class="sub">베타 기간엔 자체 소식으로 대신해요 — 곧 실제 광고로 바뀝니다</p>
+    <div class="card" style="text-align:center;padding:26px 16px">
+      <div style="font-size:2.4rem">🧊✨</div>
+      <b style="display:block;margin-top:6px">냉비서 프리미엄이 곧 나와요</b>
+      <p class="hint">AI 무제한 · 살아 움직이는 재료 캐릭터팩 · 가족 공유 냉장고</p>
+    </div>
+    <button id="ad-btn" class="btn btn-block btn-soft" disabled>15초 후 충전돼요…</button>`);
+  let t = 15;
+  const iv = setInterval(async () => {
+    const b = $('#ad-btn');
+    if (!b) { clearInterval(iv); return; }
+    t--;
+    if (t > 0) { b.textContent = `${t}초 후 충전돼요…`; return; }
+    clearInterval(iv);
+    b.textContent = '충전 중…';
+    try {
+      await claimReward(S.settings);
+      b.className = 'btn btn-block btn-primary';
+      b.textContent = '✅ +1회 충전 완료 — 닫고 다시 시도하세요';
+    } catch (e) {
+      b.className = 'btn btn-block btn-soft';
+      b.textContent = e.message || '충전에 실패했어요';
+    }
+    b.disabled = false;
+    b.onclick = () => UI.closeSheet();
+  }, 1000);
+};
+UI.premiumInterest = () => {
+  S.premiumWish = true;
+  save({ silent: true });
+  toast('등록 완료! 프리미엄 출시 때 가장 먼저 알려드릴게요 🙌');
 };
 
 /* ── 레시피 ─────────────────────────────── */
@@ -579,10 +665,7 @@ function renderRecipes() {
     </div>
     ${mode.blockCaution && blocked.length
       ? `<div class="banner warn">🤰 주의 재료가 든 레시피 ${blocked.length}개를 자동으로 숨겼어요. 본 정보는 의학적 조언이 아니며, 식단은 담당 의료진과 상의하세요.</div>` : ''}
-    ${list.length ? list.map(recipeCard).join('') : emptyMsg}
-    <div class="btn-row">
-      <button class="btn btn-soft btn-block" onclick="UI.openImport()">📥 공유 코드로 레시피·모드 가져오기</button>
-    </div>`;
+    ${list.length ? list.map(recipeCard).join('') : emptyMsg}`;
 }
 UI.recipeSearch = (v) => { recipeQuery = v; renderRecipes(); };
 UI.setRTab = (t) => { rTab = t; renderRecipes(); };
@@ -745,6 +828,7 @@ UI.rfAuto = async () => {
     renderRecipeForm(true);
     toast('정리 완료 ✨ 내용 확인하고 저장하세요');
   } catch (e) {
+    if (e.status === 429 && S.settings.aiMode === 'server') { UI.openRecharge(); return; }
     toast(e.message || '정리에 실패했어요');
     const b = $('#rf-auto');
     if (b) { b.disabled = false; b.textContent = '🤖 빠른 레시피 — 영상 안 보고 재료·순서 자동 정리'; }
@@ -795,14 +879,16 @@ UI.deleteMyRecipe = (id) => {
   S.myRecipes = S.myRecipes.filter((r) => r.id !== id);
   save(); UI.closeSheet(); render();
 };
+const shareUrl = (code) => `${location.origin}${location.pathname}?share=${encodeURIComponent(code)}`;
+
 UI.shareRecipe = (id) => {
   const r = S.myRecipes.find((x) => x.id === id);
   if (!r) return;
-  const d = { ...r, photo: null }; // 사진은 용량상 코드에서 제외 (유튜브 썸네일은 유지)
-  const code = shareEncode('recipe', d);
-  const text = `🧊 냉비서 레시피 공유 — [${r.title}]\n앱의 "공유 코드로 가져오기"에 붙여넣으세요:\n${code}`;
-  if (navigator.share) navigator.share({ text }).catch(() => copyText(text));
-  else copyText(text);
+  const d = { ...r, photo: null }; // 사진은 용량상 제외 (유튜브 썸네일은 유지)
+  const url = shareUrl(shareEncode('recipe', d));
+  const text = `🧊 [${r.title}] 레시피 공유! 링크 누르면 냉비서에 바로 추가돼요 👇`;
+  if (navigator.share) navigator.share({ title: '냉비서 레시피', text, url }).catch(() => copyText(`${text}\n${url}`));
+  else copyText(`${text}\n${url}`);
 };
 
 /* ── 맞춤 모드 만들기 ─────────────────────── */
@@ -867,19 +953,19 @@ UI.deleteMode = (key) => {
 UI.shareMode = (key) => {
   const m = S.settings.customModes.find((x) => x.key === key);
   if (!m) return;
-  const code = shareEncode('mode', { ...m, key: undefined });
-  const text = `🧊 냉비서 모드 공유 — [${m.emoji} ${m.label}]\n앱의 "공유 코드로 가져오기"에 붙여넣으세요:\n${code}`;
-  if (navigator.share) navigator.share({ text }).catch(() => copyText(text));
-  else copyText(text);
+  const url = shareUrl(shareEncode('mode', { ...m, key: undefined }));
+  const text = `🧊 [${m.emoji} ${m.label}] 모드 공유! 링크 누르면 냉비서에 바로 적용돼요 👇`;
+  if (navigator.share) navigator.share({ title: '냉비서 모드', text, url }).catch(() => copyText(`${text}\n${url}`));
+  else copyText(`${text}\n${url}`);
 };
 
 /* ── 공유 코드 가져오기 ───────────────────── */
 UI.openImport = () => {
   openSheet(`
-    <h2>📥 공유 코드로 가져오기</h2>
-    <p class="sub">친구가 보낸 레시피·모드 코드를 붙여넣으세요 (NB1. 으로 시작)</p>
-    <div class="field"><textarea id="imp-code" rows="4" placeholder="NB1.eyJ0Ijoi…"></textarea></div>
-    <div class="btn-row"><button class="btn btn-primary btn-block" onclick="UI.runImport()">가져오기</button></div>`);
+    <h2>📥 공유받은 것 추가</h2>
+    <p class="sub">보통은 받은 링크를 그냥 누르면 자동으로 추가돼요. 링크가 안 눌리면 여기에 통째로 붙여넣으세요.</p>
+    <div class="field"><textarea id="imp-code" rows="4" placeholder="받은 링크 또는 NB1.… 코드"></textarea></div>
+    <div class="btn-row"><button class="btn btn-primary btn-block" onclick="UI.runImport()">추가하기</button></div>`);
 };
 UI.runImport = () => { handleShareCode($('#imp-code').value); };
 function handleShareCode(code) {
@@ -1172,6 +1258,7 @@ function renderSettings() {
       <label class="btn">가져오기<input type="file" accept=".json" style="display:none" onchange="UI.importData(this)" /></label>
       <button class="btn btn-soft" onclick="UI.resetAll()">초기화</button>
     </div>
+    <button class="btn btn-soft btn-block" style="margin-top:9px" onclick="UI.openImport()">📥 공유받은 레시피·모드 추가 (링크 붙여넣기)</button>
     <p class="hint" style="margin-top:16px;text-align:center">냉비서 v0.2 · 데이터는 내 기기(와 내 Firebase)에만 저장됩니다<br>제품 설계 문서: 레포 docs/ 폴더</p>`;
 }
 UI.setAiMode = (m) => { S.settings.aiMode = m; save(); renderSettings(); };
@@ -1227,9 +1314,62 @@ function render() {
   $$('#tabbar button').forEach((b) => b.classList.toggle('active', b.dataset.tab === tab));
   window.scrollTo({ top: 0 });
 }
-UI.go = (t) => { tab = t; render(); };
+UI.go = (t) => { endMove(); tab = t; render(); };
 
 $$('#tabbar button').forEach((b) => b.addEventListener('click', () => UI.go(b.dataset.tab)));
+
+/* ── 길게 눌러 칸 이동 (냉장↔냉동↔실온) ───── */
+let moveCtx = null;
+let holdTimer = null;
+let holdStart = null;
+let suppressClick = false;
+
+function endMove() {
+  moveCtx = null;
+  document.body.classList.remove('move-mode');
+}
+
+const view = $('#view');
+view.addEventListener('pointerdown', (e) => {
+  const t = e.target.closest('[data-move]');
+  if (!t || moveCtx) return;
+  holdStart = [e.clientX, e.clientY];
+  holdTimer = setTimeout(() => {
+    holdTimer = null;
+    suppressClick = true;
+    moveCtx = t.dataset.move;
+    t.classList.add('moving');
+    document.body.classList.add('move-mode');
+    navigator.vibrate?.(30);
+    toast('옮길 칸(냉장·냉동·실온)을 탭하세요 — 다른 곳 탭하면 취소');
+  }, 400);
+});
+view.addEventListener('pointermove', (e) => {
+  if (holdTimer && holdStart && Math.hypot(e.clientX - holdStart[0], e.clientY - holdStart[1]) > 12) {
+    clearTimeout(holdTimer); holdTimer = null;
+  }
+});
+['pointerup', 'pointercancel'].forEach((ev) =>
+  view.addEventListener(ev, () => { if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; } }));
+
+document.addEventListener('click', (e) => {
+  if (suppressClick) { suppressClick = false; e.preventDefault(); e.stopPropagation(); return; }
+  if (!moveCtx) return;
+  e.preventDefault(); e.stopPropagation();
+  const loc = e.target.closest('[data-loc]')?.dataset.loc;
+  const [kind, id] = moveCtx.split(':');
+  if (loc) {
+    if (kind === 'p') {
+      const p = S.pantry.find((x) => x.id === id);
+      if (p && p.location !== loc) { p.location = loc; save(); toast(`${p.name} → ${LOC_LABEL[loc]}로 옮겼어요`); }
+    } else {
+      const l = S.leftovers.find((x) => x.id === id);
+      if (l && loc === 'room') toast('조리음식은 냉장·냉동에만 보관할 수 있어요');
+      else if (l && l.location !== loc) { l.location = loc; save(); toast(`${l.name} → ${LOC_LABEL[loc]}로 옮겼어요`); }
+    }
+  }
+  endMove(); render();
+}, true);
 
 render();
 initSync(() => renderTop());

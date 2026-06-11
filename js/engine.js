@@ -170,3 +170,69 @@ export function deductionPlan(recipe, state, servings = 1) {
   }
   return plan;
 }
+
+/* ── 같이 요리: 여러 레시피 → 통합 조리 타임라인 (비AI 휴리스틱) ──
+   원칙: ① 손질은 전부 먼저 모아서 ② 오래 걸리는 요리부터 불에 올리고
+        ③ 끓이는·굽는 대기 시간에 다른 요리 단계를 끼워넣는다 */
+const PREP_RE = /(썰|다듬|다지|씻|손질|불리|재워|밑간|풀어|섞어 ?둔|깐다|까서|데쳐 ?둔)/;
+const PASSIVE_RE = /(끓인다|끓이|조린다|조리|굽는다|구워|튀긴|찐다|쪄|오븐|기다|동안|분간|뜸)/;
+
+export function buildCookPlan(recipes) {
+  const list = recipes.slice().sort((a, b) => (b.time || 10) - (a.time || 10));
+
+  // 통합 재료 (양념 제외 합산)
+  const merged = new Map();
+  for (const r of list) {
+    for (const g of r.ingredients) {
+      if (g.st) continue;
+      const key = findIng(g.n)?.name || g.n;
+      const cur = merged.get(key);
+      if (cur && cur.u === (g.u || '')) cur.a = Math.round((cur.a + (g.a || 0)) * 100) / 100;
+      else if (!cur) merged.set(key, { n: key, a: g.a || 0, u: g.u || '' });
+      else merged.set(key + '·' + r.title, { n: key, a: g.a || 0, u: g.u || '' });
+    }
+  }
+
+  // 각 레시피의 선두 손질 단계 분리
+  const prep = [];
+  const queues = list.map((r) => {
+    const steps = (r.steps || []).slice();
+    while (steps.length > 1 && PREP_RE.test(steps[0])) {
+      prep.push({ recipe: r.title, emoji: r.emoji || '🍳', text: steps.shift() });
+    }
+    return { r, steps };
+  });
+
+  // 타임라인: 긴 요리부터, 대기 단계 뒤엔 다른 요리를 끼워넣기
+  const timeline = [];
+  const pending = queues.filter((q) => q.steps.length);
+  let main = 0;
+  while (pending.some((q) => q.steps.length)) {
+    if (!pending[main] || !pending[main].steps.length) {
+      main = pending.findIndex((q) => q.steps.length);
+      if (main < 0) break;
+    }
+    const q = pending[main];
+    const text = q.steps.shift();
+    timeline.push({ recipe: q.r.title, emoji: q.r.emoji || '🍳', text, parallel: false });
+    if (PASSIVE_RE.test(text)) {
+      // 기다리는 동안 → 다른 요리에서 한 단계
+      const other = pending.find((o, i) => i !== main && o.steps.length);
+      if (other) {
+        timeline.push({
+          recipe: other.r.title, emoji: other.r.emoji || '🍳',
+          text: other.steps.shift(), parallel: true,
+        });
+      }
+    }
+  }
+
+  const totalTime = Math.max(...list.map((r) => r.time || 10)) + (list.length - 1) * 5;
+  return {
+    titles: list.map((r) => `${r.emoji || '🍳'} ${r.title}`),
+    estTime: totalTime,
+    ingredients: [...merged.values()],
+    prep,
+    timeline,
+  };
+}

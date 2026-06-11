@@ -611,3 +611,44 @@ a { color: var(--blue); text-decoration: none; }
 @keyframes chr-blink-sadl { 0%, 88%, 96%, 100% { transform: rotate(10deg) scaleY(1); } 92% { transform: rotate(10deg) scaleY(0.07) scaleX(1.12); } }
 @keyframes chr-blink-sadr { 0%, 88%, 96%, 100% { transform: rotate(-10deg) scaleY(1); } 92% { transform: rotate(-10deg) scaleY(0.07) scaleX(1.12); } }
 @keyframes chr-blink2 { 0%, 90%, 97%, 100% { transform: scaleY(1); } 93.5% { transform: scaleY(0.07) scaleX(1.12); } }
+
+/* ── 🎤 음성 컨트롤 · 👩‍🍳 같이 요리 ── */
+#mic-btn.mic-on {
+  background: var(--red); color: #fff;
+  animation: mic-pulse 1.6s ease-in-out infinite;
+}
+@keyframes mic-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 69, 58, 0.45); }
+  50% { box-shadow: 0 0 0 9px rgba(255, 69, 58, 0); }
+}
+.sel-badge {
+  position: absolute; top: 10px; right: 10px; z-index: 3;
+  width: 28px; height: 28px; display: grid; place-items: center;
+  border-radius: 99px; font-weight: 800; font-size: 0.9rem;
+  background: rgba(255, 255, 255, 0.92); color: var(--label-3);
+  box-shadow: 0 2px 8px rgba(20, 24, 33, 0.18); backdrop-filter: blur(4px);
+}
+.sel-badge.on { background: var(--green); color: #fff; }
+.recipe-card.selected { outline: 2.5px solid var(--green); }
+#cookbar {
+  position: fixed; bottom: calc(64px + env(safe-area-inset-bottom)); left: 50%;
+  transform: translateX(-50%); width: min(450px, 92%); z-index: 40;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  background: rgba(23, 24, 28, 0.93); color: #fff; padding: 11px 16px;
+  border-radius: 18px; box-shadow: var(--shadow-float); backdrop-filter: blur(8px);
+  animation: toast-in 0.3s cubic-bezier(0.18, 1.1, 0.3, 1);
+}
+.plan-step {
+  display: flex; gap: 11px; align-items: flex-start;
+  background: var(--card); border-radius: var(--r-md); padding: 11px 13px; margin-bottom: 7px;
+  box-shadow: var(--shadow-card); font-size: 0.88rem; line-height: 1.5;
+  transition: background 0.25s, outline 0.25s;
+}
+.plan-step small { color: var(--label-3); font-weight: 700; font-size: 0.68rem; }
+.plan-step .ps-no {
+  width: 24px; height: 24px; flex-shrink: 0; display: grid; place-items: center;
+  background: rgba(118, 118, 128, 0.1); color: var(--label-2);
+  font-size: 0.74rem; font-weight: 800; border-radius: 99px;
+}
+.plan-step.current { background: var(--green-bg); outline: 2px solid var(--green); }
+.plan-step.current .ps-no { background: var(--green); color: #fff; }

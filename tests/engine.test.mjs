@@ -2,7 +2,7 @@
 import assert from 'node:assert';
 import { RECIPES } from '../js/data/recipes.js';
 import { ING, findIng, defaultShelf, defaultLocation } from '../js/data/ingredients.js';
-import { recommend, analyzeRecipe, deductionPlan, expiringItems, recipesUsing, modeList, getMode } from '../js/engine.js';
+import { recommend, analyzeRecipe, deductionPlan, expiringItems, recipesUsing, modeList, getMode, buildCookPlan } from '../js/engine.js';
 
 const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
 const nextMonth = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
@@ -133,5 +133,15 @@ for (const r of RECIPES) {
 assert.ok(ING.length >= 75, '재료 사전 75종 이상');
 assert.ok(RECIPES.length >= 55, '레시피 55종 이상');
 assert.ok(RECIPES.filter((r) => r.tags.includes('반찬')).length >= 7, '반찬 레시피 7종 이상');
+
+
+// 12) 같이 요리 플랜: 손질 선분리 + 긴 요리 우선 + 대기 중 끼워넣기(⏲)
+const planRecipes = [RECIPES.find((r) => r.id === 'kimchi-jjigae'), RECIPES.find((r) => r.id === 'gyeran-mari')];
+const cookPlan = buildCookPlan(planRecipes);
+assert.ok(cookPlan.titles.length === 2 && cookPlan.estTime > 0);
+assert.ok(cookPlan.ingredients.length >= 5, '통합 재료 합산');
+assert.ok(cookPlan.timeline.length >= 4, '타임라인 생성');
+assert.ok(cookPlan.timeline[0].recipe === '김치찌개', '오래 걸리는 요리부터 시작');
+assert.ok(cookPlan.timeline.some((s) => s.parallel), '대기 중 병렬(그동안) 단계 존재');
 
 console.log(`✓ 엔진 스모크 테스트 통과 — 레시피 ${RECIPES.length}종 (반찬 ${RECIPES.filter((r) => r.tags.includes('반찬')).length}종), 재료 ${ING.length}종, 모드 프리셋 ${modeList(state).length}종`);

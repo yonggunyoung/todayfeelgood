@@ -1,9 +1,10 @@
 // 냉비서 — 화면 렌더링과 상호작용 전부. 프레임워크 없는 단일 페이지 앱.
 import { S, save, uid, today, addDays, daysLeft, won } from './store.js';
 import { ING, findIng, defaultShelf, defaultLocation } from './data/ingredients.js';
-import { recommend, recipesUsing, expiringItems, activeLeftovers, deductionPlan, modeList, getMode, allRecipes } from './engine.js';
+import { recommend, recipesUsing, expiringItems, activeLeftovers, deductionPlan, modeList, getMode, allRecipes, buildCookPlan } from './engine.js';
 import { scanImage, extractRecipeFromYouTube, claimReward, searchYouTube } from './ai.js';
 import { initSync, sync, makeSpaceCode } from './sync.js';
+import { canListen, speak, stopSpeak, startListen, stopListen, isListening, parseCommand } from './voice.js';
 
 let tab = 'home';
 let pantryView = 'shelf';
@@ -15,6 +16,10 @@ let scanResults = null;
 let deductCtx = null;
 let draft = null; // 레시피/모드 작성 임시 객체
 let detailServings = 1; // 레시피 상세에서 고른 인분 수 (차감으로 이어짐)
+let vc = null;          // 음성 컨텍스트 {type:'detail'|'plan', idx, video, recipe|plan}
+let ytTime = 0;         // 유튜브 현재 재생 시각 (player infoDelivery)
+let selMode = false;    // 같이 요리 — 레시피 다중 선택 모드
+const cookSel = new Set();
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => [...document.querySelectorAll(sel)];
@@ -73,6 +78,7 @@ let ignoreNextPop = false;
 UI.closeSheet = (fromPop = false) => {
   $('#modal-root').innerHTML = '';
   scanFile = null; scanResults = null; deductCtx = null; draft = null; qaLoc = null;
+  vc = null; stopListen(); stopSpeak();
   if (sheetPushed && !fromPop) { ignoreNextPop = true; history.back(); }
   sheetPushed = false;
 };
@@ -96,6 +102,23 @@ function ytId(url) {
   return m ? m[1] : null;
 }
 const ytThumb = (id) => `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
+
+/* ── 유튜브 플레이어 원격 제어 (음성·버튼 공용) ── */
+function ytCmd(func, args = []) {
+  const f = $('#dt-yt iframe');
+  f?.contentWindow?.postMessage(JSON.stringify({ event: 'command', func, args }), '*');
+}
+function ytHandshake() { // 플레이어가 currentTime을 보내주도록 구독
+  const f = $('#dt-yt iframe');
+  f?.contentWindow?.postMessage(JSON.stringify({ event: 'listening', id: 'nb' }), '*');
+}
+window.addEventListener('message', (e) => {
+  if (typeof e.data !== 'string') return;
+  try {
+    const d = JSON.parse(e.data);
+    if (d.event === 'infoDelivery' && d.info && typeof d.info.currentTime === 'number') ytTime = d.info.currentTime;
+  } catch { /* ignore */ }
+});
 
 // 사진 → 축소 dataURL
 function fileToDataURL(file, max = 480) {
@@ -636,7 +659,8 @@ function recipeCard(a) {
   const pct = Math.round((a.have / Math.max(1, a.total)) * 100);
   const visual = recipeVisual(r);
   return `
-    <div class="card recipe-card" onclick="UI.openRecipe('${r.id}')">
+    <div class="card recipe-card ${selMode && cookSel.has(r.id) ? 'selected' : ''}" onclick="UI.cardTap('${r.id}')">
+      ${selMode ? `<div class="sel-badge ${cookSel.has(r.id) ? 'on' : ''}">${cookSel.has(r.id) ? '✓' : '＋'}</div>` : ''}
       ${a.cookable ? '<div class="ready-flag">✓ 지금 가능</div>' : ''}
       ${r.yt ? '<div class="yt-flag">▶ YouTube</div>' : (r.mine ? '<div class="yt-flag">내 레시피</div>' : '')}
       ${visual}
@@ -706,8 +730,67 @@ function renderRecipes() {
     </div>
     ${mode.blockCaution && blocked.length
       ? `<div class="banner warn">🤰 임신 중 <b>섭취 주의 재료</b>(참치의 수은 등)가 든 레시피 ${blocked.length}개를 가렸어요 — 상해서가 아니라 안 드시는 게 좋은 재료라서예요. 다른 모드로 바꾸면 그대로 보입니다. (의학적 조언 아님 · 식단은 의료진과 상의)</div>` : ''}
-    <div id="recipe-list">${recipeListHtml()}</div>`;
+    <button class="btn ${selMode ? 'btn-tint' : 'btn-soft'} btn-block" style="margin:2px 0 8px" onclick="UI.toggleSelMode()">
+      ${selMode ? '✕ 같이 요리 선택 끝내기' : '👩‍🍳 같이 요리 — 여러 개 골라 통합 순서 만들기'}</button>
+    <div id="recipe-list">${recipeListHtml()}</div>
+    ${selMode && cookSel.size ? `
+      <div id="cookbar">
+        <b>${cookSel.size}개 선택됨</b>
+        <button class="btn btn-primary btn-sm" onclick="UI.openCookPlan()">🍳 통합 순서 만들기</button>
+      </div>` : ''}`;
 }
+
+UI.toggleSelMode = () => { selMode = !selMode; if (!selMode) cookSel.clear(); renderRecipes(); };
+UI.cardTap = (id) => {
+  if (!selMode) { UI.openRecipe(id); return; }
+  const r = allRecipes(S).find((x) => x.id === id);
+  if (!r?.steps?.length) { toast('단계가 없는 레시피는 같이 요리에 못 넣어요'); return; }
+  if (cookSel.has(id)) cookSel.delete(id);
+  else {
+    if (cookSel.size >= 3) { toast('한 번에 3개까지 — 그 이상은 주방이 전쟁터가 돼요 😅'); return; }
+    cookSel.add(id);
+  }
+  renderRecipes();
+};
+
+// 여러 요리 → 손질부터 타이밍까지 통합 타임라인 (음성으로 한 단계씩)
+UI.openCookPlan = () => {
+  const recipes = [...cookSel].map((id) => allRecipes(S).find((x) => x.id === id)).filter(Boolean);
+  if (recipes.length < 2) { toast('2개 이상 선택해 주세요'); return; }
+  const plan = buildCookPlan(recipes);
+  vc = { type: 'plan', plan, idx: 0, video: false };
+  openSheet(`
+    <h2>👩‍🍳 같이 요리 플랜</h2>
+    <p class="sub">${plan.titles.join(' + ')} · 예상 ${plan.estTime}분 · 휴리스틱 베타 — 🎤를 켜면 "다음"만 말하면 돼요</p>
+    <div class="btn-row" style="margin-top:0">
+      <button class="btn btn-soft btn-sm" onclick="UI.readIngs()">🔊 재료</button>
+      <button class="btn btn-soft btn-sm" onclick="UI.readStep()">🔊 현재 단계</button>
+      <button id="mic-btn" class="btn btn-sm ${canListen ? 'btn-tint' : 'btn-soft'}" onclick="UI.micToggle()">🎤 음성</button>
+    </div>
+    <div class="section-title"><h2>🧺 통합 재료</h2><small>${plan.ingredients.length}가지</small></div>
+    <div>${plan.ingredients.map((g) => `<span class="chip have">${esc(g.n)} ${g.a ? fmtAmt(g.a) : ''}${esc(g.u || '')}</span>`).join('')}</div>
+    ${plan.prep.length ? `
+    <div class="section-title"><h2>🔪 손질 먼저 (한 번에)</h2><small>${plan.prep.length}개</small></div>
+    <div class="card flat" style="padding:6px 15px"><ul class="steps">
+      ${plan.prep.map((p) => `<li><b style="font-weight:700">${p.emoji}</b>&nbsp;${esc(p.text)}</li>`).join('')}</ul></div>` : ''}
+    <div class="section-title"><h2>🔥 조리 타임라인</h2><small>⏲ = 기다리는 동안</small></div>
+    <div id="plan-steps">
+      ${plan.timeline.map((s2, i) => `
+        <div class="plan-step ${i === 0 ? 'current' : ''}" id="ps-${i}" onclick="vcJump(${i})">
+          <span class="ps-no">${i + 1}</span>
+          <div class="grow">
+            <small>${s2.parallel ? '⏲ 그동안 · ' : ''}${s2.emoji} ${esc(s2.recipe)}</small>
+            <div>${esc(s2.text)}</div>
+          </div>
+        </div>`).join('')}
+    </div>
+    <div class="btn-row">
+      <button class="btn" onclick="UI.planNav(-1)">◀ 이전</button>
+      <button class="btn btn-primary" onclick="UI.planNav(1)">다음 단계 ▶</button>
+    </div>
+    <p class="hint" style="text-align:center">다 만들면 각 레시피에서 "요리 완료"로 재고 차감하세요 ${recipes.map((r) => `· <a href="#" onclick="event.preventDefault();UI.openRecipe('${r.id}')">${esc(r.title)}</a>`).join(' ')}</p>`);
+};
+window.vcJump = (i) => { if (vc?.type === 'plan') { vc.idx = i; vcRead(); highlightPlanStep(); } };
 // 입력 중엔 목록만 갈아끼운다 — 화면 전체를 다시 그리면 한글 조합이 끊긴다
 UI.recipeSearch = (v) => {
   recipeQuery = v;
@@ -734,8 +817,10 @@ UI.openRecipe = (rid) => {
   detailServings = 1;
   const a = recommend(S, S.settings.mode).find((x) => x.recipe.id === rid) ||
             { missing: [], have: 0, total: 1, cookable: false, fav: S.favs.includes(rid) };
-  const ytSrc = r.yt ? `https://www.youtube-nocookie.com/embed/${r.yt}?rel=0&playsinline=1` : '';
+  const ytSrc = r.yt ? `https://www.youtube-nocookie.com/embed/${r.yt}?rel=0&playsinline=1&enablejsapi=1&origin=${encodeURIComponent(location.origin)}` : '';
   const startInRecipe = !!(r.yt && r.steps?.length); // 영상+레시피 둘 다 있으면 간편 보기로 시작
+  vc = { type: 'detail', recipe: r, idx: 0, video: !!r.yt };
+  if (r.yt && !startInRecipe) { setTimeout(ytHandshake, 900); setTimeout(ytHandshake, 2200); }
   openSheet(`
     ${r.yt ? `
       ${startInRecipe ? `<div class="seg" style="margin:2px 0 10px" id="dt-vseg">
@@ -753,6 +838,11 @@ UI.openRecipe = (rid) => {
       <button class="heart ${a.fav ? 'on' : ''}" onclick="UI.toggleFav('${r.id}');this.classList.toggle('on')">❤️</button>
     </div>
     ${r.caution ? `<div class="banner warn">⚠️ ${esc(r.caution)}</div>` : ''}
+    <div class="btn-row" style="margin-top:8px">
+      <button class="btn btn-soft btn-sm" onclick="UI.readIngs()">🔊 재료 읽어줘</button>
+      <button class="btn btn-soft btn-sm" onclick="UI.readStep()">🔊 단계 읽어줘</button>
+      <button id="mic-btn" class="btn btn-sm ${canListen ? 'btn-tint' : 'btn-soft'}" onclick="UI.micToggle()">🎤 음성</button>
+    </div>
     <div class="section-title" style="margin-top:12px"><h2>재료</h2><small>${a.have}/${a.total} 보유 · 인분을 바꾸면 양이 환산돼요</small></div>
     <div class="seg" id="dt-serv" style="margin:2px 0 10px">
       ${[1, 2, 3, 4].map((n) => `<button class="${n === 1 ? 'on' : ''}" onclick="UI.dtServ(${n})">${n}인분</button>`).join('')}
@@ -792,6 +882,101 @@ UI.dtView = (m) => {
   wrap.style.display = video ? '' : 'none';
   if (link) link.style.display = video ? '' : 'none';
   if (seg) [...seg.children].forEach((b, i) => b.classList.toggle('on', video ? i === 0 : i === 1));
+  if (video) { setTimeout(ytHandshake, 900); setTimeout(ytHandshake, 2200); }
+};
+
+/* ── 🎤 음성 컨트롤 — 주방에서 손 안 대고 ── */
+UI.micToggle = () => {
+  if (isListening()) { UI.micOff(); toast('🎤 음성 컨트롤 종료'); return; }
+  if (!canListen) {
+    toast('이 브라우저는 음성인식을 지원하지 않아요 (아이폰 사파리 등) — 🔊 읽어주기 버튼은 사용할 수 있어요');
+    return;
+  }
+  const ok = startListen(
+    (t) => UI.handleVoice(t),
+    (on, why) => {
+      $('#mic-btn')?.classList.toggle('mic-on', !!on);
+      if (why === 'denied') toast('마이크 권한이 거부됐어요 — 브라우저 설정에서 허용해 주세요');
+    });
+  if (ok) {
+    $('#mic-btn')?.classList.add('mic-on');
+    speak('음성 컨트롤 켰어요. 다음, 정지, 십초 뒤로, 재료 읽어줘, 타이머 오 분 — 이렇게 말해보세요.');
+  }
+};
+UI.micOff = () => { stopListen(); stopSpeak(); $('#mic-btn')?.classList.remove('mic-on'); };
+
+function vcSteps() {
+  if (!vc) return [];
+  if (vc.type === 'plan') return vc.plan.timeline.map((s2) => `${s2.parallel ? '그동안, ' : ''}${s2.recipe}. ${s2.text}`);
+  return vc.recipe?.steps || [];
+}
+function vcRead() {
+  const steps = vcSteps();
+  if (!steps.length) { speak('단계 정보가 없어요'); return; }
+  speak(`${vc.idx + 1}단계. ${steps[vc.idx]}`);
+}
+function vcMove(d) {
+  const steps = vcSteps();
+  if (!vc || !steps.length) return;
+  const last = vc.idx >= steps.length - 1 && d > 0;
+  vc.idx = Math.min(steps.length - 1, Math.max(0, vc.idx + d));
+  if (last) { speak('마지막 단계예요. 맛있게 드세요!'); }
+  else vcRead();
+  highlightPlanStep();
+}
+function highlightPlanStep() {
+  if (vc?.type !== 'plan') return;
+  $$('#plan-steps .plan-step').forEach((el, i) => el.classList.toggle('current', i === vc.idx));
+  $(`#ps-${vc.idx}`)?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+}
+UI.planNav = (d) => vcMove(d);
+UI.readStep = () => vcRead();
+UI.readIngs = () => {
+  if (vc?.type === 'plan') {
+    speak('통합 재료. ' + vc.plan.ingredients.map((g) => `${g.n} ${g.a ? fmtAmt(g.a) : ''}${g.u || ''}`).join(', '));
+    return;
+  }
+  const r = vc?.recipe;
+  if (!r) { toast('레시피를 먼저 열어주세요'); return; }
+  const main2 = r.ingredients.filter((g) => !g.st).map((g) => `${g.n} ${g.a ? fmtAmt(g.a * detailServings) : ''}${g.u || ''}`);
+  const season = r.ingredients.filter((g) => g.st).map((g) => g.n);
+  speak(`${detailServings}인분 재료 ${main2.length}가지. ` + main2.join(', ') + (season.length ? `. 양념은 ${season.join(', ')}.` : ''));
+};
+
+let ktTimer = null;
+function startKitchenTimer(min) {
+  clearTimeout(ktTimer);
+  speak(`${min}분 타이머 시작!`);
+  toast(`⏲ ${min}분 타이머 시작`);
+  ktTimer = setTimeout(() => {
+    speak(`${min}분 타이머가 끝났어요! 불 확인하세요!`);
+    toast(`⏲ ${min}분 타이머 종료!`);
+    navigator.vibrate?.([220, 110, 220]);
+  }, min * 60000);
+}
+
+UI.handleVoice = (t) => {
+  const c = parseCommand(t);
+  if (!c) return;
+  const videoOn = vc?.video && $('#dt-yt iframe')?.src;
+  switch (c.cmd) {
+    case 'play':
+      if (!vc?.video) break;
+      if (!videoOn) UI.dtView('video');
+      setTimeout(() => { ytHandshake(); ytCmd('playVideo'); }, videoOn ? 0 : 1100);
+      toast('🎤 재생'); break;
+    case 'pause': stopSpeak(); if (videoOn) ytCmd('pauseVideo'); toast('🎤 정지'); break;
+    case 'seek':
+      if (videoOn) { ytCmd('seekTo', [Math.max(0, ytTime + c.n), true]); toast(`🎤 ${c.n > 0 ? '+' : ''}${c.n}초`); }
+      break;
+    case 'next': vcMove(1); break;
+    case 'prev': vcMove(-1); break;
+    case 'restart': if (vc) { vc.idx = 0; vcRead(); highlightPlanStep(); } break;
+    case 'repeat': vcRead(); break;
+    case 'ingredients': UI.readIngs(); break;
+    case 'timer': startKitchenTimer(c.n); break;
+    case 'micoff': UI.micOff(); toast('🎤 음성 컨트롤 종료'); break;
+  }
 };
 
 UI.dtServ = (n) => {

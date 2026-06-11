@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Chip } from "@webapp/ui";
-import { EMOTIONS, EMOTION_BY_ID } from "../../lib/emotions";
+import { EMOTIONS, EMOTION_BY_ID, type EmotionCat } from "../../lib/emotions";
 import {
   DEFAULT_STYLE,
   generateSet,
@@ -10,7 +10,7 @@ import {
 } from "../../lib/generate";
 import { CURATED } from "../../lib/curated";
 import { LIBRARY } from "../../lib/kaomojiLibrary";
-import { SYMBOL_CATS } from "../../lib/symbols";
+import { SYMBOL_CATS, type SymbolCat } from "../../lib/symbols";
 import { FONTS } from "../../lib/fonts";
 import { decorate, THEMES } from "../../lib/decorate";
 import { copyText } from "../../lib/clipboard";
@@ -19,22 +19,49 @@ import {
   saveFavorites,
   toggleFavorite,
 } from "../../lib/favorites";
+import {
+  EMOTION_EN,
+  SYMBOL_EN,
+  THEME_EN,
+  FONT_EN,
+  type Locale,
+  type TextmojiDict,
+} from "../../lib/i18n";
 import styles from "./TextmojiStudio.module.css";
 
 type Mode = "kaomoji" | "symbol" | "font" | "decorate";
 type Tab = "all" | "fav";
 const GRID = 12;
 const FONT_SAMPLE = "Aa Bb 123";
-const DECORATE_SAMPLE = "내이름";
 
-const MODES: { id: Mode; label: string; emoji: string }[] = [
-  { id: "decorate", label: "꾸미기", emoji: "꒰♡꒱" },
-  { id: "kaomoji", label: "카오모지", emoji: "ʕ•ᴥ•ʔ" },
-  { id: "symbol", label: "특수기호", emoji: "✦" },
-  { id: "font", label: "인싸폰트", emoji: "𝓐𝒶" },
+const MODES: { id: Mode; emoji: string }[] = [
+  { id: "decorate", emoji: "꒰♡꒱" },
+  { id: "kaomoji", emoji: "ʕ•ᴥ•ʔ" },
+  { id: "symbol", emoji: "✦" },
+  { id: "font", emoji: "𝓐𝒶" },
 ];
 
-export default function TextmojiStudio() {
+export default function TextmojiStudio({
+  locale,
+  dict,
+}: {
+  locale: Locale;
+  dict: TextmojiDict;
+}) {
+  const t = dict.studio;
+  const en = locale === "en";
+
+  // ── 로케일별 라벨/검색어 헬퍼(데이터는 그대로, 영어는 오버레이) ──
+  const emoLabel = useCallback(
+    (e: EmotionCat | undefined) =>
+      e ? (en ? EMOTION_EN[e.id]?.label ?? e.label : e.label) : "",
+    [en]
+  );
+  const symLabel = useCallback(
+    (c: SymbolCat) => (en ? SYMBOL_EN[c.id]?.label ?? c.label : c.label),
+    [en]
+  );
+
   const [mode, setMode] = useState<Mode>("kaomoji");
   const [tab, setTab] = useState<Tab>("all");
 
@@ -51,6 +78,7 @@ export default function TextmojiStudio() {
   const [fontInput, setFontInput] = useState("");
 
   // 한 줄 꾸미기
+  const decorateSample = en ? "myname" : "내이름";
   const [decorateInput, setDecorateInput] = useState("");
   const [decorateSeed, setDecorateSeed] = useState(0);
   const [decorateTheme, setDecorateTheme] = useState<string>(THEMES[0]!.id);
@@ -86,10 +114,15 @@ export default function TextmojiStudio() {
       const gen = generated.map((g) => g.text);
       return Array.from(new Set(showGenerated ? [...gen, ...base] : base));
     }
-    // 검색: 텍스트·키워드(한/영) + 감정 라벨/키워드 매칭
-    const matchEmotions = EMOTIONS.filter(
-      (e) => e.label.includes(q) || e.keywords.some((k) => k.toLowerCase().includes(q))
-    ).map((e) => e.id);
+    // 검색: 텍스트·키워드 + 감정 라벨/키워드(한·영 모두) 매칭
+    const matchEmotions = EMOTIONS.filter((e) => {
+      const labels = [e.label, EMOTION_EN[e.id]?.label ?? ""];
+      const kws = [...e.keywords, ...(EMOTION_EN[e.id]?.keywords ?? [])];
+      return (
+        labels.some((l) => l.toLowerCase().includes(q)) ||
+        kws.some((k) => k.toLowerCase().includes(q))
+      );
+    }).map((e) => e.id);
     const hits = allKao
       .filter(
         (k) =>
@@ -107,8 +140,11 @@ export default function TextmojiStudio() {
     if (q) {
       const hits: string[] = [];
       for (const cat of SYMBOL_CATS) {
+        const labels = [cat.label, SYMBOL_EN[cat.id]?.label ?? ""];
+        const kws = [...cat.keywords, ...(SYMBOL_EN[cat.id]?.keywords ?? [])];
         const catMatch =
-          cat.label.includes(q) || cat.keywords.some((k) => k.toLowerCase().includes(q));
+          labels.some((l) => l.toLowerCase().includes(q)) ||
+          kws.some((k) => k.toLowerCase().includes(q));
         for (const it of cat.items) {
           if (catMatch || it.toLowerCase().includes(q)) hits.push(it);
         }
@@ -121,18 +157,22 @@ export default function TextmojiStudio() {
   // ── 인싸폰트 결과 ──
   const fontOutputs = useMemo(() => {
     const src = fontInput.trim() || FONT_SAMPLE;
-    return FONTS.map((f) => ({ id: f.id, label: f.label, text: f.transform(src) }));
-  }, [fontInput]);
+    return FONTS.map((f) => ({
+      id: f.id,
+      label: en ? FONT_EN[f.id] ?? f.label : f.label,
+      text: f.transform(src),
+    }));
+  }, [fontInput, en]);
 
   // ── 한 줄 꾸미기 결과 ──
   const decorateOutputs = useMemo(
     () =>
-      decorate(decorateInput.trim() || DECORATE_SAMPLE, {
+      decorate(decorateInput.trim() || decorateSample, {
         theme: decorateTheme,
         seed: decorateSeed,
         withKaomoji: decorateKao,
       }),
-    [decorateInput, decorateSeed, decorateTheme, decorateKao]
+    [decorateInput, decorateSeed, decorateTheme, decorateKao, decorateSample]
   );
 
   const showToast = useCallback((msg: string) => {
@@ -144,9 +184,9 @@ export default function TextmojiStudio() {
   const onCopy = useCallback(
     async (text: string) => {
       const ok = await copyText(text);
-      showToast(ok ? "복사했다 너굴! 붙여넣기 해 봐 ✨" : "복사 실패… 길게 눌러 직접 복사해 줘.");
+      showToast(ok ? t.toastCopied : t.toastCopyFail);
     },
-    [showToast]
+    [showToast, t.toastCopied, t.toastCopyFail]
   );
 
   const onToggleFav = useCallback((text: string) => {
@@ -175,7 +215,7 @@ export default function TextmojiStudio() {
       <div className={styles.sticky}>
         {/* ── 매크로 모드 바 ── */}
         {tab === "all" ? (
-          <div className={styles.modeBar} role="tablist" aria-label="콘텐츠 종류">
+          <div className={styles.modeBar} role="tablist" aria-label={t.contentKindsAria}>
             {MODES.map((m) => (
               <button
                 key={m.id}
@@ -191,7 +231,7 @@ export default function TextmojiStudio() {
                 <span className={styles.modeEmoji} aria-hidden>
                   {m.emoji}
                 </span>
-                {m.label}
+                {t.modes[m.id]}
               </button>
             ))}
           </div>
@@ -203,20 +243,18 @@ export default function TextmojiStudio() {
             <input
               type="search"
               className={styles.search}
-              placeholder={
-                mode === "kaomoji" ? "감정·키워드 검색 (곰, 우는, 하트…)" : "기호 검색 (별, 화살표, 하트…)"
-              }
+              placeholder={mode === "kaomoji" ? t.searchKaomojiPh : t.searchSymbolPh}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              aria-label="검색"
+              aria-label={t.searchAria}
             />
             {mode === "kaomoji" ? (
               <button
                 type="button"
                 className={styles.dice}
                 onClick={reroll}
-                aria-label="더 만들기 — 새 조합 생성"
-                title="🎲 더 만들기"
+                aria-label={t.diceMakeMore}
+                title={t.diceMakeMoreTitle}
               >
                 🎲
               </button>
@@ -227,7 +265,7 @@ export default function TextmojiStudio() {
         {/* ── 카오모지: 감정칩 + 스타일 ── */}
         {tab === "all" && mode === "kaomoji" ? (
           <>
-            <div className={styles.chips} role="tablist" aria-label="감정 카테고리">
+            <div className={styles.chips} role="tablist" aria-label={t.emotionCatsAria}>
               {EMOTIONS.slice()
                 .sort((a, b) => Number(Boolean(b.trend)) - Number(Boolean(a.trend)))
                 .map((e) => (
@@ -241,32 +279,32 @@ export default function TextmojiStudio() {
                     }}
                     className={styles.chip}
                   >
-                    <span aria-hidden>{e.emoji}</span> {e.label}
-                    {e.trend ? <span className={styles.trendDot}> ·HOT</span> : null}
+                    <span aria-hidden>{e.emoji}</span> {emoLabel(e)}
+                    {e.trend ? <span className={styles.trendDot}> {t.hot}</span> : null}
                   </Chip>
                 ))}
             </div>
-            <div className={styles.styleRow} aria-label="생성 스타일">
+            <div className={styles.styleRow} aria-label={t.styleAria}>
               <Chip
                 selected={style.animalFace}
                 onClick={() => setStyle((s) => ({ ...s, animalFace: !s.animalFace }))}
                 className={styles.styleChip}
               >
-                동물상
+                {t.styleAnimal}
               </Chip>
               <Chip
                 selected={style.action}
                 onClick={() => setStyle((s) => ({ ...s, action: !s.action }))}
                 className={styles.styleChip}
               >
-                액션형
+                {t.styleAction}
               </Chip>
               <Chip
                 selected={style.symmetric}
                 onClick={() => setStyle((s) => ({ ...s, symmetric: !s.symmetric }))}
                 className={styles.styleChip}
               >
-                좌우대칭
+                {t.styleSymmetric}
               </Chip>
               <Chip
                 selected={style.fancy >= 2}
@@ -275,7 +313,7 @@ export default function TextmojiStudio() {
                 }
                 className={styles.styleChip}
               >
-                장식 {style.fancy}
+                {t.styleDeco} {style.fancy}
               </Chip>
             </div>
           </>
@@ -283,7 +321,7 @@ export default function TextmojiStudio() {
 
         {/* ── 특수기호: 카테고리칩 ── */}
         {tab === "all" && mode === "symbol" ? (
-          <div className={styles.chips} role="tablist" aria-label="기호 카테고리">
+          <div className={styles.chips} role="tablist" aria-label={t.symbolCatsAria}>
             {SYMBOL_CATS.map((c) => (
               <Chip
                 key={c.id}
@@ -294,7 +332,7 @@ export default function TextmojiStudio() {
                 }}
                 className={styles.chip}
               >
-                <span aria-hidden>{c.emoji}</span> {c.label}
+                <span aria-hidden>{c.emoji}</span> {symLabel(c)}
               </Chip>
             ))}
           </div>
@@ -306,10 +344,10 @@ export default function TextmojiStudio() {
             <input
               type="text"
               className={styles.search}
-              placeholder="여기에 영어·숫자를 입력하면 폰트로 변환돼요"
+              placeholder={t.fontInputPh}
               value={fontInput}
               onChange={(e) => setFontInput(e.target.value)}
-              aria-label="인싸폰트로 변환할 글자"
+              aria-label={t.fontInputAria}
               maxLength={60}
             />
           </div>
@@ -322,23 +360,23 @@ export default function TextmojiStudio() {
               <input
                 type="text"
                 className={styles.search}
-                placeholder="이름·한줄소개를 넣으면 꾸며 줘요 (한글 OK)"
+                placeholder={t.decorateInputPh}
                 value={decorateInput}
                 onChange={(e) => setDecorateInput(e.target.value)}
-                aria-label="꾸밀 글자"
+                aria-label={t.decorateInputAria}
                 maxLength={40}
               />
               <button
                 type="button"
                 className={styles.dice}
                 onClick={() => setDecorateSeed((s) => s + 1)}
-                aria-label="다른 조합으로"
-                title="🎲 다른 조합"
+                aria-label={t.diceOtherCombo}
+                title={t.diceOtherComboTitle}
               >
                 🎲
               </button>
             </div>
-            <div className={styles.chips} role="tablist" aria-label="꾸미기 테마">
+            <div className={styles.chips} role="tablist" aria-label={t.decorateThemesAria}>
               {THEMES.map((th) => (
                 <Chip
                   key={th.id}
@@ -346,17 +384,18 @@ export default function TextmojiStudio() {
                   onClick={() => setDecorateTheme(th.id)}
                   className={styles.chip}
                 >
-                  <span aria-hidden>{th.emoji}</span> {th.label}
+                  <span aria-hidden>{th.emoji}</span>{" "}
+                  {en ? THEME_EN[th.id] ?? th.label : th.label}
                 </Chip>
               ))}
             </div>
-            <div className={styles.styleRow} aria-label="꾸미기 옵션">
+            <div className={styles.styleRow} aria-label={t.decorateOptionsAria}>
               <Chip
                 selected={decorateKao}
                 onClick={() => setDecorateKao((v) => !v)}
                 className={styles.styleChip}
               >
-                {decorateKao ? "카오모지 ✓" : "카오모지"}
+                {decorateKao ? t.kaomojiOn : t.kaomojiOff}
               </Chip>
             </div>
           </>
@@ -367,9 +406,7 @@ export default function TextmojiStudio() {
       <div className={styles.gridScroll}>
         {tab === "all" && mode === "decorate" ? (
           <div className={styles.fontList}>
-            <p className={styles.decoHint}>
-              마음에 드는 줄을 탭하면 복사돼요. 🎲로 다른 조합도 뽑아 봐요.
-            </p>
+            <p className={styles.decoHint}>{t.decoHint}</p>
             {decorateOutputs.map((text, i) => {
               const isFav = favs.includes(text);
               return (
@@ -378,8 +415,8 @@ export default function TextmojiStudio() {
                     type="button"
                     className={styles.fontPreview}
                     onClick={() => onCopy(text)}
-                    aria-label={`${text} 복사`}
-                    title="탭하면 복사"
+                    aria-label={`${text} ${t.copySuffix}`}
+                    title={t.copyTitle}
                   >
                     {text}
                   </button>
@@ -388,7 +425,7 @@ export default function TextmojiStudio() {
                     className={`${styles.star} ${isFav ? styles.starOn : ""}`}
                     onClick={() => onToggleFav(text)}
                     aria-pressed={isFav}
-                    aria-label={isFav ? "즐겨찾기 해제" : "즐겨찾기"}
+                    aria-label={isFav ? t.starRemove : t.starAdd}
                   >
                     {isFav ? "★" : "☆"}
                   </button>
@@ -400,7 +437,7 @@ export default function TextmojiStudio() {
               className={styles.moreBtn}
               onClick={() => setDecorateSeed((s) => s + 1)}
             >
-              🎲 다른 조합 더 보기
+              {t.decoMoreBtn}
             </button>
           </div>
         ) : tab === "all" && mode === "font" ? (
@@ -414,8 +451,8 @@ export default function TextmojiStudio() {
                     type="button"
                     className={styles.fontPreview}
                     onClick={() => onCopy(f.text)}
-                    aria-label={`${f.label} 복사: ${f.text}`}
-                    title="탭하면 복사"
+                    aria-label={`${f.label} ${t.copySuffix}: ${f.text}`}
+                    title={t.copyTitle}
                   >
                     {f.text}
                   </button>
@@ -424,23 +461,17 @@ export default function TextmojiStudio() {
                     className={`${styles.star} ${isFav ? styles.starOn : ""}`}
                     onClick={() => onToggleFav(f.text)}
                     aria-pressed={isFav}
-                    aria-label={isFav ? "즐겨찾기 해제" : "즐겨찾기"}
+                    aria-label={isFav ? t.starRemove : t.starAdd}
                   >
                     {isFav ? "★" : "☆"}
                   </button>
                 </div>
               );
             })}
-            <p className={styles.honest}>
-              인싸폰트는 영어·숫자만 변환돼요. 일부 기기·앱에선 다르게 보일 수 있어요.
-            </p>
+            <p className={styles.honest}>{t.fontHonest}</p>
           </div>
         ) : gridTexts.length === 0 ? (
-          <p className={styles.empty}>
-            {tab === "fav"
-              ? "아직 즐겨찾기가 없어 너굴. 마음에 드는 카드의 ☆를 눌러 봐."
-              : "조건에 맞는 게 없어 너굴. 다른 검색어나 카테고리를 골라 봐."}
-          </p>
+          <p className={styles.empty}>{tab === "fav" ? t.emptyFav : t.emptyNone}</p>
         ) : (
           <div className={styles.grid}>
             {gridTexts.map((text, i) => {
@@ -451,8 +482,8 @@ export default function TextmojiStudio() {
                     type="button"
                     className={styles.copyBtn}
                     onClick={() => onCopy(text)}
-                    aria-label={`${text} 복사`}
-                    title="탭하면 복사"
+                    aria-label={`${text} ${t.copySuffix}`}
+                    title={t.copyTitle}
                   >
                     <span className={styles.moji}>{text}</span>
                   </button>
@@ -461,7 +492,7 @@ export default function TextmojiStudio() {
                     className={`${styles.star} ${styles.starCorner} ${isFav ? styles.starOn : ""}`}
                     onClick={() => onToggleFav(text)}
                     aria-pressed={isFav}
-                    aria-label={isFav ? "즐겨찾기 해제" : "즐겨찾기"}
+                    aria-label={isFav ? t.starRemove : t.starAdd}
                   >
                     {isFav ? "★" : "☆"}
                   </button>
@@ -473,20 +504,22 @@ export default function TextmojiStudio() {
 
         {tab === "all" && mode === "kaomoji" && !query.trim() ? (
           <button type="button" className={styles.moreBtn} onClick={reroll}>
-            🎲 {curEmotion?.label ?? ""} 더 만들기
+            {t.moreBtnPrefix}
+            {emoLabel(curEmotion)}
+            {t.moreBtnSuffix}
           </button>
         ) : null}
       </div>
 
       {/* ── 하단 탭바 ── */}
-      <nav className={styles.tabbar} aria-label="보기 전환">
+      <nav className={styles.tabbar} aria-label={t.viewSwitchAria}>
         <button
           type="button"
           className={`${styles.tab} ${tab === "all" ? styles.tabOn : ""}`}
           onClick={() => setTab("all")}
           aria-pressed={tab === "all"}
         >
-          전체
+          {t.tabAll}
         </button>
         <button
           type="button"
@@ -494,7 +527,8 @@ export default function TextmojiStudio() {
           onClick={() => setTab("fav")}
           aria-pressed={tab === "fav"}
         >
-          ★ 즐겨찾기{favs.length ? ` (${favs.length})` : ""}
+          {t.tabFav}
+          {favs.length ? ` (${favs.length})` : ""}
         </button>
       </nav>
 

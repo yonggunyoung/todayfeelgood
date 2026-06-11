@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@webapp/i18n": "workspace:*",
     "@webapp/seo": "workspace:*",
     "@webapp/ui": "workspace:*",
     "next": "^14.2.5",

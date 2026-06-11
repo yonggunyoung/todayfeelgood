@@ -11,7 +11,7 @@ const nextConfig = {
   basePath: basePath || undefined,
   assetPrefix: basePath || undefined,
   // 워크스페이스 패키지를 소스(.ts/.css)째로 가져오므로 Next가 트랜스파일하도록 지정
-  transpilePackages: ["@webapp/seo", "@webapp/ui"],
+  transpilePackages: ["@webapp/seo", "@webapp/ui", "@webapp/i18n"],
   env: {
     NEXT_PUBLIC_BASE_PATH: basePath || "",
   },

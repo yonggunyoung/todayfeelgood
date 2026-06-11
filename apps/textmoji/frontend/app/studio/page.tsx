@@ -1,21 +1,31 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { buildMeta } from "@webapp/seo";
+import { localeFromHeaders } from "@webapp/i18n";
 import { SiteHeader } from "../../components/SiteChrome";
+import { getDict } from "../../lib/i18n";
 import TextmojiStudio from "./TextmojiStudio";
 
-export const metadata: Metadata = buildMeta({
-  title: "텍스트 이모티콘·특수문자·인싸폰트 — 원탭 복사",
-  description:
-    "카오모지(감정별)·특수문자/꾸밈 기호·인싸폰트 변환을 한 곳에서. 입력한 글자를 𝓯𝓪𝓷𝓬𝔂·Ⓒⓘⓡⓒⓛⓔ로 즉시 변환하고, 별·하트·화살표·구분선까지 탭 한 번에 복사. 즐겨찾기·검색 지원.",
-  path: "/textmoji/studio",
-});
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = localeFromHeaders(headers());
+  const t = getDict(locale).meta;
+  return buildMeta({
+    title: t.studioTitle,
+    description: t.studioDescription,
+    path: "/textmoji/studio",
+    locale,
+    alternates: { ko: "/textmoji/studio", en: "/textmoji/studio" },
+  });
+}
 
 export default function StudioPage() {
+  const locale = localeFromHeaders(headers());
+  const dict = getDict(locale);
   return (
     <>
-      <SiteHeader />
+      <SiteHeader dict={dict} />
       <main>
-        <TextmojiStudio />
+        <TextmojiStudio locale={locale} dict={dict} />
       </main>
     </>
   );

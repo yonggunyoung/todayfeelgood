@@ -53,3 +53,17 @@
 결론: 영수증 1장당 비용이 Haiku ≈ 7원 vs Flash-Lite ≈ 1원 수준 — **차이가 사용자당 월 수십 원**이라
 지금 규모에선 갈아타는 공수·품질 리스크가 절감액보다 크다. 유튜브 빠른 레시피는 Claude 서버측 웹 도구에
 의존하므로 유지. 월 AI 비용이 수십만 원대(MAU 수천)에 도달하면 스캔만 Flash-Lite 병행을 재검토.
+
+## 터미널(클로드 CLI 포함)에서 AI 테스트 — 관리자용
+
+서버를 배포하기 전에도, 폰 없이도 파이프라인을 검증할 수 있다:
+
+```bash
+export ANTHROPIC_API_KEY=sk-ant-…           # 운영자 키
+node tools/ai-test.mjs scan ./영수증.jpg     # 영수증/식재료 사진 → 품목 추출 결과 + 토큰 사용량
+node tools/ai-test.mjs yt https://youtu.be/… # 유튜브 → 빠른 레시피 정리 결과
+SCAN_MODEL=claude-sonnet-4-6 node tools/ai-test.mjs scan ./영수증.jpg  # 모델 교체 비교 실험
+```
+
+앱 쪽에서는 AI 설정이 **관리자 모드**(설정 → AI 기능 → 🔒 관리자, 최초 1회 PIN 설정) 뒤로 숨겨져 있어
+일반 사용자는 "베타 준비 중" 안내만 보고, 키·서버 주소는 운영자만 만질 수 있다.

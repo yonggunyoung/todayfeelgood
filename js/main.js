@@ -25,6 +25,22 @@ const TAGS = ['반찬', '고단백', '운동', '자취', '초간단', '국물', 
 
 window.UI = {};
 
+// 관리자 모드 — AI 설정은 운영자만 만진다 (이 기기에서만 해제 상태 유지)
+const ADMIN_FLAG = 'naengbiseo.admin';
+const isAdmin = () => { try { return localStorage.getItem(ADMIN_FLAG) === '1'; } catch { return false; } };
+UI.adminGate = () => {
+  if (isAdmin()) { localStorage.removeItem(ADMIN_FLAG); render(); toast('관리자 모드 잠금 🔒'); return; }
+  const pin = prompt(S.settings.adminPin ? '관리자 PIN을 입력하세요' : '처음이네요 — 사용할 관리자 PIN을 정하세요');
+  if (!pin) return;
+  if (!S.settings.adminPin) {
+    S.settings.adminPin = pin; save({ silent: true });
+    localStorage.setItem(ADMIN_FLAG, '1'); toast('관리자 PIN 설정 완료 · 잠금 해제 🔓');
+  } else if (pin === S.settings.adminPin) {
+    localStorage.setItem(ADMIN_FLAG, '1'); toast('관리자 모드 ON 🔓');
+  } else { toast('PIN이 달라요'); return; }
+  render();
+};
+
 // AI 사용 가능 여부 (byok=내 키 / server=운영자 서버 경유)
 function aiReady() {
   const st = S.settings;
@@ -137,9 +153,9 @@ function renderHome() {
     firstEat = `<div class="section-title"><h2>🔥 먼저 먹어요</h2><small>잔반과 임박 재료</small></div>` +
       leftovers.map((l) => `
         <div class="item ${daysLeft(l.expiresAt) <= 1 ? 'danger' : ''}">
-          <span class="emoji t-가공">🍱</span>
-          <div class="grow"><div class="name">${esc(l.name)}</div>
-            <div class="sub">남은 음식 · ${LOC_LABEL[l.location]} ${stampFor(daysLeft(l.expiresAt))}</div></div>
+          <span class="emoji t-가공" onclick="UI.openFood('${l.id}')">${l.photo ? `<img src="${l.photo}" alt="" />` : foodKind(l).emoji}</span>
+          <div class="grow" onclick="UI.openFood('${l.id}')"><div class="name">${esc(l.name)}</div>
+            <div class="sub">${foodKind(l).label} · ${LOC_LABEL[l.location]} ${stampFor(daysLeft(l.expiresAt))}</div></div>
           <button class="btn btn-sm btn-primary" onclick="UI.leftoverDone('${l.id}','eaten')">먹었어요</button>
           <button class="btn btn-sm btn-soft" onclick="UI.leftoverDone('${l.id}','wasted')">버림</button>
         </div>`).join('') +
@@ -218,12 +234,27 @@ const shelfRows = (items) => items.length
   ? chunk(items, 4).map((row) => `<div class="f-row">${row.map(fItem).join('')}</div><div class="f-shelf"></div>`).join('')
   : `<p class="f-empty">텅 비었어요</p>`;
 
+function foodTile(l) {
+  const d = daysLeft(l.expiresAt);
+  return `
+    <button class="f-item" onclick="UI.openFood('${l.id}')">
+      ${d <= 3 ? `<span class="fi-dot ${d <= 1 ? 'dot-red' : 'dot-amber'}"></span>` : ''}
+      <span class="fi-face">${l.photo ? `<img src="${l.photo}" alt="" />` : foodKind(l).emoji}</span>
+      <span class="fi-name">${esc(l.name)}</span>
+    </button>`;
+}
+const foodRows = (foods) =>
+  chunk(foods, 4).map((row) => `<div class="f-row">${row.map(foodTile).join('')}</div><div class="f-shelf"></div>`).join('');
+
 function fridgeHtml(all) {
   const fr = all.filter((p) => p.location === 'fridge');
   const frMain = fr.filter((p) => p.qtyType !== 'level');
   const frDoor = fr.filter((p) => p.qtyType === 'level');
   const fz = all.filter((p) => p.location === 'freezer');
   const rm = all.filter((p) => p.location === 'room');
+  const foods = activeLeftovers(S);
+  const frFoods = foods.filter((l) => l.location === 'fridge');
+  const fzFoods = foods.filter((l) => l.location === 'freezer');
   return `
     <div class="fridge">
       <div class="fridge-inner">
@@ -234,12 +265,14 @@ function fridgeHtml(all) {
         <span class="mist" style="left:71%;animation-delay:3.2s;--dx:9px"></span>
         <div class="f-sec-label"><span>냉장실</span><span>${fr.length ? fr.length + '개' : ''}</span></div>
         ${shelfRows(frMain)}
+        ${frFoods.length ? `<div class="f-sec-label" style="padding-top:2px"><span>🍱 반찬·조리음식 칸</span><span>${frFoods.length}개</span></div>${foodRows(frFoods)}` : ''}
         ${frDoor.length ? `<div class="f-pocket"><div class="fp-label">도어 포켓 · 소스</div><div class="fp-row">${frDoor.map(fItem).join('')}</div></div>` : ''}
       </div>
       <div class="f-divider"></div>
       <div class="fridge-inner freezer">
         <div class="f-sec-label"><span>냉동실</span><span>${fz.length ? fz.length + '개' : ''}</span></div>
         ${shelfRows(fz)}
+        ${fzFoods.length ? `<div class="f-sec-label" style="padding-top:2px"><span>🍱 얼려둔 음식</span><span>${fzFoods.length}개</span></div>${foodRows(fzFoods)}` : ''}
       </div>
     </div>
     ${rm.length ? `<div class="basket"><div class="f-sec-label"><span>실온 선반</span><span>${rm.length}개</span></div>${shelfRows(rm)}</div>` : ''}`;
@@ -276,6 +309,7 @@ function renderPantry() {
       <button class="btn btn-primary" onclick="UI.openScan()"><b>📷 AI 스캔</b><small>영수증/사진 입고</small></button>
       <button class="btn" onclick="UI.openQuickAdd()"><b>➕ 빠른 추가</b><small>검색 후 탭</small></button>
     </div>
+    <button class="btn btn-soft btn-block" style="margin-top:9px" onclick="UI.openFoodForm()">🍱 만든 요리·반찬·배달음식 보관하기</button>
     <div class="seg">
       <button class="${pantryView === 'shelf' ? 'on' : ''}" onclick="UI.setPantryView('shelf')">🧊 냉장고</button>
       <button class="${pantryView === 'list' ? 'on' : ''}" onclick="UI.setPantryView('list')">📋 자세히 보기</button>
@@ -395,10 +429,15 @@ UI.openScan = () => {
     openSheet(`
       <h2>📷 AI 입고 스캔</h2>
       <p class="sub">영수증이나 장 봐온 식재료 사진 한 장이면 AI가 품목을 읽어 냉장고에 등록해 드려요.</p>
-      <div class="banner">🔑 <span>${esc(ready.msg)}</span></div>
-      <div class="btn-row">
-        <button class="btn" onclick="UI.closeSheet()">나중에</button>
-        <button class="btn btn-primary" onclick="UI.closeSheet();UI.go('settings')">설정으로 가기</button></div>`);
+      ${isAdmin()
+        ? `<div class="banner">🔑 <span>${esc(ready.msg)}</span></div>
+           <div class="btn-row">
+             <button class="btn" onclick="UI.closeSheet()">나중에</button>
+             <button class="btn btn-primary" onclick="UI.closeSheet();UI.go('settings')">설정으로 가기</button></div>`
+        : `<div class="banner">✨ <span>AI 스캔은 베타 준비 중이에요 — 곧 무료로 제공됩니다. 그동안은 <b>빠른 추가</b>로 2탭 등록을 써주세요!</span></div>
+           <div class="btn-row">
+             <button class="btn" onclick="UI.closeSheet()">알겠어요</button>
+             <button class="btn btn-primary" onclick="UI.closeSheet();UI.openQuickAdd()">➕ 빠른 추가 열기</button></div>`}`);
     return;
   }
   openSheet(`
@@ -687,7 +726,7 @@ UI.rfAuto = async () => {
   const url = $('#rf-yt').value.trim();
   if (!ytId(url)) { toast('유튜브 링크를 먼저 붙여넣어 주세요'); return; }
   const ready = aiReady();
-  if (!ready.ok) { toast(ready.msg); return; }
+  if (!ready.ok) { toast(isAdmin() ? ready.msg : '빠른 레시피는 베타 준비 중이에요 ✨ 곧 제공됩니다'); return; }
   collectForm();
   const btn = $('#rf-auto');
   btn.disabled = true; btn.textContent = '🤖 영상 내용 정리 중… (20~40초)';
@@ -927,33 +966,78 @@ UI.applyDeduct = () => {
     </div>`);
 };
 
-UI.openLeftoverForm = (name) => {
+/* ── 음식 보관 (만든 요리·반찬·배달음식) ───── */
+const FOOD_KINDS = {
+  cooked:   { emoji: '🍲', label: '만든 요리', fridgeDays: 3 },
+  banchan:  { emoji: '🥢', label: '반찬',      fridgeDays: 5 },
+  delivery: { emoji: '🥡', label: '배달음식',  fridgeDays: 2 },
+};
+const foodKind = (l) => FOOD_KINDS[l.kind] || FOOD_KINDS.cooked;
+let foodCtx = null;
+
+UI.openFoodForm = (name = '', kind = 'cooked') => {
+  foodCtx = { kind, loc: 'fridge', photo: null };
   openSheet(`
-    <h2>🍱 잔반 등록</h2><p class="sub">홈 화면 맨 위에서 챙겨드릴게요</p>
-    <div class="field"><label>이름</label><input id="lo-name" value="${esc(name)}" /></div>
-    <div class="field"><label>보관</label>
-      <div class="seg" style="margin:0">
-        <button id="lo-fridge" class="on" onclick="UI.loLoc('fridge')">냉장 (3일)</button>
-        <button id="lo-freezer" onclick="UI.loLoc('freezer')">냉동 (30일)</button>
+    <h2>🍱 음식 보관</h2><p class="sub">만든 요리·반찬·배달음식 — 넣어두면 기한을 챙겨드려요</p>
+    <div class="field"><label>이름</label><input id="fo-name" placeholder="예: 엄마표 멸치볶음, 남은 치킨" value="${esc(name)}" /></div>
+    <div class="field"><label>종류</label>
+      <div class="seg" style="margin:0" id="fo-kind">
+        ${Object.entries(FOOD_KINDS).map(([k, v]) =>
+          `<button class="${k === kind ? 'on' : ''}" onclick="UI.foKind('${k}',this)">${v.emoji} ${v.label}</button>`).join('')}
       </div></div>
-    <div class="btn-row"><button class="btn btn-primary btn-block" onclick="UI.saveLeftover()">저장</button></div>`);
-  deductCtx = { loLoc: 'fridge' };
+    <div class="field"><label>보관</label>
+      <div class="seg" style="margin:0" id="fo-loc">
+        <button class="on" onclick="UI.foLoc('fridge',this)">냉장</button>
+        <button onclick="UI.foLoc('freezer',this)">냉동</button>
+      </div>
+      <p class="hint" id="fo-exp"></p></div>
+    <div class="field">
+      <label class="btn btn-soft">📸 사진 (선택)<input type="file" accept="image/*" capture="environment" style="display:none" onchange="UI.foPhoto(this)" /></label>
+      <span id="fo-photoprev" class="hint"></span></div>
+    <div class="btn-row"><button class="btn btn-primary btn-block" onclick="UI.saveFood()">냉장고에 넣기</button></div>`);
+  updateFoExp();
 };
-UI.loLoc = (l) => {
-  deductCtx.loLoc = l;
-  $('#lo-fridge').classList.toggle('on', l === 'fridge');
-  $('#lo-freezer').classList.toggle('on', l === 'freezer');
+const foodDays = () => (foodCtx.loc === 'freezer' ? 30 : FOOD_KINDS[foodCtx.kind].fridgeDays);
+function updateFoExp() {
+  const el = $('#fo-exp');
+  if (el) el.textContent = `소비기한 자동 설정: ${foodDays()}일 (저장 후 수정 가능)`;
+}
+UI.foKind = (k, el) => { foodCtx.kind = k; $$('#fo-kind button').forEach((b) => b.classList.toggle('on', b === el)); updateFoExp(); };
+UI.foLoc = (l, el) => { foodCtx.loc = l; $$('#fo-loc button').forEach((b) => b.classList.toggle('on', b === el)); updateFoExp(); };
+UI.foPhoto = async (input) => {
+  const f = input.files?.[0];
+  if (!f) return;
+  try { foodCtx.photo = await fileToDataURL(f, 320); $('#fo-photoprev').textContent = '✓ 사진 첨부됨'; }
+  catch { toast('사진을 읽지 못했어요'); }
 };
-UI.saveLeftover = () => {
-  const loc = deductCtx?.loLoc || 'fridge';
+UI.saveFood = () => {
+  const k = FOOD_KINDS[foodCtx.kind];
+  const name = $('#fo-name').value.trim() || k.label;
   S.leftovers.push({
-    id: uid(), name: $('#lo-name').value || '남은 음식',
-    location: loc, expiresAt: addDays(loc === 'freezer' ? 30 : 3),
+    id: uid(), name, kind: foodCtx.kind, photo: foodCtx.photo,
+    location: foodCtx.loc, expiresAt: addDays(foodDays()),
     createdAt: today(), status: 'active',
   });
   save(); UI.closeSheet(); render();
-  toast('잔반 등록 완료 — 먼저 먹기 목록에서 챙겨드릴게요');
+  toast(`${k.emoji} ${name} 보관 완료 — 기한 챙겨드릴게요`);
 };
+UI.openLeftoverForm = (name) => UI.openFoodForm(name, 'cooked');
+
+UI.openFood = (id) => {
+  const l = S.leftovers.find((x) => x.id === id);
+  if (!l) return;
+  const k = foodKind(l);
+  openSheet(`
+    ${l.photo ? `<img src="${l.photo}" style="width:100%;border-radius:16px;margin-bottom:10px;max-height:200px;object-fit:cover" />` : ''}
+    <h2>${k.emoji} ${esc(l.name)}</h2>
+    <p class="sub">${k.label} · ${LOC_LABEL[l.location]} ${stampFor(daysLeft(l.expiresAt))}</p>
+    <div class="field"><label>소비기한</label>
+      <input type="date" value="${l.expiresAt}" onchange="UI.foExpEdit('${id}',this.value)" /></div>
+    <div class="btn-row">
+      <button class="btn btn-soft" onclick="UI.leftoverDone('${id}','wasted');UI.closeSheet()">🗑️ 버렸어요</button>
+      <button class="btn btn-primary" onclick="UI.leftoverDone('${id}','eaten');UI.closeSheet()">먹었어요 🪙</button></div>`);
+};
+UI.foExpEdit = (id, v) => { const l = S.leftovers.find((x) => x.id === id); if (l) { l.expiresAt = v; save(); } };
 UI.leftoverDone = (id, result) => {
   const l = S.leftovers.find((x) => x.id === id);
   if (!l) return;
@@ -1035,7 +1119,13 @@ function renderSettings() {
         <span class="m-emoji">＋</span><b>새 모드 만들기</b><small>나만의 추천 기준 설계</small></button>
     </div>
 
-    <div class="section-title"><h2>🤖 AI 기능</h2><small>영수증 스캔 · 빠른 레시피</small></div>
+    <div class="section-title"><h2>🤖 AI 기능</h2>
+      <small style="cursor:pointer" onclick="UI.adminGate()">${isAdmin() ? '🔓 관리자 ON · 잠그기' : '🔒 관리자'}</small></div>
+    ${!isAdmin() ? `
+    <div class="card flat">
+      <p class="hint" style="margin:0">✨ AI 기능(영수증 스캔 · 유튜브 빠른 레시피)은 베타 운영 중이에요.
+      운영자가 서버를 켜면 모든 사용자에게 무료 월 10회로 제공됩니다. 설정은 관리자만 가능해요.</p>
+    </div>` : `
     <div class="card flat">
       <div class="seg" style="margin-top:0">
         <button class="${st.aiMode !== 'server' ? 'on' : ''}" onclick="UI.setAiMode('byok')">🔑 내 키 (베타)</button>
@@ -1055,7 +1145,8 @@ function renderSettings() {
         </select></div>
       <p class="hint">개발·베타용. 키는 console.anthropic.com에서 발급, 비용은 본인 계정 과금 (영수증 1장 수~수십 원). 공용 기기에서는 등록하지 마세요.</p>`}
       <button class="btn btn-block btn-tint" style="margin-top:6px" onclick="UI.saveAI()">저장</button>
-    </div>
+      <p class="hint" style="margin-top:8px">터미널 테스트: <b>tools/ai-test.mjs</b> — 폰 없이 스캔·레시피 정리 파이프라인을 검증할 수 있어요 (docs/07)</p>
+    </div>`}
 
     <div class="section-title"><h2>🔄 기기 연동 · 가족 공유</h2><small>같은 코드 = 같은 냉장고</small></div>
     <div class="card flat">

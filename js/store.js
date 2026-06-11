@@ -6,6 +6,7 @@ const DEFAULT = () => ({
   settings: {
     mode: 'none', coupangId: '', aiKey: '', aiModel: 'claude-opus-4-8',
     aiMode: 'byok', aiEndpoint: '', // byok=내 키(베타) | server=운영자 서버 경유(유료화)
+    adminPin: '', // 관리자 잠금 PIN (이 기기에만 — 동기화 제외)
     spaceCode: '', firebaseConfig: '',
     customModes: [], // {key, label, emoji, desc, protein, expiring, zeroExtra, prefTags:[], exclude:[]}
   },
@@ -55,12 +56,14 @@ export function replaceState(remote) {
   const keepKey = S.settings.aiKey;
   const keepFb = S.settings.firebaseConfig;
   const keepCode = S.settings.spaceCode;
+  const keepPin = S.settings.adminPin;
   for (const k of ['meta', 'settings', 'pantry', 'leftovers', 'shopping', 'myRecipes', 'favs', 'ledger', 'onboarded']) {
     if (remote[k] !== undefined) S[k] = remote[k];
   }
   S.settings.aiKey = keepKey;
   S.settings.firebaseConfig = keepFb;
   S.settings.spaceCode = keepCode;
+  S.settings.adminPin = keepPin;
   save({ fromSync: true });
 }
 
@@ -69,6 +72,7 @@ export function exportForSync() {
   const clone = JSON.parse(JSON.stringify(S));
   clone.settings.aiKey = '';
   clone.settings.firebaseConfig = '';
+  clone.settings.adminPin = '';
   return clone;
 }
 

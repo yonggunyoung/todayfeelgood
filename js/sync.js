@@ -1,78 +1,155 @@
-// 선택적 기기 간 동기화 — Firebase Firestore (사용자 본인 프로젝트)
-// 같은 "동기화 코드"를 입력한 기기끼리 냉장고를 공유한다 (앱↔웹앱 연동, 가족 공유).
-// 설정이 없으면 로컬 모드로 동작하며 앱의 모든 기능은 그대로 쓸 수 있다.
+// 계정·동기화 — 일반 사용자는 "구글로 시작하기" 한 번이면 끝.
+// 우선순위: 가족 공유 코드(spaces/{code}) > 내 계정(userdata/{uid}) > 로컬 전용.
+// FIREBASE_CONFIG(config.js)가 채워지면 전 사용자 활성화, 없으면 관리자 설정의 JSON으로 폴백(베타).
 import { S, save, bus, replaceState, exportForSync } from './store.js';
+import { FIREBASE_CONFIG } from './config.js';
 
-export const sync = { status: 'off', error: '' }; // off | connecting | on | error
+export const sync = { status: 'off', error: '', user: null }; // user: {uid, anon, name, email, photo}
 
+let app = null;
+let auth = null;
+let authMod = null;
+let fsMod = null;
 let docRef = null;
-let setDocFn = null;
+let unsubSnap = null;
 let pushTimer = null;
 let applyingRemote = false;
-let authObj = null; // 서버 경유 AI가 사용자 식별 토큰을 얻는 데도 쓰인다
+let onStatusCb = null;
 
-// 서버 경유 AI 호출용 ID 토큰 (기기 연동이 연결돼 있어야 발급됨)
-export async function getIdToken() {
-  try { return authObj?.currentUser ? await authObj.currentUser.getIdToken() : null; }
+function cfg() {
+  if (FIREBASE_CONFIG) return FIREBASE_CONFIG;
+  try { return S.settings.firebaseConfig ? JSON.parse(S.settings.firebaseConfig) : null; }
   catch { return null; }
 }
+export const syncAvailable = () => !!cfg();
 
-export async function initSync(onStatus) {
-  const cfgRaw = (S.settings.firebaseConfig || '').trim();
+async function ensureFirebase() {
+  if (auth) return true;
+  const c = cfg();
+  if (!c) return false;
+  sync.status = 'connecting'; onStatusCb?.();
+  const [appM, aM, fM] = await Promise.all([
+    import('https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js'),
+    import('https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js'),
+    import('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js'),
+  ]);
+  app = appM.initializeApp(c);
+  auth = aM.getAuth(app);
+  authMod = aM; fsMod = fM;
+  aM.getRedirectResult(auth).catch(() => { /* 리다이렉트 복귀 아님 */ });
+  aM.onAuthStateChanged(auth, (u) => {
+    sync.user = u ? {
+      uid: u.uid, anon: u.isAnonymous,
+      name: u.displayName || '', email: u.email || '', photo: u.photoURL || '',
+    } : null;
+    attachDoc();
+  });
+  return true;
+}
+
+function targetRef() {
+  if (!fsMod || !auth?.currentUser) return null;
+  const db = fsMod.getFirestore(app);
   const code = (S.settings.spaceCode || '').trim();
-  if (!cfgRaw || !code) { sync.status = 'off'; onStatus?.(); return; }
+  if (code) return fsMod.doc(db, 'spaces', code);                       // 가족 공유
+  if (!auth.currentUser.isAnonymous) return fsMod.doc(db, 'userdata', auth.currentUser.uid); // 내 계정
+  return null;
+}
 
-  sync.status = 'connecting'; onStatus?.();
+function attachDoc() {
+  unsubSnap?.(); unsubSnap = null; docRef = null;
+  const ref = targetRef();
+  if (!ref) {
+    sync.status = syncAvailable() ? 'off' : 'off';
+    onStatusCb?.();
+    return;
+  }
+  docRef = ref;
+  let first = true;
+  unsubSnap = fsMod.onSnapshot(ref, (snap) => {
+    const remote = snap.data();
+    if (first) {
+      first = false;
+      if (!remote?.state) pushNow(); // 첫 연결: 이 기기 데이터를 클라우드로 올림 (베타 데이터 보존)
+    }
+    if (remote?.state && (remote.state.meta?.updatedAt || 0) > S.meta.updatedAt) {
+      applyingRemote = true;
+      replaceState(remote.state);
+      applyingRemote = false;
+    }
+    sync.status = 'on'; sync.error = '';
+    onStatusCb?.();
+  }, (e) => {
+    sync.status = 'error'; sync.error = e.message || String(e);
+    onStatusCb?.();
+  });
+}
+
+async function pushNow() {
+  if (!docRef) return;
   try {
-    const cfg = JSON.parse(cfgRaw);
-    const [{ initializeApp }, { getAuth, signInAnonymously }, fs] = await Promise.all([
-      import('https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js'),
-      import('https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js'),
-      import('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js'),
-    ]);
-    const app = initializeApp(cfg);
-    authObj = getAuth(app);
-    await signInAnonymously(authObj);
-    const db = fs.getFirestore(app);
-    docRef = fs.doc(db, 'spaces', code);
-    setDocFn = fs.setDoc;
-
-    fs.onSnapshot(docRef, (snap) => {
-      const remote = snap.data();
-      if (!remote || !remote.state) return;
-      if ((remote.state.meta?.updatedAt || 0) > S.meta.updatedAt) {
-        applyingRemote = true;
-        replaceState(remote.state);
-        applyingRemote = false;
-      }
-    });
-
+    await fsMod.setDoc(docRef, { state: exportForSync(), pushedAt: Date.now() });
     sync.status = 'on'; sync.error = '';
   } catch (e) {
-    sync.status = 'error';
-    sync.error = e.message || String(e);
-    docRef = null;
+    sync.status = 'error'; sync.error = e.message || String(e);
+  }
+  onStatusCb?.();
+}
+
+// 로컬 변경 → 1.5초 디바운스 후 클라우드 반영
+bus.on((evt) => {
+  if (evt.type !== 'saved' || evt.fromSync || applyingRemote || !docRef) return;
+  clearTimeout(pushTimer);
+  pushTimer = setTimeout(pushNow, 1500);
+});
+
+export async function initSync(onStatus) {
+  onStatusCb = onStatus;
+  if (!(await ensureFirebase())) { sync.status = 'off'; onStatus?.(); return; }
+  // 레거시: 가족 코드만 있고 로그인이 없는 기기 → 익명 인증으로 코드 동기화 유지
+  if ((S.settings.spaceCode || '').trim() && !auth.currentUser) {
+    try { await authMod.signInAnonymously(auth); }
+    catch (e) { sync.status = 'error'; sync.error = e.message; }
   }
   onStatus?.();
 }
 
-// 로컬 변경 → 1.5초 디바운스 후 원격 반영
-bus.on((evt) => {
-  if (evt.type !== 'saved' || evt.fromSync || applyingRemote || !docRef || !setDocFn) return;
-  clearTimeout(pushTimer);
-  pushTimer = setTimeout(async () => {
-    try {
-      await setDocFn(docRef, { state: exportForSync(), pushedAt: Date.now() });
-      sync.status = 'on'; sync.error = '';
-    } catch (e) {
-      sync.status = 'error'; sync.error = e.message || String(e);
+/* ── 간편 로그인 (구글) ── */
+export async function loginGoogle() {
+  if (!(await ensureFirebase())) throw new Error('계정 기능이 아직 준비되지 않았어요 (운영자 설정 대기 중)');
+  const provider = new authMod.GoogleAuthProvider();
+  try {
+    await authMod.signInWithPopup(auth, provider);
+  } catch (e) {
+    if (['auth/popup-blocked', 'auth/popup-closed-by-user', 'auth/cancelled-popup-request'].includes(e.code)) {
+      await authMod.signInWithRedirect(auth, provider); // 모바일 폴백
+    } else {
+      throw new Error(e.message || '로그인에 실패했어요');
     }
-  }, 1500);
-});
+  }
+}
+export async function logoutGoogle() {
+  if (auth) await authMod.signOut(auth);
+}
 
-// 가족 공유용 코드 생성 도우미
+/* ── 가족 공유 (선택 기능) — 같은 코드 = 같은 냉장고 ── */
 export function makeSpaceCode() {
   const words = ['사과', '양파', '두부', '계란', '대파', '버섯', '감자', '당근'];
   const w = words[Math.floor(Math.random() * words.length)];
   return `${w}-${Math.random().toString(36).slice(2, 6)}`;
+}
+export async function setSpaceCode(code) {
+  S.settings.spaceCode = (code || '').trim();
+  save({ silent: true });
+  if (!(await ensureFirebase())) return;
+  if (S.settings.spaceCode && !auth.currentUser) {
+    try { await authMod.signInAnonymously(auth); return; } catch { /* attachDoc은 auth 콜백에서 */ }
+  }
+  attachDoc();
+}
+
+// 서버 AI 호출용 사용자 토큰
+export async function getIdToken() {
+  try { return auth?.currentUser ? await auth.currentUser.getIdToken() : null; }
+  catch { return null; }
 }

@@ -3,7 +3,8 @@ import { S, save, uid, today, addDays, daysLeft, won } from './store.js';
 import { ING, findIng, defaultShelf, defaultLocation } from './data/ingredients.js';
 import { recommend, recipesUsing, expiringItems, activeLeftovers, deductionPlan, modeList, getMode, allRecipes, buildCookPlan } from './engine.js';
 import { scanImage, extractRecipeFromYouTube, claimReward, searchYouTube } from './ai.js';
-import { initSync, sync, makeSpaceCode } from './sync.js';
+import { initSync, sync, makeSpaceCode, setSpaceCode, loginGoogle, logoutGoogle, syncAvailable } from './sync.js';
+import { AI_ENDPOINT } from './config.js';
 import { canListen, speak, stopSpeak, startListen, stopListen, isListening, parseCommand } from './voice.js';
 
 let tab = 'home';
@@ -50,8 +51,8 @@ UI.adminGate = () => {
 function aiReady() {
   const st = S.settings;
   if (st.aiMode === 'server') {
-    if (!st.aiEndpoint) return { ok: false, msg: '설정 → AI에서 서버 AI 주소를 입력해 주세요.' };
-    if (!st.firebaseConfig || !st.spaceCode) return { ok: false, msg: '서버 AI는 설정의 "기기 연동"을 먼저 연결해야 해요.' };
+    if (!(st.aiEndpoint || AI_ENDPOINT)) return { ok: false, msg: '설정 → AI에서 서버 AI 주소를 입력해 주세요.' };
+    if (!syncAvailable()) return { ok: false, msg: 'AI 기능 준비 중이에요 — 곧 제공됩니다.' };
     return { ok: true };
   }
   return st.aiKey ? { ok: true } : { ok: false, msg: '설정 → AI에서 Claude API 키를 등록해 주세요.' };
@@ -157,8 +158,11 @@ function renderTop() {
   $('#top-date').textContent = `${d.getMonth() + 1}월 ${d.getDate()}일 ${['일', '월', '화', '수', '목', '금', '토'][d.getDay()]}요일`;
   $('#saved-badge').textContent = won(S.ledger.saved);
   const badge = $('#sync-badge');
-  const map = { off: ['이 기기', 'pill pill-muted'], connecting: ['연결중…', 'pill pill-muted'], on: ['동기화 ✓', 'pill pill-on'], error: ['동기화 오류', 'pill pill-err'] };
-  const [label, cls] = map[sync.status] || map.off;
+  let label = '이 기기'; let cls = 'pill pill-muted';
+  if (sync.status === 'error') { label = '동기화 오류'; cls = 'pill pill-err'; }
+  else if (S.settings.spaceCode && sync.status === 'on') { label = '👨‍👩‍👧 가족 공유'; cls = 'pill pill-on'; }
+  else if (sync.user && !sync.user.anon && sync.status === 'on') { label = '☁️ 내 계정'; cls = 'pill pill-on'; }
+  else if (sync.status === 'connecting') { label = '연결 중…'; cls = 'pill pill-muted'; }
   badge.textContent = label;
   badge.className = cls;
 }
@@ -619,14 +623,16 @@ UI.explainLedger = () => {
 UI.explainSync = () => {
   const st = sync.status;
   const body = st === 'on'
-    ? `<div class="card flat"><b style="color:var(--green)">동기화 ✓ 작동 중</b>
-       <p class="hint" style="margin-top:6px">같은 동기화 코드를 넣은 기기·가족과 냉장고가 실시간으로 합쳐져 있어요.</p></div>`
+    ? `<div class="card flat"><b style="color:var(--green)">${S.settings.spaceCode ? '👨‍👩‍👧 가족 공유 중' : '☁️ 내 계정에 백업 중'}</b>
+       <p class="hint" style="margin-top:6px">${S.settings.spaceCode
+         ? '가족 코드를 넣은 기기들과 냉장고가 실시간으로 합쳐져 있어요.'
+         : '냉장고가 계정에 자동 백업돼요. 폰을 바꿔도 로그인만 하면 그대로 돌아옵니다.'}</p></div>`
     : st === 'error'
       ? `<div class="card flat"><b style="color:var(--red)">동기화 오류</b>
-         <p class="hint" style="margin-top:6px">${esc(sync.error || '연결에 실패했어요')} — 설정에서 다시 연결해 보세요.</p></div>`
-      : `<div class="card flat"><b>이 기기 (로컬 모드)</b>
-         <p class="hint" style="margin-top:6px">지금 냉장고 데이터는 <b>이 기기 안에만</b> 저장되고 있어요. 외부로 전송되지 않아 프라이버시는 좋지만, 폰을 바꾸거나 다른 기기에서 보려면 연동이 필요해요.</p></div>
-       <p class="hint">폰↔PC 연동·가족 공유를 원하면 설정의 "기기 연동"에서 동기화 코드를 만들면 됩니다 (무료).</p>`;
+         <p class="hint" style="margin-top:6px">${esc(sync.error || '연결에 실패했어요')} — 설정에서 다시 시도해 보세요.</p></div>`
+      : `<div class="card flat"><b>이 기기 (로컬 저장)</b>
+         <p class="hint" style="margin-top:6px">지금 냉장고 데이터는 <b>이 기기 안에만</b> 저장되고 있어요. 외부로 전송되지 않아 프라이버시는 좋지만, 폰을 바꾸면 가져갈 수 없어요.</p></div>
+       <p class="hint">${syncAvailable() ? '설정에서 <b>구글로 시작하기</b>를 누르면 백업·기기 이동·가족 공유가 켜져요 (무료).' : '계정 백업 기능은 곧 제공돼요. 그동안은 설정 → 내보내기로 백업해 두세요.'}</p>`;
   openSheet(`
     <h2>📡 이 표시가 뭐예요?</h2>
     <p class="sub">내 냉장고 데이터가 어디에 저장되는지 알려주는 상태예요</p>
@@ -1613,8 +1619,37 @@ UI.shopCommit = () => {
 function renderSettings() {
   const st = S.settings;
   const modes = modeList(S);
+  const acct = !syncAvailable()
+    ? `<div class="card flat"><p class="hint" style="margin:0">☁️ 계정 백업·가족 공유는 <b>곧 제공</b>돼요. 지금은 데이터가 이 기기에 안전하게 저장됩니다 (아래 "데이터 → 내보내기"로 수동 백업 가능).</p></div>`
+    : (sync.user && !sync.user.anon)
+      ? `<div class="card flat">
+           <div class="row">
+             ${sync.user.photo ? `<img src="${sync.user.photo}" alt="" style="width:44px;height:44px;border-radius:99px" />`
+               : '<span class="emoji t-기타" style="font-size:1.3rem;width:44px;height:44px;display:grid;place-items:center;border-radius:99px">👤</span>'}
+             <div class="grow"><b>${esc(sync.user.name || '내 계정')}</b>
+               <p class="hint" style="margin:2px 0 0">${esc(sync.user.email)} · ${sync.status === 'on' ? '☁️ 자동 백업 중' : '연결 중…'}</p></div>
+             <button class="btn btn-sm btn-soft" onclick="UI.doLogout()">로그아웃</button>
+           </div>
+           <div class="divider" style="margin:12px 0"></div>
+           ${st.spaceCode
+             ? `<div class="row"><div class="grow"><b>👨‍👩‍👧 가족 공유 중</b>
+                  <p class="hint" style="margin:2px 0 0">코드 <b>${esc(st.spaceCode)}</b> — 가족 기기에도 같은 코드를 입력하면 냉장고가 합쳐져요</p></div>
+                <button class="btn btn-sm btn-soft" onclick="UI.famShare()">초대 복사</button>
+                <button class="btn btn-sm btn-soft" onclick="UI.famLeave()">해제</button></div>`
+             : `<div class="row"><div class="grow"><b>가족과 같이 쓰기</b>
+                  <p class="hint" style="margin:2px 0 0">한 냉장고를 온 가족이 함께 — 코드 하나면 끝</p></div>
+                <button class="btn btn-sm btn-tint" onclick="UI.famCreate()">코드 만들기</button>
+                <button class="btn btn-sm btn-soft" onclick="UI.famJoin()">코드 입력</button></div>`}
+         </div>`
+      : `<button class="btn btn-block" style="background:#fff;border:1px solid var(--hairline);box-shadow:var(--shadow-card);font-weight:800" onclick="UI.doLogin()">
+           <span style="font-weight:900;color:#4285F4">G</span>&nbsp; 구글로 시작하기 — 백업 · 기기 이동 · 가족 공유
+         </button>
+         <p class="hint" style="text-align:center;margin:8px 0 0">로그인 없이도 이 기기에서는 모든 기능을 쓸 수 있어요</p>`;
+
   $('#view').innerHTML = `
-    <div class="hero"><h1>내 <em>모드</em>와 설정</h1><p>모드를 바꾸면 추천이 통째로 달라져요</p></div>
+    <div class="hero"><h1>내 <em>계정</em>과 설정</h1><p>모드를 바꾸면 추천이 통째로 달라져요</p></div>
+    ${acct}
+    <div class="section-title"><h2>🍽️ 추천 모드</h2><small>나에게 맞게</small></div>
     <div class="mode-grid">
       ${modes.map((m) => `
         <button class="mode-card ${st.mode === m.key ? 'on' : ''}" onclick="UI.setMode('${m.key}')">
@@ -1660,23 +1695,20 @@ function renderSettings() {
       <p class="hint" style="margin-top:8px">터미널 테스트: <b>tools/ai-test.mjs</b> — 폰 없이 스캔·레시피 정리 파이프라인을 검증할 수 있어요 (docs/07)</p>
     </div>`}
 
-    <div class="section-title"><h2>🔄 기기 연동 · 가족 공유</h2><small>같은 코드 = 같은 냉장고</small></div>
+    ${isAdmin() ? `
+    <div class="section-title"><h2>🛠️ 고급 (관리자)</h2><small>베타·수동 설정</small></div>
     <div class="card flat">
-      <p class="hint" style="margin-bottom:10px">휴대폰(앱)과 컴퓨터(웹), 또는 가족끼리 같은 냉장고를 보려면:
-      ① <a href="https://console.firebase.google.com" target="_blank" rel="noreferrer">Firebase</a> 무료 프로젝트 생성 → 웹앱 추가
-      ② Authentication "익명" 로그인 켜기 + Firestore 만들기
-      ③ 설정 JSON을 아래에 붙여넣기 ④ 모든 기기에서 같은 동기화 코드 입력.</p>
-      <div class="field"><label>Firebase 설정 (JSON)</label>
+      <div class="field"><label>Firebase 구성 JSON (config.js 미설정 시 폴백)</label>
         <textarea id="set-fb" rows="3" placeholder='{"apiKey":"…","projectId":"…", …}'>${esc(st.firebaseConfig)}</textarea></div>
-      <div class="field"><label>동기화 코드</label>
+      <div class="field"><label>가족 코드 수동 입력</label>
         <div class="search-row" style="margin:0">
           <input id="set-code" placeholder="예: 두부-x3k9" value="${esc(st.spaceCode)}" />
           <button class="btn btn-soft" onclick="UI.genCode()">생성</button>
         </div></div>
-      <button class="btn btn-primary btn-block" onclick="UI.connectSync()">연결</button>
+      <button class="btn btn-block btn-tint" onclick="UI.connectSync()">수동 연결</button>
       ${sync.status === 'error' ? `<p class="hint" style="color:var(--red)">오류: ${esc(sync.error)}</p>` : ''}
-      ${sync.status === 'on' ? `<p class="hint" style="color:var(--green)">✓ 동기화 작동 중 — 다른 기기에서 같은 코드를 입력하면 냉장고가 합쳐져요</p>` : ''}
-    </div>
+      <p class="hint" style="margin-top:8px">상용 전환: js/config.js에 FIREBASE_CONFIG·AI_ENDPOINT를 채워 커밋하면 모든 사용자에게 "구글로 시작"과 서버 AI가 기본 적용돼요 (docs/09)</p>
+    </div>` : ''}
 
     <div class="section-title"><h2>🗂️ 데이터</h2></div>
     <div class="btn-row" style="margin-top:0">
@@ -1708,6 +1740,39 @@ UI.connectSync = () => {
   save({ silent: true });
   initSync(() => { renderTop(); if (tab === 'settings') renderSettings(); });
   toast('동기화 연결을 시도합니다…');
+};
+
+/* ── 계정 (간편 로그인) · 가족 공유 ── */
+UI.doLogin = async () => {
+  try {
+    toast('구글 로그인 창을 여는 중…');
+    await loginGoogle();
+    setTimeout(() => { renderTop(); if (tab === 'settings') renderSettings(); }, 600);
+  } catch (e) { toast(e.message || '로그인에 실패했어요'); }
+};
+UI.doLogout = async () => {
+  await logoutGoogle();
+  toast('로그아웃했어요 — 데이터는 이 기기와 클라우드에 그대로 있어요');
+  renderTop(); renderSettings();
+};
+UI.famCreate = async () => {
+  const code = makeSpaceCode();
+  await setSpaceCode(code);
+  renderSettings(); renderTop();
+  copyText(`🧊 우리집 냉장고 같이 써요!\n냉비서 앱 → 설정 → "코드 입력"에 이 코드를 넣어주세요: ${code}\n앱: ${location.origin}${location.pathname}`);
+};
+UI.famJoin = async () => {
+  const code = prompt('가족에게 받은 코드를 입력하세요 (예: 두부-x3k9)');
+  if (!code) return;
+  await setSpaceCode(code);
+  renderSettings(); renderTop();
+  toast('👨‍👩‍👧 가족 냉장고에 연결했어요');
+};
+UI.famLeave = async () => {
+  if (!confirm('가족 공유를 해제할까요? (데이터는 사라지지 않고, 내 계정 백업으로 전환돼요)')) return;
+  await setSpaceCode('');
+  renderSettings(); renderTop();
+  toast('가족 공유를 해제했어요');
 };
 UI.exportData = () => {
   const blob = new Blob([JSON.stringify(S, null, 2)], { type: 'application/json' });
@@ -1820,8 +1885,15 @@ window.addEventListener('popstate', () => {
   history.back(); // 진짜 종료
 });
 
+// 상용 기본값: config.js에 서버 AI 주소가 채워져 있으면 전 사용자 자동 적용
+if (AI_ENDPOINT && !S.settings.aiEndpoint) {
+  S.settings.aiEndpoint = AI_ENDPOINT;
+  if (!S.settings.aiKey) S.settings.aiMode = 'server';
+  save({ silent: true });
+}
+
 render();
-initSync(() => renderTop());
+initSync(() => { renderTop(); if (tab === 'settings') renderSettings(); });
 
 // 공유 링크로 진입한 경우 (?share=NB1.…)
 const shared = new URLSearchParams(location.search).get('share');

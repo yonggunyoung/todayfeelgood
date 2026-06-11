@@ -3,45 +3,97 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>냉비서 매거진 — 냉장고를 부탁받는 글들</title>
-  <meta name="description" content="냉장고 관리, 냉파 레시피, 식재료 보관법 — 버리는 돈을 줄이는 부엌 지식. 냉비서 앱과 함께." />
+  <title>냉비서 — 영수증 한 장으로 끝내는 냉장고 관리</title>
+  <meta name="description" content="영수증 사진 한 장으로 재고 등록, 내 냉장고 기준 레시피 추천, 요리 완료 원탭 차감, 유통기한이 임박하면 재료가 직접 알려주는 냉장고 비서. 무료, 설치 없이 시작." />
+  <meta property="og:title" content="냉비서 — 영수증 한 장으로 끝내는 냉장고 관리" />
+  <meta property="og:description" content="버리는 식비를 줄여주는 냉장고 비서. 무료로 바로 시작하세요." />
   <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
   <link rel="stylesheet" href="./blog.css" />
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"SoftwareApplication",
+   "name":"냉비서","applicationCategory":"LifestyleApplication","operatingSystem":"Web, Android, iOS",
+   "description":"영수증 한 장으로 냉장고 재고를 등록하고, 보유 재료 기준으로 레시피를 추천받는 냉장고 관리 서비스",
+   "offers":{"@type":"Offer","price":"0","priceCurrency":"KRW"},"inLanguage":"ko"}
+  </script>
 </head>
 <body>
   <div class="wrap">
     <header class="site">
-      <a href="./"><span class="mark">냉</span><span><b>냉비서 매거진</b><small>버리는 돈을 줄이는 부엌 지식</small></span></a>
+      <a href="./"><span class="mark">냉</span><span><b>냉비서</b><small>버리는 식비를 줄이는 냉장고 비서</small></span></a>
+      <nav class="topnav">
+        <a href="#features">기능</a><a href="#how">사용법</a><a href="#mag">매거진</a><a href="#faq">FAQ</a>
+      </nav>
     </header>
 
-    <div class="hero">
-      <h1>냉장고가 새는 돈을<br>막아주는 글들 🧊</h1>
-      <p class="lead">한국 가정 평균, 산 식재료의 약 1/5이 버려집니다. 보관법·냉파 레시피·자동화 팁을 모았어요.</p>
+    <div class="hero center">
+      <div class="badges"><span>무료로 시작</span><span>설치 없이 3초</span><span>기기 자동 백업</span></div>
+      <h1>장 본 건 기억 못 해도,<br><b class="g">냉장고는 기억합니다</b></h1>
+      <p class="lead">영수증 사진 한 장으로 재고 등록 끝. 내 냉장고에 있는 재료로 오늘 메뉴를 추천받고,
+      요리 완료 버튼 하나로 재고가 줄어듭니다. 유통기한이 다가오면 — 재료가 직접 울면서 알려드려요.</p>
+      <a class="cta" href="https://yonggunyoung.github.io/todayfeelgood/">🧊 무료로 시작하기</a>
+      <p class="cta-note">회원가입 없이 바로 체험 · 폰에서 "홈 화면에 추가"하면 앱으로</p>
     </div>
 
-    <div class="cards">
-      <a class="card" href="./receipt-scan.html">
-        <span class="tag">자동화</span>
-        <h3>영수증 한 장으로 냉장고 정리 끝내는 법</h3>
-        <p>장 보고 와서 재고 정리에 10분 쓰는 사람 vs 사진 한 장 찍는 사람.</p>
-      </a>
-      <a class="card" href="./fridge-recipes.html">
-        <span class="tag">레시피</span>
-        <h3>냉장고 파먹기 — 두부 스테이크 덮밥 (앱에 바로 담기)</h3>
-        <p>두부 1모와 양파 반 개로 끝. 링크 한 번이면 레시피가 앱으로 들어갑니다.</p>
-      </a>
-      <a class="card" href="./delivery-storage.html">
-        <span class="tag">보관 가이드</span>
-        <h3>배달음식, 냉장고에서 며칠까지 안전할까?</h3>
-        <p>치킨·찌개·반찬별 보관 한계와, 까먹지 않게 챙기는 방법.</p>
-      </a>
-    </div>
+    <section id="features">
+      <h2 class="sec-t">한국 부엌에 맞춰 만들었습니다</h2>
+      <div class="feat-grid">
+        <div class="feat"><span>📷</span><b>영수증 AI 스캔</b><p>마트 영수증·장본 사진을 읽어 품목과 수량, 권장 소비기한까지 자동 등록</p></div>
+        <div class="feat"><span>🧊</span><b>진짜 냉장고처럼</b><p>냉장·냉동·도어포켓·실온 선반에 재료가 놓이고, 칸마다 냉기가 흐르는 화면</p></div>
+        <div class="feat"><span>😢</span><b>재료가 직접 알림</b><p>기한이 임박하면 재료에 눈이 생겨 깜빡이고, 마지막 날엔 눈물까지 — 버리기 전에 알게 됩니다</p></div>
+        <div class="feat"><span>🍳</span><b>내 재료 기준 추천</b><p>레시피 59종 + 유튜브 레시피 저장 — "지금 만들 수 있는 요리"부터 보여줍니다</p></div>
+        <div class="feat"><span>🎬</span><b>유튜브 영상 → 레시피</b><p>링크만 붙이면 영상 안 봐도 재료·순서·키포인트가 정리되고, 보면서 음성으로 조작도</p></div>
+        <div class="feat"><span>💰</span><b>절약 장부</b><p>버리기 전에 쓴 재료, 해결한 잔반이 "아낀 돈"으로 쌓입니다 — 동기부여 확실</p></div>
+      </div>
+    </section>
 
-    <a class="cta" href="https://yonggunyoung.github.io/todayfeelgood/">🧊 냉비서 앱 열기 — 무료</a>
-    <p class="cta-note">설치 없이 바로 시작 · 폰에서 "홈 화면에 추가"하면 앱이 됩니다</p>
+    <section id="how">
+      <h2 class="sec-t">사용법은 세 걸음이면 끝</h2>
+      <ol class="steps3">
+        <li><b>1 · 담기</b><p>영수증 찍기 또는 재료 검색 2탭 — 처음엔 "기본 재료 한번에 담기"로 3초 시작</p></li>
+        <li><b>2 · 고르기</b><p>홈에서 오늘의 추천 확인 — 운동·자린고비·반찬 등 모드를 바꾸면 추천이 달라져요</p></li>
+        <li><b>3 · 요리 완료</b><p>버튼 한 번이면 쓴 재료가 차감되고, 떨어진 건 장보기 목록으로 — 끝</p></li>
+      </ol>
+      <a class="cta" href="https://yonggunyoung.github.io/todayfeelgood/">지금 내 냉장고 만들기 →</a>
+    </section>
+
+    <section id="mag">
+      <h2 class="sec-t">매거진 — 버리는 돈을 줄이는 부엌 지식</h2>
+      <div class="cards">
+        <a class="card" href="./receipt-scan.html">
+          <span class="tag">자동화</span>
+          <h3>영수증 한 장으로 냉장고 정리 끝내는 법</h3>
+          <p>장 보고 와서 재고 정리에 10분 쓰는 사람 vs 사진 한 장 찍는 사람.</p>
+        </a>
+        <a class="card" href="./fridge-recipes.html">
+          <span class="tag">레시피</span>
+          <h3>냉장고 파먹기 — 두부 스테이크 덮밥 (앱에 바로 담기)</h3>
+          <p>두부 1모와 양파 반 개로 끝. 링크 한 번이면 레시피가 앱으로 들어갑니다.</p>
+        </a>
+        <a class="card" href="./delivery-storage.html">
+          <span class="tag">보관 가이드</span>
+          <h3>배달음식, 냉장고에서 며칠까지 안전할까?</h3>
+          <p>치킨·찌개·반찬별 보관 한계와, 까먹지 않게 챙기는 방법.</p>
+        </a>
+      </div>
+    </section>
+
+    <section id="faq">
+      <h2 class="sec-t">자주 묻는 질문</h2>
+      <details><summary>정말 무료인가요?</summary><p>냉장고 관리·레시피 추천·차감·장보기 등 핵심 기능은 전부 무료입니다. AI 스캔은 매달 무료 횟수가 제공되고, 더 쓰고 싶으면 짧은 광고를 보거나 프리미엄(출시 예정)을 이용하면 됩니다.</p></details>
+      <details><summary>설치해야 하나요?</summary><p>아니요. 링크로 바로 쓰고, 폰 브라우저 메뉴에서 "홈 화면에 추가"를 누르면 아이콘이 생기고 앱처럼 전체화면·오프라인으로 동작합니다.</p></details>
+      <details><summary>내 냉장고 데이터는 어디에 저장되나요?</summary><p>기본은 사용자 기기 안에만 저장됩니다(외부 전송 없음). 구글 로그인을 하면 계정에 자동 백업되어 폰을 바꿔도 그대로 이어집니다. 자세한 내용은 <a href="./privacy.html">개인정보처리방침</a>을 확인하세요.</p></details>
+      <details><summary>가족이 같이 쓸 수 있나요?</summary><p>네. 설정에서 가족 코드를 만들어 공유하면 온 가족이 한 냉장고를 함께 봅니다 — 한 명이 차감하면 모두에게 반영돼요.</p></details>
+      <details><summary>영수증 사진은 보관되나요?</summary><p>아니요. 사진은 품목 인식에만 사용되고 저장하지 않습니다.</p></details>
+    </section>
+
+    <div class="hero center" style="padding-top:10px">
+      <h1 style="font-size:1.35rem">오늘 산 재료, 이번엔 다 먹어봅시다</h1>
+      <a class="cta" href="https://yonggunyoung.github.io/todayfeelgood/">🧊 냉비서 무료로 시작하기</a>
+    </div>
 
     <footer class="site">
-      ⓒ 냉비서 · 본 매거진의 절약 금액 등은 평균 시세 기반 추정치입니다 · <a href="https://yonggunyoung.github.io/todayfeelgood/">앱 바로가기</a>
+      <a href="./privacy.html">개인정보처리방침</a> · 문의: 앱 내 설정 → 공유받은 링크 또는 이메일(준비 중)<br>
+      ⓒ 2026 냉비서 · 절약 금액 등 수치는 평균 시세 기반 추정치입니다
     </footer>
   </div>
 </body>

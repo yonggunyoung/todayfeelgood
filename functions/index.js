@@ -29,7 +29,7 @@ function isPremium(u) {
 /* ── 한도 집계 (무료 + 광고 보너스 / 프리미엄은 상한만) ── */
 const usageRef = (uid) => db.collection('ai_usage').doc(`${uid}_${new Date().toISOString().slice(0, 7)}`);
 
-async function consumeQuota(uid, type) {
+async function consumeQuota(uid, type, cost = 1) {
   const ref = usageRef(uid);
   const userRef = db.collection('users').doc(uid);
   await db.runTransaction(async (tx) => {
@@ -38,15 +38,17 @@ async function consumeQuota(uid, type) {
     const premium = isPremium(uSnap.exists ? uSnap.data() : null);
     const count = d.count || 0;
     const allowed = premium ? PREMIUM_QUOTA : FREE_QUOTA + (d.bonus || 0);
-    if (count >= allowed) {
+    if (count + cost > allowed) {
       const err = new Error(premium
         ? `이번 달 사용량이 비정상 사용 방지 상한(${PREMIUM_QUOTA}회)에 도달했어요. 문의 주시면 풀어드릴게요!`
-        : '이번 달 무료 AI를 모두 사용했어요. 광고를 보면 1회씩 충전돼요!');
+        : cost > 1
+          ? `영상 정리는 크레딧 ${cost}개가 필요해요. 광고 ${cost}번 보면 충전돼요!`
+          : '이번 달 무료 AI를 모두 사용했어요. 광고를 보면 1회씩 충전돼요!');
       err.code = 429;
       throw err;
     }
     tx.set(ref, {
-      count: count + 1,
+      count: count + cost,
       [`by_${type}`]: admin.firestore.FieldValue.increment(1),
       premium,
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -225,7 +227,8 @@ exports.ai = onRequest(
       if (path.endsWith('/ytrecipe')) {
         const { url } = req.body || {};
         if (!url || !/youtu/.test(String(url))) { res.status(400).json({ error: '유튜브 링크가 필요합니다' }); return; }
-        await consumeQuota(uid, 'ytrecipe');
+        // 영상 정리는 원가가 높아(웹 도구 호출 포함) 크레딧 2개 차감 — 광고 1회=1크레딧과 자동 균형
+        await consumeQuota(uid, 'ytrecipe', Number(process.env.YT_COST || 2));
         res.json(await handleYtRecipe(url, apiKey));
         return;
       }

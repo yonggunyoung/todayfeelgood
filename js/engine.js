@@ -43,6 +43,18 @@ function hasEnough(item) {
   return (item.qty ?? 0) > 0;
 }
 
+// 같은 재료의 모든 배치를 임박순으로 — 선입선출(FIFO)의 기반
+function findPantryBatches(pantry, name) {
+  const target = findIng(name);
+  return pantry
+    .filter((p) => {
+      if (p.name === name) return true;
+      const pi = findIng(p.name);
+      return target && pi && pi.name === target.name;
+    })
+    .sort((a, b) => daysLeft(a.expiresAt) - daysLeft(b.expiresAt));
+}
+
 function sameIng(a, b) {
   if (a === b) return true;
   const ia = findIng(a), ib = findIng(b);
@@ -88,7 +100,7 @@ export function analyzeRecipe(recipe, state, modeOrKey) {
 
   return {
     recipe, have, total: required.length, missing,
-    cookable: missing.length === 0,
+    cookable: required.length > 0 && missing.length === 0, // 영상만 저장(재료 0)은 "지금 가능" 아님
     almostCookable: missing.length === 1,
     usesExpiring: expiringBoost > 0,
     fav, score,
@@ -132,18 +144,28 @@ export function activeLeftovers(state) {
     .sort((a, b) => daysLeft(a.expiresAt) - daysLeft(b.expiresAt));
 }
 
-/* ── 요리 완료 차감 계획 ─────────────────── */
+/* ── 요리 완료 차감 계획 — 선입선출(FIFO): 같은 재료가 여러 배치면 임박한 것부터 소진 ── */
 export function deductionPlan(recipe, state, servings = 1) {
   const plan = [];
   for (const g of recipe.ingredients) {
     if (g.st) continue;
-    const item = findPantryItem(state.pantry, g.n);
-    if (!item) continue;
-    if (item.qtyType === 'level') {
-      plan.push({ item, skip: true, label: '양념 — 차감 안 함' });
-    } else {
-      const need = Math.round((g.a || 1) * servings * 100) / 100;
-      plan.push({ item, need, after: Math.max(0, Math.round((item.qty - need) * 100) / 100) });
+    const batches = findPantryBatches(state.pantry, g.n);
+    if (!batches.length) continue;
+    if (batches[0].qtyType === 'level') {
+      plan.push({ item: batches[0], skip: true, label: '양념 — 차감 안 함' });
+      continue;
+    }
+    let need = Math.round((g.a || 1) * servings * 100) / 100;
+    for (const item of batches) {
+      if (need <= 0) break;
+      const take = Math.min(item.qty, need);
+      if (take <= 0) continue;
+      plan.push({
+        item, need: take,
+        after: Math.max(0, Math.round((item.qty - take) * 100) / 100),
+        fifo: batches.length > 1,
+      });
+      need = Math.round((need - take) * 100) / 100;
     }
   }
   return plan;

@@ -109,8 +109,8 @@ export function findIng(raw) {
 }
 
 export function defaultShelf(ing, location) {
-  if (!ing) return 7;
-  return ing.shelf[location] ?? ing.shelf.fridge ?? ing.shelf.room ?? ing.shelf.freezer ?? 7;
+  if (!ing) return 5; // 사전에 없는 품목은 보수적으로 5일
+  return ing.shelf[location] ?? ing.shelf.fridge ?? ing.shelf.room ?? ing.shelf.freezer ?? 5;
 }
 
 export function defaultLocation(ing) {

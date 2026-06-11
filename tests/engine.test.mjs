@@ -96,6 +96,32 @@ assert.strictEqual(kimchiPlan.find((p) => p.item.name === '김치').skip, true);
 const ideas = recipesUsing(state, '두부', 'none');
 assert.ok(ideas.length >= 3 && ideas.every((x) => x.recipe.ingredients.some((g) => !g.st && findIng(g.n)?.name === '두부')));
 
+// 10-1) 선입선출(FIFO): 계란이 두 배치(임박 2개 + 신선 6개)일 때 4개 차감 → 임박 배치부터 소진
+const fifoState = {
+  ...state,
+  pantry: [
+    { id: 'new', name: '계란', qtyType: 'count', unit: '개', qty: 6, location: 'fridge', expiresAt: nextMonth, price: 500, emoji: '🥚' },
+    { id: 'old', name: '계란', qtyType: 'count', unit: '개', qty: 2, location: 'fridge', expiresAt: tomorrow, price: 500, emoji: '🥚' },
+    { id: 'rice', name: '즉석밥', qtyType: 'count', unit: '개', qty: 2, location: 'room', expiresAt: nextMonth, price: 1100, emoji: '🍚' },
+  ],
+};
+const fifoPlan = deductionPlan(eggRice, fifoState, 2); // 계란 4개 필요
+const eggLines = fifoPlan.filter((p) => p.item.name === '계란');
+assert.strictEqual(eggLines.length, 2, '두 배치에 걸쳐 차감돼야 함');
+assert.strictEqual(eggLines[0].item.id, 'old', '임박 배치가 먼저');
+assert.strictEqual(eggLines[0].need, 2);
+assert.strictEqual(eggLines[0].after, 0);
+assert.strictEqual(eggLines[1].item.id, 'new');
+assert.strictEqual(eggLines[1].need, 2);
+assert.strictEqual(eggLines[1].after, 4);
+assert.ok(eggLines[0].fifo && eggLines[1].fifo, 'FIFO 표시 플래그');
+
+// 10-2) 영상만 저장(재료 0개) 레시피는 "지금 가능" 배지가 붙지 않는다
+const videoOnly = { ...state, myRecipes: [{ id: 'my-v', mine: true, videoOnly: true, title: '영상', yt: 'x', ingredients: [], steps: [], tags: [] }], favs: [] };
+const vo = recommend(videoOnly, 'none').find((x) => x.recipe.id === 'my-v');
+assert.strictEqual(vo.cookable, false, '재료 없는 레시피는 cookable 아님');
+assert.strictEqual(vo.total, 0);
+
 // 11) 임박 재료 + 데이터 무결성
 assert.ok(expiringItems(state, 3).some((p) => p.name === '두부'));
 for (const r of RECIPES) {

@@ -1,0 +1,81 @@
+# 냉비서 운영자 입력값 모음 (이 파일만 채우면 됩니다)
+
+> 사용자 앱에는 어떤 키·설정도 보이지 않습니다. 아래 값들은 전부 **운영자(사장님)** 가
+> 한 번씩 만들어서 지정된 위치에 넣는 것이고, 넣는 순간 모든 사용자에게 자동 적용됩니다.
+> 자세한 클릭 순서는 docs/09-launch-runbook.md 참고. ✅ 칸은 완료 체크용.
+
+---
+
+## 1. 지금 바로 — 무료로 켜지는 것들
+
+### ① Firebase (구글 로그인 + 자동 백업) — 무료 Spark 요금제로 충분
+
+| 할 일 | 어디서 | 완료 |
+|---|---|---|
+| 프로젝트 만들기 | console.firebase.google.com | ☐ |
+| Authentication → Google 로그인 **사용** | 콘솔 → Authentication → Sign-in method | ☐ |
+| Authentication → **익명 로그인도 사용** (가족코드 호환용) | 같은 화면 | ☐ |
+| 승인된 도메인에 `yonggunyoung.github.io` 추가 | Authentication → Settings → 승인된 도메인 | ☐ |
+| Firestore 데이터베이스 만들기 (서울 asia-northeast3) + 보안 규칙 붙여넣기(docs/07) | Firestore Database | ☐ |
+| 웹 앱 추가 → 구성(JSON) 복사 | ⚙️ 프로젝트 설정 → 일반 → 내 앱 | ☐ |
+
+**복사한 구성을 여기에 기록해 두세요 (붙여넣을 곳: `js/config.js`)**
+
+```
+apiKey:            ________________________________
+authDomain:        ________________________________
+projectId:         ________________________________
+storageBucket:     ________________________________
+messagingSenderId: ________________________________
+appId:             ________________________________
+```
+
+→ 넣는 곳: 저장소 **`js/config.js`** 의 `FIREBASE_CONFIG = null;` 을 위 값으로 채워 커밋
+(코드를 직접 만지기 어려우면 이 값만 저에게 주시면 제가 반영합니다)
+
+---
+
+## 2. AI 켜는 날 — 서버 AI (사용자는 키 없이 무료 10회/월)
+
+| 항목 | 받는 곳 | 기록 | 완료 |
+|---|---|---|---|
+| Anthropic API 키 | console.anthropic.com (결제수단 등록) | `sk-ant-________________` | ☐ |
+| Firebase Blaze 업그레이드 | Firebase 콘솔 (예산알림 월 2만원 권장) | — | ☐ |
+| 함수 배포 후 URL | `firebase deploy --only functions` 출력 | `https://________________` | ☐ |
+| 유튜브 검색 키 (선택) | console.cloud.google.com → YouTube Data API v3 | `AIza________________` | ☐ |
+
+**키가 들어가는 곳 (앱 화면 아님!):**
+- Anthropic 키 → 터미널에서 `firebase functions:secrets:set ANTHROPIC_API_KEY` (서버 금고에만 저장)
+- 유튜브 키 → 배포 명령 앞에 `YT_API_KEY=AIza… firebase deploy --only functions`
+- 함수 URL → **`js/config.js`** 의 `AI_ENDPOINT = ''` 에 채워 커밋
+
+---
+
+## 3. 수익 계정들 — 신청만 해두면 되는 것
+
+| 항목 | 신청처 | 발급값 기록 | 완료 |
+|---|---|---|---|
+| 쿠팡 파트너스 추적 ID | partners.coupang.com | `AF_______` | ☐ |
+| 카카오 AdFit (광고) | adfit.kakao.com | 광고단위 ID: `__________` | ☐ |
+| Google AdSense (매거진) | adsense.google.com | `ca-pub-__________` | ☐ |
+| 도메인 (선택, 연 ~2만원) | 가비아/후이즈 등 | `__________________` | ☐ |
+| 토스페이먼츠 (구독 결제, 사업자 필요) | tosspayments.com | 클라이언트 키: `__________` | ☐ |
+| 앱인토스 워크스페이스 | developers-apps-in-toss.toss.im | — | ☐ |
+
+- 쿠팡 ID 넣는 곳: 앱 → 관리자 모드 → AI 카드 → "쿠팡 파트너스 추적 ID"
+- AdFit/AdSense/토스페이먼츠: 발급값을 저에게 주시면 광고 슬롯·결제 페이지에 제가 연결합니다
+
+---
+
+## 4. 관리자 모드 — 사용자에게는 보이지 않습니다
+
+- 들어가기: **설정 맨 아래 "냉비서 v0.3 …" 문구를 4초 안에 7번 연속 탭** → PIN 입력
+- 처음 한 번은 원하는 PIN을 정하는 화면이 나옵니다 → 여기 기록: `PIN: ______`
+- 잠그기: 관리자 고급 카드 맨 아래 "관리자 모드 잠그기" 버튼
+- 관리자에서만 보이는 것: 내 키(BYOK) 입력, 서버 주소, 유튜브 키, 쿠팡 ID, Firebase JSON, 가족코드 수동 입력
+
+## 5. 사용자에게 보이는 선택지 (확인용)
+
+- 무료: 모든 냉장고·레시피 기능 + AI 월 10회
+- AI 다 썼을 때: **[📺 광고 보고 +1회]** 또는 **[⭐ 프리미엄 알림받기]** — 이 둘뿐
+- 로그인: **[구글로 시작하기]** 단 하나 (가족 공유는 로그인 뒤 선택)

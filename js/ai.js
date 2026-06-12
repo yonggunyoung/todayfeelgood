@@ -21,13 +21,15 @@ async function throwApiError(res) {
 }
 
 /* ── 서버 경유 모드 (유료화) — 운영자 서버가 키·한도를 관리 ── */
-const isServer = (settings) => settings.aiMode === 'server' && !!settings.aiEndpoint;
+import { AI_ENDPOINT } from './config.js';
+const endpointOf = (settings) => settings.aiEndpoint || AI_ENDPOINT;
+const isServer = (settings) => settings.aiMode === 'server' && !!endpointOf(settings);
 
 async function serverPost(path, payload, settings) {
   const { getIdToken } = await import('./sync.js');
   const token = await getIdToken();
-  if (!token) throw new Error('서버 AI는 설정의 "기기 연동"을 먼저 연결해야 사용자를 구분할 수 있어요.');
-  const res = await fetch(settings.aiEndpoint.replace(/\/+$/, '') + path, {
+  if (!token) throw new Error('먼저 로그인해 주세요 — 설정에서 "구글로 시작하기" 한 번이면 돼요.');
+  const res = await fetch(endpointOf(settings).replace(/\/+$/, '') + path, {
     method: 'POST',
     headers: { 'content-type': 'application/json', authorization: 'Bearer ' + token },
     body: JSON.stringify(payload),

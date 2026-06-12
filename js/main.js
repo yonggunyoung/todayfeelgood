@@ -19,6 +19,7 @@ let draft = null; // 레시피/모드 작성 임시 객체
 let detailServings = 1; // 레시피 상세에서 고른 인분 수 (차감으로 이어짐)
 let vc = null;          // 음성 컨텍스트 {type:'detail'|'plan', idx, video, recipe|plan}
 let ytTime = 0;         // 유튜브 현재 재생 시각 (player infoDelivery)
+let ytState = -1;       // 유튜브 재생 상태 (1=재생 중) — 영상 소리의 명령 오인 방지용
 let selMode = false;    // 같이 요리 — 레시피 다중 선택 모드
 const cookSel = new Set();
 
@@ -34,6 +35,15 @@ window.UI = {};
 // 관리자 모드 — AI 설정은 운영자만 만진다 (이 기기에서만 해제 상태 유지)
 const ADMIN_FLAG = 'naengbiseo.admin';
 const isAdmin = () => { try { return localStorage.getItem(ADMIN_FLAG) === '1'; } catch { return false; } };
+// 숨은 진입: 설정 맨 아래 버전 문구를 4초 안에 7번 탭 → PIN 입력 (일반 사용자에겐 보이지 않음)
+let verTaps = 0;
+let verTapTimer = null;
+UI.verTap = () => {
+  verTaps++;
+  clearTimeout(verTapTimer);
+  verTapTimer = setTimeout(() => { verTaps = 0; }, 4000);
+  if (verTaps >= 7) { verTaps = 0; UI.adminGate(); }
+};
 UI.adminGate = () => {
   if (isAdmin()) { localStorage.removeItem(ADMIN_FLAG); render(); toast('관리자 모드 잠금 🔒'); return; }
   const pin = prompt(S.settings.adminPin ? '관리자 PIN을 입력하세요' : '처음이네요 — 사용할 관리자 PIN을 정하세요');
@@ -117,7 +127,10 @@ window.addEventListener('message', (e) => {
   if (typeof e.data !== 'string') return;
   try {
     const d = JSON.parse(e.data);
-    if (d.event === 'infoDelivery' && d.info && typeof d.info.currentTime === 'number') ytTime = d.info.currentTime;
+    if (d.event === 'infoDelivery' && d.info) {
+      if (typeof d.info.currentTime === 'number') ytTime = d.info.currentTime;
+      if (typeof d.info.playerState === 'number') ytState = d.info.playerState;
+    }
   } catch { /* ignore */ }
 });
 
@@ -949,7 +962,7 @@ UI.micToggle = () => {
     });
   if (ok) {
     $('#mic-btn')?.classList.add('mic-on');
-    speak('음성 컨트롤 켰어요. 다음, 정지, 십초 뒤로, 재료 읽어줘, 타이머 오 분 — 이렇게 말해보세요.');
+    speak('음성 컨트롤을 켰어요. 다음. 정지. 십 초 뒤로. 재료 읽어줘. 타이머 오 분. 이렇게 말하면 돼요.');
   }
 };
 UI.micOff = () => { stopListen(); stopSpeak(); $('#mic-btn')?.classList.remove('mic-on'); };
@@ -1008,13 +1021,22 @@ UI.handleVoice = (t) => {
   const c = parseCommand(t);
   if (!c) return;
   const videoOn = vc?.video && $('#dt-yt iframe')?.src;
+  // 영상이 소리를 내는 동안엔 영상 속 대사("다음은…")가 명령으로 오인되기 쉽다
+  // → 짧은 직접 명령만 받는다 (정지/다음 등 7자, 초·분이 붙는 명령은 14자까지)
+  if (videoOn && ytState === 1) {
+    const bare = t.replace(/\s/g, '');
+    if (bare.length > (c.cmd === 'seek' || c.cmd === 'timer' ? 14 : 7)) return;
+  }
   switch (c.cmd) {
     case 'play':
-      if (!vc?.video) break;
+      if (!vc?.video) { if (vcSteps().length) vcRead(); break; } // 영상 없으면 현재 단계 읽기
       if (!videoOn) UI.dtView('video');
       setTimeout(() => { ytHandshake(); ytCmd('playVideo'); }, videoOn ? 0 : 1100);
       toast('🎤 재생'); break;
-    case 'pause': stopSpeak(); if (videoOn) ytCmd('pauseVideo'); toast('🎤 정지'); break;
+    case 'pause':
+      stopSpeak();
+      if (videoOn) { ytCmd('pauseVideo'); ytState = 2; }
+      toast('🎤 정지'); break;
     case 'seek':
       if (videoOn) { ytCmd('seekTo', [Math.max(0, ytTime + c.n), true]); toast(`🎤 ${c.n > 0 ? '+' : ''}${c.n}초`); }
       break;
@@ -1189,8 +1211,8 @@ UI.openYtSearch = () => {
       <input id="yts-q" placeholder="예: 백종원 제육볶음" onkeydown="if(event.key==='Enter')UI.ytSearch()" />
       <button class="btn btn-tint" onclick="UI.ytSearch()">검색</button>
     </div>
-    <div id="yts-out">${S.settings.ytKey ? '' : `
-      <p class="hint">앱 안 검색은 관리자 설정의 유튜브 API 키가 있어야 해요. 키가 없어도 이렇게 하면 돼요:</p>
+    <div id="yts-out">${(S.settings.ytKey || (S.settings.aiMode === 'server' && (S.settings.aiEndpoint || AI_ENDPOINT))) ? '' : `
+      <p class="hint">앱 안 검색은 곧 제공돼요. 지금은 이렇게 하면 바로 돼요:</p>
       <a id="yts-ext" class="btn btn-block" style="margin:8px 0" target="_blank" rel="noreferrer"
          href="https://www.youtube.com/results?search_query=%EB%A0%88%EC%8B%9C%ED%94%BC">↗ 유튜브에서 검색하기</a>
       <div class="field"><label>찾은 영상 링크 붙여넣기</label>
@@ -1204,7 +1226,7 @@ UI.openYtSearch = () => {
 UI.ytSearch = async () => {
   const q = $('#yts-q').value.trim();
   if (!q) return;
-  const canServer = S.settings.aiMode === 'server' && S.settings.aiEndpoint;
+  const canServer = S.settings.aiMode === 'server' && (S.settings.aiEndpoint || AI_ENDPOINT);
   if (!S.settings.ytKey && !canServer) {
     const a = $('#yts-ext');
     if (a) a.href = 'https://www.youtube.com/results?search_query=' + encodeURIComponent(q + ' 레시피');
@@ -1660,13 +1682,27 @@ function renderSettings() {
         <span class="m-emoji">＋</span><b>새 모드 만들기</b><small>나만의 추천 기준 설계</small></button>
     </div>
 
-    <div class="section-title"><h2>🤖 AI 기능</h2>
-      <small style="cursor:pointer" onclick="UI.adminGate()">${isAdmin() ? '🔓 관리자 ON · 잠그기' : '🔒 관리자'}</small></div>
-    ${!isAdmin() ? `
+    <div class="section-title"><h2>✨ AI 기능</h2><small>영수증 스캔 · 유튜브 정리</small></div>
+    ${!isAdmin() ? (aiReady().ok ? `
     <div class="card flat">
-      <p class="hint" style="margin:0">✨ AI 기능(영수증 스캔 · 유튜브 빠른 레시피)은 베타 운영 중이에요.
-      운영자가 서버를 켜면 모든 사용자에게 무료 월 10회로 제공됩니다. 설정은 관리자만 가능해요.</p>
+      <p class="hint" style="margin:0 0 10px">영수증 스캔, 유튜브 레시피 자동 정리에 쓰여요.
+      매달 <b>무료 횟수</b>가 제공되고, 다 쓰면 아래 두 가지 중 골라서 계속 쓸 수 있어요.</p>
+      <div class="row" style="gap:12px">
+        <div style="font-size:1.5rem">📺</div>
+        <div class="grow"><b>광고 보고 +1회</b><p class="hint" style="margin:2px 0 0">15초 시청 · 하루 3회까지</p></div>
+        <button class="btn btn-sm btn-primary" onclick="UI.watchAd()">시청</button>
+      </div>
+      <div class="divider" style="margin:10px 0"></div>
+      <div class="row" style="gap:12px">
+        <div style="font-size:1.5rem">⭐</div>
+        <div class="grow"><b>프리미엄 — 무제한 · 광고 없음</b><p class="hint" style="margin:2px 0 0">월 3,900원 (출시 준비 중)</p></div>
+        <button class="btn btn-sm btn-tint" onclick="UI.premiumInterest()">알림받기</button>
+      </div>
     </div>` : `
+    <div class="card flat">
+      <p class="hint" style="margin:0">✨ AI 기능(영수증 스캔 · 유튜브 빠른 레시피)은 <b>곧 무료로 열려요</b> —
+      별도 설치나 설정 없이 업데이트로 자동 적용됩니다. 그동안은 빠른 추가(2탭 등록)를 써주세요.</p>
+    </div>`) : `
     <div class="card flat">
       <div class="seg" style="margin-top:0">
         <button class="${st.aiMode !== 'server' ? 'on' : ''}" onclick="UI.setAiMode('byok')">🔑 내 키 (베타)</button>
@@ -1707,7 +1743,8 @@ function renderSettings() {
         </div></div>
       <button class="btn btn-block btn-tint" onclick="UI.connectSync()">수동 연결</button>
       ${sync.status === 'error' ? `<p class="hint" style="color:var(--red)">오류: ${esc(sync.error)}</p>` : ''}
-      <p class="hint" style="margin-top:8px">상용 전환: js/config.js에 FIREBASE_CONFIG·AI_ENDPOINT를 채워 커밋하면 모든 사용자에게 "구글로 시작"과 서버 AI가 기본 적용돼요 (docs/09)</p>
+      <p class="hint" style="margin-top:8px">상용 전환: js/config.js에 FIREBASE_CONFIG·AI_ENDPOINT를 채워 커밋하면 모든 사용자에게 "구글로 시작"과 서버 AI가 기본 적용돼요. 입력값 목록은 레포 <b>OPERATOR.md</b>, 절차는 docs/09.</p>
+      <button class="btn btn-block btn-soft" style="margin-top:6px" onclick="UI.adminGate()">🔒 관리자 모드 잠그기 (재진입: 버전 문구 7번 탭)</button>
     </div>` : ''}
 
     <div class="section-title"><h2>🗂️ 데이터</h2></div>
@@ -1717,7 +1754,7 @@ function renderSettings() {
       <button class="btn btn-soft" onclick="UI.resetAll()">초기화</button>
     </div>
     <button class="btn btn-soft btn-block" style="margin-top:9px" onclick="UI.openImport()">📥 공유받은 레시피·모드 추가 (링크 붙여넣기)</button>
-    <p class="hint" style="margin-top:16px;text-align:center">냉비서 v0.2 · 데이터는 내 기기(와 내 Firebase)에만 저장됩니다<br>제품 설계 문서: 레포 docs/ 폴더</p>`;
+    <p class="hint" style="margin-top:16px;text-align:center" onclick="UI.verTap()">냉비서 v0.3 · 내 데이터는 내 기기${syncAvailable() ? '(로그인 시 내 계정)' : ''}에만 저장됩니다</p>`;
 }
 UI.setAiMode = (m) => { S.settings.aiMode = m; save(); renderSettings(); };
 UI.saveAI = () => {

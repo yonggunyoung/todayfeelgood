@@ -18,6 +18,10 @@ const DEFAULT = () => ({
   favs: [],       // 즐겨찾기 레시피 id
   ledger: { saved: 0, wasted: 0, cooked: 0, leftoverEaten: 0, leftoverWasted: 0 },
   plan: '',       // ''=무료 | 'premium' — 결제 웹훅/운영자가 기록, 프리미엄이면 앱 내 광고 미노출
+  points: { bal: 0, total: 0, day: '', got: {}, hist: [] }, // 냉비서 포인트 — 절약 행동 보상 (무상 적립만)
+  games: { best: {}, week: '', weekBest: {}, day: '', earned: 0 }, // 미니게임 기록 — 주간 리셋 승부욕
+  adFreeUntil: 0,    // 포인트샵 "광고 없는 하루" 교환 시각
+  planTrialUntil: 0, // 포인트샵 "프리미엄 맛보기" 만료 시각
   onboarded: false,
 });
 
@@ -31,6 +35,8 @@ function load() {
       ...d, ...p,
       settings: { ...d.settings, ...(p.settings || {}) },
       ledger: { ...d.ledger, ...(p.ledger || {}) },
+      points: { ...d.points, ...(p.points || {}) },
+      games: { ...d.games, ...(p.games || {}) },
       myRecipes: p.myRecipes || [],
       favs: p.favs || [],
     };
@@ -59,7 +65,8 @@ export function replaceState(remote) {
   const keepFb = S.settings.firebaseConfig;
   const keepCode = S.settings.spaceCode;
   const keepPin = S.settings.adminPin;
-  for (const k of ['meta', 'settings', 'pantry', 'leftovers', 'shopping', 'myRecipes', 'favs', 'ledger', 'onboarded']) {
+  for (const k of ['meta', 'settings', 'pantry', 'leftovers', 'shopping', 'myRecipes', 'favs', 'ledger',
+    'plan', 'points', 'games', 'adFreeUntil', 'planTrialUntil', 'onboarded']) {
     if (remote[k] !== undefined) S[k] = remote[k];
   }
   S.settings.aiKey = keepKey;

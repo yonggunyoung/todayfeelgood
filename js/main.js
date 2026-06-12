@@ -2,10 +2,13 @@
 import { S, save, uid, today, addDays, daysLeft, won } from './store.js';
 import { ING, findIng, defaultShelf, defaultLocation } from './data/ingredients.js';
 import { recommend, recipesUsing, expiringItems, activeLeftovers, deductionPlan, modeList, getMode, allRecipes, buildCookPlan } from './engine.js';
-import { scanImage, extractRecipeFromYouTube, claimReward, searchYouTube } from './ai.js';
+import { scanImage, extractRecipeFromYouTube, claimReward, redeemAiCredit, searchYouTube } from './ai.js';
 import { initSync, sync, makeSpaceCode, setSpaceCode, loginGoogle, logoutGoogle, syncAvailable } from './sync.js';
 import { AI_ENDPOINT } from './config.js';
 import { canListen, speak, stopSpeak, startListen, stopListen, isListening, parseCommand } from './voice.js';
+import { earn, spend, refund, EARN, earnedToday, SHOP, adFreeNow, gameBest } from './points.js';
+import { initGames, openGames, gameFresh, gameVoice, gameVoicePass, gameDouble } from './games.js';
+import { tossRewardedAd } from './toss.js';
 
 let tab = 'home';
 let pantryView = 'shelf';
@@ -248,6 +251,12 @@ function renderHome() {
     <div class="card ledger-card" style="cursor:pointer" onclick="UI.explainLedger()">
       <div class="save"><div class="l-label">아낀 돈 (누적)</div><div class="l-val">${won(S.ledger.saved)}</div></div>
       <div class="waste"><div class="l-label">버린 돈 (누적)</div><div class="l-val">${won(S.ledger.wasted)}</div></div>
+    </div>
+    <div class="card points-card">
+      <div class="grow" onclick="UI.openPoints()"><span class="p-coin">🅿</span> <b>${(S.points?.bal || 0).toLocaleString()}P</b>
+        <small>절약할수록 쌓여요</small></div>
+      <button class="btn btn-sm btn-tint" onclick="UI.openPoints()">포인트샵</button>
+      <button class="btn btn-sm btn-primary" onclick="UI.openGames()">🎮 게임</button>
     </div>
     ${adBanner('home')}`;
 }
@@ -691,16 +700,30 @@ UI.openRecharge = (retry) => {
     </div>
     <div class="btn-row"><button class="btn btn-block" onclick="UI.closeSheet()">다음에 할게요</button></div>`);
 };
+/* 광고 재생 코어 — 모든 보상형(AI 충전·게임 2배)이 이 한 곳을 거친다.
+   토스 안: 네이티브 보상형 SDK 시도 → 개별 운영/실패: 하우스 15초 (AdFit 교체 자리) */
 let adTimer = null;
-UI.watchAd = () => {
+function playAd({ onComplete, note = '' }) {
+  tossRewardedAd().then((r) => {
+    if (r === true) { // 토스 보상형 완주 — 바로 보상 단계
+      openSheet('<h2>📺 광고</h2><button id="ad-btn" class="btn btn-block btn-soft" disabled>보상 적용 중…</button>', { lock: true });
+      onComplete($('#ad-btn'));
+      return;
+    }
+    if (r === false) { toast('광고를 끝까지 봐야 보상을 받아요'); return; }
+    houseAd({ onComplete, note }); // null = 토스 환경 아님/광고 없음 → 폴백
+  });
+}
+function houseAd({ onComplete, note }) {
   clearInterval(adTimer);
   const total = 15;
-  // 잠금 시트: 바깥 탭으로 안 닫힘 — 완주해야 충전 (보상형 광고 표준 동작)
+  // 잠금 시트: 바깥 탭으로 안 닫힘 — 완주해야 보상 (보상형 광고 표준 동작)
   openSheet(`
     <div class="row" style="justify-content:space-between;align-items:center">
       <h2 style="margin:0">📺 광고</h2>
-      <small style="color:var(--label-3);cursor:pointer" onclick="UI.adQuit()">✕ 건너뛰기 (충전 안 됨)</small>
+      <small style="color:var(--label-3);cursor:pointer" onclick="UI.adQuit()">✕ 건너뛰기 (보상 없음)</small>
     </div>
+    ${note ? `<p class="sub">${note}</p>` : ''}
     <div class="card" style="text-align:center;padding:26px 16px;margin-top:10px" id="ad-stage">
       <div style="font-size:2.4rem">🧊✨</div>
       <b style="display:block;margin-top:6px">냉비서 프리미엄이 곧 나와요</b>
@@ -711,38 +734,47 @@ UI.watchAd = () => {
   const bar = $('#ad-bar');
   if (bar) { bar.style.transitionDuration = total + 's'; requestAnimationFrame(() => { bar.style.width = '100%'; }); }
   let t = total;
-  adTimer = setInterval(async () => {
+  adTimer = setInterval(() => {
     const b = $('#ad-btn');
     if (!b) { clearInterval(adTimer); return; } // 시트가 닫혔으면(뒤로가기 등) 보상 없음
     t--;
     if (t > 0) { b.textContent = `광고 시청 중… ${t}초`; return; }
     clearInterval(adTimer);
-    b.textContent = '충전 중…';
-    try {
-      await claimReward(S.settings);
-      b.className = 'btn btn-block btn-primary';
-      if (adRetry) {
-        b.textContent = '✅ +1회 충전 완료 — 이어서 진행할게요';
-        const r = adRetry; adRetry = null;
-        setTimeout(() => { UI.closeSheet(); r(); }, 900);
-      } else {
-        b.textContent = '✅ +1회 충전 완료';
+    onComplete(b);
+  }, 1000);
+}
+UI.watchAd = () => {
+  playAd({
+    note: '끝까지 보면 AI 1회가 충전되고 하던 작업이 이어져요',
+    onComplete: async (b) => {
+      b.textContent = '충전 중…';
+      try {
+        await claimReward(S.settings);
+        const bonusP = earn('ad');
+        b.className = 'btn btn-block btn-primary';
+        if (adRetry) {
+          b.textContent = `✅ +1회 충전${bonusP.ok ? ` · 🅿+${bonusP.p}P` : ''} — 이어서 진행할게요`;
+          const r = adRetry; adRetry = null;
+          setTimeout(() => { UI.closeSheet(); r(); }, 900);
+        } else {
+          b.textContent = `✅ +1회 충전 완료${bonusP.ok ? ` · 🅿+${bonusP.p}P` : ''}`;
+          b.disabled = false;
+          b.onclick = () => UI.closeSheet();
+        }
+      } catch (e) {
+        b.className = 'btn btn-block btn-soft';
+        b.textContent = e.message || '충전에 실패했어요';
         b.disabled = false;
         b.onclick = () => UI.closeSheet();
       }
-    } catch (e) {
-      b.className = 'btn btn-block btn-soft';
-      b.textContent = e.message || '충전에 실패했어요';
-      b.disabled = false;
-      b.onclick = () => UI.closeSheet();
-    }
-  }, 1000);
+    },
+  });
 };
 UI.adQuit = () => {
   clearInterval(adTimer);
   adRetry = null;
   UI.closeSheet();
-  toast('광고를 끝까지 봐야 충전돼요');
+  toast('광고를 끝까지 봐야 보상을 받아요');
 };
 
 /* ── 앱 내 광고 슬롯 — 지금은 하우스 광고, 운영자가 애드핏/애드센스 코드로 교체하는 자리 ──
@@ -754,13 +786,84 @@ const HOUSE_ADS = [
   { ico: '👨‍👩‍👧', t: '가족과 같이 쓰기', d: '코드 하나로 온 가족이 한 냉장고를 봐요', act: "UI.go('settings')" },
 ];
 function adBanner(slot) {
-  if (S.plan === 'premium') return '';
+  if (adFreeNow()) return ''; // 프리미엄 · 포인트샵 "광고 없는 하루" · 맛보기 중
   const a = HOUSE_ADS[(new Date().getDate() + slot.length) % HOUSE_ADS.length];
   return `<div class="ad-banner" id="ad-${slot}" onclick="${a.act}">
     <span class="ad-ico">${a.ico}</span>
     <div><b>${a.t}</b><p>${a.d}</p></div>
     <span class="ad-tag">AD</span></div>`;
 }
+
+/* ── 🅿 포인트 — 절약 행동 보상 + 교환소 (충전·현금화 없음) ── */
+UI.openPoints = () => {
+  const rows = Object.entries(EARN).map(([k, r]) => {
+    const got = earnedToday(k);
+    return `<div class="p-row ${got >= r.cap ? 'done' : ''}">
+      <span>${r.emoji}</span>
+      <div class="grow"><b>${r.label}</b><small>${k === 'game' ? '점수만큼 (판당 최대 12P)' : `+${r.p}P`}</small></div>
+      <b class="p-stat">${got}/${r.cap}</b></div>`;
+  }).join('');
+  const shop = SHOP.map((it) => {
+    const locked = it.kind === 'locked' || (it.kind === 'server' && !(aiReady().ok && S.settings.aiMode === 'server'));
+    const can = !locked && (S.points?.bal || 0) >= it.p;
+    return `<div class="p-row ${locked ? 'done' : ''}">
+      <span>${it.emoji}</span>
+      <div class="grow"><b>${it.name}</b><small>${it.desc}</small></div>
+      ${locked
+        ? `<small style="color:var(--label-3)">${it.kind === 'locked' ? '준비 중' : 'AI 오픈 시'}</small>`
+        : `<button class="btn btn-sm ${can ? 'btn-tint' : 'btn-soft'}" ${can ? '' : 'disabled'} onclick="UI.redeem('${it.id}')">${it.p.toLocaleString()}P</button>`}
+    </div>`;
+  }).join('');
+  const hist = (S.points?.hist || []).slice(0, 6).map((h) =>
+    `<div class="p-row"><small style="color:var(--label-3)">${new Date(h.t).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' })}</small>
+      <div class="grow"><small>${esc(h.n)}</small></div><b class="${h.p > 0 ? 'p-plus' : 'p-minus'}">${h.p > 0 ? '+' : ''}${h.p}P</b></div>`).join('');
+  openSheet(`
+    <h2>🅿 내 포인트</h2>
+    <div class="card flat" style="text-align:center;padding:18px">
+      <div style="font-size:2rem;font-weight:900">${(S.points?.bal || 0).toLocaleString()}<small style="font-size:1rem">P</small></div>
+      <p class="hint" style="margin:4px 0 0">누적 ${(S.points?.total || 0).toLocaleString()}P · 버리지 않을수록 쌓여요</p>
+    </div>
+    <div class="section-title" style="margin-top:14px"><h2>오늘 적립</h2><small>매일 자정 리셋</small></div>
+    <div class="card flat">${rows}</div>
+    <div class="section-title" style="margin-top:14px"><h2>교환소</h2><small>모은 포인트 쓰기</small></div>
+    <div class="card flat">${shop}</div>
+    ${hist ? `<div class="section-title" style="margin-top:14px"><h2>최근 내역</h2></div><div class="card flat">${hist}</div>` : ''}
+    <p class="hint" style="text-align:center;margin-top:10px">포인트는 활동으로만 적립되고 현금으로 바꿀 수 없어요.<br>기프티콘·토스포인트 교환은 준비되는 대로 열립니다.</p>
+    <div class="btn-row"><button class="btn btn-block" onclick="UI.closeSheet()">닫기</button></div>`);
+};
+UI.redeem = async (id) => {
+  const it = SHOP.find((x) => x.id === id);
+  if (!it) return;
+  if (it.id === 'ai1') {
+    if (!spend(it.p, it.name)) { toast('포인트가 부족해요'); return; }
+    try {
+      await redeemAiCredit(S.settings);
+      toast('🤖 AI 1회 충전 완료!');
+    } catch (e) {
+      refund(it.p, it.name);
+      toast(e.message || '교환에 실패했어요 — 포인트는 돌려드렸어요');
+    }
+  } else if (it.id === 'adfree') {
+    if (!spend(it.p, it.name)) { toast('포인트가 부족해요'); return; }
+    S.adFreeUntil = Date.now() + 86400e3;
+    save();
+    toast('🧘 24시간 동안 배너 광고가 사라져요');
+  } else if (it.id === 'trial') {
+    if (!spend(it.p, it.name)) { toast('포인트가 부족해요'); return; }
+    S.planTrialUntil = Date.now() + 86400e3;
+    save();
+    toast('⭐ 프리미엄 맛보기 시작! 24시간 광고 없이 쓰세요');
+  }
+  UI.openPoints();
+  if (tab === 'home') renderHome();
+};
+
+/* ── 🎮 게임 글루 — games.js의 시트들이 onclick 문자열로 부른다 ── */
+UI.openGames = () => openGames();
+UI.gameFresh = () => gameFresh();
+UI.gameVoice = () => gameVoice();
+UI.gameVoicePass = () => gameVoicePass();
+UI.gameDouble = (p) => gameDouble(p);
 UI.premiumInterest = () => {
   S.premiumWish = true;
   save({ silent: true });
@@ -1065,11 +1168,28 @@ UI.readIngs = () => {
 };
 
 let ktTimer = null;
+let ktTick = null;
+function killTimerChip() { clearInterval(ktTick); $('#timer-chip')?.remove(); }
 function startKitchenTimer(min) {
-  clearTimeout(ktTimer);
+  clearTimeout(ktTimer); killTimerChip();
   speak(`${min}분 타이머 시작!`);
   toast(`⏲ ${min}분 타이머 시작`);
+  // 떠있는 칩: 남은 시간 표시 + 짬시간 게임 입구 (탭하면 게임 허브)
+  const end = Date.now() + min * 60000;
+  const chip = document.createElement('div');
+  chip.id = 'timer-chip';
+  chip.onclick = () => UI.openGames();
+  document.body.appendChild(chip);
+  const tick = () => {
+    const left = Math.max(0, end - Date.now());
+    const mm = Math.floor(left / 60000);
+    const ss = String(Math.floor((left % 60000) / 1000)).padStart(2, '0');
+    chip.innerHTML = `⏲ ${mm}:${ss} <span>🎮 기다리는 동안 한 판?</span>`;
+  };
+  tick();
+  ktTick = setInterval(tick, 1000);
   ktTimer = setTimeout(() => {
+    killTimerChip();
     speak(`${min}분 타이머가 끝났어요! 불 확인하세요!`);
     toast(`⏲ ${min}분 타이머 종료!`);
     navigator.vibrate?.([220, 110, 220]);
@@ -1533,10 +1653,14 @@ UI.applyDeduct = () => {
   S.ledger.cooked += 1;
   S.ledger.saved += savedFromExpiring;
   save();
+  // 포인트: 요리 완료 +10P, 임박 재료를 구출했으면 +20P 추가 (각각 일일 상한)
+  const pCook = earn('cook');
+  const pRescue = savedFromExpiring > 0 ? earn('rescue') : { ok: false };
+  const pMsg = [pCook.ok ? `+${pCook.p}P 요리` : '', pRescue.ok ? `+${pRescue.p}P 임박 구출` : ''].filter(Boolean).join(' · ');
   const recipeTitle = recipe.title;
   openSheet(`
     <h2>🍽️ 맛있게 드세요!</h2>
-    <p class="sub">${esc(recipeTitle)} 완료 · 재고가 알아서 줄었어요${savedFromExpiring ? ` · 임박 재료 소진으로 ${won(savedFromExpiring)} 아꼈어요 🪙` : ''}</p>
+    <p class="sub">${esc(recipeTitle)} 완료 · 재고가 알아서 줄었어요${savedFromExpiring ? ` · 임박 재료 소진으로 ${won(savedFromExpiring)} 아꼈어요 🪙` : ''}${pMsg ? ` · 🅿 ${pMsg}` : ''}</p>
     <div class="card flat" style="text-align:center;padding:20px">
       <div style="font-size:2.2rem">🥘</div>
       <b style="display:block;margin-top:6px">음식이 남았나요?</b>
@@ -1624,8 +1748,11 @@ UI.leftoverDone = (id, result) => {
   const l = S.leftovers.find((x) => x.id === id);
   if (!l) return;
   l.status = result;
-  if (result === 'eaten') { S.ledger.leftoverEaten += 1; S.ledger.saved += 4000; toast('한 끼 해결! 약 ₩4,000 아꼈어요 🪙'); }
-  else { S.ledger.leftoverWasted += 1; S.ledger.wasted += 3000; toast('버린 기록을 장부에 남겼어요'); }
+  if (result === 'eaten') {
+    S.ledger.leftoverEaten += 1; S.ledger.saved += 4000;
+    const p = earn('leftover');
+    toast(`한 끼 해결! 약 ₩4,000 아꼈어요 🪙${p.ok ? ` · 🅿+${p.p}P` : ''}`);
+  } else { S.ledger.leftoverWasted += 1; S.ledger.wasted += 3000; toast('버린 기록을 장부에 남겼어요'); }
   save(); render();
 };
 
@@ -1995,6 +2122,21 @@ if (AI_ENDPOINT && !S.settings.aiEndpoint) {
 
 render();
 initSync(() => { renderTop(); if (tab === 'settings') renderSettings(); });
+
+// 게임 모듈에 UI 콘텍스트 주입 (시트·토스트·광고 코어 공유)
+initGames({
+  openSheet,
+  closeSheet: (fromPop) => UI.closeSheet(fromPop),
+  toast,
+  playAd,
+  onPoints: () => { if (tab === 'home') renderHome(); },
+});
+
+// 출석 포인트 — 하루 한 번, 앱을 연 것 자체가 절약의 시작
+{
+  const att = earn('daily');
+  if (att.ok) setTimeout(() => toast(`📅 출석 +${att.p}P — 오늘도 냉장고부터!`), 1400);
+}
 
 // 공유 링크로 진입한 경우 (?share=NB1.…)
 const shared = new URLSearchParams(location.search).get('share');

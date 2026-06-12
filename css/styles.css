@@ -671,3 +671,88 @@ a { color: var(--blue); text-decoration: none; }
   margin-left: auto; flex-shrink: 0; font-size: 0.6rem; font-weight: 800;
   color: var(--label-3); border: 1px solid var(--hairline); border-radius: 5px; padding: 2px 5px;
 }
+
+/* ── 🅿 포인트 ── */
+.points-card { display: flex; align-items: center; gap: 8px; padding: 13px 14px; }
+.points-card .grow { cursor: pointer; }
+.points-card b { font-size: 1.05rem; }
+.points-card small { display: block; color: var(--label-2); font-size: 0.72rem; margin-top: 1px; }
+.p-coin {
+  display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 99px;
+  background: linear-gradient(145deg, #ffd54d, #f5a623); color: #7a4d00; font-weight: 900; font-size: 0.72rem;
+  vertical-align: -5px; margin-right: 2px;
+}
+.p-row { display: flex; align-items: center; gap: 10px; padding: 8px 2px; border-bottom: 1px solid var(--hairline); }
+.p-row:last-child { border-bottom: none; }
+.p-row > span { font-size: 1.2rem; }
+.p-row b { font-size: 0.88rem; display: block; }
+.p-row small { color: var(--label-2); font-size: 0.74rem; }
+.p-row.done { opacity: 0.45; }
+.p-stat { font-size: 0.8rem; color: var(--label-2); }
+.p-plus { color: var(--green); font-size: 0.85rem; }
+.p-minus { color: var(--red); font-size: 0.85rem; }
+
+/* ── 🎮 게임 허브 ── */
+.g-card { display: flex; align-items: center; gap: 12px; cursor: pointer; }
+.g-card .g-ico { font-size: 1.8rem; }
+.g-card .g-best { color: var(--label-2); font-size: 0.72rem; }
+.g-card .g-go { font-size: 1rem; color: var(--green); font-weight: 900; }
+.g-card.g-off { opacity: 0.55; cursor: default; }
+
+/* ── 게임 스테이지 공통 ── */
+.g-stage { user-select: none; -webkit-user-select: none; touch-action: manipulation; }
+.g-hud { display: flex; align-items: center; justify-content: space-between; font-size: 0.9rem; margin-bottom: 6px; }
+.g-hud b { font-size: 1.15rem; }
+.g-combo { color: var(--orange); font-weight: 800; font-size: 0.8rem; min-width: 70px; text-align: right; }
+.g-itembox { text-align: center; margin: 8px 0 2px; }
+.g-itembox span { font-size: 3rem; display: block; animation: g-bob 1.6s ease-in-out infinite; }
+.g-itembox.big span { font-size: 4.2rem; }
+.g-itembox b { font-size: 0.95rem; }
+@keyframes g-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+.g-track {
+  position: relative; height: 46px; border-radius: 14px; overflow: hidden;
+  background: linear-gradient(180deg, #eef1f5, #e3e7ee); border: 1px solid var(--hairline);
+}
+.g-zone {
+  position: absolute; top: 0; bottom: 0; border-radius: 10px;
+  background: rgba(47, 174, 95, 0.32); border: 2px solid var(--green);
+  transition: left 0.18s ease, width 0.18s ease;
+}
+.g-zone i {
+  position: absolute; left: 50%; top: 6px; bottom: 6px; width: 3px; margin-left: -1.5px;
+  background: var(--green); border-radius: 99px; opacity: 0.8;
+}
+.g-marker {
+  position: absolute; top: 3px; bottom: 3px; width: 7px; margin-left: -3.5px; border-radius: 99px;
+  background: #1d2733; box-shadow: 0 0 0 2px #fff, 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+.g-pop {
+  text-align: center; height: 26px; font-weight: 900; font-size: 1rem; color: var(--green);
+  opacity: 0; transform: translateY(6px) scale(0.9); transition: all 0.18s;
+}
+.g-pop.on { opacity: 1; transform: translateY(0) scale(1); }
+.g-pop.perfect { color: var(--orange); font-size: 1.15rem; }
+.g-pop.miss { color: var(--red); }
+.g-shake { animation: g-shake 0.32s; }
+@keyframes g-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-7px); } 50% { transform: translateX(6px); } 75% { transform: translateX(-3px); }
+}
+.g-flash { animation: g-flash 0.22s; }
+@keyframes g-flash { 0% { background: rgba(47, 174, 95, 0.18); } 100% { background: transparent; } }
+.g-hint { text-align: center; font-weight: 800; font-size: 0.95rem; margin: 8px 0 4px; min-height: 22px; }
+.g-heard { text-align: center; color: var(--label-2); font-size: 0.8rem; min-height: 18px; margin-bottom: 8px; }
+.g-score { font-size: 1.9rem; font-weight: 900; }
+.g-newbest { color: var(--orange); font-weight: 900; margin-top: 6px; animation: g-bob 1.2s ease-in-out infinite; }
+.g-earn { margin-top: 8px; font-weight: 800; color: var(--green); }
+
+/* ── ⏲ 타이머 칩 — 짬시간 게임 입구 ── */
+#timer-chip {
+  position: fixed; right: 14px; bottom: 92px; z-index: 58;
+  background: linear-gradient(145deg, #2e3540, #1d2733); color: #fff;
+  border-radius: 99px; padding: 9px 14px; font-size: 0.86rem; font-weight: 800;
+  box-shadow: 0 8px 22px rgba(20, 24, 33, 0.35); cursor: pointer;
+  animation: chip-in 0.4s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+#timer-chip span { font-size: 0.72rem; font-weight: 600; opacity: 0.85; margin-left: 4px; }
+@keyframes chip-in { from { transform: translateY(16px) scale(0.8); opacity: 0; } }

@@ -16,6 +16,7 @@ const RECIPE_MODEL = process.env.RECIPE_MODEL || 'claude-sonnet-4-6';
 const FREE_QUOTA = Number(process.env.FREE_QUOTA || 5); // 월 무료 횟수 (스캔 기준 5회 — 광고 시청으로 충전)
 const PREMIUM_QUOTA = Number(process.env.PREMIUM_QUOTA || 200); // 프리미엄 남용 방지 상한
 const REWARD_DAILY_CAP = Number(process.env.REWARD_DAILY_CAP || 3); // 광고 충전 일일 상한
+const REDEEM_DAILY_CAP = Number(process.env.REDEEM_DAILY_CAP || 2); // 포인트샵 AI 1회권 교환 일일 상한
 
 /* ── 구독 상태 — 결제 성공 시 users/{uid}에 plan:'premium' 기록 (G2 결제 연동 또는 수동 부여) ── */
 function isPremium(u) {
@@ -79,6 +80,29 @@ async function grantReward(uid) {
     bonus = (d.bonus || 0) + 1;
     tx.set(ref, {
       bonus, rewardDay: today, rewardToday: todayCount + 1,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true });
+  });
+  return { bonus };
+}
+
+// 포인트샵 교환: 무료 한도에 +1 (구조는 광고 보상과 동일, 상한만 별도)
+async function redeemCredit(uid) {
+  const ref = usageRef(uid);
+  const today = new Date().toISOString().slice(0, 10);
+  let bonus = 0;
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    const d = snap.exists ? snap.data() : {};
+    const todayCount = d.redeemDay === today ? (d.redeemToday || 0) : 0;
+    if (todayCount >= REDEEM_DAILY_CAP) {
+      const err = new Error(`오늘 포인트 교환 한도(${REDEEM_DAILY_CAP}회)를 모두 썼어요. 내일 또 교환할 수 있어요!`);
+      err.code = 429;
+      throw err;
+    }
+    bonus = (d.bonus || 0) + 1;
+    tx.set(ref, {
+      bonus, redeemDay: today, redeemToday: todayCount + 1,
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     }, { merge: true });
   });
@@ -238,6 +262,13 @@ exports.ai = onRequest(
         return;
       }
 
+      // 포인트샵 "AI 1회권" 교환 — 포인트 차감은 클라이언트, 서버는 일일 상한으로 남용만 차단
+      // (직접 호출해도 하루 REDEEM_DAILY_CAP회가 끝 — 광고 보상과 같은 노출 수준)
+      if (path.endsWith('/redeem')) {
+        res.json(await redeemCredit(uid));
+        return;
+      }
+
       // 인앱 유튜브 검색 — 운영자 YT_API_KEY로 전 사용자에게 제공 (AI 한도 미차감, 무료 기능)
       if (path.endsWith('/ytsearch')) {
         const q = String((req.body || {}).q || '').trim().slice(0, 60);
@@ -256,7 +287,7 @@ exports.ai = onRequest(
         return;
       }
 
-      res.status(404).json({ error: '알 수 없는 경로입니다 (/scan, /ytrecipe, /reward, /ytsearch)' });
+      res.status(404).json({ error: '알 수 없는 경로입니다 (/scan, /ytrecipe, /reward, /redeem, /ytsearch)' });
     } catch (e) {
       res.status(e.code && e.code >= 400 && e.code < 600 ? e.code : 500).json({ error: e.message || '서버 오류' });
     }

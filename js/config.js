@@ -18,3 +18,7 @@ export const FIREBASE_CONFIG = {
 
 // ② functions 배포 후 나온 URL을 넣으면 모든 사용자에게 서버 AI(무료 한도+광고충전+프리미엄)가 기본 적용된다
 export const AI_ENDPOINT = '';
+
+// ③ 앱인토스 입점 후 채우기 — 콘솔에서 발급받는 값 (비우면 개별 운영 모드로 자동 폴백)
+//    rewardAdId: 보상형 광고 단위 / promotionId: 토스포인트 프로모션 (비즈월렛 예산 선충전 필요)
+export const TOSS = { rewardAdId: '', promotionId: '' };

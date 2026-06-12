@@ -49,6 +49,11 @@ export async function claimReward(settings) {
   return serverPost('/reward', {}, settings);
 }
 
+// 포인트샵 "AI 1회권" → 서버에 +1회 충전 요청 (포인트 차감은 클라이언트)
+export async function redeemAiCredit(settings) {
+  return serverPost('/redeem', {}, settings);
+}
+
 const SCHEMA = {
   type: 'object',
   properties: {

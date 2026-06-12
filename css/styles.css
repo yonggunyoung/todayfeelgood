@@ -655,3 +655,19 @@ a { color: var(--blue); text-decoration: none; }
 
 /* 신규 카테고리 틴트 */
 .t-간식, .t-음료 { background: var(--tint-etc); }
+
+/* ── 광고 — 보상형 진행바 + 인앱 슬롯 (프리미엄 미노출) ── */
+.ad-progress { height: 4px; background: var(--hairline); border-radius: 99px; overflow: hidden; margin: 14px 0 10px; }
+.ad-progress i { display: block; height: 100%; width: 0; background: var(--green); border-radius: 99px; transition-property: width; transition-timing-function: linear; }
+.ad-banner {
+  display: flex; align-items: center; gap: 11px; background: var(--card);
+  border: 1px solid var(--hairline); border-radius: 14px; padding: 11px 13px;
+  margin: 16px 0 4px; box-shadow: var(--shadow-card); cursor: pointer;
+}
+.ad-banner .ad-ico { font-size: 1.45rem; }
+.ad-banner b { font-size: 0.86rem; display: block; }
+.ad-banner p { margin: 1px 0 0; font-size: 0.76rem; color: var(--label-2); }
+.ad-banner .ad-tag {
+  margin-left: auto; flex-shrink: 0; font-size: 0.6rem; font-weight: 800;
+  color: var(--label-3); border: 1px solid var(--hairline); border-radius: 5px; padding: 2px 5px;
+}

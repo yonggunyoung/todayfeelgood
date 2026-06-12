@@ -13,7 +13,7 @@ const ANTHROPIC_API_KEY = defineSecret('ANTHROPIC_API_KEY');
 // 모델·한도는 환경변수로 교체 가능 (비용 최적화 실험용)
 const SCAN_MODEL = process.env.SCAN_MODEL || 'claude-haiku-4-5';
 const RECIPE_MODEL = process.env.RECIPE_MODEL || 'claude-sonnet-4-6';
-const FREE_QUOTA = Number(process.env.FREE_QUOTA || 10); // 월 무료 횟수
+const FREE_QUOTA = Number(process.env.FREE_QUOTA || 5); // 월 무료 횟수 (스캔 기준 5회 — 광고 시청으로 충전)
 const PREMIUM_QUOTA = Number(process.env.PREMIUM_QUOTA || 200); // 프리미엄 남용 방지 상한
 const REWARD_DAILY_CAP = Number(process.env.REWARD_DAILY_CAP || 3); // 광고 충전 일일 상한
 

@@ -17,6 +17,7 @@ const DEFAULT = () => ({
   myRecipes: [],  // 내가 만든/유튜브에서 저장한 레시피 (RECIPES와 동일 구조 + yt, photo, mine)
   favs: [],       // 즐겨찾기 레시피 id
   ledger: { saved: 0, wasted: 0, cooked: 0, leftoverEaten: 0, leftoverWasted: 0 },
+  plan: '',       // ''=무료 | 'premium' — 결제 웹훅/운영자가 기록, 프리미엄이면 앱 내 광고 미노출
   onboarded: false,
 });
 

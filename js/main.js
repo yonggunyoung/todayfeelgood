@@ -77,10 +77,11 @@ function toast(msg) {
   setTimeout(() => el.remove(), 2300);
 }
 
-function openSheet(html) {
+function openSheet(html, { lock = false } = {}) {
+  // lock: 보상형 광고처럼 바깥 탭으로 닫히면 안 되는 시트 (명시적 버튼으로만 종료)
   $('#modal-root').innerHTML =
-    `<div class="overlay" onclick="if(event.target===this)UI.closeSheet()">
-       <div class="sheet"><div class="grip"></div>${html}</div>
+    `<div class="overlay" ${lock ? '' : 'onclick="if(event.target===this)UI.closeSheet()"'}>
+       <div class="sheet">${lock ? '' : '<div class="grip"></div>'}${html}</div>
      </div>`;
   if (!sheetPushed) { history.pushState({ nb: 'sheet' }, ''); sheetPushed = true; }
 }
@@ -247,7 +248,8 @@ function renderHome() {
     <div class="card ledger-card" style="cursor:pointer" onclick="UI.explainLedger()">
       <div class="save"><div class="l-label">아낀 돈 (누적)</div><div class="l-val">${won(S.ledger.saved)}</div></div>
       <div class="waste"><div class="l-label">버린 돈 (누적)</div><div class="l-val">${won(S.ledger.wasted)}</div></div>
-    </div>`;
+    </div>
+    ${adBanner('home')}`;
 }
 
 UI.starterPack = () => {
@@ -580,7 +582,19 @@ UI.runScan = async () => {
     btn.textContent = '다시 분석';
     btn.disabled = false;
   } catch (e) {
-    if (e.status === 429 && S.settings.aiMode === 'server') { UI.openRecharge(); return; }
+    if (e.status === 429 && S.settings.aiMode === 'server') {
+      const f = scanFile; // 광고 완주 후 같은 사진으로 분석을 이어간다
+      UI.openRecharge(() => {
+        UI.openScan();
+        scanFile = f;
+        const pv = $('#scan-preview');
+        if (pv && f) pv.innerHTML = `<img src="${URL.createObjectURL(f)}" style="width:100%;border-radius:16px;max-height:240px;object-fit:cover" />`;
+        const go = $('#scan-go');
+        if (go) go.disabled = false;
+        UI.runScan();
+      });
+      return;
+    }
     toast(e.message || 'AI 분석에 실패했어요');
     btn.textContent = '🤖 AI 분석';
     btn.disabled = false;
@@ -655,54 +669,98 @@ UI.explainSync = () => {
       <button class="btn btn-primary" onclick="UI.closeSheet();UI.go('settings')">설정 열기</button></div>`);
 };
 
-/* ── 무료 한도 소진 → 광고 충전 / 구독 유도 ── */
-UI.openRecharge = () => {
+/* ── 무료 한도 소진 → 그때서야 고지하고, 광고 풀시청 시 하던 작업을 이어간다 ──
+   미리 광고를 노출/예고하지 않는다. AI 버튼을 눌러 한도에 걸린 순간에만 팝업. */
+let adRetry = null; // 광고 완주 후 이어서 실행할 작업 (스캔 재실행 등)
+UI.openRecharge = (retry) => {
+  adRetry = typeof retry === 'function' ? retry : null;
   openSheet(`
-    <h2>🔋 무료 횟수를 다 썼어요</h2>
-    <p class="sub">이번 달 무료 AI를 모두 사용했어요 — 두 가지 방법으로 계속 쓸 수 있어요</p>
+    <h2>🔋 이번 달 무료 횟수를 다 썼어요</h2>
+    <p class="sub">짧은 광고를 <b>끝까지 보면 +1회</b> 충전되고, 하던 작업이 바로 이어져요</p>
     <div class="card flat row" style="gap:12px">
       <div style="font-size:1.7rem">📺</div>
-      <div class="grow"><b>광고 보고 +1회 충전</b>
-        <p class="hint" style="margin:2px 0 0">15초 시청 · 하루 3회까지</p></div>
+      <div class="grow"><b>광고 보고 계속하기</b>
+        <p class="hint" style="margin:2px 0 0">15초 · 하루 3회까지 · 중간에 닫으면 충전되지 않아요</p></div>
       <button class="btn btn-sm btn-primary" onclick="UI.watchAd()">시청</button>
     </div>
     <div class="card flat row" style="gap:12px">
       <div style="font-size:1.7rem">⭐</div>
-      <div class="grow"><b>프리미엄 — AI 무제한</b>
-        <p class="hint" style="margin:2px 0 0">월 3,900원 · 살아있는 캐릭터팩 · 가족 공유 (출시 준비 중)</p></div>
+      <div class="grow"><b>프리미엄 — 무제한 · 광고 없음</b>
+        <p class="hint" style="margin:2px 0 0">월 3,900원 (출시 준비 중)</p></div>
       <button class="btn btn-sm btn-tint" onclick="UI.premiumInterest()">알림받기</button>
     </div>
-    <div class="btn-row"><button class="btn btn-block" onclick="UI.closeSheet()">닫기</button></div>`);
+    <div class="btn-row"><button class="btn btn-block" onclick="UI.closeSheet()">다음에 할게요</button></div>`);
 };
+let adTimer = null;
 UI.watchAd = () => {
+  clearInterval(adTimer);
+  const total = 15;
+  // 잠금 시트: 바깥 탭으로 안 닫힘 — 완주해야 충전 (보상형 광고 표준 동작)
   openSheet(`
-    <h2>📺 광고</h2><p class="sub">베타 기간엔 자체 소식으로 대신해요 — 곧 실제 광고로 바뀝니다</p>
-    <div class="card" style="text-align:center;padding:26px 16px">
+    <div class="row" style="justify-content:space-between;align-items:center">
+      <h2 style="margin:0">📺 광고</h2>
+      <small style="color:var(--label-3);cursor:pointer" onclick="UI.adQuit()">✕ 건너뛰기 (충전 안 됨)</small>
+    </div>
+    <div class="card" style="text-align:center;padding:26px 16px;margin-top:10px" id="ad-stage">
       <div style="font-size:2.4rem">🧊✨</div>
       <b style="display:block;margin-top:6px">냉비서 프리미엄이 곧 나와요</b>
-      <p class="hint">AI 무제한 · 살아 움직이는 재료 캐릭터팩 · 가족 공유 냉장고</p>
+      <p class="hint">AI 무제한 · 살아 움직이는 재료 캐릭터팩 · 광고 없음</p>
     </div>
-    <button id="ad-btn" class="btn btn-block btn-soft" disabled>15초 후 충전돼요…</button>`);
-  let t = 15;
-  const iv = setInterval(async () => {
+    <div class="ad-progress"><i id="ad-bar"></i></div>
+    <button id="ad-btn" class="btn btn-block btn-soft" disabled>광고 시청 중… ${total}초</button>`, { lock: true });
+  const bar = $('#ad-bar');
+  if (bar) { bar.style.transitionDuration = total + 's'; requestAnimationFrame(() => { bar.style.width = '100%'; }); }
+  let t = total;
+  adTimer = setInterval(async () => {
     const b = $('#ad-btn');
-    if (!b) { clearInterval(iv); return; }
+    if (!b) { clearInterval(adTimer); return; } // 시트가 닫혔으면(뒤로가기 등) 보상 없음
     t--;
-    if (t > 0) { b.textContent = `${t}초 후 충전돼요…`; return; }
-    clearInterval(iv);
+    if (t > 0) { b.textContent = `광고 시청 중… ${t}초`; return; }
+    clearInterval(adTimer);
     b.textContent = '충전 중…';
     try {
       await claimReward(S.settings);
       b.className = 'btn btn-block btn-primary';
-      b.textContent = '✅ +1회 충전 완료 — 닫고 다시 시도하세요';
+      if (adRetry) {
+        b.textContent = '✅ +1회 충전 완료 — 이어서 진행할게요';
+        const r = adRetry; adRetry = null;
+        setTimeout(() => { UI.closeSheet(); r(); }, 900);
+      } else {
+        b.textContent = '✅ +1회 충전 완료';
+        b.disabled = false;
+        b.onclick = () => UI.closeSheet();
+      }
     } catch (e) {
       b.className = 'btn btn-block btn-soft';
       b.textContent = e.message || '충전에 실패했어요';
+      b.disabled = false;
+      b.onclick = () => UI.closeSheet();
     }
-    b.disabled = false;
-    b.onclick = () => UI.closeSheet();
   }, 1000);
 };
+UI.adQuit = () => {
+  clearInterval(adTimer);
+  adRetry = null;
+  UI.closeSheet();
+  toast('광고를 끝까지 봐야 충전돼요');
+};
+
+/* ── 앱 내 광고 슬롯 — 지금은 하우스 광고, 운영자가 애드핏/애드센스 코드로 교체하는 자리 ──
+   배치: 홈 맨 아래 · 레시피 목록 아래 · 장보기 아래 (요리 진행·레시피 상세에는 두지 않는다)
+   프리미엄(plan==='premium')은 모든 슬롯 미노출 */
+const HOUSE_ADS = [
+  { ico: '⭐', t: '냉비서 프리미엄', d: 'AI 무제한 · 광고 없음 · 월 3,900원 (준비 중)', act: 'UI.premiumInterest()' },
+  { ico: '📰', t: '냉장고 파먹기 매거진', d: '버리는 식비를 줄이는 부엌 지식 읽기', act: "window.open('https://yonggunyoung.github.io/todayfeelgood/blog/','_blank')" },
+  { ico: '👨‍👩‍👧', t: '가족과 같이 쓰기', d: '코드 하나로 온 가족이 한 냉장고를 봐요', act: "UI.go('settings')" },
+];
+function adBanner(slot) {
+  if (S.plan === 'premium') return '';
+  const a = HOUSE_ADS[(new Date().getDate() + slot.length) % HOUSE_ADS.length];
+  return `<div class="ad-banner" id="ad-${slot}" onclick="${a.act}">
+    <span class="ad-ico">${a.ico}</span>
+    <div><b>${a.t}</b><p>${a.d}</p></div>
+    <span class="ad-tag">AD</span></div>`;
+}
 UI.premiumInterest = () => {
   S.premiumWish = true;
   save({ silent: true });
@@ -795,6 +853,7 @@ function renderRecipes() {
     <button class="btn ${selMode ? 'btn-tint' : 'btn-soft'} btn-block" style="margin:2px 0 8px" onclick="UI.toggleSelMode()">
       ${selMode ? '✕ 같이 요리 선택 끝내기' : '👩‍🍳 같이 요리 — 여러 개 골라 통합 순서 만들기'}</button>
     <div id="recipe-list">${recipeListHtml()}</div>
+    ${adBanner('recipes')}
     ${selMode && cookSel.size ? `
       <div id="cookbar">
         <b>${cookSel.size}개 선택됨</b>
@@ -1085,8 +1144,8 @@ function renderRecipeForm(isEdit) {
       <div id="rf-ytprev">${draft.yt ? `<img src="${ytThumb(draft.yt)}" style="width:100%;border-radius:14px;margin-top:8px" />` : ''}</div>
       <button id="rf-auto" class="btn btn-tint btn-block" style="margin-top:9px" onclick="UI.rfAuto()">🤖 빠른 레시피 — 영상 안 보고 재료·순서 자동 정리</button>
       <p class="hint">${aiReady().ok
-        ? 'AI가 영상 페이지의 설명란과 웹을 읽어 정리해요 (약 20~40초 · 사진 스캔보다 토큰을 조금 더 씁니다)'
-        : '자동 정리는 설정 → AI 설정을 마친 뒤 사용할 수 있어요'}</p></div>
+        ? 'AI가 영상 페이지의 설명란과 웹을 읽어 정리해요 (약 20~40초 · 사진 스캔보다 사용량을 조금 더 씁니다)'
+        : '자동 정리는 곧 제공돼요 — 지금은 아래 칸을 직접 채워 저장할 수 있어요'}</p></div>
     <div class="field"><label>이름 *</label><input id="rf-title" placeholder="예: 백종원 김치찜" value="${esc(draft.title)}" /></div>
     <div class="field"><label>또는 완성 사진</label>
       <div class="btn-row" style="margin-top:0">
@@ -1156,7 +1215,17 @@ UI.rfAuto = async () => {
     renderRecipeForm(true);
     toast('정리 완료 ✨ 내용 확인하고 저장하세요');
   } catch (e) {
-    if (e.status === 429 && S.settings.aiMode === 'server') { UI.openRecharge(); return; }
+    if (e.status === 429 && S.settings.aiMode === 'server') {
+      const d = draft; // 광고 완주 후 작성하던 폼 그대로 복원해서 이어간다
+      UI.openRecharge(() => {
+        draft = d;
+        renderRecipeForm(true);
+        const inp = $('#rf-yt');
+        if (inp) inp.value = url;
+        UI.rfAuto();
+      });
+      return;
+    }
     toast(e.message || '정리에 실패했어요');
     const b = $('#rf-auto');
     if (b) { b.disabled = false; b.textContent = '🤖 빠른 레시피 — 영상 안 보고 재료·순서 자동 정리'; }
@@ -1615,7 +1684,8 @@ function renderShopping() {
           <div class="grow"><div class="name" style="text-decoration:line-through">${esc(x.name)}</div></div>
           <button style="color:var(--label-3)" onclick="UI.shopRemove('${x.id}')">✕</button>
         </div>`).join('')}
-      <button class="btn btn-primary btn-block" onclick="UI.shopCommit()">🧊 산 것들 냉장고로 입고 (${done.length})</button>` : ''}`;
+      <button class="btn btn-primary btn-block" onclick="UI.shopCommit()">🧊 산 것들 냉장고로 입고 (${done.length})</button>` : ''}
+    ${adBanner('shopping')}`;
 }
 UI.shopAdd = () => {
   const v = $('#shop-new').value.trim();
@@ -1686,13 +1756,7 @@ function renderSettings() {
     ${!isAdmin() ? (aiReady().ok ? `
     <div class="card flat">
       <p class="hint" style="margin:0 0 10px">영수증 스캔, 유튜브 레시피 자동 정리에 쓰여요.
-      매달 <b>무료 횟수</b>가 제공되고, 다 쓰면 아래 두 가지 중 골라서 계속 쓸 수 있어요.</p>
-      <div class="row" style="gap:12px">
-        <div style="font-size:1.5rem">📺</div>
-        <div class="grow"><b>광고 보고 +1회</b><p class="hint" style="margin:2px 0 0">15초 시청 · 하루 3회까지</p></div>
-        <button class="btn btn-sm btn-primary" onclick="UI.watchAd()">시청</button>
-      </div>
-      <div class="divider" style="margin:10px 0"></div>
+      매달 무료 횟수가 새로 채워지고, 다 쓰면 그 자리에서 충전 방법을 안내해 드려요.</p>
       <div class="row" style="gap:12px">
         <div style="font-size:1.5rem">⭐</div>
         <div class="grow"><b>프리미엄 — 무제한 · 광고 없음</b><p class="hint" style="margin:2px 0 0">월 3,900원 (출시 준비 중)</p></div>
@@ -1711,7 +1775,7 @@ function renderSettings() {
       ${st.aiMode === 'server' ? `
       <div class="field"><label>서버 AI 주소 (Functions 배포 URL)</label>
         <input id="set-aiendpoint" placeholder="https://ai-xxxxxxxx.a.run.app" value="${esc(st.aiEndpoint)}" /></div>
-      <p class="hint">운영 모드 — 사용자는 키 없이 가입만으로 AI를 쓰고, 운영자 키는 서버에만 저장되며 무료 월 한도(기본 10회)가 자동 집계돼요. 위 "기기 연동" 연결이 먼저 필요하고, 서버 배포 방법은 레포의 <b>docs/07</b> 문서에 있어요.</p>`
+      <p class="hint">운영 모드 — 사용자는 키 없이 가입만으로 AI를 쓰고, 운영자 키는 서버에만 저장되며 무료 월 한도(기본 5회, 환경변수 FREE_QUOTA)가 자동 집계돼요. 서버 배포 방법은 레포의 <b>docs/07</b> 문서에 있어요.</p>`
       : `
       <div class="field"><label>Claude API 키 (이 기기에만 저장 · 동기화 안 됨)</label>
         <input id="set-aikey" type="password" placeholder="sk-ant-…" value="${esc(st.aiKey)}" /></div>

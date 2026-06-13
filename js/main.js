@@ -251,23 +251,23 @@ function renderHome() {
       </div>` : ''}
     ${firstEat}
     ${recoHtml}
-    <div class="section-title"><h2>🧾 절약 장부</h2>
+    <div class="section-title"><h2>🧾 절약 &amp; 포인트</h2>
       <small style="cursor:pointer" onclick="UI.explainLedger()">계산법 ⓘ</small></div>
-    <div class="card ledger-card" style="cursor:pointer" onclick="UI.explainLedger()">
-      <div class="save"><div class="l-label">아낀 돈 (누적)</div><div class="l-val">${won(S.ledger.saved)}</div></div>
-      <div class="waste"><div class="l-label">버린 돈 (누적)</div><div class="l-val">${won(S.ledger.wasted)}</div></div>
+    <div class="stat-row">
+      <div class="stat-card save" onclick="UI.explainLedger()"><small>아낀 돈</small><b>${won(S.ledger.saved)}</b></div>
+      <div class="stat-card waste" onclick="UI.explainLedger()"><small>버린 돈</small><b>${won(S.ledger.wasted)}</b></div>
+      <div class="stat-card point" onclick="UI.openPoints()"><small>🅿 포인트</small><b>${(S.points?.bal || 0).toLocaleString()}P</b></div>
     </div>
-    <div class="card points-card">
-      <div class="grow" onclick="UI.openPoints()"><span class="p-coin">🅿</span> <b>${(S.points?.bal || 0).toLocaleString()}P</b>
-        <small>절약할수록 쌓여요</small></div>
-      <button class="btn btn-sm btn-tint" onclick="UI.openPoints()">포인트샵</button>
-      <button class="btn btn-sm btn-primary" onclick="UI.openGames()">🎮 게임</button>
+    <div class="home-games">
+      <button onclick="UI.openGames()">🎮 미니게임</button>
+      <button onclick="UI.openRanks()">🏆 랭킹</button>
+      <button onclick="UI.openPoints()">🎁 포인트샵</button>
     </div>
     ${adBanner('home')}`;
 }
 
 UI.starterPack = () => {
-  const names = ['계란', '양파', '대파', '김치', '즉석밥', '간장', '고추장', '식용유', '참기름', '다진마늘'];
+  const names = ['계란', '양파', '대파', '김치', '밥', '간장', '고추장', '식용유', '참기름', '다진마늘'];
   for (const n of names) addPantryByName(n, { silentToast: true });
   S.onboarded = true;
   save(); render();

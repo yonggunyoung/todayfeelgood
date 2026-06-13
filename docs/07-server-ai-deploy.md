@@ -33,6 +33,34 @@
 5. 앱 → 설정 → **AI 기능 → ☁️ 서버(유료화)** 선택 → URL 붙여넣고 저장
 6. 끝 — 이제 이 앱을 쓰는 누구나 (기기 연동만 켜면) 키 없이 월 10회 AI를 쓴다
 
+## Firestore 보안 규칙 (콘솔 → Firestore → 규칙 탭에 붙여넣기)
+
+계정 동기화·가족 공유·게임 랭킹이 안전하게 돌아가는 최소 규칙:
+
+```
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{db}/documents {
+    // 내 계정 데이터 — 본인만
+    match /userdata/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+    // 가족 공유 — 로그인 사용자(코드를 아는 사람)만
+    match /spaces/{code} {
+      allow read, write: if request.auth != null;
+    }
+    // 게임 랭킹 — 모두 읽기(로그인), 내 문서만 쓰기
+    match /leaderboard/{uid} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == uid;
+    }
+    // AI 한도/구독은 서버(Functions=Admin)만 다룬다 — 클라이언트 직접 접근 차단
+    match /ai_usage/{doc} { allow read, write: if false; }
+    match /users/{uid} { allow read: if request.auth.uid == uid; allow write: if false; }
+  }
+}
+```
+
 ## 운영 노트
 
 - **한도 변경**: `firebase functions:config`가 아닌 환경변수 — 배포 시 `FREE_QUOTA=20 firebase deploy --only functions` 또는 콘솔에서 함수 환경변수 수정

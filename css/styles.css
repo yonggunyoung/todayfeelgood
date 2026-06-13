@@ -870,3 +870,21 @@ a { color: var(--blue); text-decoration: none; }
 .tut-dots { display: flex; justify-content: center; gap: 6px; margin-bottom: 10px; }
 .tut-dots i { width: 7px; height: 7px; border-radius: 99px; background: var(--hairline); }
 .tut-dots i.on { background: var(--green); width: 18px; }
+
+/* ── 홈 통계 행 (절약·포인트 한 줄) + 게임 바 ── */
+.stat-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+.stat-card {
+  background: var(--card); border: 1px solid var(--hairline); border-radius: 14px;
+  padding: 12px 10px; text-align: center; cursor: pointer; box-shadow: var(--shadow-card);
+}
+.stat-card small { display: block; color: var(--label-2); font-size: 0.72rem; margin-bottom: 3px; }
+.stat-card b { font-size: 1.02rem; }
+.stat-card.save b { color: var(--green); }
+.stat-card.waste b { color: var(--red); }
+.stat-card.point b { color: #8a5a00; }
+.home-games { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 10px; }
+.home-games button {
+  border: none; background: var(--green-bg); color: #1f7a44; font-weight: 800;
+  border-radius: 12px; padding: 11px 6px; font-size: 0.82rem; cursor: pointer;
+}
+.home-games button:active { transform: scale(0.97); }

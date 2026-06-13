@@ -13,7 +13,7 @@ const state = {
   favs: [],
   pantry: [
     { id: 'a', name: '계란', qtyType: 'count', unit: '개', qty: 6, location: 'fridge', expiresAt: nextMonth, price: 500, emoji: '🥚' },
-    { id: 'b', name: '즉석밥', qtyType: 'count', unit: '개', qty: 2, location: 'room', expiresAt: nextMonth, price: 1100, emoji: '🍚' },
+    { id: 'b', name: '밥', qtyType: 'count', unit: '개', qty: 2, location: 'room', expiresAt: nextMonth, price: 1100, emoji: '🍚' },
     { id: 'c', name: '간장', qtyType: 'level', unit: '병', level: 'half', location: 'room', expiresAt: nextMonth, price: 4000, emoji: '🍶' },
     { id: 'd', name: '두부', qtyType: 'count', unit: '모', qty: 1, location: 'fridge', expiresAt: tomorrow, price: 1800, emoji: '⬜' },
   ],
@@ -22,12 +22,12 @@ const state = {
 
 // 1) 재료 정규화
 assert.strictEqual(findIng('서울우유').name, '우유');
-assert.strictEqual(findIng('햇반').name, '즉석밥');
+assert.strictEqual(findIng('햇반').name, '밥');
 assert.strictEqual(findIng('달걀').name, '계란');
 assert.ok(defaultShelf(findIng('계란'), 'fridge') === 30);
 assert.ok(['fridge', 'room', 'freezer'].includes(defaultLocation(findIng('라면'))));
 
-// 2) 간장계란밥 = 계란+즉석밥 보유 + 간장(양념) → cookable
+// 2) 간장계란밥 = 계란+밥 보유 + 간장(양념) → cookable
 const eggRice = RECIPES.find((r) => r.id === 'egg-rice');
 const a = analyzeRecipe(eggRice, state, 'none');
 assert.strictEqual(a.cookable, true, '간장계란밥은 지금 가능이어야 함');
@@ -102,7 +102,7 @@ const fifoState = {
   pantry: [
     { id: 'new', name: '계란', qtyType: 'count', unit: '개', qty: 6, location: 'fridge', expiresAt: nextMonth, price: 500, emoji: '🥚' },
     { id: 'old', name: '계란', qtyType: 'count', unit: '개', qty: 2, location: 'fridge', expiresAt: tomorrow, price: 500, emoji: '🥚' },
-    { id: 'rice', name: '즉석밥', qtyType: 'count', unit: '개', qty: 2, location: 'room', expiresAt: nextMonth, price: 1100, emoji: '🍚' },
+    { id: 'rice', name: '밥', qtyType: 'count', unit: '개', qty: 2, location: 'room', expiresAt: nextMonth, price: 1100, emoji: '🍚' },
   ],
 };
 const fifoPlan = deductionPlan(eggRice, fifoState, 2); // 계란 4개 필요

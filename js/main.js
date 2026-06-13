@@ -3,11 +3,14 @@ import { S, save, uid, today, addDays, daysLeft, won } from './store.js';
 import { ING, findIng, defaultShelf, defaultLocation } from './data/ingredients.js';
 import { recommend, recipesUsing, expiringItems, activeLeftovers, deductionPlan, modeList, getMode, allRecipes, buildCookPlan } from './engine.js';
 import { scanImage, extractRecipeFromYouTube, claimReward, redeemAiCredit, searchYouTube } from './ai.js';
-import { initSync, sync, makeSpaceCode, setSpaceCode, loginGoogle, logoutGoogle, syncAvailable } from './sync.js';
+import { initSync, sync, makeSpaceCode, setSpaceCode, loginGoogle, logoutGoogle, syncAvailable, submitScore, topScores } from './sync.js';
 import { AI_ENDPOINT } from './config.js';
 import { canListen, speak, stopSpeak, startListen, stopListen, isListening, parseCommand } from './voice.js';
 import { earn, spend, refund, EARN, earnedToday, SHOP, adFreeNow, gameBest } from './points.js';
-import { initGames, openGames, gameFresh, gameVoice, gameVoicePass, gameDouble } from './games.js';
+import { initGames, openGames, GAMES, gameFresh, gameVoice, gameVoicePass, gameDouble } from './games.js';
+import { gameDefense } from './game-defense.js';
+import { gamePuzzle } from './game-puzzle.js';
+import { gameQuiz, quizPick, quizNext, quizReveal } from './game-quiz.js';
 import { tossRewardedAd } from './toss.js';
 
 let tab = 'home';
@@ -174,6 +177,8 @@ function renderTop() {
   const d = new Date();
   $('#top-date').textContent = `${d.getMonth() + 1}월 ${d.getDate()}일 ${['일', '월', '화', '수', '목', '금', '토'][d.getDay()]}요일`;
   $('#saved-badge').textContent = won(S.ledger.saved);
+  const pb = $('#points-badge');
+  if (pb) pb.textContent = `🅿 ${(S.points?.bal || 0).toLocaleString()}`;
   const badge = $('#sync-badge');
   let label = '이 기기'; let cls = 'pill pill-muted';
   if (sync.status === 'error') { label = '동기화 오류'; cls = 'pill pill-err'; }
@@ -858,12 +863,59 @@ UI.redeem = async (id) => {
   if (tab === 'home') renderHome();
 };
 
-/* ── 🎮 게임 글루 — games.js의 시트들이 onclick 문자열로 부른다 ── */
+/* ── 🎮 게임 글루 — 각 게임 모듈의 시트가 onclick 문자열로 부른다 ── */
 UI.openGames = () => openGames();
 UI.gameFresh = () => gameFresh();
 UI.gameVoice = () => gameVoice();
 UI.gameVoicePass = () => gameVoicePass();
 UI.gameDouble = (p) => gameDouble(p);
+UI.gameDefense = () => gameDefense();
+UI.gamePuzzle = () => gamePuzzle();
+UI.gameQuiz = () => gameQuiz();
+UI.quizPick = (i) => quizPick(i);
+UI.quizNext = () => quizNext();
+UI.quizReveal = () => quizReveal();
+
+/* ── 🏆 랭킹 — 같은 냉장고(가족) vs 전체, 게임별 ── */
+let ranksScope = 'global';
+let ranksGame = 'defense';
+UI.openRanks = () => { renderRanks(); };
+UI.ranksScope = (s) => { ranksScope = s; renderRanks(); };
+UI.ranksGame = (g) => { ranksGame = g; renderRanks(); };
+async function renderRanks() {
+  const gmeta = GAMES.find((g) => g.id === ranksGame) || GAMES[0];
+  const chips = GAMES.filter((g) => !g.needVoice || canListen).map((g) =>
+    `<button class="rk-chip ${ranksGame === g.id ? 'on' : ''}" onclick="UI.ranksGame('${g.id}')">${g.emoji} ${g.name}</button>`).join('');
+  openSheet(`
+    <div class="g-hubhead"><h2 style="margin:0">🏆 랭킹</h2>
+      <button class="btn btn-sm" onclick="UI.openGames()">← 게임</button></div>
+    <div class="seg" style="margin-top:6px">
+      <button class="${ranksScope === 'global' ? 'on' : ''}" onclick="UI.ranksScope('global')">🌍 전체</button>
+      <button class="${ranksScope === 'family' ? 'on' : ''}" onclick="UI.ranksScope('family')">👨‍👩‍👧 우리 냉장고</button>
+    </div>
+    <div class="rk-chips">${chips}</div>
+    <div id="rk-body"><p class="hint" style="text-align:center;padding:20px">불러오는 중…</p></div>`);
+  const body = $('#rk-body');
+  const res = await topScores({ scope: ranksScope, game: ranksGame, max: 30 });
+  if (!body || !body.isConnected) return;
+  if (res.state === 'off') { body.innerHTML = `<p class="hint" style="text-align:center;padding:20px">랭킹은 계정 기능이 켜지면 제공돼요.</p>`; return; }
+  if (res.state === 'needLogin') {
+    body.innerHTML = `<div class="empty"><span class="e-emoji">🔑</span><b>로그인하면 랭킹에 참여해요</b><small>구글로 시작하면 내 최고 점수가 등록됩니다</small>
+      <button class="btn btn-primary" style="margin-top:10px" onclick="UI.closeSheet();UI.go('settings')">설정에서 로그인</button></div>`; return;
+  }
+  if (res.state === 'noFamily') {
+    body.innerHTML = `<div class="empty"><span class="e-emoji">👨‍👩‍👧</span><b>가족 공유를 켜면 가족끼리 겨뤄요</b><small>설정 → 가족과 같이 쓰기에서 코드를 만드세요</small></div>`; return;
+  }
+  if (!res.rows.length) { body.innerHTML = `<div class="empty"><span class="e-emoji">🥇</span><b>아직 기록이 없어요</b><small>${gmeta.name} 첫 기록의 주인공이 되세요!</small></div>`; return; }
+  const medal = (i) => ['🥇', '🥈', '🥉'][i] || `<span class="rk-num">${i + 1}</span>`;
+  body.innerHTML = res.rows.map((r, i) => `
+    <div class="rk-row ${r.me ? 'me' : ''}">
+      <span class="rk-rank">${medal(i)}</span>
+      ${r.photo ? `<img class="rk-photo" src="${r.photo}" alt="" />` : '<span class="rk-photo ph">👤</span>'}
+      <b class="grow">${esc(r.name)}${r.me ? ' <small style="color:var(--green)">나</small>' : ''}</b>
+      <b class="rk-score">${r.score.toLocaleString()}</b>
+    </div>`).join('');
+}
 UI.premiumInterest = () => {
   S.premiumWish = true;
   save({ silent: true });
@@ -1078,8 +1130,11 @@ UI.openRecipe = (rid) => {
         return `<span class="chip ${miss ? 'miss' : 'have'}" ${miss ? `onclick="UI.addShopping('${esc(g.n)}')"` : ''}>${miss ? '＋ ' : '✓ '}${esc(g.n)} <b class="amt" data-b="${g.a || 0}" data-u="${esc(g.u || '')}">${g.a ? fmtAmt(g.a) + (g.u || '') : ''}</b></span>`;
       }).join('')}
     </div>
-    ${r.steps?.length ? `<div class="section-title"><h2>만드는 법</h2></div>
-    <div class="card flat" style="padding:6px 15px"><ul class="steps">${r.steps.map((st) => `<li>${esc(st)}</li>`).join('')}</ul></div>` : ''}
+    ${r.steps?.length ? `<div class="section-title"><h2>만드는 법</h2><small style="cursor:pointer" onclick="UI.quickTimer()">⏲ 타이머</small></div>
+    <div class="card flat" style="padding:6px 15px"><ul class="steps">${r.steps.map((st) => {
+      const pm = passiveMin(st);
+      return `<li>${esc(st)}${pm ? `<button class="step-wait" onclick="UI.waitGame(${pm})">⏳ ${pm}분 — 타이머·게임</button>` : ''}</li>`;
+    }).join('')}</ul></div>` : ''}
     ${r.tips?.length ? `<div class="banner" style="display:block">💡 <b>키포인트</b><br>${r.tips.map((t2) => '· ' + esc(t2)).join('<br>')}</div>` : ''}
     ${r.mine ? `<div class="btn-row" style="margin-bottom:0">
       <button class="btn btn-soft" onclick="UI.openRecipeForm('${r.id}')">✎ 수정</button>
@@ -1167,34 +1222,89 @@ UI.readIngs = () => {
   speak(`${detailServings}인분 재료 ${main2.length}가지. ` + main2.join(', ') + (season.length ? `. 양념은 ${season.join(', ')}.` : ''));
 };
 
+/* ── 주방 타이머 — 떠있는 위젯(남은 시간·＋1분·게임 입구). 화면 어디서나 보인다 ── */
 let ktTimer = null;
 let ktTick = null;
-function killTimerChip() { clearInterval(ktTick); $('#timer-chip')?.remove(); }
+let ktEnd = 0;
+function killTimerChip() { clearTimeout(ktTimer); clearInterval(ktTick); ktEnd = 0; $('#timer-chip')?.remove(); }
 function startKitchenTimer(min) {
-  clearTimeout(ktTimer); killTimerChip();
+  clearTimeout(ktTimer); clearInterval(ktTick);
   speak(`${min}분 타이머 시작!`);
   toast(`⏲ ${min}분 타이머 시작`);
-  // 떠있는 칩: 남은 시간 표시 + 짬시간 게임 입구 (탭하면 게임 허브)
-  const end = Date.now() + min * 60000;
-  const chip = document.createElement('div');
-  chip.id = 'timer-chip';
-  chip.onclick = () => UI.openGames();
-  document.body.appendChild(chip);
+  ktEnd = Date.now() + min * 60000;
+  let chip = $('#timer-chip');
+  if (!chip) {
+    chip = document.createElement('div');
+    chip.id = 'timer-chip';
+    document.body.appendChild(chip);
+  }
+  chip.innerHTML = `
+    <div class="tc-top"><span class="tc-time" id="tc-time">0:00</span>
+      <span class="tc-x" onclick="UI.timerStop()">✕</span></div>
+    <div class="tc-game" onclick="UI.openGames()">🎮 기다리는 동안 한 판?</div>
+    <div class="tc-game" style="background:rgba(255,255,255,.1)" onclick="UI.timerPlus()">＋1분</div>`;
   const tick = () => {
-    const left = Math.max(0, end - Date.now());
-    const mm = Math.floor(left / 60000);
-    const ss = String(Math.floor((left % 60000) / 1000)).padStart(2, '0');
-    chip.innerHTML = `⏲ ${mm}:${ss} <span>🎮 기다리는 동안 한 판?</span>`;
+    const left = Math.max(0, ktEnd - Date.now());
+    const el = $('#tc-time'); if (!el) { clearInterval(ktTick); return; }
+    el.textContent = `${Math.floor(left / 60000)}:${String(Math.floor((left % 60000) / 1000)).padStart(2, '0')}`;
   };
   tick();
   ktTick = setInterval(tick, 1000);
-  ktTimer = setTimeout(() => {
-    killTimerChip();
-    speak(`${min}분 타이머가 끝났어요! 불 확인하세요!`);
-    toast(`⏲ ${min}분 타이머 종료!`);
-    navigator.vibrate?.([220, 110, 220]);
-  }, min * 60000);
+  ktTimer = setTimeout(timerDone, min * 60000);
 }
+function timerDone() {
+  killTimerChip();
+  speak('타이머가 끝났어요! 불 확인하세요!');
+  toast('⏲ 타이머 종료!');
+  navigator.vibrate?.([220, 110, 220]);
+}
+UI.timerStop = () => { killTimerChip(); toast('타이머를 껐어요'); };
+UI.timerPlus = () => {
+  if (!ktEnd) return;
+  ktEnd += 60000; clearTimeout(ktTimer);
+  ktTimer = setTimeout(timerDone, Math.max(0, ktEnd - Date.now()));
+  toast('⏲ +1분');
+};
+UI.quickTimer = () => {
+  openSheet(`
+    <h2>⏲ 타이머</h2>
+    <p class="sub">손 놓고 끓이는 시간, 알려드릴게요</p>
+    <div class="g-grid" style="grid-template-columns:repeat(3,1fr)">
+      ${[1, 3, 5, 10, 15, 20].map((m) => `<button class="btn btn-soft" onclick="UI.closeSheet();startTimer(${m})">${m}분</button>`).join('')}
+    </div>`);
+};
+window.startTimer = (m) => startKitchenTimer(m);
+
+/* 긴 조리(끓이기·졸이기 등)에서 '손 놓는 시간' 감지 → 타이머 + 게임/광고 유도 */
+function passiveMin(step) {
+  if (!/끓|졸|삶|우려|익히|재워|절여|불려|쪄|구워|튀겨/.test(step)) return 0;
+  const m = step.match(/(\d+)\s*분/);
+  const n = m ? parseInt(m[1], 10) : 0;
+  return n >= 3 ? n : 0;
+}
+UI.waitGame = (min) => {
+  startKitchenTimer(min);
+  openSheet(`
+    <h2>⏳ ${min}분, 손 놓는 시간이에요</h2>
+    <p class="sub">타이머를 켰어요. 기다리는 동안 게임 한 판 어때요? — 점수는 포인트로!</p>
+    <div class="btn-row" style="flex-direction:column">
+      <button class="btn btn-primary btn-block" onclick="UI.closeSheet();UI.openGames()">🎮 게임하고 포인트 받기</button>
+      <button class="btn btn-accent btn-block" onclick="UI.waitAd()">📺 광고 보고 포인트 받기</button>
+      <button class="btn btn-block" onclick="UI.closeSheet()">그냥 기다릴게요</button>
+    </div>`);
+};
+UI.waitAd = () => {
+  playAd({
+    note: '광고를 끝까지 보면 포인트를 드려요',
+    onComplete: (btn) => {
+      const r = earn('ad');
+      btn.className = 'btn btn-block btn-primary';
+      btn.textContent = r.ok ? `✅ +${r.p}P 적립!` : '오늘 광고 보너스는 다 받았어요';
+      btn.disabled = false; btn.onclick = () => UI.closeSheet();
+      renderTop();
+    },
+  });
+};
 
 UI.handleVoice = (t) => {
   const c = parseCommand(t);
@@ -2129,7 +2239,8 @@ initGames({
   closeSheet: (fromPop) => UI.closeSheet(fromPop),
   toast,
   playAd,
-  onPoints: () => { if (tab === 'home') renderHome(); },
+  onPoints: () => { renderTop(); if (tab === 'home') renderHome(); },
+  submitScore,
 });
 
 // 출석 포인트 — 하루 한 번, 앱을 연 것 자체가 절약의 시작

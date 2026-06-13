@@ -7,12 +7,13 @@ import { ING } from './data/ingredients.js';
 import { canListen, startListen, stopListen, isListening } from './voice.js';
 import { earn, bonus, canEarn, earnedToday, EARN, gameBest, recordScore } from './points.js';
 
-let ui = null; // {openSheet, closeSheet, toast, playAd, onPoints}
+let ui = null; // {openSheet, closeSheet, toast, playAd, onPoints, submitScore}
 export function initGames(ctx) { ui = ctx; }
+export const gameUI = () => ui; // 외부 게임 모듈이 시트/토스트/광고 코어를 공유
 
 /* ── 효과음 — 에셋 없이 WebAudio 합성 (무음 실패는 조용히 무시) ── */
 let ac = null;
-function beep(freq = 880, dur = 0.08, type = 'sine', vol = 0.18) {
+export function beep(freq = 880, dur = 0.08, type = 'sine', vol = 0.18) {
   try {
     ac = ac || new (window.AudioContext || window.webkitAudioContext)();
     const o = ac.createOscillator();
@@ -24,56 +25,80 @@ function beep(freq = 880, dur = 0.08, type = 'sine', vol = 0.18) {
     o.start(); o.stop(ac.currentTime + dur);
   } catch { /* ignore */ }
 }
-const buzz = (ms) => navigator.vibrate?.(ms);
+// 코드 진행(상승) — 콤보·승리 같은 보상 순간
+export function chord(freqs, dur = 0.12, type = 'triangle') {
+  freqs.forEach((f, i) => setTimeout(() => beep(f, dur, type, 0.14), i * 55));
+}
+export const buzz = (ms) => navigator.vibrate?.(ms);
+
+/* ── 게임 카탈로그 (허브가 이걸로 그려진다) ── */
+export const GAMES = [
+  { id: 'defense', emoji: '🧊', name: '냉장고 지키기', tag: '디펜스',
+    desc: '상한 음식·세균이 냉장고로! 탭으로 막아내는 웨이브 디펜스', open: 'UI.gameDefense()' },
+  { id: 'puzzle', emoji: '🍎', name: '재료 매치', tag: '퍼즐',
+    desc: '같은 재료 3개 이상 맞춰 터뜨리기 — 연쇄 콤보', open: 'UI.gamePuzzle()' },
+  { id: 'fresh', emoji: '🥬', name: '프레시 캐치', tag: '순발력',
+    desc: '신선 존에서 탭! 원터치 타이밍 — 콤보로 점수 폭발', open: 'UI.gameFresh()' },
+  { id: 'quiz', emoji: '🧠', name: '냉장고 상식 퀴즈', tag: '음성/탭',
+    desc: '신기한 음식 상식 — 음성이나 탭으로 정답', open: 'UI.gameQuiz()' },
+  { id: 'voice', emoji: '🎤', name: '외쳐! 재료', tag: '음성', needVoice: true,
+    desc: '재료 이름을 빨리 외치기 — 8문제 스피드런', open: 'UI.gameVoice()' },
+];
 
 /* ── 게임 허브 ── */
 export function openGames() {
-  const a = gameBest('fresh');
-  const b = gameBest('voice');
   const left = EARN.game.cap - earnedToday('game');
+  const cards = GAMES.map((g) => {
+    const locked = g.needVoice && !canListen;
+    const b = gameBest(g.id);
+    return `<div class="g-card2 ${locked ? 'g-off' : ''}" ${locked ? '' : `onclick="${g.open}"`}>
+      <div class="g-ico2">${g.emoji}</div>
+      <div class="grow">
+        <div class="g-titlerow"><b>${g.name}</b><span class="g-tag">${g.tag}</span></div>
+        <p class="g-desc">${locked ? '안드로이드 크롬에서 즐길 수 있어요 (아이폰 사파리 음성 미지원)' : g.desc}</p>
+        <small class="g-best">🏆 ${b.all} · 이번 주 ${b.week}</small>
+      </div>
+      <span class="g-go">${locked ? '🔒' : '▶'}</span>
+    </div>`;
+  }).join('');
   ui.openSheet(`
-    <h2>🎮 짬시간 게임</h2>
+    <div class="g-hubhead">
+      <h2 style="margin:0">🎮 짬시간 게임</h2>
+      <button class="btn btn-sm btn-tint" onclick="UI.openRanks()">🏆 랭킹</button>
+    </div>
     <p class="sub">끓는 동안 한 판 — 점수가 포인트로 (오늘 보상 ${left}판 남음 · 광고 보면 2배)</p>
-    <div class="card flat g-card" onclick="UI.gameFresh()">
-      <div class="g-ico">🥬</div>
-      <div class="grow"><b>프레시 캐치</b>
-        <p class="hint" style="margin:2px 0 0">신선할 때 잡아라! 원터치 타이밍 — 콤보로 점수 폭발</p>
-        <small class="g-best">최고 ${a.all} · 이번 주 ${a.week}</small></div>
-      <span class="g-go">▶</span>
-    </div>
-    <div class="card flat g-card ${canListen ? '' : 'g-off'}" onclick="${canListen ? 'UI.gameVoice()' : ''}">
-      <div class="g-ico">🎤</div>
-      <div class="grow"><b>외쳐! 재료</b>
-        <p class="hint" style="margin:2px 0 0">재료 이름을 빨리 외치기 — 8문제 스피드런</p>
-        <small class="g-best">${canListen ? `최고 ${b.all} · 이번 주 ${b.week}` : '이 브라우저는 음성인식 미지원 (아이폰 사파리) — 안드로이드 크롬에서!'}</small></div>
-      <span class="g-go">${canListen ? '▶' : '🔒'}</span>
-    </div>
+    <div class="g-grid">${cards}</div>
     <p class="hint" style="text-align:center;margin-top:10px">주간 기록은 월요일마다 리셋 — 이번 주 왕좌를 지키세요 👑</p>
     <div class="btn-row"><button class="btn btn-block" onclick="UI.closeSheet()">닫기</button></div>`);
 }
 
-/* ── 공통: 판 종료 → 점수/기록/포인트/광고 2배 ── */
-function finishGame(game, title, score, scoreLabel, replayFn) {
+/* ── 공통: 판 종료 → 점수/기록/포인트/광고 2배/랭킹 제출 ── */
+const PTS_DIV = { fresh: 25, voice: 10, defense: 70, puzzle: 90, quiz: 14 }; // 점수→포인트 환산 (수익성 보정)
+export function finishGame(game, title, score, scoreLabel, replayFn, { extra = '' } = {}) {
   stopListen();
   const rec = recordScore(game, score);
+  ui.submitScore?.(game, Math.max(rec.all, score)); // 가족·전체 랭킹에 최고기록 제출
   let earned = 0;
   if (score > 0 && canEarn('game')) {
-    const p = game === 'fresh' ? Math.min(12, Math.max(1, Math.floor(score / 25))) : Math.min(12, Math.max(1, Math.floor(score / 10)));
+    const p = Math.min(15, Math.max(1, Math.floor(score / (PTS_DIV[game] || 30))));
     const r = earn('game', p);
     if (r.ok) earned = r.p;
   }
   const b = gameBest(game);
   ui.onPoints?.();
+  if (rec.newAll || rec.newWeek) { chord([523, 659, 784, 1047]); buzz([20, 40, 20]); }
   ui.openSheet(`
     <h2>${title}</h2>
     <div class="card flat" style="text-align:center;padding:22px 16px">
       <div class="g-score">${scoreLabel}</div>
+      ${extra ? `<p class="hint" style="margin:4px 0 0">${extra}</p>` : ''}
       ${rec.newAll ? '<div class="g-newbest">🏆 역대 최고 기록!</div>' : rec.newWeek ? '<div class="g-newbest">👑 이번 주 신기록!</div>' : `<p class="hint" style="margin:6px 0 0">최고 ${b.all} · 이번 주 ${b.week}</p>`}
       ${earned ? `<div class="g-earn">🅿 +${earned}P 적립</div>` : `<p class="hint" style="margin:8px 0 0">오늘 보상 판수를 다 썼어요 — 기록 도전은 무제한!</p>`}
     </div>
     <div class="btn-row" style="flex-direction:column">
       ${earned ? `<button class="btn btn-accent btn-block" onclick="UI.gameDouble(${earned})">📺 광고 끝까지 보고 2배 받기 (+${earned}P)</button>` : ''}
       <button class="btn btn-primary btn-block" onclick="${replayFn}">🔁 한 판 더</button>
+      <button class="btn btn-block" onclick="UI.openGames()">다른 게임</button>
       <button class="btn btn-block" onclick="UI.closeSheet()">끝내기</button>
     </div>`);
 }

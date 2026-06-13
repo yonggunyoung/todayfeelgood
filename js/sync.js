@@ -153,3 +153,52 @@ export async function getIdToken() {
   try { return auth?.currentUser ? await auth.currentUser.getIdToken() : null; }
   catch { return null; }
 }
+
+/* ── 게임 랭킹 (leaderboard/{uid}) — 로그인 사용자만 참여 ──
+   같은 가족 코드끼리 비교(scope:family) + 전체 랭킹(scope:global). */
+export async function submitScore(game, score) {
+  if (!score || !(await ensureFirebase())) return;
+  const u = auth?.currentUser;
+  if (!u || u.isAnonymous) return; // 익명/비로그인은 랭킹 미참여
+  try {
+    const db = fsMod.getFirestore(app);
+    const ref = fsMod.doc(db, 'leaderboard', u.uid);
+    const snap = await fsMod.getDoc(ref);
+    const cur = snap.exists() ? snap.data() : {};
+    const best = { ...(cur.best || {}) };
+    if (!(best[game] >= score)) best[game] = score;
+    const total = Object.values(best).reduce((a, b) => a + (Number(b) || 0), 0);
+    await fsMod.setDoc(ref, {
+      name: u.displayName || '익명 셰프', photo: u.photoURL || '',
+      code: (S.settings.spaceCode || '').trim(), best, total, ts: Date.now(),
+    }, { merge: true });
+  } catch { /* 랭킹 실패는 게임 흐름을 막지 않는다 */ }
+}
+
+export async function topScores({ scope = 'global', game = 'defense', max = 30 } = {}) {
+  if (!(await ensureFirebase())) return { rows: [], state: 'off' };
+  const u = auth?.currentUser;
+  if (!u || u.isAnonymous) return { rows: [], state: 'needLogin' };
+  try {
+    const db = fsMod.getFirestore(app);
+    const col = fsMod.collection(db, 'leaderboard');
+    let q;
+    if (scope === 'family') {
+      const code = (S.settings.spaceCode || '').trim();
+      if (!code) return { rows: [], state: 'noFamily' };
+      q = fsMod.query(col, fsMod.where('code', '==', code), fsMod.limit(50));
+    } else {
+      q = fsMod.query(col, fsMod.orderBy(`best.${game}`, 'desc'), fsMod.limit(max));
+    }
+    const snap = await fsMod.getDocs(q);
+    let rows = [];
+    snap.forEach((d) => {
+      const v = d.data();
+      rows.push({ uid: d.id, name: v.name || '셰프', photo: v.photo || '', score: (v.best && v.best[game]) || 0, me: d.id === u.uid });
+    });
+    rows = rows.filter((r) => r.score > 0).sort((a, b) => b.score - a.score).slice(0, max);
+    return { rows, state: 'ok' };
+  } catch (e) {
+    return { rows: [], state: 'error', error: e.message };
+  }
+}

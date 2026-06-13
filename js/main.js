@@ -976,7 +976,9 @@ function recipeListHtml() {
     ? `<div class="empty"><span class="e-emoji">📒</span><b>아직 내 레시피가 없어요</b><small>유튜브에서 본 그 요리, 엄마 레시피 —<br>위 🎬/＋ 버튼으로 저장해 두면 내 재고와 자동 매칭돼요</small></div>`
     : rTab === 'fav'
       ? `<div class="empty"><span class="e-emoji">🤍</span><b>하트가 비어 있어요</b><small>레시피 카드의 ❤️를 누르면 여기 모여요</small></div>`
-      : `<div class="empty"><span class="e-emoji">🔍</span><b>검색 결과가 없어요</b><small>다른 키워드로 찾아보세요</small></div>`;
+      : `<div class="empty"><span class="e-emoji">🔍</span><b>'${esc(recipeQuery)}' 결과가 없어요</b>
+          <small>유튜브에서 찾아 바로 내 레시피로 담아보세요</small>
+          ${recipeQuery ? `<button class="btn btn-accent" style="margin-top:10px" onclick="UI.openYtSearch('${esc(recipeQuery)}')">🎬 유튜브에서 '${esc(recipeQuery)}' 찾기</button>` : ''}</div>`;
   return list.length ? list.map(recipeCard).join('') : emptyMsg;
 }
 
@@ -1220,6 +1222,60 @@ UI.readIngs = () => {
   const main2 = r.ingredients.filter((g) => !g.st).map((g) => `${g.n} ${g.a ? fmtAmt(g.a * detailServings) : ''}${g.u || ''}`);
   const season = r.ingredients.filter((g) => g.st).map((g) => g.n);
   speak(`${detailServings}인분 재료 ${main2.length}가지. ` + main2.join(', ') + (season.length ? `. 양념은 ${season.join(', ')}.` : ''));
+};
+
+/* ── 첫 사용자 가이드 — 실제 화면 위에 스포트라이트로 짚어준다 (다시 보기 가능) ── */
+const TUT_STEPS = [
+  { sel: '.action-strip', emoji: '🧊', title: '① 재료를 담아요', body: '영수증을 찍거나(📷), 검색해서 2탭으로 추가(➕). 처음엔 "기본 재료 한번에 담기"로 3초면 시작!' },
+  { sel: '#tabbar button[data-tab="recipes"]', emoji: '🍳', title: '② 오늘 뭐 먹지?', body: '내 냉장고에 있는 재료로 "지금 만들 수 있는 요리"부터 추천해줘요. 유튜브 레시피도 담을 수 있어요.' },
+  { sel: '#tabbar button[data-tab="pantry"]', emoji: '🧊', title: '③ 한눈에 보는 냉장고', body: '담은 재료가 진짜 냉장고처럼 칸칸이 정리돼요. 유통기한이 다가오면 재료가 직접 알려줘요.' },
+  { sel: '#points-badge', emoji: '🅿', title: '④ 절약이 곧 포인트', body: '요리 완료·임박 재료 구출·출석·게임으로 포인트가 쌓여요. 탭하면 포인트샵과 게임으로!' },
+  { sel: '#saved-badge', emoji: '💰', title: '⑤ 아낀 돈이 보여요', body: '버리기 전에 쓴 재료가 "아낀 돈"으로 모여요. 버리는 식비, 이번엔 줄여봐요!' },
+];
+let tutIdx = 0;
+UI.startTutorial = () => {
+  tab = 'home'; render();
+  tutIdx = 0;
+  if (!$('#tut')) {
+    const el = document.createElement('div');
+    el.id = 'tut';
+    el.innerHTML = '<div id="tut-hole"></div><div id="tut-card"></div>';
+    document.body.appendChild(el);
+  }
+  tutShow();
+};
+function tutShow() {
+  const step = TUT_STEPS[tutIdx];
+  const tut = $('#tut'); if (!tut) return;
+  const target = $(step.sel);
+  const hole = $('#tut-hole');
+  const card = $('#tut-card');
+  if (target) {
+    const r = target.getBoundingClientRect();
+    const pad = 8;
+    hole.style.cssText = `display:block;left:${r.left - pad}px;top:${r.top - pad}px;width:${r.width + pad * 2}px;height:${r.height + pad * 2}px`;
+    const below = r.top < window.innerHeight / 2;
+    card.style.top = below ? `${r.bottom + 16}px` : '';
+    card.style.bottom = below ? '' : `${window.innerHeight - r.top + 16}px`;
+  } else {
+    hole.style.display = 'none';
+    card.style.top = '50%'; card.style.bottom = '';
+  }
+  const last = tutIdx === TUT_STEPS.length - 1;
+  card.innerHTML = `
+    <div class="tut-emoji">${step.emoji}</div>
+    <b>${step.title}</b>
+    <p>${step.body}</p>
+    <div class="tut-dots">${TUT_STEPS.map((_, i) => `<i class="${i === tutIdx ? 'on' : ''}"></i>`).join('')}</div>
+    <div class="btn-row" style="margin-top:4px">
+      <button class="btn btn-sm" onclick="UI.endTutorial()">건너뛰기</button>
+      <button class="btn btn-primary btn-sm" onclick="UI.tutNext()">${last ? '시작하기 🎉' : '다음 →'}</button>
+    </div>`;
+}
+UI.tutNext = () => { tutIdx += 1; if (tutIdx >= TUT_STEPS.length) { UI.endTutorial(); return; } tutShow(); };
+UI.endTutorial = () => {
+  $('#tut')?.remove();
+  if (!S.tutorialDone) { S.tutorialDone = true; save({ silent: true }); }
 };
 
 /* ── 주방 타이머 — 떠있는 위젯(남은 시간·＋1분·게임 입구). 화면 어디서나 보인다 ── */
@@ -1502,26 +1558,34 @@ UI.saveRecipeForm = () => {
   setTimeout(() => UI.openRecipe(savedId), 150);
 };
 /* ── 유튜브에서 레시피 찾아오기 (인앱 검색 + 원탭 퍼오기) ── */
-UI.openYtSearch = () => {
+const YT_POPULAR = ['김치찌개', '제육볶음', '된장찌개', '계란찜', '닭가슴살 요리', '비빔국수', '김밥', '간단 파스타', '에어프라이어', '자취 요리'];
+UI.openYtSearch = (prefill) => {
+  const q0 = prefill || recipeQuery || '';
   openSheet(`
-    <h2>🎬 유튜브 레시피 찾기</h2>
-    <p class="sub">검색해서 고르면 영상이 내 레시피로 들어와요${aiReady().ok ? ' — AI가 재료·순서·키포인트까지 자동 정리' : ''}</p>
-    <div class="search-row" style="margin-bottom:6px">
-      <input id="yts-q" placeholder="예: 백종원 제육볶음" onkeydown="if(event.key==='Enter')UI.ytSearch()" />
-      <button class="btn btn-tint" onclick="UI.ytSearch()">검색</button>
+    <div class="g-hubhead"><h2 style="margin:0">🎬 유튜브 레시피</h2>
+      <button class="btn btn-sm" onclick="UI.closeSheet()">✕</button></div>
+    <p class="sub" style="margin:2px 0 8px">고르면 영상이 내 레시피로 들어와요${aiReady().ok ? ' — AI가 재료·순서·키포인트까지 자동 정리' : ''}</p>
+    <div class="yt-search">
+      <span class="yt-ico">🔍</span>
+      <input id="yts-q" placeholder="요리 이름·재료로 검색" value="${esc(q0)}" onkeydown="if(event.key==='Enter')UI.ytSearch()" />
+      <button class="btn btn-tint btn-sm" onclick="UI.ytSearch()">검색</button>
     </div>
-    <div id="yts-out">${(S.settings.ytKey || (S.settings.aiMode === 'server' && (S.settings.aiEndpoint || AI_ENDPOINT))) ? '' : `
-      <p class="hint">앱 안 검색은 곧 제공돼요. 지금은 이렇게 하면 바로 돼요:</p>
+    <div class="yt-chips">${YT_POPULAR.map((p) => `<button class="yt-chip" onclick="UI.ytChip('${p}')">${p}</button>`).join('')}</div>
+    <div id="yts-out">${(S.settings.ytKey || (S.settings.aiMode === 'server' && (S.settings.aiEndpoint || AI_ENDPOINT))) ? `
+      <p class="hint" style="text-align:center;padding:14px 0">위에서 검색하거나 인기 키워드를 눌러보세요 👆</p>` : `
+      <p class="hint">키워드를 누르거나 검색하면 유튜브가 열려요. 마음에 든 영상 링크를 붙여넣으면 바로 담깁니다:</p>
       <a id="yts-ext" class="btn btn-block" style="margin:8px 0" target="_blank" rel="noreferrer"
-         href="https://www.youtube.com/results?search_query=%EB%A0%88%EC%8B%9C%ED%94%BC">↗ 유튜브에서 검색하기</a>
+         href="https://www.youtube.com/results?search_query=${encodeURIComponent((q0 || '레시피') + ' 레시피')}">↗ 유튜브에서 검색하기</a>
       <div class="field"><label>찾은 영상 링크 붙여넣기</label>
         <div class="search-row" style="margin:0">
           <input id="yts-link" placeholder="https://youtu.be/…" />
           <button class="btn btn-primary" onclick="UI.ytPickLink()">가져오기</button>
         </div></div>`}
     </div>`);
-  setTimeout(() => $('#yts-q')?.focus(), 60);
+  if (q0) setTimeout(() => UI.ytSearch(), 80);
+  else setTimeout(() => $('#yts-q')?.focus(), 60);
 };
+UI.ytChip = (q) => { const i = $('#yts-q'); if (i) i.value = q; UI.ytSearch(); };
 UI.ytSearch = async () => {
   const q = $('#yts-q').value.trim();
   if (!q) return;
@@ -2055,6 +2119,7 @@ function renderSettings() {
       <button class="btn btn-soft" onclick="UI.resetAll()">초기화</button>
     </div>
     <button class="btn btn-soft btn-block" style="margin-top:9px" onclick="UI.openImport()">📥 공유받은 레시피·모드 추가 (링크 붙여넣기)</button>
+    <button class="btn btn-soft btn-block" style="margin-top:9px" onclick="UI.startTutorial()">📖 사용법 다시 보기 (튜토리얼)</button>
     <p class="hint" style="margin-top:16px;text-align:center" onclick="UI.verTap()">냉비서 v0.3 · 내 데이터는 내 기기${syncAvailable() ? '(로그인 시 내 계정)' : ''}에만 저장됩니다</p>`;
 }
 UI.setAiMode = (m) => { S.settings.aiMode = m; save(); renderSettings(); };
@@ -2254,4 +2319,6 @@ const shared = new URLSearchParams(location.search).get('share');
 if (shared) {
   history.replaceState(null, '', location.pathname);
   handleShareCode(shared);
+} else if (!S.tutorialDone) {
+  setTimeout(() => UI.startTutorial(), 700); // 첫 사용자 가이드
 }

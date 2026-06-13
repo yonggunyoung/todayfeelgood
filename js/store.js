@@ -23,6 +23,7 @@ const DEFAULT = () => ({
   adFreeUntil: 0,    // 포인트샵 "광고 없는 하루" 교환 시각
   planTrialUntil: 0, // 포인트샵 "프리미엄 맛보기" 만료 시각
   onboarded: false,
+  tutorialDone: false, // 첫 사용자 가이드 완료 여부
 });
 
 function load() {
@@ -66,7 +67,7 @@ export function replaceState(remote) {
   const keepCode = S.settings.spaceCode;
   const keepPin = S.settings.adminPin;
   for (const k of ['meta', 'settings', 'pantry', 'leftovers', 'shopping', 'myRecipes', 'favs', 'ledger',
-    'plan', 'points', 'games', 'adFreeUntil', 'planTrialUntil', 'onboarded']) {
+    'plan', 'points', 'games', 'adFreeUntil', 'planTrialUntil', 'onboarded', 'tutorialDone']) {
     if (remote[k] !== undefined) S[k] = remote[k];
   }
   S.settings.aiKey = keepKey;

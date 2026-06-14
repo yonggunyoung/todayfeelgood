@@ -8,8 +8,8 @@ import { enemySprite, fridgeSprite, itemSprite, drawSprite } from './pixel.js';
 // ── 밸런스: 100+ 웨이브용 완만한 곡선. 초반은 아주 너그럽게(잘 안 죽음), 후반은 업그레이드로 따라잡기. ──
 const BALANCE = {
   enemy: {
-    baseHP: 6, hpGrow: 1.072, speedBase: 15, speedGrow: 1.014, speedCap: 54,
-    countBase: 4, countGrow: 1.0, countCap: 32,
+    baseHP: 7, hpGrow: 1.092, speedBase: 16, speedGrow: 1.013, speedCap: 44,
+    countBase: 4, countGrow: 1.15, countCap: 34,
     // dmg=냉장고에 닿을 때 깎는 신선도 (작게 — 누적 실수만 위험). from=등장 시작 웨이브.
     types: {
       grunt:  { hpx: 1.0,  spx: 1.0,  dmg: 3, r: 18, from: 1,  w: 1.0,  name: '곰팡이빵' },
@@ -20,28 +20,29 @@ const BALANCE = {
       shield: { hpx: 5.5,  spx: 0.62, dmg: 5, r: 21, from: 12, w: 0.45, name: '굳은 더께' },
     },
   },
-  economy: { scorePerHP: 0.62 },
-  weapon: { dmg: 5, fireRate: 1.6, projSpeed: 470, projR: 6 },
-  boss: { every: 10, hpMult: 16, dmg: 18, reward: 90 },
+  economy: { scorePerHP: 0.42 },
+  weapon: { dmg: 4, fireRate: 1.5, fireRateMax: 7, projSpeed: 500, projR: 8 },
+  boss: { every: 10, hpMult: 17, dmg: 18, reward: 90 },
   up: {
-    damage: { base: 14, ratio: 1.14, add: 3, name: '데미지', icon: '⚔️', unit: '발당' },
-    fireRate: { base: 18, ratio: 1.15, add: 0.18, name: '연사속도', icon: '🔥', unit: '/초' },
-    multiShot: { base: 70, ratio: 1.7, add: 1, max: 6, name: '다중샷', icon: '✳️', unit: '타겟' },
-    pierce: { base: 55, ratio: 1.6, add: 1, max: 6, name: '관통', icon: '➶', unit: '관통' },
-    crit: { base: 45, ratio: 1.35, add: 0.06, max: 0.7, name: '치명타', icon: '💥', unit: '확률' },
-    chain:   { base: 60,  ratio: 1.55, add: 1, max: 4, unlock: 40,  name: '냉기 전이', icon: '🔗', unit: '연쇄' },
-    frostAura: { base: 80, ratio: 1.6, add: 1, max: 6, unlock: 60,  name: '냉기 오라', icon: '❄️', unit: 'Lv' },
-    sideTurret: { base: 120, ratio: 1.85, add: 1, max: 2, unlock: 90, name: '보조 포탑', icon: '🛰️', unit: '문' },
-    homing:  { base: 110, ratio: 1.6, add: 1, max: 4, unlock: 110, name: '유도 눈송이', icon: '❇️', unit: 'Lv' },
-    bomb:    { base: 130, ratio: 1.7, add: 1, max: 5, unlock: 140, name: '서리 폭탄', icon: '💣', unit: 'Lv' },
-    orbital: { base: 150, ratio: 1.65, add: 1, max: 5, unlock: 170, name: '얼음 위성', icon: '💫', unit: '개' },
-    laser:   { base: 180, ratio: 1.7, add: 1, max: 5, unlock: 210, name: '관통 레이저', icon: '⚡', unit: 'Lv' },
-    regen: { base: 70, ratio: 1.6, add: 0.5, name: '신선도 회복', icon: '❤️', unit: '/초' },
-    maxHp: { base: 60, ratio: 1.5, add: 25, name: '단열 강화', icon: '🧊', unit: '최대' },
-    boost: { base: 90, ratio: 1.55, add: 0.18, name: '코인 부스트', icon: '🪙', unit: '+' },
+    damage: { base: 18, ratio: 1.18, add: 3, name: '데미지', icon: '⚔️', unit: '발당' }, // max 없음(무한)
+    fireRate: { base: 24, ratio: 1.2, add: 0.18, name: '연사속도', icon: '🔥', unit: '/초' }, // 상한 fireRateMax
+    multiShot: { base: 90, ratio: 1.9, add: 1, max: 6, name: '다중샷', icon: '✳️', unit: '타겟' },
+    pierce: { base: 70, ratio: 1.75, add: 1, max: 6, name: '관통', icon: '➶', unit: '관통' },
+    crit: { base: 60, ratio: 1.4, add: 0.06, max: 0.7, name: '치명타', icon: '💥', unit: '확률' },
+    chain:   { base: 80,  ratio: 1.65, add: 1, max: 4, unlock: 60,  name: '냉기 전이', icon: '🔗', unit: '연쇄' },
+    frostAura: { base: 110, ratio: 1.7, add: 1, max: 6, unlock: 90,  name: '냉기 오라', icon: '❄️', unit: 'Lv' },
+    sideTurret: { base: 160, ratio: 2.0, add: 1, max: 3, unlock: 130, name: '보조 포탑', icon: '🛰️', unit: '문' },
+    homing:  { base: 150, ratio: 1.7, add: 1, max: 4, unlock: 160, name: '유도 눈송이', icon: '❇️', unit: 'Lv' },
+    bomb:    { base: 180, ratio: 1.8, add: 1, max: 5, unlock: 200, name: '서리 폭탄', icon: '💣', unit: 'Lv' },
+    orbital: { base: 200, ratio: 1.75, add: 1, max: 5, unlock: 240, name: '얼음 위성', icon: '💫', unit: '개' },
+    laser:   { base: 240, ratio: 1.8, add: 1, max: 5, unlock: 290, name: '관통 레이저', icon: '⚡', unit: 'Lv' },
+    projspd: { base: 40, ratio: 1.45, add: 0.14, max: 8, name: '발사체 속도', icon: '🚀', unit: 'x' }, // 빨리 내려오는 몹 대응
+    regen: { base: 100, ratio: 1.7, add: 0.5, name: '신선도 회복', icon: '❤️', unit: '/초' },
+    maxHp: { base: 80, ratio: 1.6, add: 25, name: '단열 강화', icon: '🧊', unit: '최대' },
+    boost: { base: 120, ratio: 1.65, add: 0.16, name: '코인 부스트', icon: '🪙', unit: '+' },
   },
 };
-const UP_ORDER = ['damage', 'fireRate', 'multiShot', 'pierce', 'crit', 'chain', 'homing', 'orbital', 'laser', 'bomb', 'frostAura', 'sideTurret', 'regen', 'maxHp', 'boost'];
+const UP_ORDER = ['damage', 'fireRate', 'projspd', 'multiShot', 'pierce', 'crit', 'chain', 'homing', 'orbital', 'laser', 'bomb', 'frostAura', 'sideTurret', 'regen', 'maxHp', 'boost'];
 
 // 난이도 (하/중/상) — 적 HP·속도·물량·침투피해·코인·어픽스 확률 배수
 const DIFF = {
@@ -59,30 +60,42 @@ const AFFIX = {
   regen:  { icon: '💚', ring: '#5ef0b0', name: '재생', w: 0.7 },   // 초당 HP 회복
 };
 
-// ── 스페셜 스킬(로그라이크) — 보스 처치 시 3택, 각자 랜덤 수치(밴드 내)로 밸런스 유지 ──
+// ── 스페셜 스킬(로그라이크) — 등급: 일반/레어/유니크 + 트랩(쓰레기). 보스 처치 시 3택, 수치 랜덤 ──
 const rnd = (a, b) => a + Math.random() * (b - a);
+const RARITY = { common: { w: 60, label: '일반', col: '#9fb2d6' }, rare: { w: 26, label: '레어', col: '#73cbff' }, unique: { w: 10, label: '유니크', col: '#ffe04a' }, junk: { w: 4, label: '트랩', col: '#7d6aa6' } };
 const SPECIALS = [
-  { id: 'power', icon: '⚡', name: '고출력 회로', max: 99, roll: () => Math.round(rnd(15, 28)), desc: (v) => `데미지 +${v}%` },
-  { id: 'overload', icon: '🔥', name: '과부하', max: 99, roll: () => Math.round(rnd(15, 28)), desc: (v) => `연사속도 +${v}%` },
-  { id: 'critdmg', icon: '💥', name: '치명 강화', max: 99, roll: () => Math.round(rnd(40, 80)), desc: (v) => `치명타 피해 +${v}%` },
-  { id: 'bigshot', icon: '🔵', name: '대구경탄', max: 99, roll: () => Math.round(rnd(18, 32)), desc: (v) => `발사체 크기·피해 +${v}%` },
-  { id: 'gold', icon: '🪙', name: '황금 회로', max: 99, roll: () => Math.round(rnd(20, 40)), desc: (v) => `코인 획득 +${v}%` },
-  { id: 'double', icon: '➿', name: '더블샷', max: 3, roll: () => 1, desc: (v) => `발사마다 +${v}발 (부채꼴)` },
-  { id: 'volley', icon: '✳️', name: '일제 사격', max: 3, roll: () => 1, desc: (v) => `동시 타겟 +${v}` },
-  { id: 'pierceUp', icon: '➶', name: '관통 코어', max: 6, roll: () => Math.round(rnd(1, 2)), desc: (v) => `관통 +${v}` },
-  { id: 'fire', icon: '🔥', name: '화염탄', max: 99, roll: () => Math.round(rnd(25, 45)), desc: (v) => `명중 시 화상(초당 데미지의 ${v}%, 3초)` },
-  { id: 'frost', icon: '❄️', name: '빙결탄', max: 60, roll: () => Math.round(rnd(15, 28)), desc: (v) => `명중 시 ${v}% 둔화 (최대 60%)` },
-  { id: 'vamp', icon: '🩸', name: '흡혈 코어', max: 40, roll: () => Math.round(rnd(8, 16)), desc: (v) => `처치 시 ${v}% 확률로 신선도 +1` },
-  { id: 'exec', icon: '☠️', name: '처형 칼날', max: 25, roll: () => Math.round(rnd(6, 12)), desc: (v) => `체력 ${v}% 이하 적 즉시 처치` },
-  { id: 'splitp', icon: '💠', name: '분열탄', max: 2, roll: () => 1, desc: (v) => `명중 시 파편 ${v}개 튐` },
-  { id: 'thorn', icon: '🌵', name: '서리 가시', max: 99, roll: () => Math.round(rnd(8, 16)), desc: (v) => `근처 적 초당 ${v} 피해` },
+  // 일반
+  { id: 'power', r: 'common', icon: '⚡', name: '고출력 회로', max: 99, roll: () => Math.round(rnd(12, 22)), desc: (v) => `데미지 +${v}%` },
+  { id: 'overload', r: 'common', icon: '🔥', name: '과부하', max: 99, roll: () => Math.round(rnd(12, 22)), desc: (v) => `연사속도 +${v}%` },
+  { id: 'gold', r: 'common', icon: '🪙', name: '황금 회로', max: 99, roll: () => Math.round(rnd(18, 35)), desc: (v) => `코인 +${v}%` },
+  { id: 'bigshot', r: 'common', icon: '🔵', name: '대구경탄', max: 99, roll: () => Math.round(rnd(14, 26)), desc: (v) => `발사체 크기·피해 +${v}%` },
+  { id: 'thorn', r: 'common', icon: '🌵', name: '서리 가시', max: 99, roll: () => Math.round(rnd(6, 14)), desc: (v) => `근처 적 초당 ${v} 피해` },
+  // 레어
+  { id: 'critdmg', r: 'rare', icon: '💥', name: '치명 강화', max: 99, roll: () => Math.round(rnd(40, 75)), desc: (v) => `치명타 피해 +${v}%` },
+  { id: 'pierceUp', r: 'rare', icon: '➶', name: '관통 코어', max: 6, roll: () => 1, desc: (v) => `관통 +${v}` },
+  { id: 'fire', r: 'rare', icon: '🔥', name: '화염탄', max: 99, roll: () => Math.round(rnd(22, 40)), desc: (v) => `명중 시 화상(초당 ${v}%, 3초)` },
+  { id: 'frost', r: 'rare', icon: '❄️', name: '빙결탄', max: 60, roll: () => Math.round(rnd(14, 26)), desc: (v) => `명중 시 ${v}% 둔화` },
+  { id: 'vamp', r: 'rare', icon: '🩸', name: '흡혈 코어', max: 40, roll: () => Math.round(rnd(8, 15)), desc: (v) => `처치 시 ${v}% 확률 신선도+1` },
+  // 유니크 (강력·희귀)
+  { id: 'double', r: 'unique', icon: '➿', name: '더블샷', max: 3, roll: () => 1, desc: (v) => `발사마다 +${v}발 부채꼴` },
+  { id: 'volley', r: 'unique', icon: '✳️', name: '일제 사격', max: 3, roll: () => 1, desc: (v) => `동시 타겟 +${v}` },
+  { id: 'exec', r: 'unique', icon: '☠️', name: '처형 칼날', max: 25, roll: () => Math.round(rnd(8, 15)), desc: (v) => `체력 ${v}% 이하 즉사` },
+  { id: 'splitp', r: 'unique', icon: '💠', name: '분열탄', max: 2, roll: () => 1, desc: (v) => `명중 시 파편 ${v}개` },
+  // 트랩(쓰레기) — 그럴듯하지만 함정. 승부욕·리스크 다양화
+  { id: 'glass', r: 'junk', icon: '🩹', name: '유리 대포', max: 1, roll: () => 60, desc: () => '데미지 +60%, 단 최대 신선도 −30', trap: true },
+  { id: 'rush', r: 'junk', icon: '🌀', name: '폭주 회로', max: 1, roll: () => 40, desc: () => '연사 +40%, 단 코인 획득 −25%', trap: true },
+  { id: 'gamble', r: 'junk', icon: '🎲', name: '도박수', max: 1, roll: () => 1, desc: () => '50%: 데미지 +80% / 50%: 꽝(+5%)', trap: true },
 ];
+const SP_BY = Object.fromEntries(SPECIALS.map((s) => [s.id, s]));
 const SP = (id) => (D.spec[id] ? D.spec[id].val : 0);
 
 let D = null;
+let savedRun = null; // 나갔다 들어와도 이어서 하기
 
 export function gameDefense() {
   const ui = gameUI();
+  const resume = (savedRun && !savedRun.over)
+    ? `<button class="gx-btn-go" style="margin-bottom:10px;background:linear-gradient(145deg,#ffe04a,#ff9f43);color:#3a2400" onclick="UI.defResume()">▶ 이어서 하기 — WAVE ${savedRun.wave} · 난이도 ${DIFF[savedRun.diffKey].name}</button>` : '';
   ui.openSheet(`
     <div class="gx gx-def">
       <div class="gx-bar">
@@ -92,13 +105,14 @@ export function gameDefense() {
       <div class="gx-stage"><canvas id="def-c"></canvas>
         <div class="gx-start" id="def-start">
           <div class="gx-start-in">
-            <div style="font-size:2.6rem">🧊🛡️</div>
+            <div style="font-size:2.4rem">🧊🛡️</div>
             <b>냉장고가 알아서 쏩니다</b>
-            <p>상한 것들이 몰려와요. 점수로 무기를 키우고,<br><b>보스를 잡으면 스페셜 스킬</b>을 골라 무한 성장!</p>
+            <p>강화 안 하면 못 버텨요. 보스를 잡으면 <b>스페셜 스킬</b>로 무한 성장!</p>
+            ${resume}
             <div class="diff-row">
               ${Object.values(DIFF).map((d) => `<button class="diff-btn" style="--dc:${d.color}" onclick="UI.defStart('${d.key}')"><b>${d.name}</b><small>${d.sub}</small></button>`).join('')}
             </div>
-            <p class="diff-hint">난이도를 골라 시작 — 게임 중 ⏩로 2·3배속</p>
+            <p class="diff-hint">난이도 선택 · 게임 중 ⏩ 2·3배속 · 나가도 이어서 가능</p>
           </div>
         </div>
       </div>
@@ -112,13 +126,13 @@ export function gameDefense() {
   const canvas = document.getElementById('def-c');
   const wrap = canvas.parentElement;
   const cssW = clamp(wrap.clientWidth || 340, 280, 460);
-  const cssH = 380;
+  const cssH = clamp(Math.round((window.innerHeight || 720) * 0.5), 300, 540); // 폰 화면에 맞춤
   const { ctx } = setupCanvas(canvas, cssW, cssH);
 
   D = {
     ctx, canvas, W: cssW, H: cssH, diff: DIFF.normal, speed: 1, spec: {},
     enemies: [], shots: [], coinsFly: [], parts: new Particles(320), fx: new Floaters(), shake: new Shake(),
-    lv: { damage: 0, fireRate: 0, multiShot: 0, pierce: 0, crit: 0, chain: 0, homing: 0, orbital: 0, laser: 0, bomb: 0, sideTurret: 0, frostAura: 0, regen: 0, maxHp: 0, boost: 0 },
+    lv: { damage: 0, fireRate: 0, projspd: 0, multiShot: 0, pierce: 0, crit: 0, chain: 0, homing: 0, orbital: 0, laser: 0, bomb: 0, sideTurret: 0, frostAura: 0, regen: 0, maxHp: 0, boost: 0 },
     coins: 0, score: 0, kills: 0, bossesKilled: 0,
     wave: 0, toSpawn: 0, spawnGap: 1, since: 0,
     hp: 100, maxHp: 100,
@@ -129,7 +143,27 @@ export function gameDefense() {
   };
 }
 
+function snapshotRun() {
+  if (!D || D.over || D.wave < 1) { savedRun = null; return; }
+  savedRun = {
+    diffKey: D.diff.key, speed: D.speed, lv: { ...D.lv }, spec: JSON.parse(JSON.stringify(D.spec)),
+    coins: D.coins, score: D.score, kills: D.kills, bossesKilled: D.bossesKilled, hp: D.hp, maxHp: D.maxHp, wave: D.wave, revived: D.revived,
+  };
+}
+export function defResume() {
+  if (!savedRun || !D) return;
+  const sv = savedRun; savedRun = null;
+  document.getElementById('def-start')?.remove();
+  D.diff = DIFF[sv.diffKey] || DIFF.normal; D.speed = sv.speed || 1; D.spec = sv.spec || {};
+  Object.assign(D.lv, sv.lv);
+  D.coins = sv.coins; D.score = sv.score; D.kills = sv.kills; D.bossesKilled = sv.bossesKilled || 0;
+  D.maxHp = sv.maxHp; D.hp = sv.hp; D.revived = sv.revived; D.wave = sv.wave - 1;
+  const lbl = document.getElementById('def-difflbl'); if (lbl) lbl.textContent = `난이도 ${D.diff.name}`;
+  const sb = document.getElementById('def-speed'); if (sb) sb.textContent = `⏩ ${D.speed}배속`;
+  beep(660, 0.05); nextWave(); D.running = true; D.last = performance.now(); renderShop(); D.raf = requestAnimationFrame(loop);
+}
 export function defStart(diffKey) {
+  savedRun = null;
   if (!D) return;
   D.diff = DIFF[diffKey] || DIFF.normal;
   document.getElementById('def-start')?.remove();
@@ -152,14 +186,15 @@ const cost = (k) => Math.floor(BALANCE.up[k].base * Math.pow(BALANCE.up[k].ratio
 const maxed = (k) => BALANCE.up[k].max != null && D.lv[k] >= BALANCE.up[k].max;
 const locked = (k) => BALANCE.up[k].unlock != null && D.score < BALANCE.up[k].unlock && D.lv[k] === 0;
 const stat = {
-  dmg: () => (BALANCE.weapon.dmg + D.lv.damage * BALANCE.up.damage.add) * (1 + SP('power') / 100) * (1 + SP('bigshot') / 100),
-  rate: () => (BALANCE.weapon.fireRate + D.lv.fireRate * BALANCE.up.fireRate.add) * (1 + SP('overload') / 100),
+  dmg: () => (BALANCE.weapon.dmg + D.lv.damage * BALANCE.up.damage.add) * (1 + (SP('power') + SP('bigshot') + SP('glass') + SP('gamble')) / 100),
+  rate: () => Math.min(BALANCE.weapon.fireRateMax, (BALANCE.weapon.fireRate + D.lv.fireRate * BALANCE.up.fireRate.add) * (1 + (SP('overload') + SP('rush')) / 100)),
   multi: () => 1 + D.lv.multiShot + SP('volley'),
   pierce: () => D.lv.pierce + SP('pierceUp'),
   crit: () => Math.min(0.85, D.lv.crit * BALANCE.up.crit.add),
   critMult: () => 2 + SP('critdmg') / 100,
-  boost: () => 1 + D.lv.boost * BALANCE.up.boost.add + SP('gold') / 100,
+  boost: () => Math.max(0.2, 1 + D.lv.boost * BALANCE.up.boost.add + SP('gold') / 100 - (D.spec.rush ? 0.25 : 0)),
   projR: () => BALANCE.weapon.projR * (1 + SP('bigshot') / 220),
+  projSpeed: () => BALANCE.weapon.projSpeed * (1 + D.lv.projspd * BALANCE.up.projspd.add),
 };
 
 function fridgePos() { return { x: D.W / 2, y: D.H - 30 }; }
@@ -220,9 +255,16 @@ function mkEnemy(key, hp, r, spd, dmg, opt = {}) {
   return e;
 }
 
-/* ── 발사 ── */
+/* ── 발사 (발사체 속도·형태가 업그레이드/속성에 따라 변함) ── */
+function projKind() {
+  if (SP('fire')) return 'fire';
+  if (SP('frost')) return 'frost';
+  if (D.lv.chain) return 'spark';
+  if (D.lv.damage >= 12) return 'heavy';
+  return 'basic';
+}
 function fireFrom(x, y, targets) {
-  const extra = SP('double'), pr = stat.projR();
+  const extra = SP('double'), pr = stat.projR(), spd = stat.projSpeed(), kind = projKind();
   for (const tg of targets) {
     const base = Math.atan2(tg.y - y, tg.x - x);
     D.aimAng = base;
@@ -231,8 +273,8 @@ function fireFrom(x, y, targets) {
       const off = shots > 1 ? (s - (shots - 1) / 2) * 0.13 : 0;
       const ang = base + off, isCrit = Math.random() < stat.crit();
       D.shots.push({
-        x, y, vx: Math.cos(ang) * BALANCE.weapon.projSpeed, vy: Math.sin(ang) * BALANCE.weapon.projSpeed,
-        dmg: stat.dmg() * (isCrit ? stat.critMult() : 1), crit: isCrit, pierce: stat.pierce(), hit: new Set(), trail: [], r: pr,
+        x, y, vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd, ang,
+        dmg: stat.dmg() * (isCrit ? stat.critMult() : 1), crit: isCrit, pierce: stat.pierce(), hit: new Set(), trail: [], r: pr, kind,
       });
     }
   }
@@ -303,7 +345,7 @@ function killEnemy(en) {
 function loop(now) {
   if (!D || !D.running) return;
   let dt = Math.min(0.034, (now - D.last) / 1000); D.last = now;
-  if (!D.canvas.isConnected) { D.running = false; return; }
+  if (!D.canvas.isConnected) { D.running = false; snapshotRun(); return; } // 시트 닫힘 → 이어하기 저장
   // 배속(1·2·3) — 한 프레임에 update를 여러 번 (렌더는 1회)
   const steps = D.speed;
   for (let s = 0; s < steps; s++) {
@@ -342,7 +384,8 @@ function UI_defAdDone() {
   const cb = D._adReward; D._adReward = null;
   document.getElementById('def-ad')?.remove();
   if (cb) cb();
-  D.running = true; D.last = performance.now(); D.raf = requestAnimationFrame(loop);
+  // 보상 콜백이 새 오버레이(유니크 드래프트)를 열었으면 재개하지 않음 (defPick이 재개)
+  if (!D.draft && !document.getElementById('def-rev')) { D.running = true; D.last = performance.now(); D.raf = requestAnimationFrame(loop); }
 }
 export function defAdSkip() {
   clearInterval(D._adTimer); D._adReward = null;
@@ -383,32 +426,52 @@ export function defAdCoin() {
   stageAd(`광고 보고 보너스 코인 +${reward}`, () => { D.coins += reward; D.coinsFly.push({ x: D.W / 2, y: 40, t: 0, val: 0 }); D.fx.add(D.W / 2, 60, `+${reward}🪙`, { color: '#ffe04a', size: 20 }); });
 }
 
-/* ── 보스 처치 → 스페셜 스킬 3택 (캔버스 위 오버레이, 각 랜덤 수치) ── */
-function bossDraft() {
+// 등급 가중 추첨 (해당 등급 후보 中)
+function pickByRarity(bag) {
+  const tot = bag.reduce((s, sp) => s + RARITY[sp.r].w, 0);
+  let r = Math.random() * tot;
+  for (const sp of bag) { r -= RARITY[sp.r].w; if (r <= 0) return sp; }
+  return bag[0];
+}
+function makeDraftCardData(s) {
+  let val = s.roll();
+  if (s.id === 'gamble') val = Math.random() < 0.5 ? 80 : 5; // 도박수 즉시 판정
+  return { id: s.id, r: s.r, icon: s.icon, name: s.name, val, desc: s.desc, trap: s.trap };
+}
+/* ── 보스 처치 → 스페셜 스킬 3택 + 광고로 유니크 1택 (캔버스 오버레이) ── */
+function bossDraft(forceUnique) {
   D.running = false; cancelAnimationFrame(D.raf);
-  const pool = SPECIALS.filter((s) => !D.spec[s.id] || D.spec[s.id].lv < (s.max || 99));
-  const bag = pool.slice(), pick = [];
-  for (let i = 0; i < 3 && bag.length; i++) { const j = Math.floor(Math.random() * bag.length); pick.push(bag.splice(j, 1)[0]); }
-  D.draft = pick.map((s) => ({ id: s.id, icon: s.icon, name: s.name, val: s.roll(), desc: s.desc }));
+  let bag = SPECIALS.filter((s) => !D.spec[s.id] || D.spec[s.id].lv < (s.max || 99));
+  if (forceUnique) bag = bag.filter((s) => s.r === 'unique');
+  const picks = [];
+  const n = forceUnique ? 1 : 3;
+  for (let i = 0; i < n && bag.length; i++) { const s = pickByRarity(bag); bag = bag.filter((x) => x !== s); picks.push(makeDraftCardData(s)); }
+  D.draft = picks;
   chord([659, 880, 1175], 0.16); buzz([20, 40, 20]);
-  const stage = D.canvas.parentElement; // .gx-stage (캔버스 유지)
+  const stage = D.canvas.parentElement;
   const ov = document.createElement('div'); ov.className = 'draft-overlay'; ov.id = 'def-draft';
   ov.innerHTML = `
     <div class="draft-in">
-      <div class="draft-title">⭐ 보스 격파!</div>
-      <p>스페셜 스킬 <b>3택</b> — 수치는 랜덤, 골라서 무한 성장</p>
+      <div class="draft-title">${forceUnique ? '✨ 유니크 스킬!' : '⭐ 보스 격파!'}</div>
+      <p>${forceUnique ? '강력한 유니크 한 장' : '스페셜 스킬 <b>3택</b> — 등급·수치 랜덤'}</p>
       <div class="draft-row">
         ${D.draft.map((s, i) => {
-          const cur = D.spec[s.id] ? D.spec[s.id].val : 0;
-          return `<button class="draft-card" onclick="UI.defPick(${i})">
-            <span class="draft-ico">${s.icon}</span><b>${s.name}</b>
-            <small>${s.desc(s.val)}</small>
-            <span class="draft-cur ${cur ? '' : 'new'}">${cur ? `→ ${s.desc(cur + s.val)}` : 'NEW'}</span>
+          const cur = D.spec[s.id] ? D.spec[s.id].val : 0; const rr = RARITY[s.r];
+          return `<button class="draft-card r-${s.r}" style="--rc:${rr.col}" onclick="UI.defPick(${i})">
+            <span class="draft-ico">${s.icon}</span>
+            <div class="grow"><div class="draft-name"><b>${s.name}</b><span class="draft-rar" style="color:${rr.col}">${s.trap ? '⚠ 트랩' : rr.label}</span></div>
+              <small>${s.desc(s.val)}</small></div>
+            <span class="draft-cur ${cur ? '' : 'new'}">${cur ? `Lv${(D.spec[s.id].lv) + 1}` : 'NEW'}</span>
           </button>`;
         }).join('')}
       </div>
+      ${forceUnique ? '' : '<button class="draft-ad" onclick="UI.defDraftAd()">📺 광고 보고 유니크 스킬 받기</button>'}
     </div>`;
   stage.appendChild(ov);
+}
+export function defDraftAd() {
+  document.getElementById('def-draft')?.remove(); D.draft = null;
+  stageAd('광고 보고 유니크 스킬 1장', () => bossDraft(true));
 }
 export function defPick(i) {
   if (!D || !D.draft) return;
@@ -426,7 +489,8 @@ function update(dt) {
   const f = fridgePos();
   D.bannerT -= dt; D.muzzle -= dt; D.vign *= 0.92; D.flash *= 0.86; if (D.bossIntro > 0) D.bossIntro -= dt; if (D.upT > 0) D.upT -= dt;
   D.coinDisp += (D.coins - D.coinDisp) * Math.min(1, dt * 9); // 코인 카운트업 롤링
-  D.maxHp = 100 + D.lv.maxHp * BALANCE.up.maxHp.add;
+  D.maxHp = Math.max(20, 100 + D.lv.maxHp * BALANCE.up.maxHp.add - (D.spec.glass ? 30 : 0));
+  if (D.hp > D.maxHp) D.hp = D.maxHp;
   if (D.lv.regen) D.hp = Math.min(D.maxHp, D.hp + D.lv.regen * BALANCE.up.regen.add * dt);
 
   // 스폰
@@ -620,14 +684,26 @@ function render(dt) {
       c.fillStyle = en.boss ? '#ff4d6a' : '#9bffe6'; rr(c, hpx, hpy, w * clamp(en.hp / en.maxhp, 0, 1), 5, 2.5); c.fill();
     }
   }
-  // 발사체 (트레일 + 글로우, 치명타는 금색)
+  // 발사체 — 속성/티어별 형태(불꽃·얼음·스파크·중탄)
+  const PK = { fire: ['#ffd24a', '#ff7a3d'], frost: ['#e8faff', '#73cbff'], spark: ['#ffffff', '#bdffe4'], heavy: ['#fff0b0', '#ffb24d'], basic: ['#bdffe4', '#5ef0b0'] };
   for (const s of D.shots) {
-    const core = s.crit ? '#ffe04a' : '#bdffe4', glow = s.crit ? '#ffb24d' : '#5ef0b0';
-    c.strokeStyle = glow; c.globalAlpha = 0.35; c.lineWidth = (s.r || BALANCE.weapon.projR) * 1.3; c.lineCap = 'round';
+    const [core, glow] = s.crit ? ['#fff', '#ffb24d'] : (PK[s.kind] || PK.basic);
+    const rr0 = (s.r || BALANCE.weapon.projR) * (s.crit ? 1.3 : 1);
+    // 트레일
+    c.strokeStyle = glow; c.globalAlpha = 0.3; c.lineWidth = rr0 * 1.2; c.lineCap = 'round';
     if (s.trail.length >= 4) { c.beginPath(); c.moveTo(s.trail[0], s.trail[1]); for (let k = 2; k < s.trail.length; k += 2) c.lineTo(s.trail[k], s.trail[k + 1]); c.lineTo(s.x, s.y); c.stroke(); }
-    c.globalAlpha = 1;
-    c.fillStyle = core; c.shadowColor = glow; c.shadowBlur = 10;
-    c.beginPath(); c.arc(s.x, s.y, (s.r || BALANCE.weapon.projR) * (s.crit ? 1.3 : 1), 0, 6.28); c.fill(); c.shadowBlur = 0;
+    c.globalAlpha = 1; c.shadowColor = glow; c.shadowBlur = 10;
+    c.save(); c.translate(s.x, s.y); c.rotate((s.ang || 0) + Math.PI / 2); c.fillStyle = core;
+    if (s.kind === 'frost') { // 얼음 마름모
+      c.beginPath(); c.moveTo(0, -rr0 * 1.4); c.lineTo(rr0, 0); c.lineTo(0, rr0 * 1.4); c.lineTo(-rr0, 0); c.closePath(); c.fill();
+    } else if (s.kind === 'fire') { // 불꽃 물방울
+      c.beginPath(); c.moveTo(0, -rr0 * 1.6); c.quadraticCurveTo(rr0 * 1.1, 0, 0, rr0); c.quadraticCurveTo(-rr0 * 1.1, 0, 0, -rr0 * 1.6); c.fill();
+    } else if (s.kind === 'spark') { // 별/스파크
+      c.beginPath(); for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4, rr2 = i % 2 ? rr0 * 0.5 : rr0 * 1.3; c[i ? 'lineTo' : 'moveTo'](Math.cos(a) * rr2, Math.sin(a) * rr2); } c.closePath(); c.fill();
+    } else { // 기본/중탄 — 원 (중탄은 큼직)
+      c.beginPath(); c.arc(0, 0, rr0 * (s.kind === 'heavy' ? 1.25 : 1), 0, 6.28); c.fill();
+    }
+    c.restore(); c.shadowBlur = 0;
   }
   drawFridge(c, f);
   // 냉기 전이(체인) 라인
@@ -702,6 +778,14 @@ function drawFridge(c, f) {
     if (D.muzzle > 0) { c.globalAlpha = clamp(D.muzzle / 0.08, 0, 1); c.fillStyle = 'rgba(255,240,150,0.95)'; c.beginPath(); c.arc(0, -bl, 7, 0, 6.28); c.fill(); c.globalAlpha = 1; }
     c.restore();
   }
+  // 보조 포탑 — 좌/우에 물리적으로 등장 (해금/레벨 가시화)
+  for (let t = 0; t < (D.lv.sideTurret || 0); t++) {
+    const sx = t % 2 === 0 ? 22 : D.W - 22, sy = D.H - 40 - Math.floor(t / 2) * 22;
+    c.save(); c.translate(sx, sy);
+    c.fillStyle = '#5a6f9c'; rr(c, -9, -6, 18, 14, 4); c.fill();
+    c.fillStyle = tierCol; c.rotate(D.aimAng + Math.PI / 2); rr(c, -3, -16, 6, 16, 3); c.fill();
+    c.restore();
+  }
   // 냉장고 바디 — 시안 픽셀 스프라이트(내장 카와이 얼굴) + 성에 글로우 / 위험 경고
   drawSprite(c, fridgeSprite().base, f.x, f.y + 6, 80, { glow: low ? 'rgba(255,77,106,0.8)' : 'rgba(115,203,255,0.6)', glowR: low ? 18 : 14 });
 }
@@ -772,6 +856,7 @@ export function defBuy(k) {
 }
 
 function endGame() {
+  savedRun = null;
   const s = D; D = null; cancelAnimationFrame(s.raf);
   beep(160, 0.3, 'square', 0.12);
   const specs = Object.keys(s.spec).length;

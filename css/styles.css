@@ -1193,3 +1193,14 @@ input:focus, select:focus, textarea:focus { outline: none; box-shadow: 0 0 0 3px
 /* 디펜스 인게임 광고 코인 버튼 */
 .gx-adcoin { background: rgba(255,224,74,0.16); color: #ffe04a; border: none; border-radius: 99px; padding: 6px 12px; font-family: 'Jua', sans-serif; font-size: 0.82rem; font-weight: 800; cursor: pointer; }
 .gx-adcoin:active { transform: scale(0.95); }
+
+/* ══════════ 디펜스: 스킬 등급 카드 + 광고 드래프트 ══════════ */
+.draft-card { position: relative; }
+.draft-card.r-rare { border-color: #2f5a8a; }
+.draft-card.r-unique { border-color: var(--rc); box-shadow: 0 0 14px rgba(255,224,74,.3); }
+.draft-card.r-junk { border-color: #4a3a5e; opacity: 0.92; }
+.draft-card .grow { flex: 1; min-width: 0; }
+.draft-name { display: flex; align-items: center; gap: 6px; }
+.draft-rar { font-size: 0.62rem; font-weight: 800; }
+.draft-ad { width: 100%; margin-top: 10px; border: none; border-radius: 12px; padding: 11px; background: var(--orange-bg, rgba(255,138,61,.18)); color: #ff8a3d; font-family: 'Jua',sans-serif; font-weight: 800; cursor: pointer; }
+.draft-ad:active { transform: scale(0.97); }

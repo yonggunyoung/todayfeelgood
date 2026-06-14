@@ -1,0 +1,16 @@
+{
+  "name": "광클대전",
+  "short_name": "광클대전",
+  "description": "오늘의 떡밥에 내 편 골라 60초 광클! 민초 vs 반민초·부먹 vs 찍먹 전국 진영전 밈 게임",
+  "lang": "ko",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#1d2330",
+  "theme_color": "#1d2330",
+  "categories": ["games", "entertainment"],
+  "icons": [
+    { "src": "./icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

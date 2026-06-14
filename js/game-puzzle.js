@@ -1,10 +1,16 @@
 // 재료 매치 — 같은 재료 3개 이상을 맞춰 터뜨리는 매치3 퍼즐. 연쇄(캐스케이드) 콤보로 점수 폭발.
 // 60초 안에 최대한 — 인접 두 칸을 탭해서 교환. 캔버스 렌더 + 낙하/팝 애니메이션.
 import { gameUI, beep, chord, buzz, finishGame, diffMul, gameDiffRow, inStageAd } from './games.js';
+import { veggieSprite, drawSprite } from './pixel.js';
 
+// 시안 6종: 색 + 형태 마크 이중 인코딩(색맹 대응) + 식자재 슬라임
 const KINDS = [
-  { e: '🍎', c: '#ff6b6b' }, { e: '🥕', c: '#ff9f43' }, { e: '🥛', c: '#dfe6e9' },
-  { e: '🥚', c: '#ffd54d' }, { e: '🐟', c: '#74b9ff' }, { e: '🥦', c: '#55c57a' },
+  { key: 'tomato', col: '#ff5a4d', sh: '#c2371f', mark: 'circle' },
+  { key: 'lemon', col: '#ffd24a', sh: '#c99a16', mark: 'square' },
+  { key: 'broccoli', col: '#56c66a', sh: '#2c7d3c', mark: 'cloud' },
+  { key: 'eggplant', col: '#9b6bff', sh: '#5e3bb0', mark: 'diamond' },
+  { key: 'blueberry', col: '#5b8def', sh: '#2f57a8', mark: 'dot' },
+  { key: 'carrot', col: '#ff8a3d', sh: '#c45e16', mark: 'triangle' },
 ];
 const COLS = 7, ROWS = 8, TIME = 60;
 let P = null;
@@ -171,13 +177,17 @@ export function gamePuzzle() {
       const k = KINDS[v];
       const sc = P.pop[idx] > 0 ? P.pop[idx] : 1;
       const pad = cell * 0.08 + (1 - sc) * cell * 0.4;
-      c.globalAlpha = P.pop[idx] > 0 ? P.pop[idx] : 1;
-      c.fillStyle = idx === P.sel ? '#ffe9a8' : k.c;
+      const a = P.pop[idx] > 0 ? P.pop[idx] : 1;
+      // 타일 배경 — 선택 시 노랑, 평소엔 타일색 12%(시안)
+      c.globalAlpha = a * (idx === P.sel ? 1 : 0.16);
+      c.fillStyle = idx === P.sel ? '#ffe9a8' : k.col;
       roundRect(c, x + pad, y + pad, cell - pad * 2, cell - pad * 2, cell * 0.24); c.fill();
+      c.globalAlpha = a;
       if (idx === P.sel) { c.strokeStyle = '#ff8a3d'; c.lineWidth = 3; c.stroke(); }
-      c.globalAlpha = P.pop[idx] > 0 ? P.pop[idx] : 1;
-      c.font = `${Math.round(cell * 0.52)}px serif`; c.textAlign = 'center'; c.textBaseline = 'middle';
-      c.fillText(k.e, x + cell / 2, y + cell / 2 + 1);
+      // 식자재 슬라임 스프라이트
+      drawSprite(c, veggieSprite(k.key).base, x + cell / 2, y + cell / 2, cell * 0.82 * sc);
+      // 형태 마크(좌상단) — 색맹 대응 이중 인코딩
+      drawMark(c, k.mark, x + cell * 0.22, y + cell * 0.22, cell * 0.1, k.sh);
     }
     c.globalAlpha = 1; c.textBaseline = 'alphabetic';
     c.restore();
@@ -186,6 +196,22 @@ export function gamePuzzle() {
     c.beginPath(); c.moveTo(x + r, y);
     c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r);
     c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath();
+  }
+  // 형태 마크 — 색에 더해 모양으로도 종류 구분(색맹 대응). 흰 테두리로 슬라임 위에서도 또렷.
+  function drawMark(c, type, cx, cy, s, col) {
+    c.save(); c.lineJoin = 'round';
+    const shape = () => {
+      c.beginPath();
+      if (type === 'circle') c.arc(cx, cy, s, 0, 6.28);
+      else if (type === 'dot') c.arc(cx, cy, s * 0.6, 0, 6.28);
+      else if (type === 'square') { c.rect(cx - s, cy - s, s * 2, s * 2); }
+      else if (type === 'diamond') { c.moveTo(cx, cy - s); c.lineTo(cx + s, cy); c.lineTo(cx, cy + s); c.lineTo(cx - s, cy); c.closePath(); }
+      else if (type === 'triangle') { c.moveTo(cx, cy - s); c.lineTo(cx + s, cy + s); c.lineTo(cx - s, cy + s); c.closePath(); }
+      else if (type === 'cloud') { [[-s * 0.6, s * 0.1], [s * 0.6, s * 0.1], [0, -s * 0.45]].forEach(([dx, dy]) => { c.moveTo(cx + dx + s * 0.6, cy + dy); c.arc(cx + dx, cy + dy, s * 0.6, 0, 6.28); }); }
+    };
+    shape(); c.strokeStyle = 'rgba(255,255,255,0.95)'; c.lineWidth = 2.4; c.stroke();
+    shape(); c.fillStyle = col; c.fill();
+    c.restore();
   }
   function offerPuzzleTime() {
     cancelAnimationFrame(P.raf);

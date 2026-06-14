@@ -3,11 +3,11 @@ import { S, save, uid, today, addDays, daysLeft, won } from './store.js';
 import { ING, findIng, defaultShelf, defaultLocation, ingredientTip } from './data/ingredients.js';
 import { isWeight, measureOf, baseUnit, unitOptions, toBase, perBase, fmtBase, fmtRaw, stepFor, defaultEntry } from './units.js';
 import { recommend, recipesUsing, expiringItems, activeLeftovers, deductionPlan, modeList, getMode, allRecipes, buildCookPlan } from './engine.js';
-import { scanImage, extractRecipeFromYouTube, claimReward } from './ai.js';
+import { scanImage, extractRecipeFromYouTube } from './ai.js';
 import { initSync, sync, makeSpaceCode, setSpaceCode, loginGoogle, logoutGoogle, syncAvailable, submitScore, topScores } from './sync.js';
 import { AI_ENDPOINT, COUPANG_TAG } from './config.js';
 import { canListen, speak, stopSpeak, startListen, stopListen, isListening, parseCommand } from './voice.js';
-import { earn, spend, refund, EARN, earnedToday, SHOP, adFreeNow, gameBest } from './points.js';
+import { earn, spend, refund, EARN, earnedToday, SHOP, adFreeNow, gameBest, aiLeft, aiConsume, aiGrant, aiUnlimited, FREE_AI } from './points.js';
 import { initGames, openGames, GAMES, gameFresh, gameVoice, gameVoicePass, gameDouble, setGameDiff } from './games.js';
 import { gameDefense, defBuy, defStart, defSpeed, defPick, defRevive, defGiveUp, defAdSkip, defAdSkill, defResume, defDraftAd, defWallMode, defElem, defMidSkill, defMidSkip, defActive } from './game-defense.js';
 import { gamePuzzle } from './game-puzzle.js';
@@ -805,6 +805,7 @@ UI.openScan = () => {
   }
   openSheet(`
     <h2>📷 AI 입고 스캔</h2><p class="sub">영수증 또는 펼쳐놓은 식재료 사진을 올려주세요</p>
+    <p class="hint" style="margin:-2px 0 10px">${aiUnlimited() ? '⭐ 프리미엄 — <b>무제한</b>' : `이번 달 무료 <b>${aiLeft().freeLeft}/${FREE_AI}회</b> 남음${aiLeft().credits ? ` · 충전권 ${aiLeft().credits}회` : ''}`}</p>
     <label class="btn btn-block" style="margin-bottom:10px">
       🖼️ 사진 선택 / 촬영
       <input id="scan-file" type="file" accept="image/*" capture="environment" style="display:none" onchange="UI.scanPicked(this)" />
@@ -824,9 +825,21 @@ UI.scanPicked = (input) => {
 };
 UI.runScan = async () => {
   const btn = $('#scan-go');
+  const f = scanFile; // 광고 완주 후 같은 사진으로 분석을 이어가기 위해 보관
+  const retry = () => {
+    UI.openScan();
+    scanFile = f;
+    const pv = $('#scan-preview');
+    if (pv && f) pv.innerHTML = `<img src="${URL.createObjectURL(f)}" style="width:100%;border-radius:16px;max-height:240px;object-fit:cover" />`;
+    const go = $('#scan-go');
+    if (go) go.disabled = false;
+    UI.runScan();
+  };
+  if (aiLeft().total <= 0) { UI.openRecharge(retry); return; } // 무료·충전권 소진 → 광고/프리미엄 안내
   btn.disabled = true; btn.textContent = '분석 중…';
   try {
     const items = await scanImage(scanFile, S.settings);
+    aiConsume(); // 성공했을 때만 1회 차감 (실패는 차감 안 함)
     scanResults = items.map((it) => {
       const ing = findIng(it.name);
       return { name: ing ? ing.name : it.name, qty: it.qty || 1, location: defaultLocation(ing), emoji: ing?.emoji || '🍽️' };
@@ -835,19 +848,7 @@ UI.runScan = async () => {
     btn.textContent = '다시 분석';
     btn.disabled = false;
   } catch (e) {
-    if (e.status === 429 && S.settings.aiMode === 'server') {
-      const f = scanFile; // 광고 완주 후 같은 사진으로 분석을 이어간다
-      UI.openRecharge(() => {
-        UI.openScan();
-        scanFile = f;
-        const pv = $('#scan-preview');
-        if (pv && f) pv.innerHTML = `<img src="${URL.createObjectURL(f)}" style="width:100%;border-radius:16px;max-height:240px;object-fit:cover" />`;
-        const go = $('#scan-go');
-        if (go) go.disabled = false;
-        UI.runScan();
-      });
-      return;
-    }
+    if (e.status === 429 && S.settings.aiMode === 'server') { UI.openRecharge(retry); return; }
     toast(e.message || 'AI 분석에 실패했어요');
     btn.textContent = '🤖 AI 분석';
     btn.disabled = false;
@@ -928,14 +929,20 @@ let adRetry = null; // 광고 완주 후 이어서 실행할 작업 (스캔 재�
 UI.openRecharge = (retry) => {
   adRetry = typeof retry === 'function' ? retry : null;
   openSheet(`
-    <h2>⏳ 잠시 요청이 몰렸어요</h2>
-    <p class="sub">조금 뒤에 다시 하면 돼요. 급하면 짧은 광고를 <b>끝까지 보고 바로 이어서</b> 진행할 수 있어요 (보너스 포인트도 받아요)</p>
+    <h2>🔋 이번 달 무료 AI 횟수를 다 썼어요</h2>
+    <p class="sub">짧은 광고를 <b>끝까지 보면 1회</b> 충전되고, 하던 작업이 바로 이어져요. 자주 쓰면 프리미엄이 편해요.</p>
     <div class="card flat row" style="gap:12px">
       <div style="font-size:1.7rem">📺</div>
-      <div class="grow"><b>광고 보고 바로 이어서</b>
-        <p class="hint" style="margin:2px 0 0">15초 · 중간에 닫으면 보상이 없어요</p></div>
+      <div class="grow"><b>광고 보고 1회 충전</b>
+        <p class="hint" style="margin:2px 0 0">15초 · 중간에 닫으면 충전되지 않아요</p></div>
       <button class="btn btn-sm btn-primary" onclick="UI.watchAd()">시청</button>
     </div>
+    ${(S.points?.bal || 0) >= 100 ? `<div class="card flat row" style="gap:12px">
+      <div style="font-size:1.7rem">🤖</div>
+      <div class="grow"><b>포인트로 1회권</b>
+        <p class="hint" style="margin:2px 0 0">100P · 모아둔 포인트로 바로 충전</p></div>
+      <button class="btn btn-sm btn-tint" onclick="UI.redeem('ai1')">100P</button>
+    </div>` : ''}
     <div class="card flat row" style="gap:12px">
       <div style="font-size:1.7rem">⭐</div>
       <div class="grow"><b>프리미엄 — 무제한 · 광고 없음</b>
@@ -998,26 +1005,18 @@ function houseAd({ onComplete, note, reward }) {
 }
 UI.watchAd = () => {
   playAd({
-    reward: '보너스 포인트 + 바로 이어서 진행',
-    note: '끝까지 보면 보너스 포인트를 받고 하던 작업이 이어져요',
-    onComplete: async (b) => {
-      b.textContent = '적용 중…';
-      try {
-        await claimReward(S.settings);
-        const bonusP = earn('ad');
-        b.className = 'btn btn-block btn-primary';
-        if (adRetry) {
-          b.textContent = `✅ ${bonusP.ok ? `🅿+${bonusP.p}P · ` : ''}이어서 진행할게요`;
-          const r = adRetry; adRetry = null;
-          setTimeout(() => { UI.closeSheet(); r(); }, 900);
-        } else {
-          b.textContent = `✅ 완료${bonusP.ok ? ` · 🅿+${bonusP.p}P` : ''}`;
-          b.disabled = false;
-          b.onclick = () => UI.closeSheet();
-        }
-      } catch (e) {
-        b.className = 'btn btn-block btn-soft';
-        b.textContent = e.message || '문제가 생겼어요';
+    reward: 'AI 1회 충전 + 보너스 포인트',
+    note: '끝까지 보면 AI 1회가 충전되고 하던 작업이 이어져요',
+    onComplete: (b) => {
+      aiGrant(1); // AI 사용권 +1 (클라 집계)
+      const bonusP = earn('ad');
+      b.className = 'btn btn-block btn-primary';
+      if (adRetry) {
+        b.textContent = `✅ +1회 충전${bonusP.ok ? ` · 🅿+${bonusP.p}P` : ''} — 이어서 진행할게요`;
+        const r = adRetry; adRetry = null;
+        setTimeout(() => { UI.closeSheet(); r(); }, 900);
+      } else {
+        b.textContent = `✅ +1회 충전 완료${bonusP.ok ? ` · 🅿+${bonusP.p}P` : ''}`;
         b.disabled = false;
         b.onclick = () => UI.closeSheet();
       }
@@ -1058,13 +1057,13 @@ UI.openPoints = () => {
       <b class="p-stat">${got}/${r.cap}</b></div>`;
   }).join('');
   const shop = SHOP.map((it) => {
-    const locked = it.kind === 'locked' || (it.kind === 'server' && !(aiReady().ok && S.settings.aiMode === 'server'));
+    const locked = it.kind === 'locked' || (it.kind === 'aicredit' && (!aiReady().ok || aiUnlimited()));
     const can = !locked && (S.points?.bal || 0) >= it.p;
     return `<div class="p-row ${locked ? 'done' : ''}">
       <span>${it.emoji}</span>
       <div class="grow"><b>${it.name}</b><small>${it.desc}</small></div>
       ${locked
-        ? `<small style="color:var(--label-3)">${it.kind === 'locked' ? '준비 중' : 'AI 오픈 시'}</small>`
+        ? `<small style="color:var(--label-3)">${it.kind === 'locked' ? '준비 중' : (aiUnlimited() ? '무제한 이용 중' : 'AI 설정 후')}</small>`
         : `<button class="btn btn-sm ${can ? 'btn-tint' : 'btn-soft'}" ${can ? '' : 'disabled'} onclick="UI.redeem('${it.id}')">${it.p.toLocaleString()}P</button>`}
     </div>`;
   }).join('');
@@ -1088,7 +1087,12 @@ UI.openPoints = () => {
 UI.redeem = async (id) => {
   const it = SHOP.find((x) => x.id === id);
   if (!it) return;
-  if (it.id === 'adfree') {
+  if (it.id === 'ai1') {
+    if (!aiReady().ok) { toast('AI를 먼저 사용할 수 있어야 충전돼요 (설정 → AI)'); return; }
+    if (!spend(it.p, it.name)) { toast('포인트가 부족해요'); return; }
+    aiGrant(1);
+    toast('🤖 AI 1회권 +1 충전 완료!');
+  } else if (it.id === 'adfree') {
     if (!spend(it.p, it.name)) { toast('포인트가 부족해요'); return; }
     S.adFreeUntil = Date.now() + 86400e3;
     save();
@@ -1799,10 +1803,13 @@ UI.rfAuto = async () => {
   const ready = aiReady();
   if (!ready.ok) { toast(isAdmin() ? ready.msg : '빠른 레시피는 베타 준비 중이에요 ✨ 곧 제공됩니다'); return; }
   collectForm();
+  const retryAuto = () => { renderRecipeForm(true); const inp = $('#rf-yt'); if (inp) inp.value = url; UI.rfAuto(); };
+  if (aiLeft().total <= 0) { UI.openRecharge(retryAuto); return; } // 무료·충전권 소진
   const btn = $('#rf-auto');
   btn.disabled = true; btn.textContent = '🤖 영상 내용 정리 중… (20~40초)';
   try {
     const data = await extractRecipeFromYouTube(url, S.settings);
+    aiConsume(); // 성공 시에만 차감
     draft.yt = ytId(url);
     if (!draft.title) draft.title = data.title || '';
     draft.time = data.time || draft.time;
@@ -1817,17 +1824,7 @@ UI.rfAuto = async () => {
     renderRecipeForm(true);
     toast('정리 완료 ✨ 내용 확인하고 저장하세요');
   } catch (e) {
-    if (e.status === 429 && S.settings.aiMode === 'server') {
-      const d = draft; // 광고 완주 후 작성하던 폼 그대로 복원해서 이어간다
-      UI.openRecharge(() => {
-        draft = d;
-        renderRecipeForm(true);
-        const inp = $('#rf-yt');
-        if (inp) inp.value = url;
-        UI.rfAuto();
-      });
-      return;
-    }
+    if (e.status === 429 && S.settings.aiMode === 'server') { UI.openRecharge(retryAuto); return; }
     toast(e.message || '정리에 실패했어요');
     const b = $('#rf-auto');
     if (b) { b.disabled = false; b.textContent = '🤖 빠른 레시피 — 영상 안 보고 재료·순서 자동 정리'; }
@@ -2444,7 +2441,8 @@ function renderSettings() {
     <div class="section-title"><h2>✨ AI 기능</h2><small>영수증 스캔 · 유튜브 정리</small></div>
     ${!isAdmin() ? (aiReady().ok ? `
     <div class="card flat">
-      <p class="hint" style="margin:0 0 10px">영수증 스캔과 유튜브 레시피 자동 정리를 <b>지금 바로 무료</b>로 쓸 수 있어요 — 사진 한 장이면 품목이 냉장고로 들어가요.</p>
+      <p class="hint" style="margin:0 0 6px">영수증 스캔과 유튜브 레시피 자동 정리에 쓰여요. <b>매달 무료 ${FREE_AI}회</b>가 새로 채워지고, 다 쓰면 광고를 보거나 포인트(1회권)로 충전할 수 있어요.</p>
+      <p class="hint" style="margin:0 0 10px;color:var(--label)">${aiUnlimited() ? '⭐ 프리미엄 — <b>무제한</b> 이용 중' : `이번 달 <b>${aiLeft().freeLeft}/${FREE_AI}회</b> 남음${aiLeft().credits ? ` · 충전권 ${aiLeft().credits}회` : ''}`}</p>
       <div class="row" style="gap:12px">
         <div style="font-size:1.5rem">⭐</div>
         <div class="grow"><b>프리미엄 — 무제한 · 광고 없음</b><p class="hint" style="margin:2px 0 0">월 3,900원 (출시 준비 중)</p></div>

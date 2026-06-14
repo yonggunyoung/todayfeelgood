@@ -53,9 +53,6 @@ function parseJsonLoose(text) {
   return null;
 }
 
-// 광고 보상 — 게이트웨이엔 서버 한도가 없어 충전 개념이 없다. 호출부 호환을 위해 성공만 반환(클라 적립은 points.js).
-export async function claimReward() { return { ok: true }; }
-
 const SCHEMA = {
   type: 'object',
   properties: {

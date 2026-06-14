@@ -61,8 +61,43 @@ export function refund(p, label) {
   save({ silent: true });
 }
 
+/* ── AI 사용 한도 (클라이언트 집계) ──
+   게이트웨이(워커)엔 서버 한도가 없으므로 한도는 앱에서 센다. 월 무료 FREE_AI회 + 충전권(광고·포인트),
+   프리미엄/맛보기는 무제한. localStorage 기반이라 강제력은 약하지만(어뷰징은 Anthropic 월 한도·CF 레이트리밋으로 차단),
+   일반 사용자에겐 자연스러운 무료→충전→구독 동선을 만든다. */
+export const FREE_AI = 5; // 매달 무료 AI 횟수 (영수증 스캔·유튜브 정리 합산)
+export const aiUnlimited = () => S.plan === 'premium' || (S.planTrialUntil || 0) > Date.now();
+function aiRoll() {
+  if (!S.aiUse) S.aiUse = { month: '', used: 0, credits: 0 };
+  const m = today().slice(0, 7); // YYYY-MM
+  if (S.aiUse.month !== m) { S.aiUse.month = m; S.aiUse.used = 0; save({ silent: true }); }
+}
+export function aiLeft() {
+  aiRoll();
+  if (aiUnlimited()) return { unlimited: true, freeLeft: Infinity, credits: 0, total: Infinity };
+  const freeLeft = Math.max(0, FREE_AI - (S.aiUse.used || 0));
+  const credits = S.aiUse.credits || 0;
+  return { unlimited: false, freeLeft, credits, total: freeLeft + credits };
+}
+export function aiConsume() {
+  if (aiUnlimited()) return true;
+  aiRoll();
+  const freeLeft = Math.max(0, FREE_AI - (S.aiUse.used || 0));
+  if (freeLeft > 0) S.aiUse.used = (S.aiUse.used || 0) + 1;
+  else if ((S.aiUse.credits || 0) > 0) S.aiUse.credits -= 1;
+  else return false;
+  save({ silent: true });
+  return true;
+}
+export function aiGrant(n = 1) {
+  aiRoll();
+  S.aiUse.credits = (S.aiUse.credits || 0) + n;
+  save({ silent: true });
+}
+
 /* 포인트샵 카탈로그 — 내부 보상(원가≈0) 중심. 외부 교환은 잠금 상태로 미리 보여줘 목표를 만든다 */
 export const SHOP = [
+  { id: 'ai1',     p: 100,  emoji: '🤖', name: 'AI 1회권',          desc: '영수증 스캔·유튜브 정리 +1회', kind: 'aicredit' },
   { id: 'adfree',  p: 300,  emoji: '🧘', name: '광고 없는 하루',     desc: '24시간 배너 광고 미노출',     kind: 'local' },
   { id: 'trial',   p: 1000, emoji: '⭐', name: '프리미엄 맛보기 1일', desc: '광고 없음 + 응원 배지 24시간', kind: 'local' },
   { id: 'gift',    p: 5000, emoji: '🎁', name: '기프티콘 교환',      desc: '커피 쿠폰 등 — 준비 중',       kind: 'locked' },

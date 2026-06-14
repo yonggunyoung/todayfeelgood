@@ -138,6 +138,7 @@ function openSheet(html, { lock = false } = {}) {
      </div>`;
   if (!sheetPushed) { history.pushState({ nb: 'sheet' }, ''); sheetPushed = true; }
   if (!lock) attachSheetDrag();
+  relocateTimerChip(); // 게임 시트가 열리면 타이머를 컴팩트/전면으로
 }
 // 상단(그립·헤더)을 잡고 아래로 슬라이드하면 닫힘
 function attachSheetDrag() {
@@ -182,6 +183,7 @@ UI.closeSheet = (fromPop = false) => {
   vc = null; stopListen(); stopSpeak();
   if (sheetPushed && !fromPop) { ignoreNextPop = true; history.back(); }
   sheetPushed = false;
+  relocateTimerChip(); // 시트 닫히면 타이머 컴팩트 해제
 };
 // 게임 나가기 확인 — 캔버스를 살린 채 스테이지 위 오버레이로
 function confirmExitGame() {
@@ -1117,6 +1119,8 @@ function relocateTimerChip() {
     host.appendChild(chip);
     if (timerPos) { chip.style.left = timerPos.x + 'px'; chip.style.top = timerPos.y + 'px'; chip.style.right = 'auto'; chip.style.bottom = 'auto'; }
   }
+  // 게임/전체화면 중엔 컴팩트(시간만) — 방해 최소화
+  chip.classList.toggle('compact', !!(document.fullscreenElement || document.querySelector('.gx')));
 }
 document.addEventListener('fullscreenchange', relocateTimerChip);
 document.addEventListener('webkitfullscreenchange', relocateTimerChip);

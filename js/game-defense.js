@@ -83,7 +83,7 @@ const ATK = {
 };
 const ATK_ORDER = ['blunt', 'fire', 'frost'];
 const COUNTER_MUL = 1.7;
-const counters = (en) => !!(en.elem && D.atkElem && ATK[D.atkElem].beats.includes(en.elem));
+const counters = (en, atk) => { const a = atk || D.atkElem; return !!(en.elem && a && ATK[a] && ATK[a].beats.includes(en.elem)); };
 // 크기별 받는 피해 격차 — 작을수록 더 받고(>1), 클수록(맷집형) 덜 받음(<1)
 const SIZE_BASE = 18;
 const sizeDmgMul = (en) => (en.boss ? 1 : clamp(Math.pow(SIZE_BASE / en.r, 0.85), 0.55, 1.6));
@@ -104,6 +104,7 @@ const SPECIALS = [
   { id: 'fire', r: 'rare', icon: '🔥', name: '화염탄', max: 99, roll: () => Math.round(rnd(22, 40)), desc: (v) => `명중 시 화상(초당 ${v}%, 3초)` },
   { id: 'frost', r: 'rare', icon: '❄️', name: '빙결탄', max: 60, roll: () => Math.round(rnd(14, 26)), desc: (v) => `명중 시 ${v}% 둔화` },
   { id: 'vamp', r: 'rare', icon: '🩸', name: '흡혈 코어', max: 40, roll: () => Math.round(rnd(8, 15)), desc: (v) => `처치 시 ${v}% 확률 신선도+1` },
+  { id: 'splash', r: 'rare', icon: '💥', name: '폭발탄', max: 99, roll: () => Math.round(rnd(20, 36)), desc: (v) => `명중 시 주변 적에게 ${v}% 광역 피해` },
   // 유니크 (강력·희귀)
   { id: 'double', r: 'unique', icon: '➿', name: '더블샷', max: 3, roll: () => 1, desc: (v) => `발사마다 +${v}발 부채꼴` },
   { id: 'volley', r: 'unique', icon: '✳️', name: '일제 사격', max: 3, roll: () => 1, desc: (v) => `동시 타겟 +${v}` },
@@ -169,12 +170,14 @@ export function gameDefense() {
     </div>`);
   const canvas = document.getElementById('def-c');
   const wrap = canvas.parentElement;
-  const cssW = clamp(wrap.clientWidth || 340, 280, 460);
-  const cssH = clamp(Math.round((window.innerHeight || 720) * 0.5), 300, 540); // 폰 화면에 맞춤
+  const cw = wrap.clientWidth, ch = wrap.clientHeight;
+  const cssW = clamp(Number.isFinite(cw) && cw > 0 ? cw : 340, 280, 1200);
+  let cssH = (Number.isFinite(ch) && ch > 240) ? ch : clamp(Math.round((window.innerHeight || 720) - 200), 340, 1200); // 화면을 꽉 채움
+  cssH = clamp(cssH, 320, 1200);
   const { ctx } = setupCanvas(canvas, cssW, cssH);
 
   D = {
-    ctx, canvas, W: cssW, H: cssH, diff: DIFF.normal, speed: 1, spec: {}, atkElem: 'blunt',
+    ctx, canvas, W: cssW, H: cssH, diff: DIFF.normal, speed: 1, spec: {}, atkElem: 'blunt', turretElem: [],
     enemies: [], shots: [], coinsFly: [], parts: new Particles(320), fx: new Floaters(), shake: new Shake(),
     lv: { damage: 0, fireRate: 0, projspd: 0, multiShot: 0, pierce: 0, crit: 0, chain: 0, wall: 0, homing: 0, orbital: 0, laser: 0, bomb: 0, sideTurret: 0, frostAura: 0, regen: 0, maxHp: 0, boost: 0 },
     walls: [], wallUsed: 0, placingWall: false,
@@ -186,13 +189,48 @@ export function gameDefense() {
     banner: '', bannerT: 0, hitStop: 0, vign: 0, flash: 0, bossIntro: 0, coinDisp: 0, upText: '', upT: 0, upPulse: 0, fridge: { blink: 1 },
     last: 0, raf: 0, running: false, over: false, shopT: 0,
   };
-  // 칸막이 설치: 설치 모드일 때 전장 터치 → 그 위치에 벽
+  // 전장 터치: ① 벽 설치 모드면 벽 ② 보조 포탑 → 그 포탑 속성 전환 ③ 냉장고 → 공격 속성 전환
   canvas.addEventListener('pointerdown', (e) => {
-    if (!D || !D.placingWall) return;
+    if (!D) return;
     const r = canvas.getBoundingClientRect();
-    const x = (e.clientX - r.left), y = clamp(e.clientY - r.top, 90, D.H - 70);
-    placeWall(x, y);
+    const x = e.clientX - r.left, y = e.clientY - r.top;
+    if (D.placingWall) { placeWall(x, clamp(y, 90, D.H - 70)); return; }
+    if (!D.running) return;
+    for (let t = 0; t < (D.lv.sideTurret || 0); t++) {
+      const sx = t % 2 === 0 ? 22 : D.W - 22, sy = D.H - 40 - Math.floor(t / 2) * 22;
+      if (Math.hypot(x - sx, y - sy) < 28) { cycleTurretElem(t % 2); return; }
+    }
+    const f = fridgePos();
+    if (Math.hypot(x - f.x, y - (f.y - 6)) < 62) { defElem(); return; }
   });
+  requestAnimationFrame(() => resizeDefCanvas()); // 레이아웃 확정 후 실제 스테이지 크기로 스냅
+}
+// 화면/전체화면 변화에 맞춰 플레이그라운드를 꽉 차게 리사이즈
+function resizeDefCanvas() {
+  if (!D || !D.canvas || !D.canvas.isConnected) return;
+  const wrap = D.canvas.parentElement; if (!wrap) return;
+  const cw = wrap.clientWidth, ch = wrap.clientHeight;
+  if (!Number.isFinite(cw) || !Number.isFinite(ch) || cw < 200 || ch < 200) return; // 스텁/미측정 시 건너뜀
+  const w = clamp(cw, 280, 1400), h = clamp(ch, 320, 1400);
+  if (Math.abs(w - D.W) < 2 && Math.abs(h - D.H) < 2) return;
+  setupCanvas(D.canvas, w, h); D.W = w; D.H = h;
+  if (D.horror && D.moldSpots) seedMold();
+}
+if (typeof window !== 'undefined' && window.addEventListener) {
+  window.addEventListener('resize', () => resizeDefCanvas());
+  if (typeof document !== 'undefined' && document.addEventListener) {
+    document.addEventListener('fullscreenchange', () => setTimeout(resizeDefCanvas, 90));
+    document.addEventListener('webkitfullscreenchange', () => setTimeout(resizeDefCanvas, 90));
+  }
+}
+// 보조 포탑 속성 (좌=0, 우=1) — 기본은 본체와 다른 속성으로 분산
+function turretElemOf(side) { return D.turretElem[side] || ATK_ORDER[(side + 1) % ATK_ORDER.length]; }
+function cycleTurretElem(side) {
+  const i = ATK_ORDER.indexOf(turretElemOf(side));
+  D.turretElem[side] = ATK_ORDER[(i + 1) % ATK_ORDER.length];
+  const a = ATK[D.turretElem[side]];
+  beep(500 + i * 80, 0.05, 'triangle', 0.08);
+  D.fx.add(side === 0 ? 28 : D.W - 28, D.H - 46, `${a.icon} ${a.name}`, { color: a.col, size: 14, font: 'Jua' });
 }
 const wallAvail = () => (D ? D.lv.wall * BALANCE.up.wall.add - D.wallUsed : 0);
 function placeWall(x, y) {
@@ -238,14 +276,14 @@ function snapshotRun() {
   if (!D || D.over || D.wave < 1) { savedRun = null; return; }
   savedRun = {
     diffKey: D.diff.key, speed: D.speed, lv: { ...D.lv }, spec: JSON.parse(JSON.stringify(D.spec)),
-    coins: D.coins, score: D.score, kills: D.kills, bossesKilled: D.bossesKilled, midKilled: D.midKilled, hp: D.hp, maxHp: D.maxHp, wave: D.wave, revived: D.revived, atkElem: D.atkElem,
+    coins: D.coins, score: D.score, kills: D.kills, bossesKilled: D.bossesKilled, midKilled: D.midKilled, hp: D.hp, maxHp: D.maxHp, wave: D.wave, revived: D.revived, atkElem: D.atkElem, turretElem: [...(D.turretElem || [])],
   };
 }
 export function defResume() {
   if (!savedRun || !D) return;
   const sv = savedRun; savedRun = null;
   document.getElementById('def-start')?.remove();
-  D.diff = DIFF[sv.diffKey] || DIFF.normal; D.speed = sv.speed || 1; D.spec = sv.spec || {}; D.atkElem = sv.atkElem || 'blunt';
+  D.diff = DIFF[sv.diffKey] || DIFF.normal; D.speed = sv.speed || 1; D.spec = sv.spec || {}; D.atkElem = sv.atkElem || 'blunt'; D.turretElem = sv.turretElem || [];
   Object.assign(D.lv, sv.lv);
   D.coins = sv.coins; D.score = sv.score; D.kills = sv.kills; D.bossesKilled = sv.bossesKilled || 0; D.midKilled = sv.midKilled || 0;
   D.maxHp = sv.maxHp; D.hp = sv.hp; D.revived = sv.revived; D.wave = sv.wave - 1;
@@ -305,7 +343,9 @@ function fridgePos() { return { x: D.W / 2, y: D.H - 30 }; }
 
 const horrorHp = (w) => (w >= 50 ? 1.2 + (w - 50) * 0.012 : 1); // 공포 구간(50+) 맷집↑
 const waveHP = (w) => BALANCE.enemy.baseHP * Math.pow(BALANCE.enemy.hpGrow, w - 1) * D.diff.hp * horrorHp(w);
-const waveSpd = (w) => Math.min(BALANCE.enemy.speedCap, BALANCE.enemy.speedBase * Math.pow(BALANCE.enemy.speedGrow, w - 1)) * D.diff.spd * (w >= 50 ? 1.06 : 1);
+// 필드가 커지면 침투까지 거리가 늘어 쉬워지므로, 높이에 비례해 속도를 키워 긴장감 유지
+const fieldScale = () => clamp((D ? D.H : 520) / 520, 0.85, 1.7);
+const waveSpd = (w) => Math.min(BALANCE.enemy.speedCap, BALANCE.enemy.speedBase * Math.pow(BALANCE.enemy.speedGrow, w - 1)) * D.diff.spd * (w >= 50 ? 1.06 : 1) * fieldScale();
 
 // 공포 구간 오염 얼룩(냉장고 오라 밖) 좌표 시드
 function seedMold() {
@@ -396,7 +436,8 @@ function projKind() {
   if (D.lv.damage >= 12) return 'heavy';
   return 'basic';
 }
-function fireFrom(x, y, targets) {
+function fireFrom(x, y, targets, atk) {
+  const elem = atk || D.atkElem;
   const extra = SP('double'), pr = stat.projR(), spd = stat.projSpeed(), kind = projKind();
   for (const tg of targets) {
     const base = Math.atan2(tg.y - y, tg.x - x);
@@ -407,7 +448,7 @@ function fireFrom(x, y, targets) {
       const ang = base + off, isCrit = Math.random() < stat.crit();
       D.shots.push({
         x, y, vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd, ang,
-        dmg: stat.dmg() * (isCrit ? stat.critMult() : 1), crit: isCrit, pierce: stat.pierce(), hit: new Set(), trail: [], r: pr, kind, atk: D.atkElem,
+        dmg: stat.dmg() * (isCrit ? stat.critMult() : 1), crit: isCrit, pierce: stat.pierce(), hit: new Set(), trail: [], r: pr, kind, atk: elem,
       });
     }
   }
@@ -421,17 +462,24 @@ function pickTargets(n) {
 
 function hitEnemy(en, dmg, opt) {
   const sec = opt && (opt.chained || opt.frag); // 2차타(체인·파편)는 원소/분열 재적용 안 함
+  const atk = (opt && opt.atk) || D.atkElem; // 발사 주체(냉장고/포탑)의 공격 속성
   if (en.shield) { en.shield = 0; en.flash = 0.12; D.parts.burst(en.x, en.y, '#bdffe4', 7, { spread: 0.6, life: 0.3 }); beep(520, 0.05); return; }
-  const ctr = counters(en) ? COUNTER_MUL : 1; // 상극: 약점 속성에 추가 피해
+  const ctr = counters(en, atk) ? COUNTER_MUL : 1; // 상극: 약점 속성에 추가 피해
   en.hp -= dmg * ctr * sizeDmgMul(en) * (en.armorMul || 1); en.flash = ctr > 1 ? 0.16 : 0.1; en.squash = 0.22;
   if (ctr > 1 && !sec) {
-    const t = performance.now();
-    if (!en._ctrT || t - en._ctrT > 380) { en._ctrT = t; D.fx.add(en.x, en.y - en.r - 4, '상극!', { color: ATK[D.atkElem].col, size: 12, font: 'Jua' }); D.parts.burst(en.x, en.y, ATK[D.atkElem].col, 5, { spread: 0.8, life: 0.3 }); }
+    const t = performance.now(), col = (ATK[atk] || ATK.blunt).col;
+    if (!en._ctrT || t - en._ctrT > 380) { en._ctrT = t; D.fx.add(en.x, en.y - en.r - 4, '상극!', { color: col, size: 12, font: 'Jua' }); D.parts.burst(en.x, en.y, col, 5, { spread: 0.8, life: 0.3 }); }
   }
   D.parts.burst(en.x, en.y, '#fff', 4, { spread: 0.5, life: 0.25 });
   if (!sec) {
     if (SP('fire')) { en.burnDps = Math.max(en.burnDps, stat.dmg() * SP('fire') / 100); en.burn = Math.max(en.burn, 3); }
     if (SP('frost')) { en.slowMul = 1 - Math.min(0.6, SP('frost') / 100); en.slowT = 1.5; }
+    if (SP('splash') && en.hp > 0) { // 폭발탄 — 명중 지점 주변 광역 피해
+      const rad = 44 + SP('splash') * 0.5, fr = SP('splash') / 100;
+      for (const o of D.enemies) { if (o === en) continue; if ((o.x - en.x) ** 2 + (o.y - en.y) ** 2 <= rad * rad) hitEnemy(o, dmg * fr, { frag: true, atk }); }
+      D.rings.push({ x: en.x, y: en.y, r: 6, max: rad, t: 0.3 });
+      D.parts.burst(en.x, en.y, '#ffb24d', 6, { spread: 1, life: 0.3 });
+    }
     if (SP('splitp') && en.hp > 0) {
       const others = D.enemies.filter((o) => o !== en);
       for (let i = 0; i < SP('splitp'); i++) {
@@ -674,7 +722,7 @@ function update(dt) {
     D.sideCd -= dt;
     if (D.sideCd <= 0 && D.enemies.length) {
       const tg = pickTargets(1);
-      fireFrom(20, D.H - 40, tg); if (D.lv.sideTurret >= 2) fireFrom(D.W - 20, D.H - 40, tg);
+      fireFrom(20, D.H - 40, tg, turretElemOf(0)); if (D.lv.sideTurret >= 2) fireFrom(D.W - 20, D.H - 40, tg, turretElemOf(1));
       D.sideCd = 1 / (stat.rate() * 0.7);
     }
   }
@@ -800,7 +848,7 @@ function update(dt) {
     for (const en of D.enemies) {
       if (s.hit.has(en)) continue;
       if ((s.x - en.x) ** 2 + (s.y - en.y) ** 2 <= (en.r + (s.r || BALANCE.weapon.projR)) ** 2) {
-        s.hit.add(en); hitEnemy(en, s.dmg, { frag: s.frag });
+        s.hit.add(en); hitEnemy(en, s.dmg, { frag: s.frag, atk: s.atk });
         if (s.hit.size > s.pierce) { D.shots.splice(i, 1); break; }
       }
     }
@@ -1049,17 +1097,26 @@ function drawFridge(c, f) {
     if (D.muzzle > 0) { c.globalAlpha = clamp(D.muzzle / 0.08, 0, 1); c.fillStyle = 'rgba(255,240,150,0.95)'; c.beginPath(); c.arc(0, -bl, 7, 0, 6.28); c.fill(); c.globalAlpha = 1; }
     c.restore();
   }
-  // 보조 포탑 — 좌/우에 물리적으로 등장 (해금/레벨 가시화)
+  // 보조 포탑 — 좌/우에 물리적으로 등장 + 각자의 속성 배지(터치로 전환)
   for (let t = 0; t < (D.lv.sideTurret || 0); t++) {
     const sx = t % 2 === 0 ? 22 : D.W - 22, sy = D.H - 40 - Math.floor(t / 2) * 22;
+    const ta = ATK[turretElemOf(t % 2)] || ATK.blunt;
     c.save(); c.translate(sx, sy);
     c.fillStyle = '#5a6f9c'; rr(c, -9, -6, 18, 14, 4); c.fill();
-    c.fillStyle = tierCol; c.rotate(D.aimAng + Math.PI / 2); rr(c, -3, -16, 6, 16, 3); c.fill();
+    c.save(); c.rotate(D.aimAng + Math.PI / 2); c.fillStyle = ta.col; rr(c, -3, -16, 6, 16, 3); c.fill(); c.restore();
+    c.font = '11px serif'; c.textAlign = 'center'; c.fillText(ta.icon, 0, -14);
     c.restore();
   }
   // 냉장고 바디 — 시안 픽셀 스프라이트(내장 카와이 얼굴) + 성에 글로우 / 위험 경고 / 강화 펄스
   const ps = 1 + (D.upPulse || 0) * 0.4;
   drawSprite(c, fridgeSprite().base, f.x, f.y + 6, 80, { sx: ps, sy: ps, glow: D.upPulse > 0.05 ? 'rgba(94,240,176,0.9)' : (low ? 'rgba(255,77,106,0.8)' : 'rgba(115,203,255,0.6)'), glowR: low || D.upPulse > 0.05 ? 18 : 14 });
+  // 공격 속성 배지 — 냉장고에 표시(터치하면 전환). 위험 텍스트와 겹치지 않게 위쪽에.
+  const ae = ATK[D.atkElem] || ATK.blunt;
+  c.save(); c.textAlign = 'center';
+  c.fillStyle = 'rgba(10,6,18,0.55)'; rr(c, f.x - 26, f.y - 34, 52, 20, 10); c.fill();
+  c.font = '13px serif'; c.fillText(ae.icon, f.x - 9, f.y - 20);
+  c.fillStyle = ae.col; c.font = "9px 'Press Start 2P', Jua, monospace"; c.fillText('전환', f.x + 9, f.y - 21);
+  c.restore();
 }
 
 function drawHud(c, W, H) {

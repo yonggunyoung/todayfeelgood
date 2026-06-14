@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="광클대전">
+  <defs><clipPath id="r"><rect width="512" height="512" rx="112"/></clipPath></defs>
+  <g clip-path="url(#r)">
+    <rect width="512" height="512" fill="#1d2330"/>
+    <!-- 두 진영 분할 (대각선) -->
+    <polygon points="0,0 300,0 212,512 0,512" fill="#12b39a"/>
+    <polygon points="300,0 512,0 512,512 212,512" fill="#7b6ef0"/>
+    <polygon points="290,0 202,512 232,512 320,0" fill="#1d2330" opacity="0.16"/>
+    <!-- 번개 (그림자 + 본체) -->
+    <path d="M306,94 L178,298 L252,298 L220,430 L350,212 L272,212 Z" fill="#000" opacity="0.18" transform="translate(0,7)"/>
+    <path d="M300,88 L172,292 L246,292 L214,424 L344,206 L266,206 Z" fill="#ffffff"/>
+  </g>
+</svg>

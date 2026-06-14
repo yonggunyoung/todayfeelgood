@@ -10,7 +10,7 @@ import { earn, spend, refund, EARN, earnedToday, SHOP, adFreeNow, gameBest } fro
 import { initGames, openGames, GAMES, gameFresh, gameVoice, gameVoicePass, gameDouble } from './games.js';
 import { gameDefense, defBuy } from './game-defense.js';
 import { gamePuzzle } from './game-puzzle.js';
-import { gameQuiz, quizPick, quizNext, quizReveal } from './game-quiz.js';
+import { gameQuiz, quizPick, quizNext, quizReveal, quizRevealAll, quizFinish } from './game-quiz.js';
 import { tossRewardedAd } from './toss.js';
 
 let tab = 'home';
@@ -708,7 +708,7 @@ UI.openRecharge = (retry) => {
 /* 광고 재생 코어 — 모든 보상형(AI 충전·게임 2배)이 이 한 곳을 거친다.
    토스 안: 네이티브 보상형 SDK 시도 → 개별 운영/실패: 하우스 15초 (AdFit 교체 자리) */
 let adTimer = null;
-function playAd({ onComplete, note = '' }) {
+function playAd({ onComplete, note = '', reward = '' }) {
   tossRewardedAd().then((r) => {
     if (r === true) { // 토스 보상형 완주 — 바로 보상 단계
       openSheet('<h2>📺 광고</h2><button id="ad-btn" class="btn btn-block btn-soft" disabled>보상 적용 중…</button>', { lock: true });
@@ -716,40 +716,50 @@ function playAd({ onComplete, note = '' }) {
       return;
     }
     if (r === false) { toast('광고를 끝까지 봐야 보상을 받아요'); return; }
-    houseAd({ onComplete, note }); // null = 토스 환경 아님/광고 없음 → 폴백
+    houseAd({ onComplete, note, reward }); // null = 토스 환경 아님/광고 없음 → 폴백
   });
 }
-function houseAd({ onComplete, note }) {
+function houseAd({ onComplete, note, reward }) {
   clearInterval(adTimer);
   const total = 15;
+  const R = 28, CIRC = 2 * Math.PI * R;
   // 잠금 시트: 바깥 탭으로 안 닫힘 — 완주해야 보상 (보상형 광고 표준 동작)
   openSheet(`
-    <div class="row" style="justify-content:space-between;align-items:center">
-      <h2 style="margin:0">📺 광고</h2>
-      <small style="color:var(--label-3);cursor:pointer" onclick="UI.adQuit()">✕ 건너뛰기 (보상 없음)</small>
-    </div>
-    ${note ? `<p class="sub">${note}</p>` : ''}
-    <div class="card" style="text-align:center;padding:26px 16px;margin-top:10px" id="ad-stage">
-      <div style="font-size:2.4rem">🧊✨</div>
-      <b style="display:block;margin-top:6px">냉비서 프리미엄이 곧 나와요</b>
-      <p class="hint">AI 무제한 · 살아 움직이는 재료 캐릭터팩 · 광고 없음</p>
-    </div>
-    <div class="ad-progress"><i id="ad-bar"></i></div>
-    <button id="ad-btn" class="btn btn-block btn-soft" disabled>광고 시청 중… ${total}초</button>`, { lock: true });
-  const bar = $('#ad-bar');
-  if (bar) { bar.style.transitionDuration = total + 's'; requestAnimationFrame(() => { bar.style.width = '100%'; }); }
+    <div class="adx">
+      <div class="adx-head"><b>📺 잠깐 광고 보고 받기</b>
+        <button class="adx-skip" onclick="UI.adQuit()">건너뛰기 ›</button></div>
+      ${reward ? `<div class="adx-reward">🎁 ${reward}</div>` : ''}
+      <div class="adx-stage">
+        <div class="adx-slime">🧊</div>
+        <b>냉비서 프리미엄이 곧 나와요</b>
+        <p>AI 무제한 · 살아 움직이는 캐릭터팩 · 광고 없음</p>
+      </div>
+      <div class="adx-ring">
+        <svg width="64" height="64"><circle cx="32" cy="32" r="${R}" fill="none" stroke="rgba(120,120,128,0.18)" stroke-width="6"/>
+          <circle id="ad-ring" cx="32" cy="32" r="${R}" fill="none" stroke="var(--green)" stroke-width="6" stroke-linecap="round"
+            stroke-dasharray="${CIRC.toFixed(1)}" stroke-dashoffset="0" style="transition:stroke-dashoffset ${total}s linear"/></svg>
+        <span class="adx-num" id="ad-num">${total}</span>
+      </div>
+      ${note ? `<p class="adx-note">${note}</p>` : ''}
+      <p class="adx-thanks">이 광고가 냉비서를 무료로 유지해요 — 봐주셔서 고마워요 🙏</p>
+      <button id="ad-btn" class="btn btn-block btn-soft" disabled style="margin-top:10px">광고 시청 중…</button>
+    </div>`, { lock: true });
+  const ring = $('#ad-ring');
+  if (ring) requestAnimationFrame(() => { ring.style.strokeDashoffset = String(CIRC); });
   let t = total;
   adTimer = setInterval(() => {
     const b = $('#ad-btn');
     if (!b) { clearInterval(adTimer); return; } // 시트가 닫혔으면(뒤로가기 등) 보상 없음
     t--;
-    if (t > 0) { b.textContent = `광고 시청 중… ${t}초`; return; }
+    const num = $('#ad-num'); if (num) num.textContent = Math.max(0, t);
+    if (t > 0) return;
     clearInterval(adTimer);
     onComplete(b);
   }, 1000);
 }
 UI.watchAd = () => {
   playAd({
+    reward: 'AI 1회 충전 + 보너스 포인트',
     note: '끝까지 보면 AI 1회가 충전되고 하던 작업이 이어져요',
     onComplete: async (b) => {
       b.textContent = '충전 중…';
@@ -876,6 +886,8 @@ UI.gameQuiz = () => gameQuiz();
 UI.quizPick = (i) => quizPick(i);
 UI.quizNext = () => quizNext();
 UI.quizReveal = () => quizReveal();
+UI.quizRevealAll = () => quizRevealAll();
+UI.quizFinish = () => quizFinish();
 
 /* ── 🏆 랭킹 — 같은 냉장고(가족) vs 전체, 게임별 ── */
 let ranksScope = 'global';
@@ -1133,7 +1145,7 @@ UI.openRecipe = (rid) => {
         return `<span class="chip ${miss ? 'miss' : 'have'}" ${miss ? `onclick="UI.addShopping('${esc(g.n)}')"` : ''}>${miss ? '＋ ' : '✓ '}${esc(g.n)} <b class="amt" data-b="${g.a || 0}" data-u="${esc(g.u || '')}">${g.a ? fmtAmt(g.a) + (g.u || '') : ''}</b></span>`;
       }).join('')}
     </div>
-    ${r.steps?.length ? `<div class="section-title"><h2>만드는 법</h2><small style="cursor:pointer" onclick="UI.quickTimer()">⏲ 타이머</small></div>
+    ${r.steps?.length ? `<div class="section-title"><h2>만드는 법</h2><small class="timer-quick" onclick="UI.recipeTimer(${r.time || 10})">⏲ ${r.time || 10}분 타이머 시작</small></div>
     <div class="card flat" style="padding:6px 15px"><ul class="steps">${r.steps.map((st) => {
       const pm = passiveMin(st);
       return `<li>${esc(st)}${pm ? `<button class="step-wait" onclick="UI.waitGame(${pm})">⏳ ${pm}분 — 타이머·게임</button>` : ''}</li>`;
@@ -1322,10 +1334,15 @@ UI.timerPlus = () => {
   ktTimer = setTimeout(timerDone, Math.max(0, ktEnd - Date.now()));
   toast('⏲ +1분');
 };
+// 원클릭: 레시피 시간으로 즉시 시작, 떠있는 칩이 이미 있으면 시간 변경 시트
+UI.recipeTimer = (min) => {
+  if ($('#timer-chip')) { UI.quickTimer(); return; }
+  startKitchenTimer(min);
+};
 UI.quickTimer = () => {
   openSheet(`
     <h2>⏲ 타이머</h2>
-    <p class="sub">손 놓고 끓이는 시간, 알려드릴게요</p>
+    <p class="sub">탭 한 번이면 시작 — 손 놓고 끓이는 시간 알려드릴게요</p>
     <div class="g-grid" style="grid-template-columns:repeat(3,1fr)">
       ${[1, 3, 5, 10, 15, 20].map((m) => `<button class="btn btn-soft" onclick="UI.closeSheet();startTimer(${m})">${m}분</button>`).join('')}
     </div>`);
@@ -1352,6 +1369,7 @@ UI.waitGame = (min) => {
 };
 UI.waitAd = () => {
   playAd({
+    reward: '포인트 적립',
     note: '광고를 끝까지 보면 포인트를 드려요',
     onComplete: (btn) => {
       const r = earn('ad');

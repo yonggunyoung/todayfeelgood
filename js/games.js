@@ -104,6 +104,7 @@ export function finishGame(game, title, score, scoreLabel, replayFn, { extra = '
 }
 export function gameDouble(p) {
   ui.playAd({
+    reward: `포인트 2배 (+${p}P)`,
     note: '광고를 끝까지 보면 이번 판 보상이 2배가 돼요',
     onComplete: (btn) => {
       bonus(p, '미니게임 광고 2배');

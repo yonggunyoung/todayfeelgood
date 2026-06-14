@@ -168,12 +168,18 @@ export function gomokuHintAd() {
 
 function render() {
   const c = G.ctx, cell = G.cell, W = G.W;
-  c.fillStyle = '#1a0f2b'; c.fillRect(0, 0, W, W);
+  // 밝은 아이스 냉장고 내부(시안: 다른 게임과 달리 라이트 보드)
+  const bg = c.createLinearGradient(0, 0, 0, W);
+  bg.addColorStop(0, '#dcefff'); bg.addColorStop(0.55, '#b6d6f5'); bg.addColorStop(1, '#9cc4ec');
+  c.fillStyle = bg; c.fillRect(0, 0, W, W);
+  // 가로 선반 라인(냉장고 칸)
+  c.fillStyle = 'rgba(111,159,206,0.18)';
+  for (let yy = cell * 1.5; yy < W; yy += cell * 3) c.fillRect(0, yy, W, 2);
   // 격자
-  c.strokeStyle = 'rgba(159,178,214,0.25)'; c.lineWidth = 1;
+  c.strokeStyle = 'rgba(95,130,170,0.5)'; c.lineWidth = 1;
   for (let i = 0; i < N; i++) { const p = i * cell + cell / 2; c.beginPath(); c.moveTo(cell / 2, p); c.lineTo(W - cell / 2, p); c.moveTo(p, cell / 2); c.lineTo(p, W - cell / 2); c.stroke(); }
   // 힌트
-  if (G.hint) { c.fillStyle = 'rgba(94,240,176,0.3)'; c.fillRect(G.hint.x * cell + 2, G.hint.y * cell + 2, cell - 4, cell - 4); }
+  if (G.hint) { c.fillStyle = 'rgba(47,140,90,0.32)'; c.fillRect(G.hint.x * cell + 2, G.hint.y * cell + 2, cell - 4, cell - 4); }
   // 알
   const me = mascotSprite('happy').base, ai = enemySprite('grunt', '').base;
   for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {

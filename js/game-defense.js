@@ -8,7 +8,7 @@ import { enemySprite, fridgeSprite, itemSprite, drawSprite } from './pixel.js';
 // ── 밸런스: 100+ 웨이브용 완만한 곡선. 초반은 아주 너그럽게(잘 안 죽음), 후반은 업그레이드로 따라잡기. ──
 const BALANCE = {
   enemy: {
-    baseHP: 7, hpGrow: 1.107, speedBase: 16, speedGrow: 1.015, speedCap: 48,
+    baseHP: 7, hpGrow: 1.12, speedBase: 16, speedGrow: 1.015, speedCap: 48,
     countBase: 4, countGrow: 1.28, countCap: 40,
     // dmg=냉장고에 닿을 때 깎는 신선도 (작게 — 누적 실수만 위험). from=등장 시작 웨이브.
     // elem=속성(상극 시스템): mold곰팡이 / bug벌레 / frozen냉동 / waste음식물 / bone뼈
@@ -25,10 +25,10 @@ const BALANCE = {
       brute:  { hpx: 13,   spx: 0.36, dmg: 11, r: 30, from: 30, w: 0.3, elem: 'waste',  name: '거대 폐기물' },
     },
   },
-  economy: { scorePerHP: 0.27 },
+  economy: { scorePerHP: 0.22 },
   weapon: { dmg: 4, fireRate: 1.5, fireRateMax: 7, projSpeed: 500, projR: 8 },
   // boss=10웨이브 대형보스, mid=5웨이브 중간보스(스킬은 짧은 광고로 획득)
-  boss: { every: 10, hpMult: 17, dmg: 18, reward: 90, midEvery: 5, midHpMult: 6, midDmg: 10, midReward: 45 },
+  boss: { every: 10, hpMult: 19, dmg: 18, reward: 70, midEvery: 5, midHpMult: 6.5, midDmg: 10, midReward: 35 },
   up: {
     damage: { base: 18, ratio: 1.18, add: 3, name: '데미지', icon: '⚔️', unit: '발당' }, // max 없음(무한)
     fireRate: { base: 24, ratio: 1.2, add: 0.18, name: '연사속도', icon: '🔥', unit: '/초' }, // 상한 fireRateMax
@@ -43,10 +43,10 @@ const BALANCE = {
     bomb:    { base: 180, ratio: 1.8, add: 1, max: 5, unlock: 200, name: '서리 폭탄', icon: '💣', unit: 'Lv' },
     orbital: { base: 200, ratio: 1.75, add: 1, max: 5, unlock: 240, name: '얼음 위성', icon: '💫', unit: '개' },
     laser:   { base: 240, ratio: 1.8, add: 1, max: 5, unlock: 290, name: '관통 레이저', icon: '⚡', unit: 'Lv' },
-    projspd: { base: 40, ratio: 1.45, add: 0.14, max: 8, name: '발사체 속도', icon: '🚀', unit: 'x' }, // 빨리 내려오는 몹 대응
-    regen: { base: 100, ratio: 1.7, add: 0.5, name: '신선도 회복', icon: '❤️', unit: '/초' },
+    projspd: { base: 40, ratio: 1.45, add: 0.12, max: 6, name: '발사체 속도', icon: '🚀', unit: 'x' }, // 발사체 속도 상한(이펙트 과부하 방지)
+    regen: { base: 100, ratio: 1.75, add: 0.5, max: 5, name: '신선도 회복', icon: '❤️', unit: '/초' }, // 재생 레벨 제한
     maxHp: { base: 80, ratio: 1.6, add: 25, name: '단열 강화', icon: '🧊', unit: '최대' },
-    boost: { base: 120, ratio: 1.65, add: 0.16, name: '코인 부스트', icon: '🪙', unit: '+' },
+    boost: { base: 130, ratio: 1.75, add: 0.1, max: 6, name: '코인 부스트', icon: '🪙', unit: '+' }, // 코인 부스트 상승률↓·레벨 제한
   },
 };
 const UP_ORDER = ['damage', 'fireRate', 'projspd', 'multiShot', 'pierce', 'crit', 'chain', 'wall', 'homing', 'orbital', 'laser', 'bomb', 'frostAura', 'sideTurret', 'regen', 'maxHp', 'boost'];
@@ -82,7 +82,7 @@ const ATK = {
   frost: { icon: '❄️', name: '냉기', col: '#73cbff', beats: ['bug', 'waste'] },
 };
 const ATK_ORDER = ['blunt', 'fire', 'frost'];
-const COUNTER_MUL = 1.7;
+const COUNTER_MUL = 2.2; // 상극 데미지 강화
 const counters = (en, atk) => { const a = atk || D.atkElem; return !!(en.elem && a && ATK[a] && ATK[a].beats.includes(en.elem)); };
 // 크기별 받는 피해 격차 — 작을수록 더 받고(>1), 클수록(맷집형) 덜 받음(<1)
 const SIZE_BASE = 18;
@@ -184,13 +184,14 @@ export function gameDefense() {
 
   D = {
     ctx, canvas, W: cssW, H: cssH, diff: DIFF.normal, speed: 1, spec: {}, atkElem: 'blunt', turretElem: [], special: { charges: 1 },
-    enemies: [], shots: [], coinsFly: [], parts: new Particles(320), fx: new Floaters(), shake: new Shake(),
+    enemies: [], shots: [], coinsFly: [], parts: new Particles(240), fx: new Floaters(48), shake: new Shake(),
     lv: { damage: 0, fireRate: 0, projspd: 0, multiShot: 0, pierce: 0, crit: 0, chain: 0, wall: 0, homing: 0, orbital: 0, laser: 0, bomb: 0, sideTurret: 0, frostAura: 0, regen: 0, maxHp: 0, boost: 0 },
     walls: [], wallUsed: 0, placingWall: false,
     coins: 0, score: 0, kills: 0, bossesKilled: 0, midKilled: 0, revived: false, pendingMidAd: false,
     wave: 0, toSpawn: 0, spawnGap: 1, since: 0,
     hp: 100, maxHp: 100,
     fireCd: 0, sideCd: 0, homingCd: 0, laserCd: 0, bombCd: 0, orbAng: 0, beams: [], rings: [], chains: [],
+    powerCut: false, plug: null, powerCd: 0, // 보스전 정전 이벤트
     aimAng: -Math.PI / 2, muzzle: 0,
     banner: '', bannerT: 0, hitStop: 0, vign: 0, flash: 0, bossIntro: 0, coinDisp: 0, upText: '', upT: 0, upPulse: 0, fridge: { blink: 1 },
     last: 0, raf: 0, running: false, over: false, shopT: 0,
@@ -200,6 +201,7 @@ export function gameDefense() {
     if (!D) return;
     const r = canvas.getBoundingClientRect();
     const x = e.clientX - r.left, y = e.clientY - r.top;
+    if (D.powerCut && D.plug && Math.hypot(x - D.plug.x, y - D.plug.y) < 44) { restorePower(); return; } // 정전 중엔 콘센트 우선
     if (D.placingWall) { placeWall(x, clamp(y, 90, D.H - 70)); return; }
     if (!D.running) return;
     for (let t = 0; t < (D.lv.sideTurret || 0); t++) {
@@ -251,6 +253,18 @@ function cycleTurretElem(side) {
   const a = ATK[D.turretElem[side]];
   beep(500 + i * 80, 0.05, 'triangle', 0.08);
   D.fx.add(side === 0 ? 28 : D.W - 28, D.H - 46, `${a.icon} ${a.name}`, { color: a.col, size: 14, font: 'Jua' });
+}
+// 보스전 정전 — 냉장고 전원 50% 다운, 콘센트(🔌)를 찾아 탭하면 복구
+function startPowerCut() {
+  D.powerCut = true; D.powerCd = 999;
+  D.plug = { x: 40 + Math.random() * (D.W - 80), y: 84 + Math.random() * Math.max(60, D.H * 0.45), t: 0 };
+  D.banner = '⚡ 정전! 콘센트(🔌)를 탭!'; D.bannerT = 1.8;
+  D.shake.add(9, 0.45); D.vign = 1; chord([180, 130, 90], 0.2, 'sawtooth'); buzz([40, 30, 40]);
+}
+function restorePower() {
+  D.powerCut = false; D.plug = null; D.powerCd = rnd(13, 19);
+  D.flash = 0.6; D.shake.add(4, 0.2); chord([523, 659, 880, 1047]); buzz(20);
+  D.fx.add(D.W / 2, D.H * 0.4, '⚡ 전원 복구!', { color: '#ffe04a', size: 18, font: 'Jua' });
 }
 const wallAvail = () => (D ? D.lv.wall * BALANCE.up.wall.add - D.wallUsed : 0);
 function placeWall(x, y) {
@@ -348,7 +362,7 @@ const cost = (k) => Math.floor(BALANCE.up[k].base * Math.pow(BALANCE.up[k].ratio
 const maxed = (k) => BALANCE.up[k].max != null && D.lv[k] >= BALANCE.up[k].max;
 const locked = (k) => BALANCE.up[k].unlock != null && D.score < BALANCE.up[k].unlock && D.lv[k] === 0;
 const stat = {
-  dmg: () => (BALANCE.weapon.dmg + D.lv.damage * BALANCE.up.damage.add) * (1 + (SP('power') + SP('bigshot') + SP('glass') + SP('gamble') + SP('overdrive')) / 100),
+  dmg: () => (BALANCE.weapon.dmg + D.lv.damage * BALANCE.up.damage.add) * (1 + (SP('power') + SP('bigshot') + SP('glass') + SP('gamble') + SP('overdrive')) / 100) * (D.powerCut ? 0.5 : 1),
   rate: () => Math.min(BALANCE.weapon.fireRateMax, (BALANCE.weapon.fireRate + D.lv.fireRate * BALANCE.up.fireRate.add) * (1 + (SP('overload') + SP('rush') + SP('overdrive') * 0.5) / 100)),
   multi: () => 1 + D.lv.multiShot + SP('volley'),
   pierce: () => D.lv.pierce + SP('pierceUp'),
@@ -379,6 +393,7 @@ function nextWave() {
   const boss = w % B.every === 0;
   const mid = !boss && w % B.midEvery === 0;
   D.bossWave = boss; D.midWave = mid; D._bossSpawned = false; D._midSpawned = false;
+  if (boss || mid) { D.powerCd = 9; D.powerCut = false; D.plug = null; } // 보스전 정전 타이머 준비
   D.horror = w >= 50;
   if (D.horror && !D.moldSpots) seedMold();
   const cnt = Math.min(e.countCap, Math.round((e.countBase + w * e.countGrow) * D.diff.count * (D.horror ? 1.12 : 1)));
@@ -737,6 +752,12 @@ function update(dt) {
   if (D.toSpawn > 0) { D.since += dt; if (D.since >= D.spawnGap) { D.since = 0; spawnOne(); D.toSpawn -= 1; } }
   else if (D.enemies.length === 0) nextWave();
 
+  // 보스전 정전 이벤트 — 보스/중간보스가 있을 때 간헐 발생, 콘센트 탭 전까지 전원 50%
+  const bossPresent = D.enemies.some((e) => e.boss || e.midboss);
+  if (bossPresent) { if (!D.powerCut) { D.powerCd -= dt; if (D.powerCd <= 0) startPowerCut(); } }
+  else if (D.powerCut || D.plug) { D.powerCut = false; D.plug = null; } // 보스 없으면 자동 복구
+  if (D.plug) D.plug.t += dt;
+
   // 메인 발사
   D.fireCd -= dt;
   if (D.fireCd <= 0 && D.enemies.length) {
@@ -868,7 +889,7 @@ function update(dt) {
         s.vy += (Math.sin(ang) * sp - s.vy) * Math.min(1, dt * 6);
       }
     }
-    s.trail.push(s.x, s.y); if (s.trail.length > 8) s.trail.splice(0, 2); // 모션 트레일
+    s.trail.push(s.x, s.y); if (s.trail.length > 6) s.trail.splice(0, 2); // 모션 트레일(짧게 — 이펙트 부하↓)
     s.x += s.vx * dt; s.y += s.vy * dt;
     if (s.x < -20 || s.x > D.W + 20 || s.y < -20 || s.y > D.H + 20) { D.shots.splice(i, 1); continue; }
     for (const en of D.enemies) {
@@ -879,8 +900,8 @@ function update(dt) {
       }
     }
   }
-  // 발사체 상한 — 후반 누적 메모리 방지(가장 오래된 것부터 제거)
-  if (D.shots.length > 260) D.shots.splice(0, D.shots.length - 260);
+  // 발사체 상한 — 후반 이펙트 누적으로 느려지지 않게(가장 오래된 것부터 제거)
+  if (D.shots.length > 170) D.shots.splice(0, D.shots.length - 170);
   // 코인 흡수
   for (let i = D.coinsFly.length - 1; i >= 0; i--) {
     const c = D.coinsFly[i]; c.t += dt * 2.2;
@@ -1007,12 +1028,12 @@ function render(dt) {
   // 발사체 — 속성/티어별 형태(불꽃·얼음·스파크·중탄)
   const PK = { fire: ['#ffd24a', '#ff7a3d'], frost: ['#e8faff', '#73cbff'], spark: ['#ffffff', '#bdffe4'], heavy: ['#fff0b0', '#ffb24d'], arrow: ['#d2adf0', '#a172d4'], basic: ['#bdffe4', '#5ef0b0'] };
   const ATKC = { blunt: ['#fff0b0', '#ffd24a'], fire: ['#ffd24a', '#ff7a3d'], frost: ['#e8faff', '#73cbff'] };
+  const drawTrails = D.shots.length < 80; // 발사체가 많으면 트레일 생략(이펙트 과부하 방지)
   for (const s of D.shots) {
     const [core, glow] = s.crit ? ['#fff', '#ffb24d'] : (ATKC[s.atk] || PK[s.kind] || PK.basic);
     const rr0 = (s.r || BALANCE.weapon.projR) * (s.crit ? 1.3 : 1);
     // 트레일
-    c.strokeStyle = glow; c.globalAlpha = 0.3; c.lineWidth = rr0 * 1.2; c.lineCap = 'round';
-    if (s.trail.length >= 4) { c.beginPath(); c.moveTo(s.trail[0], s.trail[1]); for (let k = 2; k < s.trail.length; k += 2) c.lineTo(s.trail[k], s.trail[k + 1]); c.lineTo(s.x, s.y); c.stroke(); }
+    if (drawTrails && s.trail.length >= 4) { c.strokeStyle = glow; c.globalAlpha = 0.3; c.lineWidth = rr0 * 1.2; c.lineCap = 'round'; c.beginPath(); c.moveTo(s.trail[0], s.trail[1]); for (let k = 2; k < s.trail.length; k += 2) c.lineTo(s.trail[k], s.trail[k + 1]); c.lineTo(s.x, s.y); c.stroke(); }
     c.globalAlpha = 1; c.shadowColor = glow; c.shadowBlur = 10;
     c.save(); c.translate(s.x, s.y); c.rotate((s.ang || 0) + Math.PI / 2); c.fillStyle = core;
     if (s.kind === 'frost') { // 얼음 마름모
@@ -1069,6 +1090,18 @@ function render(dt) {
     drawSprite(c, coin, cn.x + (tx - cn.x) * t, cn.y + (ty - cn.y) * t, 16);
   }
   D.fx.draw(c);
+  // 정전 — 화면 어두워지고 점멸하는 콘센트(🔌)를 탭하면 복구
+  if (D.powerCut) {
+    c.save(); c.globalAlpha = 0.2 + Math.abs(Math.sin(performance.now() / 110)) * 0.16; c.fillStyle = '#05030a'; c.fillRect(0, 0, W, H); c.restore();
+    c.fillStyle = '#ffe04a'; c.textAlign = 'center'; c.font = "10px 'Press Start 2P', Jua, monospace";
+    c.fillText('⚡ 전원 50% — 콘센트를 꽂아요', W / 2, 96);
+    if (D.plug) {
+      const p = D.plug, k = 0.55 + Math.sin(p.t * 8) * 0.4;
+      c.save(); c.globalAlpha = clamp(k, 0, 1); c.strokeStyle = '#ffe04a'; c.lineWidth = 3; c.shadowColor = '#ffe04a'; c.shadowBlur = 14;
+      c.beginPath(); c.arc(p.x, p.y, 22 + Math.sin(p.t * 6) * 5, 0, 6.28); c.stroke(); c.shadowBlur = 0;
+      c.globalAlpha = 1; c.font = '28px serif'; c.textBaseline = 'middle'; c.fillText('🔌', p.x, p.y); c.textBaseline = 'alphabetic'; c.restore();
+    }
+  }
   drawHud(c, W, H);
   // 위험 비네트
   if (D.hp <= D.maxHp * 0.3 || D.vign > 0.04) {

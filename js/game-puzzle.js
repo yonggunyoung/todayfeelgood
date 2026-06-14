@@ -152,7 +152,10 @@ export function gamePuzzle() {
     c.clearRect(0, 0, P.W, P.H);
     c.save();
     if (P.shakeT > 0) { P.shakeT -= 1 / 60; const a = P.shakeA * Math.max(0, P.shakeT) * 3; c.translate((Math.random() - 0.5) * a, (Math.random() - 0.5) * a); }
-    c.fillStyle = '#1a0f2b'; c.fillRect(-20, -20, P.W + 40, P.H + 40);
+    // 따뜻한 주방 톤(시안: 매치3 라이트 필드)
+    const bg = c.createLinearGradient(0, 0, 0, P.H);
+    bg.addColorStop(0, '#ffe7c2'); bg.addColorStop(0.5, '#ffd49a'); bg.addColorStop(1, '#ffc074');
+    c.fillStyle = bg; c.fillRect(-20, -20, P.W + 40, P.H + 40);
     // 스왑 이동 오프셋(부드럽게 — easeInOut)
     let sox = {}, soy = {};
     if (P.swap) {

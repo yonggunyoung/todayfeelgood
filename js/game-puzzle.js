@@ -178,16 +178,16 @@ export function gamePuzzle() {
       const sc = P.pop[idx] > 0 ? P.pop[idx] : 1;
       const pad = cell * 0.08 + (1 - sc) * cell * 0.4;
       const a = P.pop[idx] > 0 ? P.pop[idx] : 1;
-      // 타일 배경 — 선택 시 노랑, 평소엔 타일색 12%(시안)
-      c.globalAlpha = a * (idx === P.sel ? 1 : 0.16);
+      // 타일 배경 — 선택 시 노랑, 평소엔 타일색 12%(시안). 시각 피로 줄이려 은은하게.
+      c.globalAlpha = a * (idx === P.sel ? 1 : 0.12);
       c.fillStyle = idx === P.sel ? '#ffe9a8' : k.col;
       roundRect(c, x + pad, y + pad, cell - pad * 2, cell - pad * 2, cell * 0.24); c.fill();
       c.globalAlpha = a;
       if (idx === P.sel) { c.strokeStyle = '#ff8a3d'; c.lineWidth = 3; c.stroke(); }
-      // 식자재 슬라임 스프라이트
-      drawSprite(c, veggieSprite(k.key).base, x + cell / 2, y + cell / 2, cell * 0.82 * sc);
-      // 형태 마크(좌상단) — 색맹 대응 이중 인코딩
-      drawMark(c, k.mark, x + cell * 0.22, y + cell * 0.22, cell * 0.1, k.sh);
+      // 식자재 슬라임 스프라이트 (시안: 색 + 볼터치만)
+      drawSprite(c, veggieSprite(k.key).base, x + cell / 2, y + cell / 2, cell * 0.8 * sc);
+      // 형태 마크(좌상단, 작게) — 색맹 대응 이중 인코딩
+      drawMark(c, k.mark, x + cell * 0.2, y + cell * 0.2, cell * 0.085, k.sh, a);
     }
     c.globalAlpha = 1; c.textBaseline = 'alphabetic';
     c.restore();
@@ -197,21 +197,16 @@ export function gamePuzzle() {
     c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r);
     c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath();
   }
-  // 형태 마크 — 색에 더해 모양으로도 종류 구분(색맹 대응). 흰 테두리로 슬라임 위에서도 또렷.
-  function drawMark(c, type, cx, cy, s, col) {
-    c.save(); c.lineJoin = 'round';
-    const shape = () => {
-      c.beginPath();
-      if (type === 'circle') c.arc(cx, cy, s, 0, 6.28);
-      else if (type === 'dot') c.arc(cx, cy, s * 0.6, 0, 6.28);
-      else if (type === 'square') { c.rect(cx - s, cy - s, s * 2, s * 2); }
-      else if (type === 'diamond') { c.moveTo(cx, cy - s); c.lineTo(cx + s, cy); c.lineTo(cx, cy + s); c.lineTo(cx - s, cy); c.closePath(); }
-      else if (type === 'triangle') { c.moveTo(cx, cy - s); c.lineTo(cx + s, cy + s); c.lineTo(cx - s, cy + s); c.closePath(); }
-      else if (type === 'cloud') { [[-s * 0.6, s * 0.1], [s * 0.6, s * 0.1], [0, -s * 0.45]].forEach(([dx, dy]) => { c.moveTo(cx + dx + s * 0.6, cy + dy); c.arc(cx + dx, cy + dy, s * 0.6, 0, 6.28); }); }
-    };
-    shape(); c.strokeStyle = 'rgba(255,255,255,0.95)'; c.lineWidth = 2.4; c.stroke();
-    shape(); c.fillStyle = col; c.fill();
-    c.restore();
+  // 형태 마크 — 시안의 코너 8px 마크(솔리드, opacity .9). 모양으로 종류 구분(색맹 대응).
+  function drawMark(c, type, cx, cy, s, col, a) {
+    c.save(); c.globalAlpha = a * 0.9; c.fillStyle = col; c.beginPath();
+    if (type === 'circle') c.arc(cx, cy, s, 0, 6.28);
+    else if (type === 'dot') c.arc(cx, cy, s * 0.62, 0, 6.28);
+    else if (type === 'square') c.rect(cx - s, cy - s, s * 2, s * 2);
+    else if (type === 'diamond') { c.moveTo(cx, cy - s); c.lineTo(cx + s, cy); c.lineTo(cx, cy + s); c.lineTo(cx - s, cy); c.closePath(); }
+    else if (type === 'triangle') { c.moveTo(cx, cy - s); c.lineTo(cx + s, cy + s); c.lineTo(cx - s, cy + s); c.closePath(); }
+    else if (type === 'cloud') { [[-s * 0.55, s * 0.1], [s * 0.55, s * 0.1], [0, -s * 0.4]].forEach(([dx, dy]) => { c.moveTo(cx + dx + s * 0.6, cy + dy); c.arc(cx + dx, cy + dy, s * 0.6, 0, 6.28); }); }
+    c.fill(); c.restore();
   }
   function offerPuzzleTime() {
     cancelAnimationFrame(P.raf);

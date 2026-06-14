@@ -13,7 +13,7 @@ export const C = {
   ice: '#73cbff', iceH: '#c8edff', iceS: '#2f7fd6',
   red: '#ff4d6a', dark: '#1c0f2b',
   steel: '#9fb2d6', steelH: '#d2dff5', steelS: '#5a6f9c',
-  blush: '#ff7d9c', leaf: '#3fa34d', leafH: '#6fd07a', // 볼터치 + 잎/꼭지 토퍼(식자재 개성)
+  blush: 'rgba(255,86,128,0.55)', // 볼터치(시안 cheeks 색)
 };
 export const PAL = {
   mascot: { body: C.mint, hi: C.mintH, sh: C.mintS, out: C.out },
@@ -85,24 +85,10 @@ export function slime(N, pal, expr, extra, opts = {}) {
   if (extra) extra(g, N, cx, mask);
   return g;
 }
-// 볼터치 — 눈 아래 양 볼
+// 볼터치 — 눈 아래 양 볼 (시안 cheeks: rgba(255,86,128,0.55) 2픽셀)
 function blushOn(g, N, cx, mask, col) {
-  const by = Math.round(N * 0.56), dx = Math.round(N * 0.27), big = N > 16;
-  [Math.round(cx - dx), Math.round(cx + dx)].forEach((x0) => {
-    for (let yy = by; yy <= by + (big ? 1 : 0); yy++) for (let xx = x0; xx <= x0 + (big ? 1 : 0); xx++) { if (mask[yy] && mask[yy][xx]) g[yy][xx] = col; }
-  });
-}
-// ── 식자재 토퍼(꼭지/잎) — 슬라임 윗변 위에 그린다 ──
-const topSet = (g, N, x, y, c) => { x = Math.round(x); y = Math.round(y); if (x >= 0 && y >= 0 && x < N && y < N) g[y][x] = c; };
-function stemTop(g, N, cx) { topSet(g, N, cx, 0, C.leaf); topSet(g, N, cx, 1, C.leaf); topSet(g, N, cx - 1, 1, C.leafH); }
-function leafTop(g, N, cx) { topSet(g, N, cx, 1, C.leaf); topSet(g, N, cx + 1, 0, C.leafH); topSet(g, N, cx + 1, 1, C.leaf); }
-function leavesTop(g, N, cx) { [[-2, 2], [-1, 1], [0, 0], [1, 1], [2, 2]].forEach(([dx, dy]) => topSet(g, N, cx + dx, dy, dy < 1 ? C.leafH : C.leaf)); }
-function bumpsTop(g, N, cx) {
-  for (let x = Math.round(cx - N * 0.30); x <= Math.round(cx + N * 0.30); x++) {
-    if (x < 0 || x >= N) continue;
-    let ty = -1; for (let y = 0; y < N; y++) { if (g[y][x] != null) { ty = y; break; } }
-    if (ty > 0) { topSet(g, N, x, ty - 1, ((x & 1) ? C.leafH : C.leaf)); if ((x & 1) === 0 && ty > 1) topSet(g, N, x, ty - 2, C.leaf); }
-  }
+  const by = Math.round(N * 0.60), dx = Math.round(N * 0.29);
+  [Math.round(cx - dx), Math.round(cx + dx)].forEach((x0) => { if (mask[by] && mask[by][x0]) g[by][x0] = col; });
 }
 
 /* ── 냉장고(거점) — 픽셀 + 카와이 얼굴 (시안 포팅·간소화) ── */
@@ -184,18 +170,18 @@ export function enemySprite(type, expr) {
   });
 }
 export function mascotSprite(expr = 'happy') { return cached(`m:${expr}`, () => ({ base: bakeGrid(slime(20, PAL.mascot, expr, null, { blush: true })), n: 20 })); }
-// 식자재 슬라임 — 매치3 6종(색 + 꼭지/잎 토퍼 + 볼터치). 색맹 대응 형태마크는 게임에서 코너에 표기.
+// 식자재 슬라임 — 매치3 6종. 시안 그대로 색 + 볼터치(cheeks)만. 종류 구분은 색 + 코너 형태마크(게임).
 const vp = (body, hi, sh) => ({ body, hi, sh, out: C.out });
 const VEG = {
-  tomato:    { pal: vp('#ff5a4d', '#ff8a7d', '#c2371f'), top: stemTop },
-  lemon:     { pal: vp('#ffd24a', '#ffe48a', '#c99a16'), top: leafTop },
-  broccoli:  { pal: vp('#56c66a', '#8fe09f', '#2c7d3c'), top: bumpsTop },
-  eggplant:  { pal: vp('#9b6bff', '#c4a6ff', '#5e3bb0'), top: stemTop },
-  blueberry: { pal: vp('#5b8def', '#9ab8f7', '#2f57a8'), top: leafTop },
-  carrot:    { pal: vp('#ff8a3d', '#ffb27a', '#c45e16'), top: leavesTop },
+  tomato: vp('#ff5a4d', '#ff9b91', '#c2371f'),
+  lemon: vp('#ffd24a', '#ffe9a3', '#c99a16'),
+  broccoli: vp('#56c66a', '#9be8a8', '#2c7d3c'),
+  eggplant: vp('#9b6bff', '#c9aeff', '#5e3bb0'),
+  blueberry: vp('#5b8def', '#a6c4ff', '#2f57a8'),
+  carrot: vp('#ff8a3d', '#ffbb86', '#c45e16'),
 };
 export function veggieSprite(key) {
-  return cached(`v:${key}`, () => { const d = VEG[key] || VEG.tomato; return { base: bakeGrid(slime(18, d.pal, 'happy', d.top, { blush: true })), white: bakeGrid(slime(18, d.pal, 'happy', d.top, { blush: true }), C.white), n: 18 }; });
+  return cached(`v:${key}`, () => { const pal = VEG[key] || VEG.tomato; return { base: bakeGrid(slime(14, pal, 'happy', null, { blush: true })), n: 14 }; });
 }
 export function fridgeSprite() { return cached('fridge', () => { const g = fridgeGrid(); return { base: bakeGrid(g), white: bakeGrid(g, C.white), w: g[0].length, h: g.length }; }); }
 export function itemSprite(key) { return cached(`i:${key}`, () => { const cv = bakeGrid(mapGrid(ROWS[key], ITEM_PAL[key])); return { base: cv, w: cv.width, h: cv.height }; }); }

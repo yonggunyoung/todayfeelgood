@@ -888,3 +888,138 @@ a { color: var(--blue); text-decoration: none; }
   border-radius: 12px; padding: 11px 6px; font-size: 0.82rem; cursor: pointer;
 }
 .home-games button:active { transform: scale(0.97); }
+
+/* ─────────────────────────────────────────────
+   ⚡ 광클대전 (faction battle) — 편 갈라 광클하는 진영전
+   ───────────────────────────────────────────── */
+
+/* 홈 밈 카드 */
+.fb-home {
+  margin-top: 14px; padding: 14px 15px; border-radius: var(--r-lg); cursor: pointer;
+  background: linear-gradient(135deg, #1d2330, #2b2138 55%, #3a2030);
+  color: #fff; box-shadow: var(--shadow-card); position: relative; overflow: hidden;
+}
+.fb-home:active { transform: scale(0.99); }
+.fb-home::after {
+  content: ''; position: absolute; top: -40%; right: -10%; width: 160px; height: 200px;
+  background: radial-gradient(circle, rgba(255,255,255,0.12), transparent 70%); pointer-events: none;
+}
+.fb-home-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.fb-home-kicker { font-weight: 900; font-size: 0.82rem; letter-spacing: 0.02em; }
+.fb-home-live { font-size: 0.72rem; font-weight: 800; color: #ff6b6b; }
+.fb-home-mine { font-size: 0.74rem; font-weight: 800; }
+.fb-home-q { font-size: 1.18rem; font-weight: 900; margin: 7px 0 9px; }
+.fb-home-vs { display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; font-weight: 800; }
+.fb-home-vs b { font-size: 0.92rem; color: #fff; opacity: 0.92; }
+.fb-home-cta { margin-top: 9px; font-size: 0.78rem; font-weight: 800; color: #ffd45e; }
+
+/* 게이지 (공용) */
+.fb-gauge { position: relative; height: 16px; border-radius: 99px; overflow: hidden; }
+.fb-gauge i { display: block; height: 100%; box-shadow: 2px 0 0 rgba(255,255,255,0.85); }
+.fb-gauge.home { height: 9px; margin-top: 9px; }
+.fb-gauge.home i { transition: width 0.5s cubic-bezier(0.3, 0.9, 0.3, 1); }
+.fb-gauge.intro { height: 18px; margin-top: 6px; }
+.fb-gauge.live { height: 20px; }
+.fb-glabels { display: flex; justify-content: space-between; align-items: center; margin-top: 6px; font-size: 0.82rem; font-weight: 800; }
+.fb-livetag { font-size: 0.66rem; font-weight: 800; color: var(--label-3); letter-spacing: 0.03em; }
+
+/* 인트로 — 오늘의 매치업 */
+.fb-wrap { padding-bottom: 4px; }
+.fb-q { text-align: center; font-size: 1.45rem; font-weight: 900; margin: 4px 0 14px; }
+.fb-vs { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; margin-bottom: 14px; }
+.fb-team {
+  text-align: center; padding: 14px 8px; border-radius: 16px;
+  background: var(--card); border: 2px solid var(--hairline); transition: all 0.18s;
+}
+.fb-team.on { border-color: var(--c); box-shadow: 0 6px 18px color-mix(in srgb, var(--c) 28%, transparent); }
+.fb-team .fb-emo { font-size: 2.6rem; display: block; }
+.fb-team b { display: block; margin-top: 4px; color: var(--c); font-size: 1.02rem; }
+.fb-team small { display: block; margin-top: 3px; color: var(--label-2); font-size: 0.72rem; line-height: 1.35; }
+.fb-vsmark { font-weight: 900; color: var(--label-3); font-size: 1.05rem; }
+.fb-streak {
+  text-align: center; margin: 12px 0 2px; padding: 9px; border-radius: 12px;
+  background: var(--orange-bg); color: #b35a12; font-weight: 800; font-size: 0.82rem;
+}
+.fb-pick { display: grid; gap: 10px; margin-top: 16px; }
+.fb-pickbtn {
+  position: relative; overflow: hidden; border: none; border-radius: 16px; color: #fff;
+  font-weight: 900; font-size: 1.05rem; padding: 17px 12px; cursor: pointer;
+  box-shadow: 0 8px 20px rgba(20, 24, 33, 0.18);
+}
+.fb-pickbtn::before {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(180deg, rgba(255,255,255,0.22), rgba(0,0,0,0.06)); pointer-events: none;
+}
+.fb-pickbtn:active { transform: scale(0.98); }
+
+/* 배틀 스테이지 — 60초 광클 */
+.fb-stage { user-select: none; -webkit-user-select: none; touch-action: manipulation; }
+.fb-time {
+  font-variant-numeric: tabular-nums; font-weight: 900; font-size: 1.1rem; color: var(--label);
+  background: rgba(118,118,128,0.12); padding: 2px 10px; border-radius: 99px;
+}
+.fb-ticker {
+  margin: 12px 0; text-align: center; font-weight: 800; font-size: 0.86rem; min-height: 1.3em;
+  color: var(--label); padding: 9px; border-radius: 12px; background: rgba(118,118,128,0.08);
+}
+.fb-ticker.beat { animation: fb-tick 0.4s ease; }
+@keyframes fb-tick { 0% { opacity: 0; transform: translateY(5px); } 100% { opacity: 1; transform: none; } }
+.fb-mid { display: flex; justify-content: space-between; align-items: flex-end; margin: 2px 4px 12px; }
+.fb-count b { font-size: 2.6rem; font-weight: 900; line-height: 1; font-variant-numeric: tabular-nums; color: var(--me); }
+.fb-count span { display: block; font-size: 0.74rem; color: var(--label-2); font-weight: 700; }
+.fb-combo {
+  font-size: 1.35rem; font-weight: 900; color: var(--label-3); font-variant-numeric: tabular-nums; transition: all 0.12s;
+}
+.fb-combo.hot { color: var(--orange); transform: scale(1.18); text-shadow: 0 0 14px rgba(255,138,61,0.5); }
+.fb-tap {
+  position: relative; overflow: hidden; width: 100%; height: 168px; border: none; border-radius: 26px;
+  color: #fff; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  box-shadow: 0 12px 30px rgba(20, 24, 33, 0.22); touch-action: manipulation;
+}
+.fb-tap::before {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(circle at 50% 30%, rgba(255,255,255,0.30), transparent 60%),
+              linear-gradient(180deg, rgba(255,255,255,0.10), rgba(0,0,0,0.12)); pointer-events: none;
+}
+.fb-tap:active { transform: scale(0.97); box-shadow: 0 6px 16px rgba(20, 24, 33, 0.22); }
+.fb-tapemo { font-size: 3rem; line-height: 1; }
+.fb-taplabel { font-size: 1.5rem; font-weight: 900; letter-spacing: 0.06em; }
+.fb-pops { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.fb-pop {
+  position: absolute; transform: translate(-50%, -50%); font-weight: 900; font-size: 1.1rem; color: #fff;
+  text-shadow: 0 2px 6px rgba(0,0,0,0.35); animation: fb-pop-rise 0.56s ease-out forwards;
+}
+.fb-pop.x2 { font-size: 1.45rem; color: #ffe27a; }
+.fb-pop.x3 { font-size: 1.75rem; color: #ff8a3d; }
+@keyframes fb-pop-rise {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.6); }
+  25% { opacity: 1; transform: translate(-50%, -120%) scale(1.1); }
+  100% { opacity: 0; transform: translate(-50%, -240%) scale(1); }
+}
+
+/* 결과 — 자랑 카드 */
+.fb-result { padding-bottom: 2px; }
+.fb-verdict { text-align: center; margin: 0 0 12px; font-size: 1.25rem; font-weight: 900; }
+.fb-verdict.win { color: var(--green); }
+.fb-verdict.lose { color: var(--red); }
+.fb-verdict.tie { color: var(--amber); }
+.fb-card {
+  border-radius: 20px; padding: 16px; color: #fff; position: relative; overflow: hidden;
+  background: linear-gradient(150deg, color-mix(in srgb, var(--c) 88%, #000), color-mix(in srgb, var(--foe) 55%, #1a1a22));
+  box-shadow: var(--shadow-float);
+}
+.fb-card-top { display: flex; align-items: center; gap: 11px; }
+.fb-card-emo { font-size: 2.6rem; }
+.fb-card-top b { font-size: 1.12rem; }
+.fb-card-top small { display: block; opacity: 0.85; font-size: 0.76rem; }
+.fb-card-badge {
+  background: rgba(255,255,255,0.22); padding: 5px 10px; border-radius: 99px;
+  font-weight: 900; font-size: 0.74rem; white-space: nowrap;
+}
+.fb-card-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 14px 0 12px; text-align: center; }
+.fb-card-stats b { font-size: 1.35rem; font-weight: 900; font-variant-numeric: tabular-nums; }
+.fb-card-stats small { display: block; opacity: 0.82; font-size: 0.7rem; margin-top: 1px; }
+.fb-card-gauge { height: 13px; border-radius: 99px; overflow: hidden; }
+.fb-card-gauge i { display: block; height: 100%; box-shadow: 2px 0 0 rgba(255,255,255,0.9); }
+.fb-card-foot { display: flex; justify-content: space-between; align-items: center; margin-top: 9px; font-size: 0.78rem; font-weight: 800; }
+.fb-card-tag { opacity: 0.85; font-size: 0.72rem; }

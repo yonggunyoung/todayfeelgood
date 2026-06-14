@@ -11,6 +11,8 @@ import { initGames, openGames, GAMES, gameFresh, gameVoice, gameVoicePass, gameD
 import { gameDefense } from './game-defense.js';
 import { gamePuzzle } from './game-puzzle.js';
 import { gameQuiz, quizPick, quizNext, quizReveal } from './game-quiz.js';
+import { gameFaction, factionGo, factionShare } from './game-faction.js';
+import { battleOfDay, dailyBias } from './data/battles.js';
 import { tossRewardedAd } from './toss.js';
 
 let tab = 'home';
@@ -198,6 +200,31 @@ function greeting() {
   return '야식의 유혹이 온다면 🌙';
 }
 
+// 오늘의 광클대전 — 홈 상단 밈 카드 (군집 경쟁심리 점화 지점)
+function factionHomeCard() {
+  const date = today();
+  const bt = battleOfDay(date);
+  const base = Math.max(12, Math.min(88, 50 + dailyBias(date, bt)));
+  const picked = (S.faction?.picks || {})[bt.id];
+  const mine = picked ? bt[picked] : null;
+  return `
+    <div class="fb-home" onclick="UI.faction()">
+      <div class="fb-home-head">
+        <span class="fb-home-kicker">⚡ 오늘의 광클대전</span>
+        ${mine ? `<span class="fb-home-mine" style="color:${mine.color}">내 편 ${mine.emoji} ${esc(mine.name)}</span>`
+          : '<span class="fb-home-live">●LIVE 참전 모집 중</span>'}
+      </div>
+      <div class="fb-home-q">${esc(bt.q)}</div>
+      <div class="fb-home-vs">
+        <span style="color:${bt.a.color}">${bt.a.emoji} ${esc(bt.a.name)}</span>
+        <b>${base.toFixed(0)} : ${(100 - base).toFixed(0)}</b>
+        <span style="color:${bt.b.color}">${esc(bt.b.name)} ${bt.b.emoji}</span>
+      </div>
+      <div class="fb-gauge home" style="background:${bt.b.color}"><i style="width:${base}%;background:${bt.a.color}"></i></div>
+      <div class="fb-home-cta">편 고르고 60초 광클 → 전국에서 이겨라 →</div>
+    </div>`;
+}
+
 function renderHome() {
   const mode = getMode(S, S.settings.mode);
   const recos = recommend(S, S.settings.mode).slice(0, 3);
@@ -241,6 +268,7 @@ function renderHome() {
       <button class="btn btn-primary" onclick="UI.openScan()"><b>📷 AI 입고 스캔</b><small>영수증·장본 사진 한 장</small></button>
       <button class="btn" onclick="UI.openQuickAdd()"><b>➕ 빠른 추가</b><small>검색해서 2탭 등록</small></button>
     </div>
+    ${factionHomeCard()}
     ${empty ? `
       <div class="empty" style="margin-top:18px">
         <span class="e-emoji">🧊</span><b>냉장고가 텅… 메아리가 들려요</b>
@@ -875,6 +903,9 @@ UI.gameQuiz = () => gameQuiz();
 UI.quizPick = (i) => quizPick(i);
 UI.quizNext = () => quizNext();
 UI.quizReveal = () => quizReveal();
+UI.faction = () => gameFaction();
+UI.factionGo = (side) => factionGo(side);
+UI.factionShare = () => factionShare();
 
 /* ── 🏆 랭킹 — 같은 냉장고(가족) vs 전체, 게임별 ── */
 let ranksScope = 'global';
@@ -2315,10 +2346,14 @@ initGames({
 }
 
 // 공유 링크로 진입한 경우 (?share=NB1.…)
-const shared = new URLSearchParams(location.search).get('share');
+const _params = new URLSearchParams(location.search);
+const shared = _params.get('share');
 if (shared) {
   history.replaceState(null, '', location.pathname);
   handleShareCode(shared);
+} else if (_params.get('b')) {            // 친구 소환 링크(?b=1) → 바로 오늘의 광클대전
+  history.replaceState(null, '', location.pathname);
+  setTimeout(() => UI.faction(), 600);
 } else if (!S.tutorialDone) {
   setTimeout(() => UI.startTutorial(), 700); // 첫 사용자 가이드
 }

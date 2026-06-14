@@ -23,6 +23,13 @@ const homeView = `
     <button class="btn btn-primary"><b>📷 AI 입고 스캔</b><small>영수증·장본 사진 한 장</small></button>
     <button class="btn"><b>➕ 빠른 추가</b><small>검색해서 2탭 등록</small></button>
   </div>
+  <div class="fb-home">
+    <div class="fb-home-head"><span class="fb-home-kicker">⚡ 오늘의 광클대전</span><span class="fb-home-live">●LIVE 참전 모집 중</span></div>
+    <div class="fb-home-q">민트초코, 너는?</div>
+    <div class="fb-home-vs"><span style="color:#12b39a">🌿 민초단</span><b>53 : 47</b><span style="color:#7b6ef0">반민초파 🚫</span></div>
+    <div class="fb-gauge home" style="background:#7b6ef0"><i style="width:53%;background:#12b39a"></i></div>
+    <div class="fb-home-cta">편 고르고 60초 광클 → 전국에서 이겨라 →</div>
+  </div>
   <div class="section-title"><h2>🔥 먼저 먹어요</h2><small>잔반과 임박 재료</small></div>
   <div class="item danger">
     <span class="emoji t-가공">🍱</span>
@@ -128,6 +135,45 @@ const recipesView = `
     </div>
   </div>`;
 
+/* ── ⑤ 광클대전 — 60초 광클 스테이지 ── */
+const factionBattleView = `
+  <div class="fb-stage" style="--me:#12b39a;--foe:#7b6ef0">
+    <div class="fb-gauge live" style="background:#7b6ef0"><i style="width:57%;background:#12b39a"></i></div>
+    <div class="fb-glabels">
+      <span style="color:#12b39a">🌿 <b>57.0</b>%</span>
+      <span class="fb-time">37</span>
+      <span style="color:#7b6ef0"><b>43.0</b>% 🚫</span></div>
+    <div class="fb-ticker">🔥 🌿 민초단 흐름 장악 57%</div>
+    <div class="fb-mid">
+      <div class="fb-count"><b>1,284</b><span>내 기여</span></div>
+      <div class="fb-combo hot">×2.4</div></div>
+    <button class="fb-tap" style="background:#12b39a"><span class="fb-tapemo">🌿</span><span class="fb-taplabel">TAP!</span></button>
+    <p class="hint" style="text-align:center;margin-top:8px"><b style="color:#12b39a">민초단</b> · 화면 아무 데나 빠르게 탭!</p>
+  </div>`;
+
+/* ── ⑥ 광클대전 — 결과 자랑 카드 ── */
+const factionResultView = `
+  <div class="fb-result">
+    <h2 class="fb-verdict win">우리 편이 전국을 먹었다! 🎉</h2>
+    <div class="fb-card" style="--c:#12b39a;--foe:#7b6ef0">
+      <div class="fb-card-top"><span class="fb-card-emo">🌿</span>
+        <div class="grow"><b>민초단</b><small>민트초코, 너는?</small></div>
+        <span class="fb-card-badge">광클의 신 👑</span></div>
+      <div class="fb-card-stats">
+        <div><b>1,284</b><small>내 기여</small></div>
+        <div><b>×2.4</b><small>최고 콤보</small></div>
+        <div><b>312위</b><small>예상 전국</small></div></div>
+      <div class="fb-card-gauge" style="background:#7b6ef0"><i style="width:57%;background:#12b39a"></i></div>
+      <div class="fb-card-foot"><span>🌿 민초단 57.0%</span><span class="fb-card-tag">#광클대전 #민초대전</span></div>
+    </div>
+    <div class="g-earn" style="text-align:center;margin-top:10px">🅿 +10P 적립</div>
+    <p class="hint" style="text-align:center">🔥 5일 연속 참전 중!</p>
+    <div class="btn-row" style="flex-direction:column;margin-top:6px">
+      <button class="btn btn-accent btn-block">📺 광고 보고 2배 (+10P)</button>
+      <button class="btn btn-primary btn-block">📣 결과 자랑 + 친구 소환</button>
+      <button class="btn btn-block">🔁 한 판 더</button></div>
+  </div>`;
+
 /* ── ④ 모드 만들기 시트 (홈 위 오버레이) ── */
 const modeMakerOverlay = `
   <div class="pv-overlay">
@@ -212,7 +258,9 @@ ${previewCss}
   ${frame('② 냉장고 — 실제 내부 뷰', 'LED 조명 · 유리 선반 · 냉기 모션 · 도어 포켓(소스) · 상냉장 하냉동 · 탭하면 자세히', pantryView, 'pantry')}
   ${frame('③ 레시피', '유튜브 저장 · 🤖 빠른 레시피(영상 안 보고 AI 정리) · 인분 환산 · ❤️ 찜', recipesView, 'recipes')}
   ${frame('④ 나만의 모드 만들기', '추천 기준 직접 설계 · 공유 코드로 친구에게 전달', homeView, 'recipes', modeMakerOverlay)}
-  <div class="pv-foot">유튜브 레시피를 저장하면 영상 실사 썸네일이 카드에 자동으로 붙고, 재료에 내 사진을 찍어 붙이면 선반에 실사로 보입니다.<br>모드·레시피는 공유 코드(NB1.…)로 카톡 등에서 주고받을 수 있어요.</div>
+  ${frame('⑤ ⚡ 광클대전 — 60초 광클', '오늘의 떡밥에 내 편 골라 미친듯이 탭 · 콤보 ×3 · 전국 흐름 게이지 실시간', factionBattleView, 'home')}
+  ${frame('⑥ 광클대전 — 결과 자랑 카드', '칭호·기여·예상 전국 등수 → 스샷/공유로 밈 확산 + 친구 소환(?b=1)', factionResultView, 'home')}
+  <div class="pv-foot">⚡ <b>광클대전</b>은 10대 군집 경쟁심리를 노린 진영전 — 같은 날 전국이 같은 떡밥(민초·부먹·양념…)으로 겨루고, 결과 카드를 단톡방에 자랑하며 친구를 소환합니다.<br>유튜브 레시피를 저장하면 영상 실사 썸네일이 카드에 자동으로 붙고, 모드·레시피는 공유 코드(NB1.…)로 카톡 등에서 주고받을 수 있어요.</div>
 </body></html>`;
 
 fs.writeFileSync(new URL('../preview.html', import.meta.url), html);

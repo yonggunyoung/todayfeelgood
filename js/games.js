@@ -33,6 +33,8 @@ export const buzz = (ms) => navigator.vibrate?.(ms);
 
 /* ── 게임 카탈로그 (허브가 이걸로 그려진다) ── */
 export const GAMES = [
+  { id: 'faction', emoji: '⚡', name: '광클대전', tag: '실시간 진영전',
+    desc: '오늘의 떡밥에 내 편 골라 60초 광클 — 전국이 같이 싸운다', open: 'UI.faction()' },
   { id: 'defense', emoji: '🧊', name: '냉장고 지키기', tag: '디펜스',
     desc: '상한 음식·세균이 냉장고로! 탭으로 막아내는 웨이브 디펜스', open: 'UI.gameDefense()' },
   { id: 'puzzle', emoji: '🍎', name: '재료 매치', tag: '퍼즐',
@@ -73,7 +75,7 @@ export function openGames() {
 }
 
 /* ── 공통: 판 종료 → 점수/기록/포인트/광고 2배/랭킹 제출 ── */
-const PTS_DIV = { fresh: 25, voice: 10, defense: 70, puzzle: 90, quiz: 14 }; // 점수→포인트 환산 (수익성 보정)
+const PTS_DIV = { fresh: 25, voice: 10, defense: 70, puzzle: 90, quiz: 14, faction: 120 }; // 점수→포인트 환산 (수익성 보정)
 export function finishGame(game, title, score, scoreLabel, replayFn, { extra = '' } = {}) {
   stopListen();
   const rec = recordScore(game, score);

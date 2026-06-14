@@ -465,6 +465,572 @@ a { color: var(--blue); text-decoration: none; }
   #shell { border-left: 0.5px solid var(--hairline); border-right: 0.5px solid var(--hairline); }
 }
 
+/* ── 재료 캐릭터 모션 (무료: 임박 재료만 / 프리미엄: 전체 캐릭터팩 예정) ── */
+.f-item { position: relative; }
+.f-item.soon .fi-face { animation: chr-bounce 1.7s ease-in-out infinite; transform-origin: 50% 100%; }
+.f-item.urgent .fi-face { animation: chr-panic 0.55s ease-in-out infinite; transform-origin: 50% 90%; }
+.chr-hand {
+  position: absolute; top: 0; right: 4px; font-size: 0.82rem; z-index: 2;
+  animation: chr-wave 0.9s ease-in-out infinite; transform-origin: 75% 80%;
+  filter: drop-shadow(0 2px 2px rgba(70, 100, 132, 0.3));
+}
+.chr-bubble {
+  position: absolute; top: -19px; left: 50%; transform: translateX(-50%); z-index: 3;
+  background: #fff; border-radius: 9px; padding: 3px 8px;
+  font-size: 0.58rem; font-weight: 800; color: var(--red); white-space: nowrap;
+  box-shadow: 0 3px 10px rgba(20, 24, 33, 0.16);
+  animation: chr-bob 1.4s ease-in-out infinite;
+}
+.chr-bubble::after {
+  content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+  border: 4px solid transparent; border-top-color: #fff;
+}
+@keyframes chr-wave { 0%, 100% { transform: rotate(-4deg); } 50% { transform: rotate(30deg); } }
+@keyframes chr-bounce { 0%, 100% { transform: translateY(0) scaleY(1); } 50% { transform: translateY(-3px) scaleY(1.04); } }
+@keyframes chr-panic { 0%, 100% { transform: rotate(-7deg); } 50% { transform: rotate(7deg) translateY(-2px); } }
+@keyframes chr-bob { 0%, 100% { transform: translateX(-50%) translateY(0); } 50% { transform: translateX(-50%) translateY(-2px); } }
+@media (prefers-reduced-motion: reduce) {
+  .f-item .fi-face { animation: none !important; }
+  .chr-hand, .chr-bubble { display: none; }
+}
+
+/* ── 칸 추가(＋) 타일 ── */
+.f-add {
+  display: grid; place-items: center; min-height: 72px;
+  border: 2px dashed rgba(138, 160, 179, 0.45); border-radius: 14px;
+  color: #8aa0b3; font-size: 1.35rem; font-weight: 800;
+}
+.f-add:active { background: rgba(138, 160, 179, 0.12); }
+.basket .f-add { border-color: rgba(165, 142, 100, 0.4); color: #a58e64; }
+
+/* ── 길게 눌러 이동 모드 ── */
+.move-mode [data-loc] { outline: 3px dashed var(--green); outline-offset: -5px; }
+.move-mode .f-item { opacity: 0.45; }
+.move-mode .f-item.moving {
+  opacity: 1 !important; transform: scale(1.14); z-index: 6;
+  filter: drop-shadow(0 10px 16px rgba(20, 24, 33, 0.3));
+}
+.move-mode .f-add { opacity: 0.25; }
+
+/* ── 미니 캐릭터 v2: 눈 + 검은 선 팔다리 + 눈물 (식품에 붙는 친구들) ── */
+.chr { position: absolute; left: 50%; top: 5px; width: 48px; height: 48px; transform: translateX(-50%); pointer-events: none; z-index: 2; }
+.chr i { position: absolute; background: #20242a; border-radius: 4px; }
+.chr .e { width: 8.5px; height: 9.5px; background: #fff; border: 1.6px solid #20242a; border-radius: 50%; top: 30%; }
+.chr .e::after { content: ''; position: absolute; width: 3.4px; height: 3.4px; background: #20242a; border-radius: 50%; left: 1.7px; top: 2.6px; }
+.chr .e.l { left: 8px; } .chr .e.r { right: 8px; }
+.soon .chr .e::after { animation: chr-blink 3.2s infinite; }
+.chr .arm { width: 14px; height: 2.6px; top: 56%; }
+.chr .arm.l { left: -8px; transform-origin: right center; transform: rotate(40deg); }
+.chr .arm.r { right: -8px; transform-origin: left center; transform: rotate(-40deg); }
+.soon .chr .arm.r { animation: chr-wave2 0.85s ease-in-out infinite; }
+.urgent .chr .arm.l { transform: rotate(75deg); }
+.urgent .chr .arm.r { transform: rotate(-75deg); animation: none; }
+.chr .leg { width: 2.6px; height: 10px; bottom: -8px; }
+.chr .leg.l { left: 15px; } .chr .leg.r { right: 15px; }
+.soon .chr .leg.l { animation: chr-kick 0.85s ease-in-out infinite; transform-origin: top center; }
+.chr .tear { width: 5.5px; height: 8px; background: #5fb9f5; border-radius: 50% 50% 60% 60%; left: 7px; top: 50%; animation: chr-tear 1.15s ease-in infinite; }
+.urgent .chr .e { height: 7px; border-radius: 50% 50% 40% 40%; } /* 슬픈 처진 눈 */
+@keyframes chr-blink { 0%, 93%, 100% { transform: scaleY(1); } 96% { transform: scaleY(0.12); } }
+@keyframes chr-wave2 { 0%, 100% { transform: rotate(-40deg); } 50% { transform: rotate(-85deg); } }
+@keyframes chr-kick { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(18deg); } }
+@keyframes chr-tear { 0% { transform: translateY(0); opacity: 0; } 25% { opacity: 1; } 100% { transform: translateY(11px); opacity: 0; } }
+.f-pocket .chr { display: none; }
+@media (prefers-reduced-motion: reduce) { .chr i { animation: none !important; } .chr .tear { display: none; } }
+
+/* ── 캐릭터 v3 — 팔다리 제거, 눈 디테일 강화 (꿈벅 + 임박 슬픈눈 · 깜빡일 때마다 눈물) ── */
+.f-item.soon .fi-face, .f-item.urgent .fi-face { animation: none; }
+.chr .arm, .chr .leg { display: none; }
+.chr .e {
+  width: 10px; height: 11px; top: 30%; border: 1.7px solid #20242a;
+  animation: chr-blink2 3.1s infinite; transform-origin: center 60%;
+}
+.chr .e.l { left: 7px; } .chr .e.r { right: 7px; }
+.chr .e::after { width: 3.9px; height: 3.9px; left: 2.1px; top: 2.9px; animation: chr-look 6.5s ease-in-out infinite; }
+.urgent .chr .e { height: 9px; border-radius: 48% 48% 62% 62%; }
+.urgent .chr .e.l { animation: chr-blink-sadl 2.1s infinite; }
+.urgent .chr .e.r { animation: chr-blink-sadr 2.1s infinite; }
+.chr .tear {
+  left: 8px; top: 52%; width: 5px; height: 7.5px; opacity: 0;
+  background: #5fb9f5; border-radius: 50% 50% 62% 62%;
+  animation: chr-tear2 2.1s infinite;
+}
+@keyframes chr-blink2 { 0%, 88%, 96%, 100% { transform: scaleY(1); } 92% { transform: scaleY(0.08); } }
+@keyframes chr-blink-sadl { 0%, 86%, 95%, 100% { transform: rotate(10deg) scaleY(1); } 90% { transform: rotate(10deg) scaleY(0.08); } }
+@keyframes chr-blink-sadr { 0%, 86%, 95%, 100% { transform: rotate(-10deg) scaleY(1); } 90% { transform: rotate(-10deg) scaleY(0.08); } }
+@keyframes chr-tear2 { 0%, 88% { opacity: 0; transform: translateY(0); } 91% { opacity: 0.95; } 100% { transform: translateY(13px); opacity: 0; } }
+@keyframes chr-look { 0%, 40%, 100% { transform: translateX(0); } 15% { transform: translateX(1.7px); } 60% { transform: translateX(-1.7px); } }
+
+/* ── 모션 폴리시 v4 — 부드럽고 세련되게 ── */
+.sheet { animation: rise 0.34s cubic-bezier(0.16, 1, 0.3, 1); }
+#modal-root .overlay { animation: fade 0.22s ease; }
+.btn { transition: transform 0.18s cubic-bezier(0.3, 1.4, 0.5, 1), opacity 0.15s, box-shadow 0.2s; }
+.btn:active { transform: scale(0.96); }
+.f-item { transition: transform 0.2s cubic-bezier(0.34, 1.45, 0.64, 1); }
+.item { transition: transform 0.18s cubic-bezier(0.34, 1.45, 0.64, 1), box-shadow 0.2s; }
+.match-bar i { transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1); }
+.toast { animation: toast-in 0.32s cubic-bezier(0.18, 1.1, 0.3, 1); }
+@keyframes toast-in { 0% { transform: translateY(16px); opacity: 0; } 70% { transform: translateY(-2px); opacity: 1; } 100% { transform: translateY(0); } }
+.heart.on { animation: heart-pop 0.38s cubic-bezier(0.3, 1.6, 0.5, 1); }
+@keyframes heart-pop { 0% { transform: scale(0.7); } 55% { transform: scale(1.28); } 100% { transform: scale(1.08); } }
+.seg button { transition: color 0.18s, background 0.22s cubic-bezier(0.2, 0.9, 0.3, 1), box-shadow 0.22s; }
+
+/* 냉기·조명 디테일 — 칸마다 다르게 */
+.f-led { animation: led-breathe 4.6s ease-in-out infinite; }
+@keyframes led-breathe {
+  0%, 100% { box-shadow: 0 2px 16px 3px rgba(150, 205, 255, 0.6); opacity: 1; }
+  50% { box-shadow: 0 2px 11px 2px rgba(150, 205, 255, 0.38); opacity: 0.85; }
+}
+.f-led.dim { opacity: 0.55; box-shadow: 0 2px 9px 1px rgba(170, 215, 255, 0.4); animation-duration: 6s; }
+.mist { animation-duration: 6.8s; filter: blur(6px); }
+@keyframes mist {
+  0% { transform: translate(0, 0) scale(0.6); opacity: 0; }
+  18% { opacity: 0.62; }
+  100% { transform: translate(var(--dx, 14px), 56px) scale(1.9); opacity: 0; }
+}
+.mist.cold {
+  background: radial-gradient(ellipse, rgba(208, 233, 255, 0.95), rgba(208, 233, 255, 0) 70%);
+  width: 60px; animation-duration: 8.2s;
+}
+.frost-spark {
+  position: absolute; color: #b9dcff; font-size: 0.55rem; pointer-events: none;
+  animation: spark 3.4s ease-in-out infinite; opacity: 0; text-shadow: 0 0 6px rgba(185, 220, 255, 0.9);
+}
+@keyframes spark { 0%, 100% { opacity: 0; transform: scale(0.6) rotate(0deg); } 50% { opacity: 0.9; transform: scale(1.15) rotate(40deg); } }
+
+/* 눈물 또르르 v4 — 맺혔다가 천천히 흘러내린다 */
+.urgent .chr .e.l { animation-duration: 3.4s; }
+.urgent .chr .e.r { animation-duration: 3.4s; }
+.chr .tear {
+  animation: chr-tear3 3.4s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  width: 4.6px; height: 6.8px;
+  background: linear-gradient(180deg, #8fcdf8, #57b1f2);
+  box-shadow: 0 1px 2px rgba(87, 177, 242, 0.35);
+}
+@keyframes chr-tear3 {
+  0%, 55% { opacity: 0; transform: translate(0, 0) scale(0.3); }
+  60% { opacity: 0.95; transform: translate(0, 0) scale(0.55); }   /* 눈가에 맺힘 */
+  66% { transform: translate(0, 1px) scale(0.85); }                 /* 그렁그렁 */
+  74% { transform: translate(0.5px, 5px) scale(1); }                /* 또르르… */
+  84% { transform: translate(-0.4px, 9px) scale(0.96); }
+  94% { opacity: 0.85; transform: translate(0.3px, 13px) scale(0.9); }
+  100% { opacity: 0; transform: translate(0, 15px) scale(0.85); }
+}
+@keyframes chr-blink-sadl { 0%, 88%, 96%, 100% { transform: rotate(10deg) scaleY(1); } 92% { transform: rotate(10deg) scaleY(0.07) scaleX(1.12); } }
+@keyframes chr-blink-sadr { 0%, 88%, 96%, 100% { transform: rotate(-10deg) scaleY(1); } 92% { transform: rotate(-10deg) scaleY(0.07) scaleX(1.12); } }
+@keyframes chr-blink2 { 0%, 90%, 97%, 100% { transform: scaleY(1); } 93.5% { transform: scaleY(0.07) scaleX(1.12); } }
+
+/* ── 🎤 음성 컨트롤 · 👩‍🍳 같이 요리 ── */
+#mic-btn.mic-on {
+  background: var(--red); color: #fff;
+  animation: mic-pulse 1.6s ease-in-out infinite;
+}
+@keyframes mic-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 69, 58, 0.45); }
+  50% { box-shadow: 0 0 0 9px rgba(255, 69, 58, 0); }
+}
+.sel-badge {
+  position: absolute; top: 10px; right: 10px; z-index: 3;
+  width: 28px; height: 28px; display: grid; place-items: center;
+  border-radius: 99px; font-weight: 800; font-size: 0.9rem;
+  background: rgba(255, 255, 255, 0.92); color: var(--label-3);
+  box-shadow: 0 2px 8px rgba(20, 24, 33, 0.18); backdrop-filter: blur(4px);
+}
+.sel-badge.on { background: var(--green); color: #fff; }
+.recipe-card.selected { outline: 2.5px solid var(--green); }
+#cookbar {
+  position: fixed; bottom: calc(64px + env(safe-area-inset-bottom)); left: 50%;
+  transform: translateX(-50%); width: min(450px, 92%); z-index: 40;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  background: rgba(23, 24, 28, 0.93); color: #fff; padding: 11px 16px;
+  border-radius: 18px; box-shadow: var(--shadow-float); backdrop-filter: blur(8px);
+  animation: toast-in 0.3s cubic-bezier(0.18, 1.1, 0.3, 1);
+}
+.plan-step {
+  display: flex; gap: 11px; align-items: flex-start;
+  background: var(--card); border-radius: var(--r-md); padding: 11px 13px; margin-bottom: 7px;
+  box-shadow: var(--shadow-card); font-size: 0.88rem; line-height: 1.5;
+  transition: background 0.25s, outline 0.25s;
+}
+.plan-step small { color: var(--label-3); font-weight: 700; font-size: 0.68rem; }
+.plan-step .ps-no {
+  width: 24px; height: 24px; flex-shrink: 0; display: grid; place-items: center;
+  background: rgba(118, 118, 128, 0.1); color: var(--label-2);
+  font-size: 0.74rem; font-weight: 800; border-radius: 99px;
+}
+.plan-step.current { background: var(--green-bg); outline: 2px solid var(--green); }
+.plan-step.current .ps-no { background: var(--green); color: #fff; }
+
+/* 신규 카테고리 틴트 */
+.t-간식, .t-음료 { background: var(--tint-etc); }
+
+/* ── 광고 — 보상형 진행바 + 인앱 슬롯 (프리미엄 미노출) ── */
+.ad-progress { height: 4px; background: var(--hairline); border-radius: 99px; overflow: hidden; margin: 14px 0 10px; }
+.ad-progress i { display: block; height: 100%; width: 0; background: var(--green); border-radius: 99px; transition-property: width; transition-timing-function: linear; }
+.ad-banner {
+  display: flex; align-items: center; gap: 11px; background: var(--card);
+  border: 1px solid var(--hairline); border-radius: 14px; padding: 11px 13px;
+  margin: 16px 0 4px; box-shadow: var(--shadow-card); cursor: pointer;
+}
+.ad-banner .ad-ico { font-size: 1.45rem; }
+.ad-banner b { font-size: 0.86rem; display: block; }
+.ad-banner p { margin: 1px 0 0; font-size: 0.76rem; color: var(--label-2); }
+.ad-banner .ad-tag {
+  margin-left: auto; flex-shrink: 0; font-size: 0.6rem; font-weight: 800;
+  color: var(--label-3); border: 1px solid var(--hairline); border-radius: 5px; padding: 2px 5px;
+}
+
+/* ── 🅿 포인트 ── */
+.points-card { display: flex; align-items: center; gap: 8px; padding: 13px 14px; }
+.points-card .grow { cursor: pointer; }
+.points-card b { font-size: 1.05rem; }
+.points-card small { display: block; color: var(--label-2); font-size: 0.72rem; margin-top: 1px; }
+.p-coin {
+  display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 99px;
+  background: linear-gradient(145deg, #ffd54d, #f5a623); color: #7a4d00; font-weight: 900; font-size: 0.72rem;
+  vertical-align: -5px; margin-right: 2px;
+}
+.p-row { display: flex; align-items: center; gap: 10px; padding: 8px 2px; border-bottom: 1px solid var(--hairline); }
+.p-row:last-child { border-bottom: none; }
+.p-row > span { font-size: 1.2rem; }
+.p-row b { font-size: 0.88rem; display: block; }
+.p-row small { color: var(--label-2); font-size: 0.74rem; }
+.p-row.done { opacity: 0.45; }
+.p-stat { font-size: 0.8rem; color: var(--label-2); }
+.p-plus { color: var(--green); font-size: 0.85rem; }
+.p-minus { color: var(--red); font-size: 0.85rem; }
+
+/* ── 🎮 게임 허브 ── */
+.g-card { display: flex; align-items: center; gap: 12px; cursor: pointer; }
+.g-card .g-ico { font-size: 1.8rem; }
+.g-card .g-best { color: var(--label-2); font-size: 0.72rem; }
+.g-card .g-go { font-size: 1rem; color: var(--green); font-weight: 900; }
+.g-card.g-off { opacity: 0.55; cursor: default; }
+
+/* ── 게임 스테이지 공통 ── */
+.g-stage { user-select: none; -webkit-user-select: none; touch-action: manipulation; }
+.g-hud { display: flex; align-items: center; justify-content: space-between; font-size: 0.9rem; margin-bottom: 6px; }
+.g-hud b { font-size: 1.15rem; }
+.g-combo { color: var(--orange); font-weight: 800; font-size: 0.8rem; min-width: 70px; text-align: right; }
+.g-itembox { text-align: center; margin: 8px 0 2px; }
+.g-itembox span { font-size: 3rem; display: block; animation: g-bob 1.6s ease-in-out infinite; }
+.g-itembox.big span { font-size: 4.2rem; }
+.g-itembox b { font-size: 0.95rem; }
+@keyframes g-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+.g-track {
+  position: relative; height: 46px; border-radius: 14px; overflow: hidden;
+  background: linear-gradient(180deg, #eef1f5, #e3e7ee); border: 1px solid var(--hairline);
+}
+.g-zone {
+  position: absolute; top: 0; bottom: 0; border-radius: 10px;
+  background: rgba(47, 174, 95, 0.32); border: 2px solid var(--green);
+  transition: left 0.18s ease, width 0.18s ease;
+}
+.g-zone i {
+  position: absolute; left: 50%; top: 6px; bottom: 6px; width: 3px; margin-left: -1.5px;
+  background: var(--green); border-radius: 99px; opacity: 0.8;
+}
+.g-marker {
+  position: absolute; top: 3px; bottom: 3px; width: 7px; margin-left: -3.5px; border-radius: 99px;
+  background: #1d2733; box-shadow: 0 0 0 2px #fff, 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+.g-pop {
+  text-align: center; height: 26px; font-weight: 900; font-size: 1rem; color: var(--green);
+  opacity: 0; transform: translateY(6px) scale(0.9); transition: all 0.18s;
+}
+.g-pop.on { opacity: 1; transform: translateY(0) scale(1); }
+.g-pop.perfect { color: var(--orange); font-size: 1.15rem; }
+.g-pop.miss { color: var(--red); }
+.g-shake { animation: g-shake 0.32s; }
+@keyframes g-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-7px); } 50% { transform: translateX(6px); } 75% { transform: translateX(-3px); }
+}
+.g-flash { animation: g-flash 0.22s; }
+@keyframes g-flash { 0% { background: rgba(47, 174, 95, 0.18); } 100% { background: transparent; } }
+.g-hint { text-align: center; font-weight: 800; font-size: 0.95rem; margin: 8px 0 4px; min-height: 22px; }
+.g-heard { text-align: center; color: var(--label-2); font-size: 0.8rem; min-height: 18px; margin-bottom: 8px; }
+.g-score { font-size: 1.9rem; font-weight: 900; }
+.g-newbest { color: var(--orange); font-weight: 900; margin-top: 6px; animation: g-bob 1.2s ease-in-out infinite; }
+.g-earn { margin-top: 8px; font-weight: 800; color: var(--green); }
+
+/* ── ⏲ 타이머 칩 — 짬시간 게임 입구 ── */
+#timer-chip {
+  position: fixed; right: 14px; bottom: 92px; z-index: 58;
+  background: linear-gradient(145deg, #2e3540, #1d2733); color: #fff;
+  border-radius: 99px; padding: 9px 14px; font-size: 0.86rem; font-weight: 800;
+  box-shadow: 0 8px 22px rgba(20, 24, 33, 0.35); cursor: pointer;
+  animation: chip-in 0.4s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+#timer-chip span { font-size: 0.72rem; font-weight: 600; opacity: 0.85; margin-left: 4px; }
+@keyframes chip-in { from { transform: translateY(16px) scale(0.8); opacity: 0; } }
+
+/* ── 포인트 배지 (상단바) ── */
+.pill-point { background: #fff4d6; color: #8a5a00; font-weight: 800; }
+
+/* ── 게임 허브 (그리드) ── */
+.g-hubhead { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.g-grid { display: grid; gap: 10px; margin-top: 6px; }
+.g-card2 {
+  display: flex; align-items: center; gap: 12px; background: var(--card);
+  border: 1px solid var(--hairline); border-radius: 16px; padding: 13px 14px;
+  box-shadow: var(--shadow-card); cursor: pointer; transition: transform 0.12s;
+}
+.g-card2:active { transform: scale(0.98); }
+.g-card2.g-off { opacity: 0.55; }
+.g-ico2 { font-size: 2rem; width: 46px; text-align: center; flex-shrink: 0; }
+.g-titlerow { display: flex; align-items: center; gap: 6px; }
+.g-titlerow b { font-size: 0.98rem; }
+.g-tag { font-size: 0.62rem; font-weight: 800; color: var(--green); background: var(--green-bg); padding: 2px 6px; border-radius: 6px; }
+.g-desc { color: var(--label-2); font-size: 0.8rem; margin: 2px 0; line-height: 1.4; }
+.g-card2 .g-go { font-size: 1.05rem; color: var(--green); font-weight: 900; flex-shrink: 0; }
+
+/* ── 캔버스 게임 무대 ── */
+.dfz-wrap, .pz-wrap { position: relative; display: flex; justify-content: center; margin-top: 6px; }
+.dfz-canvas, .pz-canvas {
+  border-radius: 16px; touch-action: none; background: #cfe8f5;
+  box-shadow: inset 0 2px 10px rgba(20,40,60,0.12), var(--shadow-card); display: block;
+}
+.dfz-start {
+  position: absolute; inset: 0; display: grid; place-items: center; text-align: center;
+  background: rgba(223,241,251,0.92); border-radius: 16px; padding: 18px;
+}
+.dfz-start b { display: block; font-size: 1.15rem; margin: 8px 0 4px; }
+.dfz-start p { color: var(--label-2); font-size: 0.84rem; line-height: 1.5; }
+
+/* ── 상식 퀴즈 ── */
+.qz-prog { height: 6px; background: var(--hairline); border-radius: 99px; overflow: hidden; margin-top: 8px; }
+.qz-prog span { display: block; height: 100%; background: var(--green); border-radius: 99px; transition: width 0.3s; }
+.qz-q { font-size: 1.12rem; font-weight: 800; line-height: 1.45; text-align: center; margin: 10px 4px 14px; }
+.qz-opts { display: grid; gap: 9px; }
+.qz-opt {
+  border: 1.5px solid var(--hairline); background: var(--card); border-radius: 14px;
+  padding: 14px; font-size: 0.98rem; font-weight: 700; color: var(--ink); cursor: pointer; transition: all 0.12s;
+}
+.qz-opt:active { transform: scale(0.98); }
+.qz-opt.right { background: var(--green-bg); border-color: var(--green); color: #1f7a44; }
+.qz-opt.wrong { background: #fde8e6; border-color: var(--red); color: var(--red); }
+
+/* ── 랭킹 ── */
+.rk-chips { display: flex; gap: 6px; overflow-x: auto; padding: 10px 0; -webkit-overflow-scrolling: touch; }
+.rk-chip {
+  flex-shrink: 0; border: 1px solid var(--hairline); background: var(--card); border-radius: 99px;
+  padding: 7px 12px; font-size: 0.78rem; font-weight: 700; color: var(--label-2); cursor: pointer;
+}
+.rk-chip.on { background: var(--ink); color: #fff; border-color: var(--ink); }
+.rk-row { display: flex; align-items: center; gap: 10px; padding: 9px 6px; border-bottom: 1px solid var(--hairline); }
+.rk-row.me { background: var(--green-bg); border-radius: 12px; }
+.rk-rank { width: 30px; text-align: center; font-size: 1.1rem; }
+.rk-num { font-weight: 800; color: var(--label-2); font-size: 0.92rem; }
+.rk-photo { width: 34px; height: 34px; border-radius: 99px; object-fit: cover; }
+.rk-photo.ph { display: grid; place-items: center; background: var(--fill-2, #eef1f5); }
+.rk-row .grow { font-size: 0.92rem; }
+.rk-score { color: var(--green); font-size: 1rem; }
+
+/* ── 타이머 위젯 (확장형) ── */
+#timer-chip {
+  position: fixed; right: 14px; bottom: 92px; z-index: 58;
+  background: linear-gradient(145deg, #2e3540, #1d2733); color: #fff;
+  border-radius: 16px; padding: 10px 14px; box-shadow: 0 8px 22px rgba(20,24,33,0.35);
+  animation: chip-in 0.4s cubic-bezier(0.2,0.9,0.3,1.2); min-width: 132px;
+}
+#timer-chip .tc-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+#timer-chip .tc-time { font-size: 1.05rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+#timer-chip .tc-x { opacity: 0.7; cursor: pointer; font-size: 0.85rem; }
+#timer-chip .tc-game { margin-top: 6px; font-size: 0.72rem; font-weight: 700; background: rgba(255,255,255,0.16); border-radius: 8px; padding: 5px 8px; text-align: center; cursor: pointer; }
+@keyframes chip-in { from { transform: translateY(16px) scale(0.8); opacity: 0; } }
+
+/* 긴 조리 단계의 '대기 시간' 유도 버튼 */
+.step-wait {
+  display: inline-block; margin-left: 8px; vertical-align: middle;
+  background: var(--green-bg); color: #1f7a44; border: none; border-radius: 8px;
+  padding: 3px 8px; font-size: 0.72rem; font-weight: 800; cursor: pointer;
+}
+
+/* ── 유튜브 검색 (리디자인) ── */
+.yt-search {
+  display: flex; align-items: center; gap: 8px; background: var(--card);
+  border: 1.5px solid var(--hairline); border-radius: 14px; padding: 8px 10px 8px 12px;
+}
+.yt-search .yt-ico { color: var(--label-3); }
+.yt-search input { flex: 1; border: none; background: none; font-size: 0.95rem; outline: none; color: var(--ink); }
+.yt-chips { display: flex; gap: 7px; overflow-x: auto; padding: 10px 0; -webkit-overflow-scrolling: touch; }
+.yt-chip {
+  flex-shrink: 0; border: 1px solid var(--hairline); background: var(--card); border-radius: 99px;
+  padding: 7px 12px; font-size: 0.8rem; font-weight: 600; color: var(--label-2); cursor: pointer;
+}
+.yt-chip:active { background: var(--green-bg); }
+
+/* ── 첫 사용자 가이드 (스포트라이트) ── */
+#tut { position: fixed; inset: 0; z-index: 200; }
+#tut-hole {
+  position: fixed; border-radius: 14px; pointer-events: none;
+  box-shadow: 0 0 0 9999px rgba(15, 22, 30, 0.72); transition: all 0.3s cubic-bezier(0.3, 0.8, 0.3, 1);
+}
+#tut-card {
+  position: fixed; left: 50%; transform: translateX(-50%);
+  width: min(360px, calc(100vw - 32px)); background: var(--card); border-radius: 18px;
+  padding: 18px; box-shadow: 0 16px 50px rgba(0, 0, 0, 0.4); text-align: center;
+}
+#tut-card .tut-emoji { font-size: 2rem; }
+#tut-card b { display: block; font-size: 1.1rem; margin: 6px 0 4px; }
+#tut-card p { color: var(--label-2); font-size: 0.88rem; line-height: 1.55; margin: 0 0 10px; }
+.tut-dots { display: flex; justify-content: center; gap: 6px; margin-bottom: 10px; }
+.tut-dots i { width: 7px; height: 7px; border-radius: 99px; background: var(--hairline); }
+.tut-dots i.on { background: var(--green); width: 18px; }
+
+/* ── 홈 통계 행 (절약·포인트 한 줄) + 게임 바 ── */
+.stat-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+.stat-card {
+  background: var(--card); border: 1px solid var(--hairline); border-radius: 14px;
+  padding: 12px 10px; text-align: center; cursor: pointer; box-shadow: var(--shadow-card);
+}
+.stat-card small { display: block; color: var(--label-2); font-size: 0.72rem; margin-bottom: 3px; }
+.stat-card b { font-size: 1.02rem; }
+.stat-card.save b { color: var(--green); }
+.stat-card.waste b { color: var(--red); }
+.stat-card.point b { color: #8a5a00; }
+.home-games { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 10px; }
+.home-games button {
+  border: none; background: var(--green-bg); color: #1f7a44; font-weight: 800;
+  border-radius: 12px; padding: 11px 6px; font-size: 0.82rem; cursor: pointer;
+}
+.home-games button:active { transform: scale(0.97); }
+
+/* ─────────────────────────────────────────────
+   ⚡ 광클대전 (faction battle) — 편 갈라 광클하는 진영전
+   ───────────────────────────────────────────── */
+
+/* 홈 밈 카드 */
+.fb-home {
+  margin-top: 14px; padding: 14px 15px; border-radius: var(--r-lg); cursor: pointer;
+  background: linear-gradient(135deg, #1d2330, #2b2138 55%, #3a2030);
+  color: #fff; box-shadow: var(--shadow-card); position: relative; overflow: hidden;
+}
+.fb-home:active { transform: scale(0.99); }
+.fb-home::after {
+  content: ''; position: absolute; top: -40%; right: -10%; width: 160px; height: 200px;
+  background: radial-gradient(circle, rgba(255,255,255,0.12), transparent 70%); pointer-events: none;
+}
+.fb-home-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.fb-home-kicker { font-weight: 900; font-size: 0.82rem; letter-spacing: 0.02em; }
+.fb-home-live { font-size: 0.72rem; font-weight: 800; color: #ff6b6b; }
+.fb-home-mine { font-size: 0.74rem; font-weight: 800; }
+.fb-home-q { font-size: 1.18rem; font-weight: 900; margin: 7px 0 9px; }
+.fb-home-vs { display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; font-weight: 800; }
+.fb-home-vs b { font-size: 0.92rem; color: #fff; opacity: 0.92; }
+.fb-home-cta { margin-top: 9px; font-size: 0.78rem; font-weight: 800; color: #ffd45e; }
+
+/* 게이지 (공용) */
+.fb-gauge { position: relative; height: 16px; border-radius: 99px; overflow: hidden; }
+.fb-gauge i { display: block; height: 100%; box-shadow: 2px 0 0 rgba(255,255,255,0.85); }
+.fb-gauge.home { height: 9px; margin-top: 9px; }
+.fb-gauge.home i { transition: width 0.5s cubic-bezier(0.3, 0.9, 0.3, 1); }
+.fb-gauge.intro { height: 18px; margin-top: 6px; }
+.fb-gauge.live { height: 20px; }
+.fb-glabels { display: flex; justify-content: space-between; align-items: center; margin-top: 6px; font-size: 0.82rem; font-weight: 800; }
+.fb-livetag { font-size: 0.66rem; font-weight: 800; color: var(--label-3); letter-spacing: 0.03em; }
+
+/* 인트로 — 오늘의 매치업 */
+.fb-wrap { padding-bottom: 4px; }
+.fb-q { text-align: center; font-size: 1.45rem; font-weight: 900; margin: 4px 0 14px; }
+.fb-vs { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; margin-bottom: 14px; }
+.fb-team {
+  text-align: center; padding: 14px 8px; border-radius: 16px;
+  background: var(--card); border: 2px solid var(--hairline); transition: all 0.18s;
+}
+.fb-team.on { border-color: var(--c); box-shadow: 0 6px 18px color-mix(in srgb, var(--c) 28%, transparent); }
+.fb-team .fb-emo { font-size: 2.6rem; display: block; }
+.fb-team b { display: block; margin-top: 4px; color: var(--c); font-size: 1.02rem; }
+.fb-team small { display: block; margin-top: 3px; color: var(--label-2); font-size: 0.72rem; line-height: 1.35; }
+.fb-vsmark { font-weight: 900; color: var(--label-3); font-size: 1.05rem; }
+.fb-streak {
+  text-align: center; margin: 12px 0 2px; padding: 9px; border-radius: 12px;
+  background: var(--orange-bg); color: #b35a12; font-weight: 800; font-size: 0.82rem;
+}
+.fb-pick { display: grid; gap: 10px; margin-top: 16px; }
+.fb-pickbtn {
+  position: relative; overflow: hidden; border: none; border-radius: 16px; color: #fff;
+  font-weight: 900; font-size: 1.05rem; padding: 17px 12px; cursor: pointer;
+  box-shadow: 0 8px 20px rgba(20, 24, 33, 0.18);
+}
+.fb-pickbtn::before {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(180deg, rgba(255,255,255,0.22), rgba(0,0,0,0.06)); pointer-events: none;
+}
+.fb-pickbtn:active { transform: scale(0.98); }
+
+/* 배틀 스테이지 — 60초 광클 */
+.fb-stage { user-select: none; -webkit-user-select: none; touch-action: manipulation; }
+.fb-time {
+  font-variant-numeric: tabular-nums; font-weight: 900; font-size: 1.1rem; color: var(--label);
+  background: rgba(118,118,128,0.12); padding: 2px 10px; border-radius: 99px;
+}
+.fb-ticker {
+  margin: 12px 0; text-align: center; font-weight: 800; font-size: 0.86rem; min-height: 1.3em;
+  color: var(--label); padding: 9px; border-radius: 12px; background: rgba(118,118,128,0.08);
+}
+.fb-ticker.beat { animation: fb-tick 0.4s ease; }
+@keyframes fb-tick { 0% { opacity: 0; transform: translateY(5px); } 100% { opacity: 1; transform: none; } }
+.fb-mid { display: flex; justify-content: space-between; align-items: flex-end; margin: 2px 4px 12px; }
+.fb-count b { font-size: 2.6rem; font-weight: 900; line-height: 1; font-variant-numeric: tabular-nums; color: var(--me); }
+.fb-count span { display: block; font-size: 0.74rem; color: var(--label-2); font-weight: 700; }
+.fb-combo {
+  font-size: 1.35rem; font-weight: 900; color: var(--label-3); font-variant-numeric: tabular-nums; transition: all 0.12s;
+}
+.fb-combo.hot { color: var(--orange); transform: scale(1.18); text-shadow: 0 0 14px rgba(255,138,61,0.5); }
+.fb-tap {
+  position: relative; overflow: hidden; width: 100%; height: 168px; border: none; border-radius: 26px;
+  color: #fff; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  box-shadow: 0 12px 30px rgba(20, 24, 33, 0.22); touch-action: manipulation;
+}
+.fb-tap::before {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(circle at 50% 30%, rgba(255,255,255,0.30), transparent 60%),
+              linear-gradient(180deg, rgba(255,255,255,0.10), rgba(0,0,0,0.12)); pointer-events: none;
+}
+.fb-tap:active { transform: scale(0.97); box-shadow: 0 6px 16px rgba(20, 24, 33, 0.22); }
+.fb-tapemo { font-size: 3rem; line-height: 1; }
+.fb-taplabel { font-size: 1.5rem; font-weight: 900; letter-spacing: 0.06em; }
+.fb-pops { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.fb-pop {
+  position: absolute; transform: translate(-50%, -50%); font-weight: 900; font-size: 1.1rem; color: #fff;
+  text-shadow: 0 2px 6px rgba(0,0,0,0.35); animation: fb-pop-rise 0.56s ease-out forwards;
+}
+.fb-pop.x2 { font-size: 1.45rem; color: #ffe27a; }
+.fb-pop.x3 { font-size: 1.75rem; color: #ff8a3d; }
+@keyframes fb-pop-rise {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.6); }
+  25% { opacity: 1; transform: translate(-50%, -120%) scale(1.1); }
+  100% { opacity: 0; transform: translate(-50%, -240%) scale(1); }
+}
+
+/* 결과 — 자랑 카드 */
+.fb-result { padding-bottom: 2px; }
+.fb-verdict { text-align: center; margin: 0 0 12px; font-size: 1.25rem; font-weight: 900; }
+.fb-verdict.win { color: var(--green); }
+.fb-verdict.lose { color: var(--red); }
+.fb-verdict.tie { color: var(--amber); }
+.fb-card {
+  border-radius: 20px; padding: 16px; color: #fff; position: relative; overflow: hidden;
+  background: linear-gradient(150deg, color-mix(in srgb, var(--c) 88%, #000), color-mix(in srgb, var(--foe) 55%, #1a1a22));
+  box-shadow: var(--shadow-float);
+}
+.fb-card-top { display: flex; align-items: center; gap: 11px; }
+.fb-card-emo { font-size: 2.6rem; }
+.fb-card-top b { font-size: 1.12rem; }
+.fb-card-top small { display: block; opacity: 0.85; font-size: 0.76rem; }
+.fb-card-badge {
+  background: rgba(255,255,255,0.22); padding: 5px 10px; border-radius: 99px;
+  font-weight: 900; font-size: 0.74rem; white-space: nowrap;
+}
+.fb-card-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 14px 0 12px; text-align: center; }
+.fb-card-stats b { font-size: 1.35rem; font-weight: 900; font-variant-numeric: tabular-nums; }
+.fb-card-stats small { display: block; opacity: 0.82; font-size: 0.7rem; margin-top: 1px; }
+.fb-card-gauge { height: 13px; border-radius: 99px; overflow: hidden; }
+.fb-card-gauge i { display: block; height: 100%; box-shadow: 2px 0 0 rgba(255,255,255,0.9); }
+.fb-card-foot { display: flex; justify-content: space-between; align-items: center; margin-top: 9px; font-size: 0.78rem; font-weight: 800; }
+.fb-card-tag { opacity: 0.85; font-size: 0.72rem; }
+
 /* ===== 미리보기 갤러리 전용 레이아웃 ===== */
 
   .pv-body{margin:0;background:#e6e8ee;padding:30px 16px 50px;display:flex;flex-wrap:wrap;gap:32px;justify-content:center;align-items:flex-start;font-family:var(--sans)}
@@ -504,6 +1070,13 @@ a { color: var(--blue); text-decoration: none; }
   <div class="action-strip">
     <button class="btn btn-primary"><b>📷 AI 입고 스캔</b><small>영수증·장본 사진 한 장</small></button>
     <button class="btn"><b>➕ 빠른 추가</b><small>검색해서 2탭 등록</small></button>
+  </div>
+  <div class="fb-home">
+    <div class="fb-home-head"><span class="fb-home-kicker">⚡ 오늘의 광클대전</span><span class="fb-home-live">●LIVE 참전 모집 중</span></div>
+    <div class="fb-home-q">민트초코, 너는?</div>
+    <div class="fb-home-vs"><span style="color:#12b39a">🌿 민초단</span><b>53 : 47</b><span style="color:#7b6ef0">반민초파 🚫</span></div>
+    <div class="fb-gauge home" style="background:#7b6ef0"><i style="width:53%;background:#12b39a"></i></div>
+    <div class="fb-home-cta">편 고르고 60초 광클 → 전국에서 이겨라 →</div>
   </div>
   <div class="section-title"><h2>🔥 먼저 먹어요</h2><small>잔반과 임박 재료</small></div>
   <div class="item danger">
@@ -683,6 +1256,13 @@ a { color: var(--blue); text-decoration: none; }
     <button class="btn btn-primary"><b>📷 AI 입고 스캔</b><small>영수증·장본 사진 한 장</small></button>
     <button class="btn"><b>➕ 빠른 추가</b><small>검색해서 2탭 등록</small></button>
   </div>
+  <div class="fb-home">
+    <div class="fb-home-head"><span class="fb-home-kicker">⚡ 오늘의 광클대전</span><span class="fb-home-live">●LIVE 참전 모집 중</span></div>
+    <div class="fb-home-q">민트초코, 너는?</div>
+    <div class="fb-home-vs"><span style="color:#12b39a">🌿 민초단</span><b>53 : 47</b><span style="color:#7b6ef0">반민초파 🚫</span></div>
+    <div class="fb-gauge home" style="background:#7b6ef0"><i style="width:53%;background:#12b39a"></i></div>
+    <div class="fb-home-cta">편 고르고 60초 광클 → 전국에서 이겨라 →</div>
+  </div>
   <div class="section-title"><h2>🔥 먼저 먹어요</h2><small>잔반과 임박 재료</small></div>
   <div class="item danger">
     <span class="emoji t-가공">🍱</span>
@@ -740,5 +1320,62 @@ a { color: var(--blue); text-decoration: none; }
     </div>
   </div></div>
   </div>
-  <div class="pv-foot">유튜브 레시피를 저장하면 영상 실사 썸네일이 카드에 자동으로 붙고, 재료에 내 사진을 찍어 붙이면 선반에 실사로 보입니다.<br>모드·레시피는 공유 코드(NB1.…)로 카톡 등에서 주고받을 수 있어요.</div>
+  <div class="pv-frame">
+    <div class="pv-cap">⑤ ⚡ 광클대전 — 60초 광클<small>오늘의 떡밥에 내 편 골라 미친듯이 탭 · 콤보 ×3 · 전국 흐름 게이지 실시간</small></div>
+    <div class="pv-phone">
+  <header class="pv-top">
+    <div class="brand"><span class="brand-mark">냉</span>
+      <div class="brand-text"><strong>냉비서</strong><small>6월 10일 수요일</small></div></div>
+    <div class="top-right"><span class="pill pill-on">동기화 ✓</span><span class="pill pill-save">₩31,000</span></div>
+  </header><div class="pv-view">
+  <div class="fb-stage" style="--me:#12b39a;--foe:#7b6ef0">
+    <div class="fb-gauge live" style="background:#7b6ef0"><i style="width:57%;background:#12b39a"></i></div>
+    <div class="fb-glabels">
+      <span style="color:#12b39a">🌿 <b>57.0</b>%</span>
+      <span class="fb-time">37</span>
+      <span style="color:#7b6ef0"><b>43.0</b>% 🚫</span></div>
+    <div class="fb-ticker">🔥 🌿 민초단 흐름 장악 57%</div>
+    <div class="fb-mid">
+      <div class="fb-count"><b>1,284</b><span>내 기여</span></div>
+      <div class="fb-combo hot">×2.4</div></div>
+    <button class="fb-tap" style="background:#12b39a"><span class="fb-tapemo">🌿</span><span class="fb-taplabel">TAP!</span></button>
+    <p class="hint" style="text-align:center;margin-top:8px"><b style="color:#12b39a">민초단</b> · 화면 아무 데나 빠르게 탭!</p>
+  </div></div>
+  <nav class="pv-tab">
+    <button class="active"><span>🏠</span>홈</button><button class=""><span>🧊</span>냉장고</button><button class=""><span>🍳</span>레시피</button><button class=""><span>🧺</span>장보기</button><button class=""><span>⚙️</span>설정</button>
+  </nav></div>
+  </div>
+  <div class="pv-frame">
+    <div class="pv-cap">⑥ 광클대전 — 결과 자랑 카드<small>칭호·기여·예상 전국 등수 → 스샷/공유로 밈 확산 + 친구 소환(?b=1)</small></div>
+    <div class="pv-phone">
+  <header class="pv-top">
+    <div class="brand"><span class="brand-mark">냉</span>
+      <div class="brand-text"><strong>냉비서</strong><small>6월 10일 수요일</small></div></div>
+    <div class="top-right"><span class="pill pill-on">동기화 ✓</span><span class="pill pill-save">₩31,000</span></div>
+  </header><div class="pv-view">
+  <div class="fb-result">
+    <h2 class="fb-verdict win">우리 편이 전국을 먹었다! 🎉</h2>
+    <div class="fb-card" style="--c:#12b39a;--foe:#7b6ef0">
+      <div class="fb-card-top"><span class="fb-card-emo">🌿</span>
+        <div class="grow"><b>민초단</b><small>민트초코, 너는?</small></div>
+        <span class="fb-card-badge">광클의 신 👑</span></div>
+      <div class="fb-card-stats">
+        <div><b>1,284</b><small>내 기여</small></div>
+        <div><b>×2.4</b><small>최고 콤보</small></div>
+        <div><b>312위</b><small>예상 전국</small></div></div>
+      <div class="fb-card-gauge" style="background:#7b6ef0"><i style="width:57%;background:#12b39a"></i></div>
+      <div class="fb-card-foot"><span>🌿 민초단 57.0%</span><span class="fb-card-tag">#광클대전 #민초대전</span></div>
+    </div>
+    <div class="g-earn" style="text-align:center;margin-top:10px">🅿 +10P 적립</div>
+    <p class="hint" style="text-align:center">🔥 5일 연속 참전 중!</p>
+    <div class="btn-row" style="flex-direction:column;margin-top:6px">
+      <button class="btn btn-accent btn-block">📺 광고 보고 2배 (+10P)</button>
+      <button class="btn btn-primary btn-block">📣 결과 자랑 + 친구 소환</button>
+      <button class="btn btn-block">🔁 한 판 더</button></div>
+  </div></div>
+  <nav class="pv-tab">
+    <button class="active"><span>🏠</span>홈</button><button class=""><span>🧊</span>냉장고</button><button class=""><span>🍳</span>레시피</button><button class=""><span>🧺</span>장보기</button><button class=""><span>⚙️</span>설정</button>
+  </nav></div>
+  </div>
+  <div class="pv-foot">⚡ <b>광클대전</b>은 10대 군집 경쟁심리를 노린 진영전 — 같은 날 전국이 같은 떡밥(민초·부먹·양념…)으로 겨루고, 결과 카드를 단톡방에 자랑하며 친구를 소환합니다.<br>유튜브 레시피를 저장하면 영상 실사 썸네일이 카드에 자동으로 붙고, 모드·레시피는 공유 코드(NB1.…)로 카톡 등에서 주고받을 수 있어요.</div>
 </body></html>

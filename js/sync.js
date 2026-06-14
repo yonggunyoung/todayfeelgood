@@ -175,6 +175,28 @@ export async function submitScore(game, score) {
   } catch { /* 랭킹 실패는 게임 흐름을 막지 않는다 */ }
 }
 
+/* ── 광클대전 전국 집계 (선택) — battles/{date}에 진영별 누적 기여를 increment ──
+   FIREBASE_CONFIG가 없으면 둘 다 조용히 비활성 → 게임은 클라 시뮬레이션으로 동작.
+   읽기/쓰기 모두 게임 흐름을 막지 않도록 실패는 삼킨다. */
+export async function readBattle(date) {
+  if (!date || !(await ensureFirebase())) return null;
+  try {
+    const db = fsMod.getFirestore(app);
+    const snap = await fsMod.getDoc(fsMod.doc(db, 'battles', date));
+    return snap.exists() ? { a: Number(snap.data().a) || 0, b: Number(snap.data().b) || 0 } : { a: 0, b: 0 };
+  } catch { return null; }
+}
+export async function bumpBattle(date, side, amount) {
+  const n = Math.round(Number(amount) || 0);
+  if (!date || !n || !['a', 'b'].includes(side) || !(await ensureFirebase())) return false;
+  try {
+    const db = fsMod.getFirestore(app);
+    await fsMod.setDoc(fsMod.doc(db, 'battles', date),
+      { [side]: fsMod.increment(n), ts: Date.now() }, { merge: true });
+    return true;
+  } catch { return false; }
+}
+
 export async function topScores({ scope = 'global', game = 'defense', max = 30 } = {}) {
   if (!(await ensureFirebase())) return { rows: [], state: 'off' };
   const u = auth?.currentUser;

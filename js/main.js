@@ -360,13 +360,7 @@ function fridgeHtml(all) {
       <div class="fridge-inner" data-loc="fridge">
         <div class="f-led"></div>
         <div class="f-vent"><i></i><i></i><i></i><i></i></div>
-        <div class="f-steam">
-          <span class="mist" style="left:10%"></span>
-          <span class="mist" style="left:28%;animation-delay:1.1s;--dx:-14px"></span>
-          <span class="mist" style="left:46%;animation-delay:2.2s;--dx:10px"></span>
-          <span class="mist" style="left:64%;animation-delay:3.0s;--dx:-9px"></span>
-          <span class="mist" style="left:82%;animation-delay:4.1s;--dx:13px"></span>
-        </div>
+        <div class="f-steam"><span class="mist" style="left:38%;animation-delay:1s;--dx:8px"></span></div>
         <div class="f-sec-label" onclick="UI.openLocList('fridge')" style="cursor:pointer"><span>냉장실</span><span>${fr.length ? fr.length + '개 ' : ''}›</span></div>
         ${shelfRows(frMain, 'fridge')}
         ${frFoods.length ? `<div class="f-sec-label" style="padding-top:2px"><span>🍱 반찬·조리음식 칸</span><span>${frFoods.length}개</span></div>${foodRows(frFoods)}` : ''}
@@ -375,12 +369,7 @@ function fridgeHtml(all) {
       <div class="f-divider"></div>
       <div class="fridge-inner freezer" data-loc="freezer">
         <div class="f-led dim"></div>
-        <div class="f-steam">
-          <span class="mist cold" style="left:14%;animation-delay:.4s"></span>
-          <span class="mist cold" style="left:38%;animation-delay:1.9s;--dx:11px"></span>
-          <span class="mist cold" style="left:60%;animation-delay:3.0s;--dx:-12px"></span>
-          <span class="mist cold" style="left:84%;animation-delay:4.4s;--dx:8px"></span>
-        </div>
+        <div class="f-steam"><span class="mist cold" style="left:56%;animation-delay:2.4s;--dx:-8px"></span></div>
         <span class="frost-spark" style="top:18px;left:12%">✦</span>
         <span class="frost-spark" style="top:30px;right:14%;animation-delay:1.4s">✦</span>
         <span class="frost-spark" style="bottom:18px;left:46%;animation-delay:2.3s">✦</span>

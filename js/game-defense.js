@@ -5,36 +5,40 @@ import { gameUI, beep, chord, buzz, finishGame } from './games.js';
 import { blinkTick, Particles, Shake, Floaters, ease, clamp, setupCanvas } from './slime.js';
 import { enemySprite, fridgeSprite, itemSprite, drawSprite } from './pixel.js';
 
+// ── 밸런스: 100+ 웨이브용 완만한 곡선. 초반은 아주 너그럽게(잘 안 죽음), 후반은 업그레이드로 따라잡기. ──
 const BALANCE = {
   enemy: {
-    baseHP: 7, hpGrow: 1.135, countBase: 5, countGrow: 1.7,
-    speedBase: 24, speedGrow: 1.03, speedCap: 64,
+    baseHP: 6, hpGrow: 1.058, speedBase: 15, speedGrow: 1.012, speedCap: 50,
+    countBase: 4, countGrow: 0.9, countCap: 28,
+    // dmg=냉장고에 닿을 때 깎는 신선도 (작게 — 누적 실수만 위험). from=등장 시작 웨이브.
     types: {
-      normal: { hpx: 1.0, spx: 1.0, dmg: 9,  r: 22, color: '#9bd36a', badge: '🍞', name: '곰팡이빵' },
-      fast:   { hpx: 0.55, spx: 1.8, dmg: 6, r: 16, color: '#c58be0', badge: '🦠', name: '세균' },
-      heavy:  { hpx: 2.8, spx: 0.6, dmg: 18, r: 27, color: '#d99a55', badge: '🍗', name: '상한배달' },
+      grunt:  { hpx: 1.0,  spx: 1.0,  dmg: 3, r: 18, from: 1,  w: 1.0,  name: '곰팡이빵' },
+      swarm:  { hpx: 0.4,  spx: 1.7,  dmg: 2, r: 12, from: 3,  w: 0.9, group: 3, name: '세균 떼' },
+      runner: { hpx: 0.7,  spx: 2.2,  dmg: 4, r: 14, from: 6,  w: 0.7,  name: '날쌘 곰팡이' },
+      tank:   { hpx: 3.4,  spx: 0.5,  dmg: 6, r: 24, from: 5,  w: 0.55, name: '상한 배달' },
+      split:  { hpx: 1.7,  spx: 0.85, dmg: 4, r: 18, from: 8,  w: 0.5, split: 2, name: '분열 곰팡이' },
+      shield: { hpx: 5.5,  spx: 0.62, dmg: 5, r: 21, from: 12, w: 0.45, name: '굳은 더께' },
     },
   },
-  economy: { scorePerHP: 0.75 },
-  weapon: { dmg: 4, fireRate: 1.7, projSpeed: 480, projR: 6 },
-  boss: { every: 5, hpMult: 13, dmg: 34, reward: 70 },
+  economy: { scorePerHP: 0.7 },
+  weapon: { dmg: 5, fireRate: 1.6, projSpeed: 470, projR: 6 },
+  boss: { every: 10, hpMult: 16, dmg: 18, reward: 90 },
   up: {
-    damage: { base: 22, ratio: 1.15, add: 3, name: '데미지', icon: '⚔️', unit: '발당' },
-    fireRate: { base: 28, ratio: 1.17, add: 0.2, name: '연사속도', icon: '🔥', unit: '/초' },
-    multiShot: { base: 110, ratio: 1.85, add: 1, max: 5, name: '다중샷', icon: '✳️', unit: '타겟' },
-    pierce: { base: 85, ratio: 1.7, add: 1, max: 4, name: '관통', icon: '➶', unit: '관통' },
-    crit: { base: 65, ratio: 1.4, add: 0.06, max: 0.6, name: '치명타', icon: '💥', unit: '확률' },
-    sideTurret: { base: 190, ratio: 2.0, add: 1, max: 2, unlock: 140, name: '보조 포탑', icon: '🛰️', unit: '문' },
-    frostAura: { base: 150, ratio: 1.8, add: 1, max: 5, unlock: 110, name: '냉기 오라', icon: '❄️', unit: 'Lv' },
-    // ── 창의 스킬(다른 게임 모티브) ──
-    chain:   { base: 130, ratio: 1.7, add: 1, max: 3, unlock: 90,  name: '냉기 전이', icon: '🔗', unit: '연쇄' }, // 체인 라이트닝
-    homing:  { base: 175, ratio: 1.7, add: 1, max: 3, unlock: 170, name: '유도 눈송이', icon: '❇️', unit: 'Lv' }, // 호밍 미사일
-    orbital: { base: 210, ratio: 1.8, add: 1, max: 4, unlock: 200, name: '얼음 위성', icon: '💫', unit: '개' }, // 오비탈(킹 바이블)
-    laser:   { base: 240, ratio: 1.9, add: 1, max: 4, unlock: 240, name: '관통 레이저', icon: '⚡', unit: 'Lv' }, // 빔
-    bomb:    { base: 200, ratio: 1.85, add: 1, max: 4, unlock: 220, name: '서리 폭탄', icon: '💣', unit: 'Lv' }, // 주기 AOE
-    regen: { base: 100, ratio: 1.7, add: 0.6, name: '신선도 회복', icon: '❤️', unit: '/초' },
-    maxHp: { base: 90, ratio: 1.55, add: 25, name: '단열 강화', icon: '🧊', unit: '최대' },
-    boost: { base: 130, ratio: 1.65, add: 0.15, name: '코인 부스트', icon: '🪙', unit: '+' },
+    damage: { base: 14, ratio: 1.14, add: 3, name: '데미지', icon: '⚔️', unit: '발당' },
+    fireRate: { base: 18, ratio: 1.15, add: 0.18, name: '연사속도', icon: '🔥', unit: '/초' },
+    multiShot: { base: 70, ratio: 1.7, add: 1, max: 6, name: '다중샷', icon: '✳️', unit: '타겟' },
+    pierce: { base: 55, ratio: 1.6, add: 1, max: 6, name: '관통', icon: '➶', unit: '관통' },
+    crit: { base: 45, ratio: 1.35, add: 0.06, max: 0.7, name: '치명타', icon: '💥', unit: '확률' },
+    chain:   { base: 60,  ratio: 1.55, add: 1, max: 4, unlock: 40,  name: '냉기 전이', icon: '🔗', unit: '연쇄' },
+    frostAura: { base: 80, ratio: 1.6, add: 1, max: 6, unlock: 60,  name: '냉기 오라', icon: '❄️', unit: 'Lv' },
+    sideTurret: { base: 120, ratio: 1.85, add: 1, max: 2, unlock: 90, name: '보조 포탑', icon: '🛰️', unit: '문' },
+    homing:  { base: 110, ratio: 1.6, add: 1, max: 4, unlock: 110, name: '유도 눈송이', icon: '❇️', unit: 'Lv' },
+    bomb:    { base: 130, ratio: 1.7, add: 1, max: 5, unlock: 140, name: '서리 폭탄', icon: '💣', unit: 'Lv' },
+    orbital: { base: 150, ratio: 1.65, add: 1, max: 5, unlock: 170, name: '얼음 위성', icon: '💫', unit: '개' },
+    laser:   { base: 180, ratio: 1.7, add: 1, max: 5, unlock: 210, name: '관통 레이저', icon: '⚡', unit: 'Lv' },
+    regen: { base: 70, ratio: 1.6, add: 0.5, name: '신선도 회복', icon: '❤️', unit: '/초' },
+    maxHp: { base: 60, ratio: 1.5, add: 25, name: '단열 강화', icon: '🧊', unit: '최대' },
+    boost: { base: 90, ratio: 1.55, add: 0.18, name: '코인 부스트', icon: '🪙', unit: '+' },
   },
 };
 const UP_ORDER = ['damage', 'fireRate', 'multiShot', 'pierce', 'crit', 'chain', 'homing', 'orbital', 'laser', 'bomb', 'frostAura', 'sideTurret', 'regen', 'maxHp', 'boost'];
@@ -105,11 +109,15 @@ const stat = {
 
 function fridgePos() { return { x: D.W / 2, y: D.H - 30 }; }
 
+const waveHP = (w) => BALANCE.enemy.baseHP * Math.pow(BALANCE.enemy.hpGrow, w - 1);
+const waveSpd = (w) => Math.min(BALANCE.enemy.speedCap, BALANCE.enemy.speedBase * Math.pow(BALANCE.enemy.speedGrow, w - 1));
+
 function nextWave() {
   D.wave += 1;
   const boss = D.wave % BALANCE.boss.every === 0;
-  D.toSpawn = boss ? 1 : Math.round(BALANCE.enemy.countBase + D.wave * BALANCE.enemy.countGrow);
-  D.spawnGap = clamp(1.05 - D.wave * 0.035, 0.3, 1.05);
+  const e = BALANCE.enemy;
+  D.toSpawn = boss ? 1 : Math.min(e.countCap, Math.round(e.countBase + D.wave * e.countGrow));
+  D.spawnGap = clamp(1.2 - D.wave * 0.012, 0.45, 1.2); // 완만하게만 빨라짐
   D.banner = boss ? `⚠ 보스 — 곰팡이대왕` : `WAVE ${D.wave}`;
   D.bannerT = 1.7;
   D.bossWave = boss;
@@ -120,24 +128,24 @@ function nextWave() {
 function spawnOne() {
   const w = D.wave;
   if (D.bossWave) {
-    const hp = BALANCE.enemy.baseHP * Math.pow(BALANCE.enemy.hpGrow, w - 1) * BALANCE.boss.hpMult;
-    D.enemies.push(mkEnemy('boss', hp, 46, '#5a8a3c', '👑', 16 + w * 1.5, BALANCE.boss.dmg, true));
+    const hp = waveHP(w) * BALANCE.boss.hpMult;
+    D.enemies.push(mkEnemy('boss', hp, 40, waveSpd(w) * 0.5, BALANCE.boss.dmg, { boss: true }));
     return;
   }
-  // 타입 분포 (웨이브가 오를수록 빠른/무거운 적 비중↑)
-  const r = Math.random();
-  let key = 'normal';
-  if (w >= 3 && r < 0.22) key = 'heavy';
-  else if (w >= 2 && r < 0.55) key = 'fast';
-  const t = BALANCE.enemy.types[key];
-  const hp = BALANCE.enemy.baseHP * Math.pow(BALANCE.enemy.hpGrow, w - 1) * t.hpx;
-  const spd = Math.min(BALANCE.enemy.speedCap, BALANCE.enemy.speedBase * Math.pow(BALANCE.enemy.speedGrow, w - 1)) * t.spx;
-  D.enemies.push(mkEnemy(key, hp, t.r, t.color, t.badge, spd, t.dmg, false));
+  // 등장 가능한 타입을 가중치로 선택 (웨이브가 오를수록 종류 다양↑)
+  const pool = Object.entries(BALANCE.enemy.types).filter(([, t]) => w >= t.from);
+  let total = pool.reduce((s, [, t]) => s + t.w, 0), r = Math.random() * total, key = 'grunt', t = pool[0][1];
+  for (const [k, tt] of pool) { r -= tt.w; if (r <= 0) { key = k; t = tt; break; } }
+  const n = t.group || 1; // 세균 떼는 한 번에 여러 마리
+  for (let i = 0; i < n; i++) {
+    D.enemies.push(mkEnemy(key, waveHP(w) * t.hpx, t.r, waveSpd(w) * t.spx, t.dmg, { split: t.split }));
+    if (n > 1) D.toSpawn = Math.max(0, D.toSpawn); // 그룹은 toSpawn 1칸으로 묶음(이미 차감됨)
+  }
 }
-function mkEnemy(key, hp, r, color, badge, spd, dmg, boss) {
+function mkEnemy(key, hp, r, spd, dmg, opt = {}) {
   return {
-    key, hp, maxhp: hp, r, color, badge, spd, dmg, boss,
-    x: 24 + Math.random() * (D.W - 48), y: -r - 6,
+    key, hp, maxhp: hp, r, spd, dmg, boss: !!opt.boss, split: opt.split || 0, mini: !!opt.mini,
+    x: 22 + Math.random() * (D.W - 44), y: -r - 6,
     ph: Math.random() * 6.28, blinkS: { blink: 1 }, flash: 0, squash: 0,
     age: 0, sporeT: 0, minionT: 1.6,
   };
@@ -181,15 +189,23 @@ function hitEnemy(en, dmg, opt) {
   }
   if (en.hp <= 0) killEnemy(en);
 }
+const PART_COLOR = { grunt: '#a172d4', swarm: '#ff5d9e', runner: '#2fcaa6', tank: '#e0a64b', split: '#2fcaa6', shield: '#9fb2d6', mini: '#2fcaa6', boss: '#cf86ff' };
 function killEnemy(en) {
   const idx = D.enemies.indexOf(en); if (idx < 0) return;
   D.enemies.splice(idx, 1); D.kills += 1;
-  D.parts.burst(en.x, en.y, en.color, en.boss ? 30 : 12, { up: 30, life: 0.5 });
+  D.parts.burst(en.x, en.y, PART_COLOR[en.key] || '#cf86ff', en.boss ? 30 : 12, { up: 30, life: 0.5 });
   const gain = Math.max(1, Math.floor(en.maxhp * BALANCE.economy.scorePerHP * stat.boost())) + (en.boss ? BALANCE.boss.reward : 0);
   D.score += gain;
   D.coinsFly.push({ x: en.x, y: en.y, t: 0, val: gain });
   D.fx.add(en.x, en.y, `+${gain}`, { color: '#ffe04a', size: en.boss ? 24 : 16, font: 'Jua' });
-  if (en.boss) { chord([523, 659, 784, 1047]); D.shake.add(10, 0.4); D.hp = Math.min(D.maxHp, D.hp + 8); }
+  // 분열 곰팡이 → 작은 새끼 2마리
+  if (en.split && !en.mini && D.enemies.length < 40) {
+    for (let i = 0; i < en.split; i++) {
+      const m = mkEnemy('mini', en.maxhp * 0.28, en.r * 0.55, en.spd * 1.3, Math.max(1, Math.round(en.dmg * 0.5)), { mini: true });
+      m.x = en.x + (i ? 14 : -14); m.y = en.y; D.enemies.push(m);
+    }
+  }
+  if (en.boss) { chord([523, 659, 784, 1047]); D.shake.add(10, 0.4); D.hp = Math.min(D.maxHp, D.hp + 12); }
   else beep(900 + Math.random() * 120, 0.05, 'triangle', 0.08);
   buzz(en.boss ? [18, 30, 18] : 5);
 }
@@ -280,11 +296,11 @@ function update(dt) {
     en.ph += dt * 3; en.age += dt; if (en.flash > 0) en.flash -= dt; if (en.squash > 0) en.squash = Math.max(0, en.squash - dt * 1.5);
     blinkTick(en.blinkS, dt);
     // 곰팡이·중장갑·보스는 포자 잔상 (가독성 위해 드물게)
-    if ((en.boss || en.key === 'heavy') && (en.sporeT -= dt) <= 0) { en.sporeT = 0.25; D.parts.burst(en.x + (Math.random() - 0.5) * en.r, en.y, en.boss ? '#7bbf52' : 'rgba(217,154,85,.7)', 1, { spread: 0.3, life: 0.6, grav: -10 }); }
+    if ((en.boss || en.key === 'tank' || en.key === 'split') && (en.sporeT -= dt) <= 0) { en.sporeT = 0.25; D.parts.burst(en.x + (Math.random() - 0.5) * en.r, en.y, en.boss ? '#cf86ff' : 'rgba(47,202,166,.7)', 1, { spread: 0.3, life: 0.6, grav: -10 }); }
     let sp = en.spd;
     if (auraR && Math.hypot(en.x - f.x, en.y - f.y) < auraR) sp *= slow;
     en.y += sp * dt; en.x += Math.sin(en.ph) * 6 * dt;
-    if (en.boss) { en.minionT -= dt; if (en.minionT <= 0) { en.minionT = 2.2; if (D.enemies.length < 16) { const t = BALANCE.enemy.types.fast; D.enemies.push(mkEnemy('fast', en.maxhp * 0.04 + 4, t.r, t.color, t.badge, t.spd * 30, t.dmg, false)); } } }
+    if (en.boss) { en.minionT -= dt; if (en.minionT <= 0) { en.minionT = 2.4; if (D.enemies.length < 22) { const sw = BALANCE.enemy.types.swarm; const m = mkEnemy('swarm', en.maxhp * 0.03 + 4, sw.r, waveSpd(D.wave) * sw.spx, sw.dmg, {}); m.x = en.x + (Math.random() - 0.5) * 40; m.y = en.y + 20; D.enemies.push(m); } } }
     if (en.y >= f.y - 8) { // 냉장고 침투
       D.enemies.splice(i, 1); D.hp -= en.dmg; D.vign = 1; D.shake.add(en.boss ? 12 : 7, 0.3);
       beep(130, 0.2, 'square', 0.13); buzz([40, 30, 50]);

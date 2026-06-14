@@ -20,6 +20,8 @@ export const PAL = {
   bac: { body: C.bac, hi: C.bacH, sh: C.bacS, out: C.out },
   mold: { body: C.mold, hi: C.moldH, sh: C.moldS, out: C.out },
   boss: { body: C.boss, hi: C.bossH, sh: C.bossS, out: C.out },
+  amber: { body: '#e0a64b', hi: '#f6d690', sh: '#9c6f22', out: C.out },
+  steel: { body: C.steel, hi: C.steelH, sh: C.steelS, out: C.out },
 };
 
 /* ── 눈/입 표정 (시안 포팅) ── */
@@ -131,16 +133,24 @@ function bakeGrid(grid, color) {
 const cache = new Map();
 function cached(key, build) { let v = cache.get(key); if (!v) { v = build(); cache.set(key, v); } return v; }
 
-// 적/마스코트 스프라이트 (타입별, 표정·깜빡임 변형 캐시)
+// 적 도감 — 타입별 팔레트/크기/표정 (몬스터 다양화)
+const ENEMY_SPR = {
+  grunt:  { N: 18, pal: PAL.rot,   expr: 'angry', drip: true },
+  swarm:  { N: 11, pal: PAL.bac,   expr: 'angry' },
+  runner: { N: 14, pal: PAL.mold,  expr: 'angry' },
+  tank:   { N: 24, pal: PAL.amber, expr: 'dull',  drip: true },
+  shield: { N: 20, pal: PAL.steel, expr: 'angry' },
+  split:  { N: 18, pal: PAL.mold,  expr: 'angry', drip: true },
+  mini:   { N: 9,  pal: PAL.mold,  expr: 'angry' },
+  boss:   { N: 40, pal: PAL.boss,  expr: 'boss',  crown: true },
+};
 export function enemySprite(type, expr) {
   return cached(`e:${type}:${expr}`, () => {
-    let N = 18, pal = PAL.rot, ex = expr, extra = null;
-    if (type === 'fast') { N = 13; pal = PAL.bac; }
-    else if (type === 'heavy') { N = 22; pal = PAL.mold; extra = (g, n, cx) => drips(g, n, cx); }
-    else if (type === 'boss') { N = 40; pal = PAL.boss; ex = expr === 'blink' ? 'blink' : 'boss'; extra = (g, n, cx) => crown(g, n, cx); }
-    else { pal = PAL.rot; extra = (g, n, cx) => drips(g, n, cx); }
-    const g = slime(N, pal, ex, extra);
-    return { base: bakeGrid(g), white: bakeGrid(g, C.white), n: N };
+    const d = ENEMY_SPR[type] || ENEMY_SPR.grunt;
+    const ex = expr === 'blink' ? 'blink' : d.expr;
+    const extra = d.crown ? ((g, n, cx) => crown(g, n, cx)) : (d.drip ? ((g, n, cx) => drips(g, n, cx)) : null);
+    const g = slime(d.N, d.pal, ex, extra);
+    return { base: bakeGrid(g), white: bakeGrid(g, C.white), n: d.N };
   });
 }
 export function mascotSprite(expr = 'happy') { return cached(`m:${expr}`, () => ({ base: bakeGrid(slime(20, PAL.mascot, expr)), n: 20 })); }

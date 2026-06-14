@@ -1002,3 +1002,73 @@ a { color: var(--blue); text-decoration: none; }
 /* 원클릭 타이머 라벨 */
 .timer-quick { cursor: pointer; color: var(--green); font-weight: 700; background: var(--green-bg); padding: 4px 10px; border-radius: 99px; }
 .timer-quick:active { transform: scale(0.95); }
+
+/* ══════════════════════════════════════════════
+   냉비서 디자인 시스템 v3 — "탑 앱" 프리미엄 패스
+   (마크업 변경 없이 기존 표면을 격상 · 게임 .gx 테마는 미영향)
+   ══════════════════════════════════════════════ */
+:root {
+  --grad-green: linear-gradient(145deg, #34c46b, #1f9a4f);
+  --grad-warm: linear-gradient(145deg, #ffb24d, #ff7a3d);
+  --shadow-card: 0 1px 1px rgba(20,24,33,.04), 0 4px 14px rgba(20,24,33,.05), 0 12px 32px rgba(20,24,33,.04);
+  --shadow-soft: 0 2px 10px rgba(20,24,33,.05);
+}
+
+/* 본문 살짝 따뜻한 프리미엄 배경 그라데이션 */
+body { background: linear-gradient(180deg, #f3f5f9 0%, #eef0f5 100%); background-attachment: fixed; }
+
+/* 브랜드 마크 — 젤리 광택 + 미세 호흡 */
+.brand-mark { background: var(--grad-green); position: relative; overflow: hidden; animation: brandBreath 4s ease-in-out infinite; }
+.brand-mark::after { content:''; position:absolute; top:3px; left:5px; width:14px; height:9px; border-radius:99px; background:rgba(255,255,255,.45); filter:blur(1px); }
+@keyframes brandBreath { 0%,100%{ transform: scale(1) } 50%{ transform: scale(1.05) } }
+.brand-text strong { letter-spacing:-.03em; }
+
+/* 상단 pill 더 또렷하게 */
+.pill { box-shadow: var(--shadow-soft); backdrop-filter: blur(4px); }
+
+/* 탭바 — 활성 탭 알약 인디케이터 + 큰 아이콘 */
+#tabbar button { position: relative; padding: 9px 0 8px; }
+#tabbar button span { font-size: 1.42rem; transition: transform .2s cubic-bezier(.2,.9,.3,1.4), filter .15s; }
+#tabbar button.active span { transform: translateY(-1px) scale(1.12); }
+#tabbar button.active::before {
+  content:''; position:absolute; top:4px; width:42px; height:30px; border-radius:99px;
+  background: var(--green-bg); z-index:-1; animation: tabPop .25s cubic-bezier(.2,.9,.3,1.4);
+}
+@keyframes tabPop { from{ transform: scale(.5); opacity:0 } to{ transform: scale(1); opacity:1 } }
+
+/* 히어로 — 더 큰 타이포 + em 강조 언더라인 */
+.hero h1 { font-size: 1.84rem; letter-spacing:-.035em; }
+.hero h1 em { background: var(--grad-green); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; position: relative; }
+.hero p { font-size:.88rem; }
+
+/* 섹션 타이틀 — 그린 액센트 바 */
+.section-title h2 { position: relative; padding-left: 11px; }
+.section-title h2::before { content:''; position:absolute; left:0; top:50%; transform:translateY(-50%); width:4px; height:14px; border-radius:99px; background: var(--grad-green); }
+
+/* 카드 — 프리미엄 엘리베이션 + 탭 리프트 */
+.card { box-shadow: var(--shadow-card); border: .5px solid rgba(255,255,255,.7); }
+.card:active { transform: scale(.992); }
+
+/* 버튼 — 그라데이션 + 깊은 그림자 */
+.btn-primary { background: var(--grad-green); box-shadow: 0 4px 16px rgba(47,174,95,.34), 0 1px 3px rgba(47,174,95,.3); }
+.btn-accent { background: var(--grad-warm); box-shadow: 0 4px 16px rgba(255,138,61,.34), 0 1px 3px rgba(255,138,61,.3); }
+.btn-tint { background: var(--green-bg); font-weight: 800; }
+.action-strip .btn { box-shadow: var(--shadow-card); border:.5px solid rgba(255,255,255,.7); }
+.action-strip .btn.btn-primary { border: none; }
+
+/* 레시피 카드 — 이미지 포워드(풀블리드 썸네일) + 그라데이션 오버레이 */
+.recipe-card { padding: 0; overflow: hidden; }
+.recipe-card .r-photo { width: 100%; height: 150px; object-fit: cover; display: block; }
+.recipe-card .r-body { padding: 13px 15px 15px; }
+.recipe-card .ready-flag, .recipe-card .yt-flag { box-shadow: 0 2px 8px rgba(0,0,0,.18); backdrop-filter: blur(4px); }
+.recipe-card h3 { letter-spacing:-.02em; }
+
+/* 입력 포커스 — 부드러운 그린 글로우 */
+input:focus, select:focus, textarea:focus { outline: none; box-shadow: 0 0 0 3px rgba(47,174,95,.18); background: var(--card); }
+
+/* 빈 상태 — 더 친근하게 */
+.empty { padding: 32px 16px; }
+.empty .e-emoji { font-size: 2.6rem; animation: brandBreath 3s ease-in-out infinite; }
+
+/* 토스트 — 프리미엄 다크 */
+.toast { box-shadow: var(--shadow-float); }

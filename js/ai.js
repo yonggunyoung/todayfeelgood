@@ -53,31 +53,12 @@ function parseJsonLoose(text) {
   return null;
 }
 
-const SCHEMA = {
-  type: 'object',
-  properties: {
-    items: {
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          name: { type: 'string', description: '일반 재료명으로 정규화 (예: 서울우유1L→우유)' },
-          qty: { type: 'number' },
-          unit: { type: 'string' },
-        },
-        required: ['name', 'qty'],
-        additionalProperties: false,
-      },
-    },
-  },
-  required: ['items'],
-  additionalProperties: false,
-};
-
 const PROMPT = `이 사진은 한국 마트/온라인몰 영수증이거나 장 봐온 식재료를 펼쳐 놓은 사진입니다.
 식품(요리 재료)만 추출하세요. 휴지·세제 등 비식품과 봉투값·할인·합계 줄은 제외합니다.
 상품명은 일반 재료명으로 정규화하세요: "서울우유1L" → "우유", "CJ 햇반 210g×3" → "즉석밥"(qty 3), "1+1" 표기는 수량 2.
-수량을 알 수 없으면 1로 두세요. JSON으로만 답하세요.`;
+수량을 알 수 없으면 1로 두세요.
+설명 없이 아래 형태의 JSON 하나만 출력하세요:
+{"items":[{"name":"우유","qty":1,"unit":"개"},{"name":"즉석밥","qty":3,"unit":"개"}]}`;
 
 // 토큰 절약을 위해 긴 변 1280px로 축소 후 JPEG 인코딩
 async function downscale(file, max = 1280) {
@@ -104,6 +85,7 @@ export async function scanImage(file, settings) {
   if (!isServer(settings) && !settings.aiKey) throw new Error('설정에서 Claude API 키를 등록하거나, 서버 연결을 켜주세요.');
   const b64 = await downscale(file);
 
+  // 구조화 출력(output_config)은 일부 계정에 권한이 없어 403을 유발할 수 있어 쓰지 않는다 — 프롬프트로 JSON을 받고 느슨히 파싱.
   const msg = await callClaude({
     model: modelFor(settings),
     max_tokens: 2048,
@@ -114,7 +96,6 @@ export async function scanImage(file, settings) {
         { type: 'text', text: PROMPT },
       ],
     }],
-    output_config: { format: { type: 'json_schema', schema: SCHEMA } },
   }, settings);
 
   if (msg.stop_reason === 'refusal') throw new Error('이미지를 분석할 수 없습니다. 다른 사진으로 시도해 주세요.');

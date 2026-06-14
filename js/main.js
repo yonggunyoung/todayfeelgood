@@ -2685,10 +2685,13 @@ window.addEventListener('popstate', () => {
 });
 
 // 상용 기본값: config.js에 서버 AI 주소가 채워져 있으면 전 사용자 자동 적용
-if (AI_ENDPOINT && !S.settings.aiEndpoint) {
-  S.settings.aiEndpoint = AI_ENDPOINT;
-  if (!S.settings.aiKey) S.settings.aiMode = 'server';
-  save({ silent: true });
+// 배포에 게이트웨이가 설정돼 있으면: 본인 키가 없는 사용자는 서버 모드로 자동 정렬(엔드포인트 보정 포함).
+// 키를 직접 넣은 사용자는 BYOK 그대로 존중. (구버전 테스트로 남은 aiMode='byok'+키없음 상태도 여기서 정상화)
+if (AI_ENDPOINT) {
+  let changed = false;
+  if (!S.settings.aiEndpoint) { S.settings.aiEndpoint = AI_ENDPOINT; changed = true; }
+  if (!S.settings.aiKey && S.settings.aiMode !== 'server') { S.settings.aiMode = 'server'; changed = true; }
+  if (changed) save({ silent: true });
 }
 
 migratePantryUnits(); // 무게·부피 재고를 g·ml 기준으로 일괄 정렬(구버전 데이터 보정)

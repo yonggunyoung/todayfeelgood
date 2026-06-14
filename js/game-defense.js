@@ -8,8 +8,8 @@ import { enemySprite, fridgeSprite, itemSprite, drawSprite } from './pixel.js';
 // ── 밸런스: 100+ 웨이브용 완만한 곡선. 초반은 아주 너그럽게(잘 안 죽음), 후반은 업그레이드로 따라잡기. ──
 const BALANCE = {
   enemy: {
-    baseHP: 6, hpGrow: 1.058, speedBase: 15, speedGrow: 1.012, speedCap: 50,
-    countBase: 4, countGrow: 0.9, countCap: 28,
+    baseHP: 6, hpGrow: 1.072, speedBase: 15, speedGrow: 1.014, speedCap: 54,
+    countBase: 4, countGrow: 1.0, countCap: 32,
     // dmg=냉장고에 닿을 때 깎는 신선도 (작게 — 누적 실수만 위험). from=등장 시작 웨이브.
     types: {
       grunt:  { hpx: 1.0,  spx: 1.0,  dmg: 3, r: 18, from: 1,  w: 1.0,  name: '곰팡이빵' },
@@ -20,7 +20,7 @@ const BALANCE = {
       shield: { hpx: 5.5,  spx: 0.62, dmg: 5, r: 21, from: 12, w: 0.45, name: '굳은 더께' },
     },
   },
-  economy: { scorePerHP: 0.7 },
+  economy: { scorePerHP: 0.62 },
   weapon: { dmg: 5, fireRate: 1.6, projSpeed: 470, projR: 6 },
   boss: { every: 10, hpMult: 16, dmg: 18, reward: 90 },
   up: {
@@ -43,6 +43,42 @@ const BALANCE = {
 };
 const UP_ORDER = ['damage', 'fireRate', 'multiShot', 'pierce', 'crit', 'chain', 'homing', 'orbital', 'laser', 'bomb', 'frostAura', 'sideTurret', 'regen', 'maxHp', 'boost'];
 
+// 난이도 (하/중/상) — 적 HP·속도·물량·침투피해·코인·어픽스 확률 배수
+const DIFF = {
+  easy:   { key: 'easy', name: '하', sub: '느긋하게', hp: 0.8, spd: 0.9, count: 0.85, dmg: 0.7, coin: 1.2, affix: 0.5, color: '#5ef0b0' },
+  normal: { key: 'normal', name: '중', sub: '적당히', hp: 1.0, spd: 1.0, count: 1.0, dmg: 1.0, coin: 1.0, affix: 1.0, color: '#ffe04a' },
+  hard:   { key: 'hard', name: '상', sub: '살벌하게', hp: 1.5, spd: 1.18, count: 1.2, dmg: 1.45, coin: 0.85, affix: 1.7, color: '#ff4d6a' },
+};
+
+// 몬스터 속성(어픽스) — 처치 난도·다양성↑ (웨이브·난이도 따라 부여 확률↑)
+const AFFIX = {
+  armor:  { icon: '🛡', ring: '#9fb2d6', name: '갑옷', w: 1.0 },   // 받는 피해 45%
+  swift:  { icon: '💨', ring: '#73cbff', name: '쾌속', w: 1.0 },   // 이동 1.45배
+  tough:  { icon: '💪', ring: '#ff9f43', name: '비대', w: 0.9 },   // HP 1.7배
+  shield: { icon: '🔰', ring: '#bdffe4', name: '보호막', w: 0.8 }, // 첫 피격 1회 무효
+  regen:  { icon: '💚', ring: '#5ef0b0', name: '재생', w: 0.7 },   // 초당 HP 회복
+};
+
+// ── 스페셜 스킬(로그라이크) — 보스 처치 시 3택, 각자 랜덤 수치(밴드 내)로 밸런스 유지 ──
+const rnd = (a, b) => a + Math.random() * (b - a);
+const SPECIALS = [
+  { id: 'power', icon: '⚡', name: '고출력 회로', max: 99, roll: () => Math.round(rnd(15, 28)), desc: (v) => `데미지 +${v}%` },
+  { id: 'overload', icon: '🔥', name: '과부하', max: 99, roll: () => Math.round(rnd(15, 28)), desc: (v) => `연사속도 +${v}%` },
+  { id: 'critdmg', icon: '💥', name: '치명 강화', max: 99, roll: () => Math.round(rnd(40, 80)), desc: (v) => `치명타 피해 +${v}%` },
+  { id: 'bigshot', icon: '🔵', name: '대구경탄', max: 99, roll: () => Math.round(rnd(18, 32)), desc: (v) => `발사체 크기·피해 +${v}%` },
+  { id: 'gold', icon: '🪙', name: '황금 회로', max: 99, roll: () => Math.round(rnd(20, 40)), desc: (v) => `코인 획득 +${v}%` },
+  { id: 'double', icon: '➿', name: '더블샷', max: 3, roll: () => 1, desc: (v) => `발사마다 +${v}발 (부채꼴)` },
+  { id: 'volley', icon: '✳️', name: '일제 사격', max: 3, roll: () => 1, desc: (v) => `동시 타겟 +${v}` },
+  { id: 'pierceUp', icon: '➶', name: '관통 코어', max: 6, roll: () => Math.round(rnd(1, 2)), desc: (v) => `관통 +${v}` },
+  { id: 'fire', icon: '🔥', name: '화염탄', max: 99, roll: () => Math.round(rnd(25, 45)), desc: (v) => `명중 시 화상(초당 데미지의 ${v}%, 3초)` },
+  { id: 'frost', icon: '❄️', name: '빙결탄', max: 60, roll: () => Math.round(rnd(15, 28)), desc: (v) => `명중 시 ${v}% 둔화 (최대 60%)` },
+  { id: 'vamp', icon: '🩸', name: '흡혈 코어', max: 40, roll: () => Math.round(rnd(8, 16)), desc: (v) => `처치 시 ${v}% 확률로 신선도 +1` },
+  { id: 'exec', icon: '☠️', name: '처형 칼날', max: 25, roll: () => Math.round(rnd(6, 12)), desc: (v) => `체력 ${v}% 이하 적 즉시 처치` },
+  { id: 'splitp', icon: '💠', name: '분열탄', max: 2, roll: () => 1, desc: (v) => `명중 시 파편 ${v}개 튐` },
+  { id: 'thorn', icon: '🌵', name: '서리 가시', max: 99, roll: () => Math.round(rnd(8, 16)), desc: (v) => `근처 적 초당 ${v} 피해` },
+];
+const SP = (id) => (D.spec[id] ? D.spec[id].val : 0);
+
 let D = null;
 
 export function gameDefense() {
@@ -58,10 +94,17 @@ export function gameDefense() {
           <div class="gx-start-in">
             <div style="font-size:2.6rem">🧊🛡️</div>
             <b>냉장고가 알아서 쏩니다</b>
-            <p>상한 것들이 몰려와요. 점수로 <b>무기·방어를 강화</b>해<br>최대한 오래 버티세요 — 탭은 강화 상점에만!</p>
-            <button class="gx-btn-go" id="def-go">시작!</button>
+            <p>상한 것들이 몰려와요. 점수로 무기를 키우고,<br><b>보스를 잡으면 스페셜 스킬</b>을 골라 무한 성장!</p>
+            <div class="diff-row">
+              ${Object.values(DIFF).map((d) => `<button class="diff-btn" style="--dc:${d.color}" onclick="UI.defStart('${d.key}')"><b>${d.name}</b><small>${d.sub}</small></button>`).join('')}
+            </div>
+            <p class="diff-hint">난이도를 골라 시작 — 게임 중 ⏩로 2·3배속</p>
           </div>
         </div>
+      </div>
+      <div class="gx-shopbar">
+        <button class="gx-speed" id="def-speed" onclick="UI.defSpeed()">⏩ 1배속</button>
+        <span class="gx-diff" id="def-difflbl"></span>
       </div>
       <div class="gx-shop" id="def-shop"></div>
     </div>`);
@@ -72,10 +115,10 @@ export function gameDefense() {
   const { ctx } = setupCanvas(canvas, cssW, cssH);
 
   D = {
-    ctx, canvas, W: cssW, H: cssH,
-    enemies: [], shots: [], coinsFly: [], parts: new Particles(300), fx: new Floaters(), shake: new Shake(),
+    ctx, canvas, W: cssW, H: cssH, diff: DIFF.normal, speed: 1, spec: {},
+    enemies: [], shots: [], coinsFly: [], parts: new Particles(320), fx: new Floaters(), shake: new Shake(),
     lv: { damage: 0, fireRate: 0, multiShot: 0, pierce: 0, crit: 0, chain: 0, homing: 0, orbital: 0, laser: 0, bomb: 0, sideTurret: 0, frostAura: 0, regen: 0, maxHp: 0, boost: 0 },
-    coins: 0, score: 0, kills: 0,
+    coins: 0, score: 0, kills: 0, bossesKilled: 0,
     wave: 0, toSpawn: 0, spawnGap: 1, since: 0,
     hp: 100, maxHp: 100,
     fireCd: 0, sideCd: 0, homingCd: 0, laserCd: 0, bombCd: 0, orbAng: 0, beams: [], rings: [], chains: [],
@@ -83,15 +126,24 @@ export function gameDefense() {
     banner: '', bannerT: 0, hitStop: 0, vign: 0, flash: 0, bossIntro: 0, coinDisp: 0, upText: '', upT: 0, fridge: { blink: 1 },
     last: 0, raf: 0, running: false, over: false, shopT: 0,
   };
+}
 
-  document.getElementById('def-go').onclick = () => {
-    document.getElementById('def-start')?.remove();
-    beep(660, 0.05);
-    nextWave();
-    D.running = true; D.last = performance.now();
-    renderShop();
-    D.raf = requestAnimationFrame(loop);
-  };
+export function defStart(diffKey) {
+  if (!D) return;
+  D.diff = DIFF[diffKey] || DIFF.normal;
+  document.getElementById('def-start')?.remove();
+  const lbl = document.getElementById('def-difflbl'); if (lbl) lbl.textContent = `난이도 ${D.diff.name}`;
+  beep(660, 0.05);
+  nextWave();
+  D.running = true; D.last = performance.now();
+  renderShop();
+  D.raf = requestAnimationFrame(loop);
+}
+export function defSpeed() {
+  if (!D) return;
+  D.speed = D.speed >= 3 ? 1 : D.speed + 1;
+  const b = document.getElementById('def-speed'); if (b) b.textContent = `⏩ ${D.speed}배속`;
+  beep(700 + D.speed * 80, 0.04);
 }
 
 /* ── 능력치 ── */
@@ -99,24 +151,26 @@ const cost = (k) => Math.floor(BALANCE.up[k].base * Math.pow(BALANCE.up[k].ratio
 const maxed = (k) => BALANCE.up[k].max != null && D.lv[k] >= BALANCE.up[k].max;
 const locked = (k) => BALANCE.up[k].unlock != null && D.score < BALANCE.up[k].unlock && D.lv[k] === 0;
 const stat = {
-  dmg: () => BALANCE.weapon.dmg + D.lv.damage * BALANCE.up.damage.add,
-  rate: () => BALANCE.weapon.fireRate + D.lv.fireRate * BALANCE.up.fireRate.add,
-  multi: () => 1 + D.lv.multiShot,
-  pierce: () => D.lv.pierce,
-  crit: () => D.lv.crit * BALANCE.up.crit.add,
-  boost: () => 1 + D.lv.boost * BALANCE.up.boost.add,
+  dmg: () => (BALANCE.weapon.dmg + D.lv.damage * BALANCE.up.damage.add) * (1 + SP('power') / 100) * (1 + SP('bigshot') / 100),
+  rate: () => (BALANCE.weapon.fireRate + D.lv.fireRate * BALANCE.up.fireRate.add) * (1 + SP('overload') / 100),
+  multi: () => 1 + D.lv.multiShot + SP('volley'),
+  pierce: () => D.lv.pierce + SP('pierceUp'),
+  crit: () => Math.min(0.85, D.lv.crit * BALANCE.up.crit.add),
+  critMult: () => 2 + SP('critdmg') / 100,
+  boost: () => 1 + D.lv.boost * BALANCE.up.boost.add + SP('gold') / 100,
+  projR: () => BALANCE.weapon.projR * (1 + SP('bigshot') / 220),
 };
 
 function fridgePos() { return { x: D.W / 2, y: D.H - 30 }; }
 
-const waveHP = (w) => BALANCE.enemy.baseHP * Math.pow(BALANCE.enemy.hpGrow, w - 1);
-const waveSpd = (w) => Math.min(BALANCE.enemy.speedCap, BALANCE.enemy.speedBase * Math.pow(BALANCE.enemy.speedGrow, w - 1));
+const waveHP = (w) => BALANCE.enemy.baseHP * Math.pow(BALANCE.enemy.hpGrow, w - 1) * D.diff.hp;
+const waveSpd = (w) => Math.min(BALANCE.enemy.speedCap, BALANCE.enemy.speedBase * Math.pow(BALANCE.enemy.speedGrow, w - 1)) * D.diff.spd;
 
 function nextWave() {
   D.wave += 1;
   const boss = D.wave % BALANCE.boss.every === 0;
   const e = BALANCE.enemy;
-  D.toSpawn = boss ? 1 : Math.min(e.countCap, Math.round(e.countBase + D.wave * e.countGrow));
+  D.toSpawn = boss ? 1 : Math.min(e.countCap, Math.round((e.countBase + D.wave * e.countGrow) * D.diff.count));
   D.spawnGap = clamp(1.2 - D.wave * 0.012, 0.45, 1.2); // 완만하게만 빨라짐
   D.banner = boss ? `⚠ 보스 — 곰팡이대왕` : `WAVE ${D.wave}`;
   D.bannerT = 1.7;
@@ -137,30 +191,49 @@ function spawnOne() {
   let total = pool.reduce((s, [, t]) => s + t.w, 0), r = Math.random() * total, key = 'grunt', t = pool[0][1];
   for (const [k, tt] of pool) { r -= tt.w; if (r <= 0) { key = k; t = tt; break; } }
   const n = t.group || 1; // 세균 떼는 한 번에 여러 마리
+  const dmg = Math.max(1, Math.round(t.dmg * D.diff.dmg));
   for (let i = 0; i < n; i++) {
-    D.enemies.push(mkEnemy(key, waveHP(w) * t.hpx, t.r, waveSpd(w) * t.spx, t.dmg, { split: t.split }));
-    if (n > 1) D.toSpawn = Math.max(0, D.toSpawn); // 그룹은 toSpawn 1칸으로 묶음(이미 차감됨)
+    D.enemies.push(mkEnemy(key, waveHP(w) * t.hpx, t.r, waveSpd(w) * t.spx, dmg, { split: t.split, affix: rollAffix(w) }));
   }
 }
+// 어픽스 부여 — 웨이브·난이도에 따라 확률↑ (미니/그룹 제외)
+function rollAffix(w) {
+  if (w < 4) return null;
+  const chance = clamp((w - 3) * 0.018, 0, 0.42) * D.diff.affix;
+  if (Math.random() > chance) return null;
+  const pool = Object.entries(AFFIX); let tot = pool.reduce((s, [, a]) => s + a.w, 0), r = Math.random() * tot;
+  for (const [k, a] of pool) { r -= a.w; if (r <= 0) return k; }
+  return 'armor';
+}
 function mkEnemy(key, hp, r, spd, dmg, opt = {}) {
-  return {
-    key, hp, maxhp: hp, r, spd, dmg, boss: !!opt.boss, split: opt.split || 0, mini: !!opt.mini,
+  const af = opt.affix || null;
+  const e = {
+    key, hp, maxhp: hp, r, spd, dmg, boss: !!opt.boss, split: opt.split || 0, mini: !!opt.mini, affix: af,
+    armorMul: af === 'armor' ? 0.55 : 1, shield: af === 'shield' ? 1 : 0, regen: af === 'regen' ? hp * 0.04 : 0,
+    burn: 0, burnDps: 0, slowT: 0, slowMul: 1,
     x: 22 + Math.random() * (D.W - 44), y: -r - 6,
-    ph: Math.random() * 6.28, blinkS: { blink: 1 }, flash: 0, squash: 0,
-    age: 0, sporeT: 0, minionT: 1.6,
+    ph: Math.random() * 6.28, blinkS: { blink: 1 }, flash: 0, squash: 0, age: 0, sporeT: 0, minionT: 1.6,
   };
+  if (af === 'swift') e.spd *= 1.45;
+  if (af === 'tough') { e.hp *= 1.7; e.maxhp *= 1.7; e.r *= 1.12; }
+  return e;
 }
 
 /* ── 발사 ── */
 function fireFrom(x, y, targets) {
+  const extra = SP('double'), pr = stat.projR();
   for (const tg of targets) {
-    const ang = Math.atan2(tg.y - y, tg.x - x);
-    D.aimAng = ang;
-    const isCrit = Math.random() < stat.crit();
-    D.shots.push({
-      x, y, vx: Math.cos(ang) * BALANCE.weapon.projSpeed, vy: Math.sin(ang) * BALANCE.weapon.projSpeed,
-      dmg: stat.dmg() * (isCrit ? 2 : 1), crit: isCrit, pierce: stat.pierce(), hit: new Set(), trail: [],
-    });
+    const base = Math.atan2(tg.y - y, tg.x - x);
+    D.aimAng = base;
+    const shots = 1 + extra;
+    for (let s = 0; s < shots; s++) {
+      const off = shots > 1 ? (s - (shots - 1) / 2) * 0.13 : 0;
+      const ang = base + off, isCrit = Math.random() < stat.crit();
+      D.shots.push({
+        x, y, vx: Math.cos(ang) * BALANCE.weapon.projSpeed, vy: Math.sin(ang) * BALANCE.weapon.projSpeed,
+        dmg: stat.dmg() * (isCrit ? stat.critMult() : 1), crit: isCrit, pierce: stat.pierce(), hit: new Set(), trail: [], r: pr,
+      });
+    }
   }
   D.muzzle = 0.08;
   beep(680 + Math.random() * 80, 0.04, 'square', 0.07);
@@ -171,8 +244,23 @@ function pickTargets(n) {
 }
 
 function hitEnemy(en, dmg, opt) {
-  en.hp -= dmg; en.flash = 0.1; en.squash = 0.22;
+  const sec = opt && (opt.chained || opt.frag); // 2차타(체인·파편)는 원소/분열 재적용 안 함
+  if (en.shield) { en.shield = 0; en.flash = 0.12; D.parts.burst(en.x, en.y, '#bdffe4', 7, { spread: 0.6, life: 0.3 }); beep(520, 0.05); return; }
+  en.hp -= dmg * (en.armorMul || 1); en.flash = 0.1; en.squash = 0.22;
   D.parts.burst(en.x, en.y, '#fff', 4, { spread: 0.5, life: 0.25 });
+  if (!sec) {
+    if (SP('fire')) { en.burnDps = Math.max(en.burnDps, stat.dmg() * SP('fire') / 100); en.burn = Math.max(en.burn, 3); }
+    if (SP('frost')) { en.slowMul = 1 - Math.min(0.6, SP('frost') / 100); en.slowT = 1.5; }
+    if (SP('splitp') && en.hp > 0) {
+      const others = D.enemies.filter((o) => o !== en);
+      for (let i = 0; i < SP('splitp'); i++) {
+        const o = others[Math.floor(Math.random() * others.length)];
+        const ang = o ? Math.atan2(o.y - en.y, o.x - en.x) : Math.random() * 6.28;
+        D.shots.push({ x: en.x, y: en.y, vx: Math.cos(ang) * 360, vy: Math.sin(ang) * 360, dmg: stat.dmg() * 0.4, crit: false, pierce: 0, hit: new Set([en]), trail: [], r: 4, frag: true });
+      }
+    }
+  }
+  if (SP('exec') && !en.boss && en.hp > 0 && en.hp <= en.maxhp * SP('exec') / 100) { en.hp = 0; D.parts.burst(en.x, en.y, '#ff4d6a', 10, { life: 0.4 }); }
   if (en.boss) { D.hitStop = Math.max(D.hitStop, 0.04); D.shake.add(3, 0.12); }
   // 냉기 전이(체인) — 가까운 다른 적으로 튄다 (한 번만, 무한 연쇄 방지)
   if (D.lv.chain && !(opt && opt.chained)) {
@@ -205,7 +293,8 @@ function killEnemy(en) {
       m.x = en.x + (i ? 14 : -14); m.y = en.y; D.enemies.push(m);
     }
   }
-  if (en.boss) { chord([523, 659, 784, 1047]); D.shake.add(10, 0.4); D.hp = Math.min(D.maxHp, D.hp + 12); }
+  if (SP('vamp') && Math.random() < SP('vamp') / 100) { D.hp = Math.min(D.maxHp, D.hp + 1); D.fx.add(en.x, en.y - 8, '+1', { color: '#ff5d9e', size: 12 }); }
+  if (en.boss) { chord([523, 659, 784, 1047]); D.shake.add(10, 0.4); D.hp = Math.min(D.maxHp, D.hp + 12); D.bossesKilled += 1; D.pendingDraft = true; }
   else beep(900 + Math.random() * 120, 0.05, 'triangle', 0.08);
   buzz(en.boss ? [18, 30, 18] : 5);
 }
@@ -214,11 +303,56 @@ function loop(now) {
   if (!D || !D.running) return;
   let dt = Math.min(0.034, (now - D.last) / 1000); D.last = now;
   if (!D.canvas.isConnected) { D.running = false; return; }
-  if (D.hitStop > 0) { D.hitStop -= dt; } else { update(dt); }
+  // 배속(1·2·3) — 한 프레임에 update를 여러 번 (렌더는 1회)
+  const steps = D.speed;
+  for (let s = 0; s < steps; s++) {
+    if (D.hitStop > 0) { D.hitStop -= dt; } else { update(dt); }
+    if (D.over || D.pendingDraft) break;
+  }
   render(dt);
   D.shopT -= dt; if (D.shopT <= 0) { renderShop(); D.shopT = 0.25; }
   if (D.over) { endGame(); return; }
+  if (D.pendingDraft) { D.pendingDraft = false; bossDraft(); return; } // 보스 처치 → 스킬 3택
   D.raf = requestAnimationFrame(loop);
+}
+
+/* ── 보스 처치 → 스페셜 스킬 3택 (캔버스 위 오버레이, 각 랜덤 수치) ── */
+function bossDraft() {
+  D.running = false; cancelAnimationFrame(D.raf);
+  const pool = SPECIALS.filter((s) => !D.spec[s.id] || D.spec[s.id].lv < (s.max || 99));
+  const bag = pool.slice(), pick = [];
+  for (let i = 0; i < 3 && bag.length; i++) { const j = Math.floor(Math.random() * bag.length); pick.push(bag.splice(j, 1)[0]); }
+  D.draft = pick.map((s) => ({ id: s.id, icon: s.icon, name: s.name, val: s.roll(), desc: s.desc }));
+  chord([659, 880, 1175], 0.16); buzz([20, 40, 20]);
+  const stage = D.canvas.parentElement; // .gx-stage (캔버스 유지)
+  const ov = document.createElement('div'); ov.className = 'draft-overlay'; ov.id = 'def-draft';
+  ov.innerHTML = `
+    <div class="draft-in">
+      <div class="draft-title">⭐ 보스 격파!</div>
+      <p>스페셜 스킬 <b>3택</b> — 수치는 랜덤, 골라서 무한 성장</p>
+      <div class="draft-row">
+        ${D.draft.map((s, i) => {
+          const cur = D.spec[s.id] ? D.spec[s.id].val : 0;
+          return `<button class="draft-card" onclick="UI.defPick(${i})">
+            <span class="draft-ico">${s.icon}</span><b>${s.name}</b>
+            <small>${s.desc(s.val)}</small>
+            <span class="draft-cur ${cur ? '' : 'new'}">${cur ? `→ ${s.desc(cur + s.val)}` : 'NEW'}</span>
+          </button>`;
+        }).join('')}
+      </div>
+    </div>`;
+  stage.appendChild(ov);
+}
+export function defPick(i) {
+  if (!D || !D.draft) return;
+  const s = D.draft[i]; if (!s) return;
+  if (D.spec[s.id]) { D.spec[s.id].lv += 1; D.spec[s.id].val += s.val; }
+  else D.spec[s.id] = { lv: 1, val: s.val };
+  D.draft = null;
+  document.getElementById('def-draft')?.remove();
+  D.flash = 0.7; D.upText = `${s.name}!`; D.upT = 1.0;
+  chord([523, 698, 880, 1047]); buzz(24);
+  D.running = true; D.last = performance.now(); D.raf = requestAnimationFrame(loop);
 }
 
 function update(dt) {
@@ -297,10 +431,15 @@ function update(dt) {
     blinkTick(en.blinkS, dt);
     // 곰팡이·중장갑·보스는 포자 잔상 (가독성 위해 드물게)
     if ((en.boss || en.key === 'tank' || en.key === 'split') && (en.sporeT -= dt) <= 0) { en.sporeT = 0.25; D.parts.burst(en.x + (Math.random() - 0.5) * en.r, en.y, en.boss ? '#cf86ff' : 'rgba(47,202,166,.7)', 1, { spread: 0.3, life: 0.6, grav: -10 }); }
+    // 원소 효과: 화상 DoT + 빙결 둔화, 어픽스 재생, 서리 가시
+    if (en.burn > 0) { en.burn -= dt; en.hp -= en.burnDps * dt; if ((en.sporeT2 = (en.sporeT2 || 0) - dt) <= 0) { en.sporeT2 = 0.12; D.parts.burst(en.x, en.y - en.r * 0.3, '#ff8a3d', 1, { life: 0.4, grav: -20 }); } if (en.hp <= 0) { killEnemy(en); continue; } }
+    if (en.regen && en.hp > 0) en.hp = Math.min(en.maxhp, en.hp + en.regen * dt);
+    if (SP('thorn') && Math.hypot(en.x - f.x, en.y - f.y) < 90) { en.hp -= SP('thorn') * dt; if (en.hp <= 0) { killEnemy(en); continue; } }
     let sp = en.spd;
+    if (en.slowT > 0) { en.slowT -= dt; sp *= en.slowMul; }
     if (auraR && Math.hypot(en.x - f.x, en.y - f.y) < auraR) sp *= slow;
     en.y += sp * dt; en.x += Math.sin(en.ph) * 6 * dt;
-    if (en.boss) { en.minionT -= dt; if (en.minionT <= 0) { en.minionT = 2.4; if (D.enemies.length < 22) { const sw = BALANCE.enemy.types.swarm; const m = mkEnemy('swarm', en.maxhp * 0.03 + 4, sw.r, waveSpd(D.wave) * sw.spx, sw.dmg, {}); m.x = en.x + (Math.random() - 0.5) * 40; m.y = en.y + 20; D.enemies.push(m); } } }
+    if (en.boss) { en.minionT -= dt; if (en.minionT <= 0) { en.minionT = 2.4; if (D.enemies.length < 22) { const sw = BALANCE.enemy.types.swarm; const m = mkEnemy('swarm', en.maxhp * 0.03 + 4, sw.r, waveSpd(D.wave) * sw.spx, Math.max(1, Math.round(sw.dmg * D.diff.dmg)), {}); m.x = en.x + (Math.random() - 0.5) * 40; m.y = en.y + 20; D.enemies.push(m); } } }
     if (en.y >= f.y - 8) { // 냉장고 침투
       D.enemies.splice(i, 1); D.hp -= en.dmg; D.vign = 1; D.shake.add(en.boss ? 12 : 7, 0.3);
       beep(130, 0.2, 'square', 0.13); buzz([40, 30, 50]);
@@ -324,8 +463,8 @@ function update(dt) {
     if (s.x < -20 || s.x > D.W + 20 || s.y < -20 || s.y > D.H + 20) { D.shots.splice(i, 1); continue; }
     for (const en of D.enemies) {
       if (s.hit.has(en)) continue;
-      if ((s.x - en.x) ** 2 + (s.y - en.y) ** 2 <= (en.r + BALANCE.weapon.projR) ** 2) {
-        s.hit.add(en); hitEnemy(en, s.dmg);
+      if ((s.x - en.x) ** 2 + (s.y - en.y) ** 2 <= (en.r + (s.r || BALANCE.weapon.projR)) ** 2) {
+        s.hit.add(en); hitEnemy(en, s.dmg, { frag: s.frag });
         if (s.hit.size > s.pierce) { D.shots.splice(i, 1); break; }
       }
     }
@@ -403,7 +542,11 @@ function render(dt) {
     const spr = enemySprite(en.key, en.blinkS.blink < 0.4 ? 'blink' : '');
     const th = en.r * 2 * pop;
     const cv = en.flash > 0 && spr.white ? spr.white : spr.base;
-    drawSprite(c, cv, en.x, en.y, th, { sx: (1 + breath + en.squash), sy: (1 - breath - en.squash * 0.8) * pop, glow: en.boss ? 'rgba(207,134,255,0.8)' : '', glowR: 18 });
+    // 어픽스 링 + 화상 글로우
+    if (en.affix) { const a = AFFIX[en.affix]; c.save(); c.globalAlpha = 0.5 + Math.sin(en.ph * 1.5) * 0.2; c.strokeStyle = a.ring; c.lineWidth = 2.5; c.beginPath(); c.arc(en.x, en.y, en.r + 4, 0, 6.28); c.stroke(); c.restore(); }
+    const glow = en.burn > 0 ? 'rgba(255,138,61,0.9)' : (en.boss ? 'rgba(207,134,255,0.8)' : (en.affix ? AFFIX[en.affix].ring : ''));
+    drawSprite(c, cv, en.x, en.y, th, { sx: (1 + breath + en.squash), sy: (1 - breath - en.squash * 0.8) * pop, glow, glowR: en.affix || en.boss || en.burn > 0 ? 14 : 0 });
+    if (en.affix) { c.font = '10px serif'; c.textAlign = 'center'; c.fillText(AFFIX[en.affix].icon, en.x, en.y - en.r - 6); }
     if (en.boss || en.maxhp > BALANCE.enemy.baseHP * 3) {
       const w = en.r * 1.8, hpx = en.x - w / 2, hpy = en.y - en.r - 12;
       c.fillStyle = 'rgba(0,0,0,0.4)'; rr(c, hpx, hpy, w, 5, 2.5); c.fill();
@@ -413,11 +556,11 @@ function render(dt) {
   // 발사체 (트레일 + 글로우, 치명타는 금색)
   for (const s of D.shots) {
     const core = s.crit ? '#ffe04a' : '#bdffe4', glow = s.crit ? '#ffb24d' : '#5ef0b0';
-    c.strokeStyle = glow; c.globalAlpha = 0.35; c.lineWidth = BALANCE.weapon.projR * 1.3; c.lineCap = 'round';
+    c.strokeStyle = glow; c.globalAlpha = 0.35; c.lineWidth = (s.r || BALANCE.weapon.projR) * 1.3; c.lineCap = 'round';
     if (s.trail.length >= 4) { c.beginPath(); c.moveTo(s.trail[0], s.trail[1]); for (let k = 2; k < s.trail.length; k += 2) c.lineTo(s.trail[k], s.trail[k + 1]); c.lineTo(s.x, s.y); c.stroke(); }
     c.globalAlpha = 1;
     c.fillStyle = core; c.shadowColor = glow; c.shadowBlur = 10;
-    c.beginPath(); c.arc(s.x, s.y, BALANCE.weapon.projR * (s.crit ? 1.3 : 1), 0, 6.28); c.fill(); c.shadowBlur = 0;
+    c.beginPath(); c.arc(s.x, s.y, (s.r || BALANCE.weapon.projR) * (s.crit ? 1.3 : 1), 0, 6.28); c.fill(); c.shadowBlur = 0;
   }
   drawFridge(c, f);
   // 냉기 전이(체인) 라인
@@ -564,6 +707,7 @@ export function defBuy(k) {
 function endGame() {
   const s = D; D = null; cancelAnimationFrame(s.raf);
   beep(160, 0.3, 'square', 0.12);
+  const specs = Object.keys(s.spec).length;
   finishGame('defense', '🧊 냉장고 지키기', s.score, `${s.score.toLocaleString()}점`,
-    'UI.gameDefense()', { extra: `${s.wave}웨이브 · ${s.kills}마리 처치` });
+    'UI.gameDefense()', { extra: `난이도 ${s.diff.name} · ${s.wave}웨이브 · ${s.kills}처치 · 보스 ${s.bossesKilled} · 스킬 ${specs}종` });
 }

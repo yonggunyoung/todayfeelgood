@@ -1132,3 +1132,36 @@ input:focus, select:focus, textarea:focus { outline: none; box-shadow: 0 0 0 3px
   100% { transform: translate(var(--dx,10px), 44px) scale(1.4); opacity: 0; }
 }
 @media (prefers-reduced-motion: reduce) { .f-steam { display: none; } }
+
+/* ══════════ 냉장고 지키기 — 난이도·배속·스킬 드래프트 ══════════ */
+.diff-row { display: flex; gap: 8px; margin-top: 14px; }
+.diff-btn {
+  flex: 1; border: 2px solid var(--dc, #5ef0b0); background: rgba(255,255,255,0.04); color: #fff;
+  border-radius: 14px; padding: 12px 4px; cursor: pointer; font-family: 'Jua', sans-serif; transition: transform .1s;
+}
+.diff-btn b { display: block; font-size: 1.3rem; color: var(--dc); }
+.diff-btn small { color: #b9a7d6; font-size: 0.72rem; }
+.diff-btn:active { transform: scale(0.95); }
+.diff-hint { color: #7d6aa6; font-size: 0.72rem; margin-top: 10px; }
+.gx-shopbar { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px 0; }
+.gx-speed { background: rgba(115,203,255,0.16); color: #73cbff; border: none; border-radius: 99px; padding: 6px 12px; font-family: 'Jua', sans-serif; font-size: 0.82rem; font-weight: 800; cursor: pointer; }
+.gx-speed:active { transform: scale(0.95); }
+.gx-diff { color: #9b8bbd; font-size: 0.76rem; font-weight: 700; }
+/* 스킬 드래프트 오버레이 (캔버스 위) */
+.draft-overlay { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(11,6,18,0.86); backdrop-filter: blur(3px); border-radius: 16px; z-index: 5; animation: fade .2s ease; }
+.draft-in { width: 100%; padding: 14px; text-align: center; }
+.draft-title { font-family: 'Press Start 2P', Jua, monospace; font-size: 1.1rem; color: #ffe04a; text-shadow: 0 0 14px rgba(255,224,74,.6); }
+.draft-in > p { color: #cdbde8; font-size: 0.82rem; margin: 8px 0 12px; }
+.draft-row { display: flex; flex-direction: column; gap: 9px; }
+.draft-card {
+  display: flex; align-items: center; gap: 11px; text-align: left; padding: 12px 14px;
+  border: 2px solid #3a2b52; background: linear-gradient(135deg, #241544, #1a0f2b); color: #fff;
+  border-radius: 14px; cursor: pointer; font-family: 'Jua', sans-serif; transition: border-color .12s, transform .1s;
+}
+.draft-card:active { transform: scale(0.97); }
+.draft-card:hover { border-color: #5ef0b0; }
+.draft-card .draft-ico { font-size: 1.8rem; flex-shrink: 0; }
+.draft-card b { font-size: 0.98rem; display: block; }
+.draft-card small { color: #bdffe4; font-size: 0.78rem; }
+.draft-card .draft-cur { margin-left: auto; font-size: 0.68rem; color: #9b8bbd; flex-shrink: 0; }
+.draft-card .draft-cur.new { color: #ffe04a; font-weight: 800; }

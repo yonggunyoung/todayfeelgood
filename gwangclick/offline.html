@@ -56,9 +56,9 @@
       href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
 <style>
 :root{
-  --bg:#f2f3f7; --card:#fff; --label:#17181c; --label-2:#6e7077; --label-3:#a3a5ad;
-  --hairline:rgba(60,60,67,.1); --green:#2fae5f; --green-bg:#e9f7ee; --orange:#ff8a3d;
-  --orange-bg:#fff1e7; --red:#ff453a; --amber:#d9930d;
+  --bg:#0b0d13; --card:rgba(255,255,255,.055); --label:#f4f5f8; --label-2:#a7acba; --label-3:#71768a;
+  --hairline:rgba(255,255,255,.1); --green:#34c46e; --green-bg:rgba(52,196,110,.16); --orange:#ff9a4d;
+  --orange-bg:rgba(255,138,61,.16); --red:#ff5b50; --amber:#ffc24d;
   --sans:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,'Noto Sans KR',sans-serif;
   --r-lg:22px;
 }
@@ -66,19 +66,24 @@
 html{font-size:16px;}
 body{font-family:var(--sans);background:var(--bg);color:var(--label);min-height:100dvh;-webkit-font-smoothing:antialiased;}
 button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit;}
-#app{max-width:480px;margin:0 auto;min-height:100dvh;padding:18px 16px 30px;position:relative;}
+#app{max-width:480px;margin:0 auto;min-height:100dvh;padding:20px 16px 34px;position:relative;
+  background:
+    radial-gradient(125% 55% at 50% -8%, rgba(123,110,240,.20), transparent 60%),
+    radial-gradient(110% 50% at 50% 108%, rgba(18,179,154,.16), transparent 58%),
+    linear-gradient(180deg,#12141d 0%,#0a0c12 62%);}
 .brandbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
 .brandbar b{font-size:1.05rem;font-weight:900;}
 .brandbar small{color:var(--label-2);font-size:.74rem;}
 .sub{color:var(--label-2);font-size:.86rem;}
 .hint{color:var(--label-3);font-size:.8rem;line-height:1.5;}
-.btn{display:block;width:100%;background:rgba(118,118,128,.1);color:var(--label);font-weight:800;
-  border-radius:14px;padding:14px;font-size:.95rem;text-align:center;}
+.btn{display:block;width:100%;background:rgba(255,255,255,.07);color:var(--label);font-weight:800;
+  border-radius:14px;padding:14px;font-size:.95rem;text-align:center;border:1px solid var(--hairline);
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);}
 .btn:active{transform:scale(.98);}
 .btn-primary{background:var(--green);color:#fff;box-shadow:0 4px 14px rgba(47,174,95,.3);}
 .btn-accent{background:var(--orange);color:#fff;box-shadow:0 4px 14px rgba(255,138,61,.32);}
 .btn-row{display:flex;flex-direction:column;gap:9px;margin-top:14px;}
-.g-earn{margin-top:8px;font-weight:900;color:#8a5a00;background:#fff4d6;border-radius:12px;padding:9px;text-align:center;}
+.g-earn{margin-top:8px;font-weight:900;color:#ffd76a;background:rgba(255,200,70,.14);border:1px solid rgba(255,200,70,.28);border-radius:12px;padding:9px;text-align:center;}
 .g-newbest{margin-top:8px;text-align:center;font-weight:900;color:var(--orange);}
 
 /* ── 게이지 (공용) ── */
@@ -91,13 +96,14 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 /* ── 인트로 ── */
 .fb-q{text-align:center;font-size:1.5rem;font-weight:900;margin:10px 0 16px;}
 .fb-vs{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;margin-bottom:14px;}
-.fb-team{text-align:center;padding:15px 8px;border-radius:16px;background:var(--card);border:2px solid var(--hairline);transition:all .18s;}
-.fb-team.on{border-color:var(--c);box-shadow:0 6px 18px color-mix(in srgb,var(--c) 28%,transparent);}
+.fb-team{text-align:center;padding:16px 8px;border-radius:18px;background:var(--card);border:1px solid var(--hairline);
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);transition:all .2s;}
+.fb-team.on{border-color:var(--c);background:color-mix(in srgb,var(--c) 18%,rgba(255,255,255,.04));box-shadow:0 10px 30px color-mix(in srgb,var(--c) 32%,transparent);}
 .fb-team .fb-emo{font-size:2.7rem;display:block;}
 .fb-team b{display:block;margin-top:4px;color:var(--c);font-size:1.04rem;}
 .fb-team small{display:block;margin-top:3px;color:var(--label-2);font-size:.72rem;line-height:1.35;}
 .fb-vsmark{font-weight:900;color:var(--label-3);font-size:1.05rem;}
-.fb-streak{text-align:center;margin:12px 0 2px;padding:9px;border-radius:12px;background:var(--orange-bg);color:#b35a12;font-weight:800;font-size:.82rem;}
+.fb-streak{text-align:center;margin:12px 0 2px;padding:9px;border-radius:12px;background:var(--orange-bg);color:#ffc24d;font-weight:800;font-size:.82rem;border:1px solid rgba(255,154,77,.2);}
 .fb-pick{display:grid;gap:10px;margin-top:16px;}
 .fb-pickbtn{position:relative;overflow:hidden;border:none;border-radius:16px;color:#fff;font-weight:900;font-size:1.06rem;padding:18px 12px;box-shadow:0 8px 20px rgba(20,24,33,.18);}
 .fb-pickbtn::before{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.22),rgba(0,0,0,.06));pointer-events:none;}
@@ -105,8 +111,8 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 
 /* ── 배틀 ── */
 .fb-stage{user-select:none;-webkit-user-select:none;touch-action:manipulation;position:relative;}
-.fb-time{font-variant-numeric:tabular-nums;font-weight:900;font-size:1.1rem;background:rgba(118,118,128,.12);padding:2px 12px;border-radius:99px;}
-.fb-ticker{margin:12px 0;text-align:center;font-weight:800;font-size:.88rem;min-height:1.3em;padding:10px;border-radius:12px;background:rgba(118,118,128,.08);}
+.fb-time{font-variant-numeric:tabular-nums;font-weight:900;font-size:1.1rem;background:rgba(255,255,255,.1);padding:2px 12px;border-radius:99px;}
+.fb-ticker{margin:12px 0;text-align:center;font-weight:800;font-size:.88rem;min-height:1.3em;padding:10px;border-radius:12px;background:rgba(255,255,255,.06);border:1px solid var(--hairline);}
 .fb-ticker.beat{animation:fb-tick .4s ease;}
 @keyframes fb-tick{0%{opacity:0;transform:translateY(5px);}100%{opacity:1;transform:none;}}
 .fb-mid{display:flex;justify-content:space-between;align-items:flex-end;margin:4px 4px 12px;}
@@ -147,6 +153,48 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .fb-card-gauge i{display:block;height:100%;box-shadow:2px 0 0 rgba(255,255,255,.9);}
 .fb-card-foot{display:flex;justify-content:space-between;align-items:center;margin-top:9px;font-size:.78rem;font-weight:800;}
 .fb-card-tag{opacity:.85;font-size:.72rem;}
+
+/* ── 화려한 액션(이펙트) ── */
+#fb-fx{position:absolute;inset:0;pointer-events:none;z-index:3;}
+#fb-sky{position:fixed;inset:0;pointer-events:none;z-index:60;}
+.fb-stage{overflow:hidden;}
+.fb-glow{position:absolute;left:50%;bottom:54px;width:300px;height:300px;transform:translateX(-50%);
+  border-radius:50%;pointer-events:none;z-index:0;opacity:0;
+  background:radial-gradient(circle,var(--me),transparent 64%);filter:blur(20px);transition:opacity .15s;}
+.fb-pops{z-index:4;}
+.fb-tap{z-index:1;}
+/* 게이지 줄무늬 + 선두 글로우 */
+.fb-gauge.live{box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);}
+.fb-gauge.live i{position:relative;}
+.fb-gauge.live i::after{content:'';position:absolute;inset:0;
+  background:repeating-linear-gradient(45deg,rgba(255,255,255,.14) 0 10px,transparent 10px 20px);
+  animation:fb-stripe .6s linear infinite;}
+.fb-gauge.live i::before{content:'';position:absolute;top:-1px;bottom:-1px;right:-2px;width:5px;
+  background:#fff;border-radius:4px;box-shadow:0 0 12px 3px var(--me);}
+@keyframes fb-stripe{to{background-position:28px 0;}}
+/* 콤보 오라 — 팀 컬러 소프트 헤일로(무지개 X, 세련되게) */
+.fb-tap.combo-hot{animation:fb-pulse 1s ease-in-out infinite;}
+.fb-tap.combo-hot::after{content:'';position:absolute;inset:-6px;border-radius:32px;z-index:-1;
+  background:radial-gradient(circle at 50% 50%,color-mix(in srgb,var(--me) 78%,#fff),transparent 70%);
+  filter:blur(12px);opacity:.7;animation:fb-aura 1s ease-in-out infinite;}
+@keyframes fb-aura{0%,100%{opacity:.42;transform:scale(1);}50%{opacity:.82;transform:scale(1.05);}}
+@keyframes fb-pulse{0%,100%{box-shadow:0 14px 34px rgba(0,0,0,.45);}
+  50%{box-shadow:0 14px 46px rgba(0,0,0,.5),0 0 44px 6px color-mix(in srgb,var(--me) 55%,transparent);}}
+/* 화면 흔들림 */
+.fb-shake{animation:fb-shk .3s ease;}
+@keyframes fb-shk{0%,100%{transform:translate(0,0);}20%{transform:translate(-7px,3px);}40%{transform:translate(6px,-5px);}60%{transform:translate(-5px,-3px);}80%{transform:translate(4px,3px);}}
+/* 막판 10초 긴급 타이머 */
+.fb-time.urgent{color:#fff;background:var(--red);animation:fb-urg .5s ease-in-out infinite;}
+@keyframes fb-urg{0%,100%{transform:scale(1);}50%{transform:scale(1.2);box-shadow:0 0 16px 3px var(--red);}}
+/* 결과 연출 */
+.fb-verdict{animation:fb-vpop .55s cubic-bezier(.2,1.5,.4,1) both;}
+@keyframes fb-vpop{0%{opacity:0;transform:scale(.55) rotate(-4deg);}100%{opacity:1;transform:none;}}
+.fb-card{animation:fb-cardin .5s cubic-bezier(.2,1,.3,1) both;}
+@keyframes fb-cardin{0%{opacity:0;transform:translateY(26px) scale(.95);}100%{opacity:1;transform:none;}}
+.fb-card::after{content:'';position:absolute;top:0;left:-60%;width:55%;height:100%;
+  background:linear-gradient(100deg,transparent,rgba(255,255,255,.5),transparent);
+  transform:skewX(-18deg);animation:fb-shine 1.5s ease .35s 1;}
+@keyframes fb-shine{to{left:135%;}}
 
 /* 토스트 */
 #toast{position:fixed;left:50%;bottom:32px;transform:translateX(-50%);background:rgba(20,24,33,.92);color:#fff;
@@ -226,6 +274,68 @@ function beep(freq,dur,type,vol){try{AC=AC||new(window.AudioContext||window.webk
 function chord(fs,dur){fs.forEach(function(f,i){setTimeout(function(){beep(f,dur||0.12,'triangle',0.14);},i*55);});}
 function buzz(ms){try{if(window.Toss&&Toss.haptic){Toss.haptic(ms);return;}}catch(e){}if(navigator.vibrate)navigator.vibrate(ms);}
 
+/* ── 화려한 액션: 캔버스 파티클 (외부 에셋 0, 캔버스 미지원이면 조용히 비활성) ── */
+var FX={ctx:null,w:0,h:0,dpr:1,list:[]};
+var SKY={ctx:null,canvas:null,list:[],raf:0,w:0,h:0,dpr:1,on:false};
+function fxInit(){
+  var c=el('fb-fx'), stage=el('fb-stage');
+  if(!c||!c.getContext||!stage){FX.ctx=null;return;}
+  var r=stage.getBoundingClientRect();
+  FX.dpr=Math.min(2,window.devicePixelRatio||1); FX.w=r.width; FX.h=r.height;
+  c.width=FX.w*FX.dpr; c.height=FX.h*FX.dpr; c.style.width=FX.w+'px'; c.style.height=FX.h+'px';
+  var ctx=c.getContext('2d'); ctx.setTransform(FX.dpr,0,0,FX.dpr,0,0); FX.ctx=ctx; FX.list=[];
+}
+function fxCap(){if(FX.list.length>260)FX.list.splice(0,FX.list.length-260);}
+function fxSpark(x,y,n,colors){
+  if(!FX.ctx)return;
+  for(var i=0;i<n;i++){var a=Math.random()*6.283,sp=2+Math.random()*5.5;
+    FX.list.push({type:'spark',x:x,y:y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-2,g:0.18,life:1,dec:0.02+Math.random()*0.02,size:1.6+Math.random()*2.6,color:colors[i%colors.length]});}
+  fxCap();
+}
+function fxRing(x,y,color){if(!FX.ctx)return;FX.list.push({type:'ring',x:x,y:y,r:6,vr:5,life:1,dec:0.045,color:color});}
+function fxEmoji(x,y,n,emoji){
+  if(!FX.ctx)return;
+  for(var i=0;i<n;i++){var a=-1.57+(Math.random()-0.5)*2.1,sp=3+Math.random()*5;
+    FX.list.push({type:'emoji',x:x,y:y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-3,g:0.16,life:1,dec:0.013,size:18+Math.random()*16,emoji:emoji,rot:Math.random()*6.28,vrot:(Math.random()-0.5)*0.3});}
+  fxCap();
+}
+function fxStep(){
+  var ctx=FX.ctx; if(!ctx)return;
+  ctx.clearRect(0,0,FX.w,FX.h);
+  for(var i=FX.list.length-1;i>=0;i--){var p=FX.list[i];
+    if(p.type==='ring'){p.r+=p.vr;p.life-=p.dec;ctx.globalAlpha=Math.max(0,p.life);ctx.strokeStyle=p.color;ctx.lineWidth=2.5;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,6.283);ctx.stroke();}
+    else{p.vy+=p.g||0;p.x+=p.vx;p.y+=p.vy;if(p.vrot)p.rot+=p.vrot;p.life-=p.dec;ctx.globalAlpha=Math.max(0,p.life);
+      if(p.emoji){ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.rot||0);ctx.font=p.size+'px serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(p.emoji,0,0);ctx.restore();}
+      else{ctx.fillStyle=p.color;ctx.beginPath();ctx.arc(p.x,p.y,p.size,0,6.283);ctx.fill();}}
+    if(p.life<=0||p.y>FX.h+60)FX.list.splice(i,1);
+  }
+  ctx.globalAlpha=1;
+}
+function shake(){var s=el('fb-stage');if(!s||!s.classList)return;s.classList.remove('fb-shake');void s.offsetWidth;s.classList.add('fb-shake');}
+function skyInit(){
+  if(SKY.canvas||typeof document==='undefined'||!document.body)return;
+  var c=document.createElement('canvas'); if(!c.getContext)return;
+  c.id='fb-sky'; document.body.appendChild(c);
+  function size(){SKY.dpr=Math.min(2,window.devicePixelRatio||1);SKY.w=window.innerWidth;SKY.h=window.innerHeight;c.width=SKY.w*SKY.dpr;c.height=SKY.h*SKY.dpr;var x=c.getContext('2d');x.setTransform(SKY.dpr,0,0,SKY.dpr,0,0);SKY.ctx=x;}
+  size(); if(window.addEventListener)window.addEventListener('resize',size); SKY.canvas=c;
+}
+function skyConfetti(emojis,colors){
+  skyInit(); if(!SKY.ctx)return;
+  for(var i=0;i<110;i++){SKY.list.push({x:Math.random()*SKY.w,y:-20-Math.random()*SKY.h*0.4,vx:(Math.random()-0.5)*2.4,vy:2+Math.random()*4,g:0.05,life:1,dec:0.0035,size:11+Math.random()*15,emoji:Math.random()<0.5?emojis[i%emojis.length]:null,color:colors[i%colors.length],rot:Math.random()*6.28,vrot:(Math.random()-0.5)*0.3});}
+  if(!SKY.on){SKY.on=true;SKY.raf=requestAnimationFrame(skyLoop);}
+}
+function skyLoop(){
+  var ctx=SKY.ctx; if(!ctx){SKY.on=false;return;}
+  ctx.clearRect(0,0,SKY.w,SKY.h);
+  for(var i=SKY.list.length-1;i>=0;i--){var p=SKY.list[i];p.vy+=p.g;p.x+=p.vx;p.y+=p.vy;p.rot+=p.vrot;p.life-=p.dec;ctx.globalAlpha=Math.max(0,Math.min(1,p.life));
+    ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.rot);
+    if(p.emoji){ctx.font=p.size+'px serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(p.emoji,0,0);}else{ctx.fillStyle=p.color;ctx.fillRect(-p.size/2,-p.size/3,p.size,p.size*0.62);}
+    ctx.restore();
+    if(p.life<=0||p.y>SKY.h+40)SKY.list.splice(i,1);}
+  ctx.globalAlpha=1;
+  if(SKY.list.length)SKY.raf=requestAnimationFrame(skyLoop);else{SKY.on=false;ctx.clearRect(0,0,SKY.w,SKY.h);}
+}
+
 /* ── DOM 헬퍼 ── */
 var app=document.getElementById('app');
 function el(id){return document.getElementById(id);}
@@ -270,6 +380,7 @@ function GO(side){
      lastTap:now,aShare:base,mean:base,target:base,push:0,simT:0,lastFrame:now,endsAt:now+DURATION*1000,raf:0,tick:0,ended:false};
   app.innerHTML=
     '<div class="fb-stage" id="fb-stage" style="--me:'+me.color+';--foe:'+foe.color+'">'+
+      '<div class="fb-glow" id="fb-glow"></div>'+
       '<div class="fb-gauge live" style="background:'+bt.b.color+'"><i id="fb-fill" style="width:'+base+'%;background:'+bt.a.color+'"></i></div>'+
       '<div class="fb-glabels"><span style="color:'+bt.a.color+'">'+bt.a.emoji+' <b id="fb-pa">'+base.toFixed(1)+'</b>%</span>'+
         '<span class="fb-time" id="fb-time">'+DURATION+'</span>'+
@@ -278,9 +389,11 @@ function GO(side){
       '<div class="fb-mid"><div class="fb-count"><b id="fb-taps">0</b><span>내 기여</span></div><div class="fb-combo" id="fb-combo">×1.0</div></div>'+
       '<button class="fb-tap" id="fb-tap" style="background:'+me.color+'"><span class="fb-tapemo">'+me.emoji+'</span><span class="fb-taplabel">TAP!</span></button>'+
       '<div class="fb-pops" id="fb-pops"></div>'+
+      '<canvas id="fb-fx"></canvas>'+
       '<p class="hint" style="text-align:center;margin-top:8px"><b style="color:'+me.color+'">'+me.name+'</b> · 화면 아무 데나 빠르게 탭!</p>'+
     '</div>';
   el('fb-stage').addEventListener('pointerdown',onTap,{passive:true});
+  fxInit();
   B.tick=setInterval(tickerBeat,2300);
   B.raf=requestAnimationFrame(frame);
 }
@@ -294,19 +407,23 @@ function onTap(e){
   var dir=B.side==='a'?1:-1;
   B.push+=dir*mult*0.9; B.mean=clamp(B.mean+dir*mult*0.05,12,88);
   var f=520+Math.min(900,B.streak*16);
-  if(B.streak>0&&B.streak%12===0){chord([f,f*1.25,f*1.5],0.07);buzz(16);}else{beep(f,0.045,'square',0.09);buzz(5);}
-  popNum(e,mult);
+  var milestone=B.streak>0&&B.streak%12===0;
+  if(milestone){chord([f,f*1.25,f*1.5],0.07);buzz(16);}else{beep(f,0.045,'square',0.09);buzz(5);}
+  var stage=el('fb-stage'), r=stage&&stage.getBoundingClientRect?stage.getBoundingClientRect():{left:0,top:0,width:300,height:200};
+  var px=(e.clientX||r.left+r.width/2)-r.left, py=(e.clientY||r.top+r.height/2)-r.top;
+  popNum(px,py,mult);
+  var hot=B.streak>10;
+  fxSpark(px,py,hot?10:6,hot?['#ffffff',B.me.color,'#ffffff']:[B.me.color,'#ffffff']);
+  if(milestone){fxRing(px,py,'#ffffff');fxEmoji(px,py,7,B.me.emoji);shake();}
   var t=el('fb-taps'); if(t)t.textContent=comma(Math.floor(B.tapsF));
 }
-function popNum(e,mult){
-  var box=el('fb-pops'), stage=el('fb-stage'); if(!box||!stage)return;
+function popNum(px,py,mult){
+  var box=el('fb-pops'); if(!box)return;
   if(box.childElementCount>14&&box.firstElementChild)box.firstElementChild.remove();
-  var r=stage.getBoundingClientRect();
   var s=document.createElement('span'), n=Math.max(1,Math.round(mult));
   s.className='fb-pop'+(n>=3?' x3':n>=2?' x2':'');
   s.textContent=n>=2?('+'+n+'🔥'):'+1';
-  s.style.left=((e.clientX||r.left+r.width/2)-r.left)+'px';
-  s.style.top=((e.clientY||r.top+r.height/2)-r.top)+'px';
+  s.style.left=px+'px'; s.style.top=py+'px';
   box.appendChild(s); setTimeout(function(){s.remove();},560);
 }
 function frame(now){
@@ -324,6 +441,10 @@ function frame(now){
   setTxt('fb-pa',B.aShare.toFixed(1)); setTxt('fb-pb',(100-B.aShare).toFixed(1));
   setTxt('fb-time',String(Math.max(0,Math.ceil((B.endsAt-now)/1000))));
   var c=el('fb-combo'); if(c){c.textContent='×'+comboMult(B.streak).toFixed(1);c.classList.toggle('hot',B.streak>10);}
+  fxStep();
+  var glow=el('fb-glow'); if(glow)glow.style.opacity=String(Math.min(0.8,B.streak/32));
+  var tapb=el('fb-tap'); if(tapb&&tapb.classList)tapb.classList.toggle('combo-hot',B.streak>14);
+  var tEl=el('fb-time'); if(tEl&&tEl.classList)tEl.classList.toggle('urgent',(B.endsAt-now)/1000<=10);
   if(now>=B.endsAt){endBattle();return;}
   B.raf=requestAnimationFrame(frame);
 }
@@ -348,6 +469,7 @@ function endBattle(){
   var title=titleForTaps(contrib), rank=rankEstimate(contrib), streak=F.streak;
   var verdict=myShare>=53?{t:'우리 편이 전국을 먹었다! 🎉',c:'win'}:myShare<=47?{t:'오늘은 밀렸다… 내일 설욕 🔥',c:'lose'}:{t:'초접전 무승부 ⚔️',c:'tie'};
   if(newBest){chord([523,659,784,1047]);buzz([20,40,20]);}
+  if(verdict.c==='win'||newBest){skyConfetti([me.emoji,'✨'],[me.color,'#ffffff','#ffd76a']);}
   LAST={bt:bt,me:me,contrib:contrib,title:title,rank:rank};
   B=null;
   app.innerHTML=
@@ -384,7 +506,7 @@ function SHARE(){
   }else{toast('스크린샷 해서 자랑해보세요 📸');}
 }
 
-function cleanup(){if(B){cancelAnimationFrame(B.raf);clearInterval(B.tick);B=null;}}
+function cleanup(){if(B){cancelAnimationFrame(B.raf);clearInterval(B.tick);B=null;}FX.list.length=0;}
 
 /* 전역 노출 (onclick에서 호출) */
 window.GO=GO; window.SHARE=SHARE; window.intro=intro;

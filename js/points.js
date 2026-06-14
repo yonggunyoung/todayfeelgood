@@ -63,7 +63,6 @@ export function refund(p, label) {
 
 /* 포인트샵 카탈로그 — 내부 보상(원가≈0) 중심. 외부 교환은 잠금 상태로 미리 보여줘 목표를 만든다 */
 export const SHOP = [
-  { id: 'ai1',     p: 100,  emoji: '🤖', name: 'AI 1회권',          desc: '영수증 스캔·유튜브 정리 +1회', kind: 'server' },
   { id: 'adfree',  p: 300,  emoji: '🧘', name: '광고 없는 하루',     desc: '24시간 배너 광고 미노출',     kind: 'local' },
   { id: 'trial',   p: 1000, emoji: '⭐', name: '프리미엄 맛보기 1일', desc: '광고 없음 + 응원 배지 24시간', kind: 'local' },
   { id: 'gift',    p: 5000, emoji: '🎁', name: '기프티콘 교환',      desc: '커피 쿠폰 등 — 준비 중',       kind: 'locked' },

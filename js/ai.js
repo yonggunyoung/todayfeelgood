@@ -17,7 +17,9 @@ const STATUS_MSG = {
 async function throwApiError(res) {
   let detail = '';
   try { detail = (await res.json()).error?.message || ''; } catch { /* ignore */ }
-  throw new Error(STATUS_MSG[res.status] || `AI 호출 실패 (${res.status}) ${detail}`);
+  const err = new Error(STATUS_MSG[res.status] || `AI 호출 실패 (${res.status}) ${detail}`);
+  err.status = res.status; // 429 등 상태코드 보존 (광고 후 재시도 흐름이 이걸 본다)
+  throw err;
 }
 
 /* ── 서버 경유 모드 — Cloudflare 게이트웨이(워커)가 Anthropic 키만 보관·주입.
@@ -51,9 +53,8 @@ function parseJsonLoose(text) {
   return null;
 }
 
-// 광고/포인트 보상 충전 — Cloudflare 게이트웨이엔 서버 한도가 없으니 클라이언트 적립으로 처리(성공 반환)
+// 광고 보상 — 게이트웨이엔 서버 한도가 없어 충전 개념이 없다. 호출부 호환을 위해 성공만 반환(클라 적립은 points.js).
 export async function claimReward() { return { ok: true }; }
-export async function redeemAiCredit() { return { ok: true }; }
 
 const SCHEMA = {
   type: 'object',

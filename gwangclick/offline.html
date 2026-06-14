@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no" />
+<title>⚡ 광클대전 (단일 파일) — 더블클릭하면 바로 실행</title>
+<meta name="theme-color" content="#1d2330" />
+<meta name="description" content="민초 vs 반민초? 부먹 vs 찍먹? 오늘의 떡밥에 내 편을 골라 60초 광클! 전국 흐름을 내 편으로 끌어와라." />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<!-- 토스 미니앱 어댑터(선택) — 토스 밖에서는 안전한 폴백, 의존성 없음 -->
+<script>
+/* 토스 미니앱 어댑터(인라인) — 토스 밖에서는 안전 폴백 */
+// ⚡ 광클대전 — 토스 미니앱 어댑터 (선택, 의존성 없음).
+// 토스 WebView SDK가 주입된 환경이면 그 기능을 쓰고, 토스 밖(웹/파일실행)에서는 안전한 폴백.
+// 입점 후 토스 콘솔에서 발급한 광고 단위 ID를 ADS에 채우면 보상형 광고가 활성화된다.
+// SDK 전역명·함수는 입점 시점 공식 문서(developers-apps-in-toss.toss.im)로 최종 확인할 것.
+(function () {
+  function sdk() {
+    return window.AppsInToss || window.appsInToss || window.tossMiniApp || null;
+  }
+  window.Toss = {
+    // 토스 앱 안에서 실행 중인가
+    inToss: function () { return !!sdk(); },
+
+    // 햅틱 — 토스 안: 네이티브 진동 / 밖: navigator.vibrate
+    haptic: function (ms) {
+      var t = sdk();
+      try { if (t && t.haptic) { t.haptic({ type: 'tap' }); return; } } catch (e) {}
+      if (navigator.vibrate) navigator.vibrate(ms);
+    },
+
+    // 보상형 광고 (예: '한 판 더 보상' 같은 수익화에 사용 — v1은 미사용, 입점 후 연결)
+    // 반환: true(완주) | false(중도이탈) | null(토스 아님/광고없음)
+    rewardedAd: function (adUnitId) {
+      return new Promise(function (res) {
+        var t = sdk();
+        if (!t || !adUnitId || !t.showFullScreenAd) { res(null); return; }
+        try {
+          t.showFullScreenAd({
+            adUnitId: adUnitId,
+            onEvent: function (e) {
+              if (e && e.type === 'userEarnedReward') res(true);
+              else if (e && (e.type === 'dismissed' || e.type === 'closed')) res(false);
+            },
+            onError: function () { res(null); },
+          });
+        } catch (e) { res(null); }
+      });
+    },
+  };
+})();
+</script>
+<!-- 폰트는 있으면 좋고 없어도(오프라인/파일실행) 시스템 폰트로 자동 폴백 -->
+<link rel="stylesheet" as="style" crossorigin
+      href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+<style>
+:root{
+  --bg:#f2f3f7; --card:#fff; --label:#17181c; --label-2:#6e7077; --label-3:#a3a5ad;
+  --hairline:rgba(60,60,67,.1); --green:#2fae5f; --green-bg:#e9f7ee; --orange:#ff8a3d;
+  --orange-bg:#fff1e7; --red:#ff453a; --amber:#d9930d;
+  --sans:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,'Noto Sans KR',sans-serif;
+  --r-lg:22px;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html{font-size:16px;}
+body{font-family:var(--sans);background:var(--bg);color:var(--label);min-height:100dvh;-webkit-font-smoothing:antialiased;}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit;}
+#app{max-width:480px;margin:0 auto;min-height:100dvh;padding:18px 16px 30px;position:relative;}
+.brandbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.brandbar b{font-size:1.05rem;font-weight:900;}
+.brandbar small{color:var(--label-2);font-size:.74rem;}
+.sub{color:var(--label-2);font-size:.86rem;}
+.hint{color:var(--label-3);font-size:.8rem;line-height:1.5;}
+.btn{display:block;width:100%;background:rgba(118,118,128,.1);color:var(--label);font-weight:800;
+  border-radius:14px;padding:14px;font-size:.95rem;text-align:center;}
+.btn:active{transform:scale(.98);}
+.btn-primary{background:var(--green);color:#fff;box-shadow:0 4px 14px rgba(47,174,95,.3);}
+.btn-accent{background:var(--orange);color:#fff;box-shadow:0 4px 14px rgba(255,138,61,.32);}
+.btn-row{display:flex;flex-direction:column;gap:9px;margin-top:14px;}
+.g-earn{margin-top:8px;font-weight:900;color:#8a5a00;background:#fff4d6;border-radius:12px;padding:9px;text-align:center;}
+.g-newbest{margin-top:8px;text-align:center;font-weight:900;color:var(--orange);}
+
+/* ── 게이지 (공용) ── */
+.fb-gauge{position:relative;height:18px;border-radius:99px;overflow:hidden;}
+.fb-gauge i{display:block;height:100%;box-shadow:2px 0 0 rgba(255,255,255,.85);}
+.fb-gauge.live{height:20px;}
+.fb-glabels{display:flex;justify-content:space-between;align-items:center;margin-top:6px;font-size:.82rem;font-weight:800;}
+.fb-livetag{font-size:.66rem;font-weight:800;color:var(--label-3);letter-spacing:.03em;}
+
+/* ── 인트로 ── */
+.fb-q{text-align:center;font-size:1.5rem;font-weight:900;margin:10px 0 16px;}
+.fb-vs{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;margin-bottom:14px;}
+.fb-team{text-align:center;padding:15px 8px;border-radius:16px;background:var(--card);border:2px solid var(--hairline);transition:all .18s;}
+.fb-team.on{border-color:var(--c);box-shadow:0 6px 18px color-mix(in srgb,var(--c) 28%,transparent);}
+.fb-team .fb-emo{font-size:2.7rem;display:block;}
+.fb-team b{display:block;margin-top:4px;color:var(--c);font-size:1.04rem;}
+.fb-team small{display:block;margin-top:3px;color:var(--label-2);font-size:.72rem;line-height:1.35;}
+.fb-vsmark{font-weight:900;color:var(--label-3);font-size:1.05rem;}
+.fb-streak{text-align:center;margin:12px 0 2px;padding:9px;border-radius:12px;background:var(--orange-bg);color:#b35a12;font-weight:800;font-size:.82rem;}
+.fb-pick{display:grid;gap:10px;margin-top:16px;}
+.fb-pickbtn{position:relative;overflow:hidden;border:none;border-radius:16px;color:#fff;font-weight:900;font-size:1.06rem;padding:18px 12px;box-shadow:0 8px 20px rgba(20,24,33,.18);}
+.fb-pickbtn::before{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.22),rgba(0,0,0,.06));pointer-events:none;}
+.fb-pickbtn:active{transform:scale(.98);}
+
+/* ── 배틀 ── */
+.fb-stage{user-select:none;-webkit-user-select:none;touch-action:manipulation;position:relative;}
+.fb-time{font-variant-numeric:tabular-nums;font-weight:900;font-size:1.1rem;background:rgba(118,118,128,.12);padding:2px 12px;border-radius:99px;}
+.fb-ticker{margin:12px 0;text-align:center;font-weight:800;font-size:.88rem;min-height:1.3em;padding:10px;border-radius:12px;background:rgba(118,118,128,.08);}
+.fb-ticker.beat{animation:fb-tick .4s ease;}
+@keyframes fb-tick{0%{opacity:0;transform:translateY(5px);}100%{opacity:1;transform:none;}}
+.fb-mid{display:flex;justify-content:space-between;align-items:flex-end;margin:4px 4px 12px;}
+.fb-count b{font-size:2.8rem;font-weight:900;line-height:1;font-variant-numeric:tabular-nums;color:var(--me);}
+.fb-count span{display:block;font-size:.74rem;color:var(--label-2);font-weight:700;}
+.fb-combo{font-size:1.4rem;font-weight:900;color:var(--label-3);font-variant-numeric:tabular-nums;transition:all .12s;}
+.fb-combo.hot{color:var(--orange);transform:scale(1.18);text-shadow:0 0 14px rgba(255,138,61,.5);}
+.fb-tap{position:relative;overflow:hidden;width:100%;height:200px;border-radius:28px;color:#fff;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+  box-shadow:0 12px 30px rgba(20,24,33,.22);touch-action:manipulation;}
+.fb-tap::before{content:'';position:absolute;inset:0;
+  background:radial-gradient(circle at 50% 30%,rgba(255,255,255,.30),transparent 60%),linear-gradient(180deg,rgba(255,255,255,.10),rgba(0,0,0,.12));pointer-events:none;}
+.fb-tap:active{transform:scale(.97);box-shadow:0 6px 16px rgba(20,24,33,.22);}
+.fb-tapemo{font-size:3.4rem;line-height:1;}
+.fb-taplabel{font-size:1.6rem;font-weight:900;letter-spacing:.06em;}
+.fb-pops{position:absolute;inset:0;pointer-events:none;overflow:hidden;}
+.fb-pop{position:absolute;transform:translate(-50%,-50%);font-weight:900;font-size:1.15rem;color:#fff;text-shadow:0 2px 6px rgba(0,0,0,.35);animation:fb-rise .56s ease-out forwards;}
+.fb-pop.x2{font-size:1.5rem;color:#ffe27a;}
+.fb-pop.x3{font-size:1.85rem;color:#ff8a3d;}
+@keyframes fb-rise{0%{opacity:0;transform:translate(-50%,-50%) scale(.6);}25%{opacity:1;transform:translate(-50%,-120%) scale(1.1);}100%{opacity:0;transform:translate(-50%,-240%) scale(1);}}
+
+/* ── 결과 ── */
+.fb-verdict{text-align:center;margin:0 0 12px;font-size:1.3rem;font-weight:900;}
+.fb-verdict.win{color:var(--green);} .fb-verdict.lose{color:var(--red);} .fb-verdict.tie{color:var(--amber);}
+.fb-card{border-radius:20px;padding:16px;color:#fff;position:relative;overflow:hidden;
+  background:linear-gradient(150deg,color-mix(in srgb,var(--c) 88%,#000),color-mix(in srgb,var(--foe) 55%,#1a1a22));
+  box-shadow:0 16px 44px rgba(20,24,33,.3);}
+.fb-card-top{display:flex;align-items:center;gap:11px;}
+.fb-card-emo{font-size:2.7rem;}
+.fb-card-top .grow{flex:1;}
+.fb-card-top b{font-size:1.14rem;}
+.fb-card-top small{display:block;opacity:.85;font-size:.76rem;}
+.fb-card-badge{background:rgba(255,255,255,.22);padding:5px 11px;border-radius:99px;font-weight:900;font-size:.74rem;white-space:nowrap;}
+.fb-card-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:14px 0 12px;text-align:center;}
+.fb-card-stats b{font-size:1.4rem;font-weight:900;font-variant-numeric:tabular-nums;}
+.fb-card-stats small{display:block;opacity:.82;font-size:.7rem;margin-top:1px;}
+.fb-card-gauge{height:13px;border-radius:99px;overflow:hidden;}
+.fb-card-gauge i{display:block;height:100%;box-shadow:2px 0 0 rgba(255,255,255,.9);}
+.fb-card-foot{display:flex;justify-content:space-between;align-items:center;margin-top:9px;font-size:.78rem;font-weight:800;}
+.fb-card-tag{opacity:.85;font-size:.72rem;}
+
+/* 토스트 */
+#toast{position:fixed;left:50%;bottom:32px;transform:translateX(-50%);background:rgba(20,24,33,.92);color:#fff;
+  padding:11px 18px;border-radius:99px;font-size:.85rem;font-weight:700;opacity:0;transition:opacity .2s;z-index:50;pointer-events:none;max-width:90vw;text-align:center;}
+#toast.on{opacity:1;}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="toast"></div>
+<script>
+"use strict";
+/* ⚡ 광클대전 — 단독 실행 버전 (서버·빌드·백엔드 없이 파일 하나로 동작)
+   냉비서 앱(js/game-faction.js)의 게임을 모듈 없이 1파일로 포팅한 데모. */
+
+/* ── 소재(밈 떡밥) ── */
+var BATTLES = [
+  { id:'mintchoco', tag:'민초대전', q:'민트초코, 너는?',
+    a:{key:'mint',name:'민초단',emoji:'🌿',color:'#12b39a',slogan:'치약? 이건 신이 내린 맛'},
+    b:{key:'anti',name:'반민초파',emoji:'🚫',color:'#7b6ef0',slogan:'디저트에 치약을 왜 넣냐고'},
+    taunts:['치약 자랑 그만 🪥','민초 모르면 인생 손해 ㅋㅋ','반민초는 미각 테러범','결국 다 민초로 온다'] },
+  { id:'tangsuyuk', tag:'부먹찍먹', q:'탕수육은 역시?',
+    a:{key:'bu',name:'부먹파',emoji:'🥣',color:'#e8633a',slogan:'소스에 촉촉하게 적셔야 진리'},
+    b:{key:'jjik',name:'찍먹파',emoji:'🥢',color:'#2f9ec4',slogan:'바삭함을 어떻게 포기해'},
+    taunts:['눅눅이들 잘 있냐 🫠','소스 부으면 그게 탕수육 죽이야','찍먹이 국룰 모르나','부먹은 사랑입니다'] },
+  { id:'chicken', tag:'양념후라이드', q:'치킨 한 마리면?',
+    a:{key:'yn',name:'양념파',emoji:'🍗',color:'#d83838',slogan:'손에 묻은 양념까지 핥아먹는다'},
+    b:{key:'fr',name:'후라이드파',emoji:'🍤',color:'#cf911f',slogan:'치킨 본연의 맛, 후라이드'},
+    taunts:['후라이드는 심심하지 않냐','양념은 소스맛이지 치킨맛이냐 ㅋ','반반? 회색분자 나가라','결국 시키면 양념'] },
+  { id:'pineapple', tag:'파인애플피자', q:'파인애플 피자, 인정?',
+    a:{key:'o',name:'하와이안단',emoji:'🍍',color:'#d9a400',slogan:'달콤짭짤 이게 천국'},
+    b:{key:'x',name:'파인애플아웃',emoji:'🙅',color:'#3f8f4f',slogan:'피자에 과일은 반칙'},
+    taunts:['피자에 과일 올린 사람 누구야','먹어보고 말해라 진짜 맛있음','이탈리아 가면 잡혀간다','단짠 모르면 입맛 초딩'] },
+  { id:'naengmyeon', tag:'물냉비냉', q:'여름엔 어떤 냉면?',
+    a:{key:'mul',name:'물냉파',emoji:'🧊',color:'#2f8fd0',slogan:'시원한 육수 들이켜는 그 맛'},
+    b:{key:'bib',name:'비냉파',emoji:'🌶️',color:'#d8452f',slogan:'매콤새콤 비벼야 제맛'},
+    taunts:['물냉은 밍밍하잖아','비냉은 그냥 매운 국수지','면치기 못하면 물냉 자격 없음','둘 다 시키는 게 정답 아님?'] },
+  { id:'milk', tag:'딸기바나나우유', q:'편의점 우유는?',
+    a:{key:'st',name:'딸기우유단',emoji:'🍓',color:'#e85a92',slogan:'핑크빛 행복 한 모금'},
+    b:{key:'bn',name:'바나나우유단',emoji:'🍌',color:'#e0a800',slogan:'국민 단지우유 영원하라'},
+    taunts:['딸기우유는 색소맛 ㅋ','바나나우유 안 먹어본 사람 있냐','단지 모양 못 이김','딸기우유가 더 고급짐'] },
+  { id:'gimbap', tag:'김밥꼬다리', q:'김밥, 어디부터 먹어?',
+    a:{key:'end',name:'꼬다리파',emoji:'🍙',color:'#8d6e63',slogan:'못생긴 끝이 제일 맛있어'},
+    b:{key:'mid',name:'가운데파',emoji:'🌀',color:'#3a9b4f',slogan:'예쁜 가운데가 정석이지'},
+    taunts:['꼬다리 안 주면 서운함','가운데부터 먹는 건 국룰','꼬다리 버리는 사람 손절','엄마는 늘 꼬다리만 드셨지…'] },
+  { id:'mandu', tag:'군만두물만두', q:'만두는 역시?',
+    a:{key:'gun',name:'군만두파',emoji:'🥟',color:'#c07c2a',slogan:'바삭바삭 겉면이 생명'},
+    b:{key:'mul',name:'물만두파',emoji:'💧',color:'#4d9ec4',slogan:'촉촉하게 터지는 육즙'},
+    taunts:['군만두는 기름맛 아니냐','물만두는 밋밋해','냉동만두는 무조건 군만두','둘 다 맛있는 거 인정하자 사실'] }
+];
+
+/* ── 순수 헬퍼 ── */
+function fnv1a(s){var h=2166136261;for(var i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619);}return h>>>0;}
+function dayNumber(d){var ms=Date.parse(d+'T00:00:00Z');return isNaN(ms)?0:Math.floor(ms/86400000);}
+function battleOfDay(d){var n=dayNumber(d);return BATTLES[((n%BATTLES.length)+BATTLES.length)%BATTLES.length];}
+function dailyBias(d,bt){return (fnv1a(d+'|'+(bt?bt.id:''))%1201)/100-6;}
+function comboMult(streak){return Math.min(3,1+Math.max(0,streak)*0.04);}
+var TITLES=[[0,'구경꾼 👀'],[50,'일반인 🙂'],[150,'광클 입문 🐣'],[300,'손가락 좀 쓰네 ✌️'],[500,'광클러 ⚡'],[800,'광클 고수 🔥'],[1200,'광클의 신 👑'],[1800,'손가락 분신술 🌀']];
+function titleForTaps(t){var l=TITLES[0][1];for(var i=0;i<TITLES.length;i++)if(t>=TITLES[i][0])l=TITLES[i][1];return l;}
+function rankEstimate(t){var pop=87431,f=Math.max(0,Math.min(1,1-t/2000));return Math.max(1,Math.round(pop*(0.0002+0.9998*f*f)));}
+function comma(n){return Math.round(n).toLocaleString('ko-KR');}
+function clamp(v,lo,hi){return Math.max(lo,Math.min(hi,v));}
+function todayStr(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function mdLabel(d){var p=String(d).split('-');return (+p[1])+'월 '+(+p[2])+'일';}
+function addDaysStr(n,from){var d=new Date(from+'T00:00:00');d.setDate(d.getDate()+n);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function withEuro(name){var c=name.charCodeAt(name.length-1)-0xac00;var jong=c>=0&&c<=11171&&c%28!==0;return name+(jong?'으로':'로');}
+
+/* ── 저장 ── */
+var KEY='gwangclick.v1';
+function load(){try{var r=localStorage.getItem(KEY);if(r)return JSON.parse(r);}catch(e){}return{picks:{},streak:0,lastDay:'',best:0};}
+function persist(){try{localStorage.setItem(KEY,JSON.stringify(F));}catch(e){}}
+var F=load();
+
+/* ── 소리/진동 ── */
+var AC=null;
+function beep(freq,dur,type,vol){try{AC=AC||new(window.AudioContext||window.webkitAudioContext)();var o=AC.createOscillator(),g=AC.createGain();o.type=type||'sine';o.frequency.value=freq;g.gain.setValueAtTime(vol||0.18,AC.currentTime);g.gain.exponentialRampToValueAtTime(0.001,AC.currentTime+dur);o.connect(g).connect(AC.destination);o.start();o.stop(AC.currentTime+dur);}catch(e){}}
+function chord(fs,dur){fs.forEach(function(f,i){setTimeout(function(){beep(f,dur||0.12,'triangle',0.14);},i*55);});}
+function buzz(ms){try{if(window.Toss&&Toss.haptic){Toss.haptic(ms);return;}}catch(e){}if(navigator.vibrate)navigator.vibrate(ms);}
+
+/* ── DOM 헬퍼 ── */
+var app=document.getElementById('app');
+function el(id){return document.getElementById(id);}
+function toast(msg){var t=el('toast');t.textContent=msg;t.classList.add('on');clearTimeout(toast._t);toast._t=setTimeout(function(){t.classList.remove('on');},2200);}
+
+/* ── 인트로 ── */
+function intro(){
+  cleanup();
+  var date=todayStr(), bt=battleOfDay(date), base=clamp(50+dailyBias(date,bt),12,88);
+  var picked=F.picks[bt.id];
+  app.innerHTML=
+    '<div class="brandbar"><b>⚡ 광클대전</b><small>'+mdLabel(date)+' · 전국 동시</small></div>'+
+    '<p class="sub" style="text-align:center;margin:2px 0 6px">오늘의 대전 — 내 편을 골라라</p>'+
+    '<div class="fb-q">'+bt.q+'</div>'+
+    '<div class="fb-vs">'+
+      '<div class="fb-team'+(picked==='a'?' on':'')+'" style="--c:'+bt.a.color+'"><span class="fb-emo">'+bt.a.emoji+'</span><b>'+bt.a.name+'</b><small>'+bt.a.slogan+'</small></div>'+
+      '<div class="fb-vsmark">VS</div>'+
+      '<div class="fb-team'+(picked==='b'?' on':'')+'" style="--c:'+bt.b.color+'"><span class="fb-emo">'+bt.b.emoji+'</span><b>'+bt.b.name+'</b><small>'+bt.b.slogan+'</small></div>'+
+    '</div>'+
+    '<div class="fb-gauge intro" style="background:'+bt.b.color+'"><i style="width:'+base+'%;background:'+bt.a.color+'"></i></div>'+
+    '<div class="fb-glabels"><span style="color:'+bt.a.color+'">'+bt.a.emoji+' '+base.toFixed(1)+'%</span>'+
+      '<span class="fb-livetag">전국 흐름 ●LIVE</span><span style="color:'+bt.b.color+'">'+(100-base).toFixed(1)+'% '+bt.b.emoji+'</span></div>'+
+    (F.streak>1?'<div class="fb-streak">🔥 '+F.streak+'일 연속 참전 중 — 오늘도 출석!</div>':'')+
+    '<div class="fb-pick">'+
+      '<button class="fb-pickbtn" style="background:'+bt.a.color+'" onclick="GO(\'a\')">'+bt.a.emoji+' '+withEuro(bt.a.name)+' 참전</button>'+
+      '<button class="fb-pickbtn" style="background:'+bt.b.color+'" onclick="GO(\'b\')">'+bt.b.emoji+' '+withEuro(bt.b.name)+' 참전</button>'+
+    '</div>'+
+    '<p class="hint" style="text-align:center;margin-top:12px">60초 동안 미친듯이 탭 → 내 편 흐름을 끌어와라.<br>콤보를 이어가면 한 탭이 <b>×3</b>까지 불어난다 ⚡</p>';
+}
+
+/* ── 배틀 ── */
+var B=null, DURATION=60;
+function GO(side){
+  cleanup();
+  var date=todayStr(), bt=battleOfDay(date), me=bt[side], foe=bt[side==='a'?'b':'a'];
+  var base=clamp(50+dailyBias(date,bt),12,88);
+  F.picks[bt.id]=side;
+  if(F.lastDay!==date){F.streak=(F.lastDay===addDaysStr(-1,date))?(F.streak||0)+1:1;F.lastDay=date;}
+  persist();
+  var now=performance.now();
+  B={date:date,bt:bt,side:side,me:me,foe:foe,base:base,tapsF:0,presses:0,streak:0,maxStreak:0,
+     lastTap:now,aShare:base,mean:base,target:base,push:0,simT:0,lastFrame:now,endsAt:now+DURATION*1000,raf:0,tick:0,ended:false};
+  app.innerHTML=
+    '<div class="fb-stage" id="fb-stage" style="--me:'+me.color+';--foe:'+foe.color+'">'+
+      '<div class="fb-gauge live" style="background:'+bt.b.color+'"><i id="fb-fill" style="width:'+base+'%;background:'+bt.a.color+'"></i></div>'+
+      '<div class="fb-glabels"><span style="color:'+bt.a.color+'">'+bt.a.emoji+' <b id="fb-pa">'+base.toFixed(1)+'</b>%</span>'+
+        '<span class="fb-time" id="fb-time">'+DURATION+'</span>'+
+        '<span style="color:'+bt.b.color+'"><b id="fb-pb">'+(100-base).toFixed(1)+'</b>% '+bt.b.emoji+'</span></div>'+
+      '<div class="fb-ticker" id="fb-ticker">전국에서 광클이 시작됐다… '+me.emoji+' '+me.name+' 가즈아!</div>'+
+      '<div class="fb-mid"><div class="fb-count"><b id="fb-taps">0</b><span>내 기여</span></div><div class="fb-combo" id="fb-combo">×1.0</div></div>'+
+      '<button class="fb-tap" id="fb-tap" style="background:'+me.color+'"><span class="fb-tapemo">'+me.emoji+'</span><span class="fb-taplabel">TAP!</span></button>'+
+      '<div class="fb-pops" id="fb-pops"></div>'+
+      '<p class="hint" style="text-align:center;margin-top:8px"><b style="color:'+me.color+'">'+me.name+'</b> · 화면 아무 데나 빠르게 탭!</p>'+
+    '</div>';
+  el('fb-stage').addEventListener('pointerdown',onTap,{passive:true});
+  B.tick=setInterval(tickerBeat,2300);
+  B.raf=requestAnimationFrame(frame);
+}
+
+function onTap(e){
+  if(!B||B.ended)return;
+  var now=performance.now(), gap=now-B.lastTap; B.lastTap=now;
+  B.streak=gap<300?B.streak+1:Math.max(0,B.streak-2);
+  if(B.streak>B.maxStreak)B.maxStreak=B.streak;
+  var mult=comboMult(B.streak); B.tapsF+=mult; B.presses+=1;
+  var dir=B.side==='a'?1:-1;
+  B.push+=dir*mult*0.9; B.mean=clamp(B.mean+dir*mult*0.05,12,88);
+  var f=520+Math.min(900,B.streak*16);
+  if(B.streak>0&&B.streak%12===0){chord([f,f*1.25,f*1.5],0.07);buzz(16);}else{beep(f,0.045,'square',0.09);buzz(5);}
+  popNum(e,mult);
+  var t=el('fb-taps'); if(t)t.textContent=comma(Math.floor(B.tapsF));
+}
+function popNum(e,mult){
+  var box=el('fb-pops'), stage=el('fb-stage'); if(!box||!stage)return;
+  if(box.childElementCount>14&&box.firstElementChild)box.firstElementChild.remove();
+  var r=stage.getBoundingClientRect();
+  var s=document.createElement('span'), n=Math.max(1,Math.round(mult));
+  s.className='fb-pop'+(n>=3?' x3':n>=2?' x2':'');
+  s.textContent=n>=2?('+'+n+'🔥'):'+1';
+  s.style.left=((e.clientX||r.left+r.width/2)-r.left)+'px';
+  s.style.top=((e.clientY||r.top+r.height/2)-r.top)+'px';
+  box.appendChild(s); setTimeout(function(){s.remove();},560);
+}
+function frame(now){
+  var fill=el('fb-fill');
+  if(!B||B.ended||!fill){cleanup();return;}
+  var dt=Math.min(0.05,(now-B.lastFrame)/1000); B.lastFrame=now; var k=dt*60;
+  B.simT+=dt;
+  if(B.simT>0.9){B.simT=0;B.target=clamp(B.mean+(Math.random()*2-1)*7,8,92);}
+  B.mean+=(B.base-B.mean)*0.0025*k;
+  B.aShare+=(B.target-B.aShare)*0.05*k;
+  B.aShare+=B.push*0.05*k; B.push*=Math.pow(0.86,k);
+  B.aShare=clamp(B.aShare,5,95);
+  if(now-B.lastTap>320&&B.streak>0)B.streak=Math.max(0,B.streak-0.5*k);
+  fill.style.width=B.aShare.toFixed(2)+'%';
+  setTxt('fb-pa',B.aShare.toFixed(1)); setTxt('fb-pb',(100-B.aShare).toFixed(1));
+  setTxt('fb-time',String(Math.max(0,Math.ceil((B.endsAt-now)/1000))));
+  var c=el('fb-combo'); if(c){c.textContent='×'+comboMult(B.streak).toFixed(1);c.classList.toggle('hot',B.streak>10);}
+  if(now>=B.endsAt){endBattle();return;}
+  B.raf=requestAnimationFrame(frame);
+}
+function setTxt(id,v){var e=el(id);if(e)e.textContent=v;}
+function tickerBeat(){
+  var t=el('fb-ticker'); if(!B||!t){cleanup();return;}
+  var bt=B.bt, lead=B.aShare>=50?bt.a:bt.b, leadShare=Math.max(B.aShare,100-B.aShare), pool=[];
+  if(Math.abs(B.aShare-50)<2.5)pool.push('⚔️ 초접전! 한 끗 차이다');
+  else pool.push('🔥 '+lead.emoji+' '+lead.name+' 흐름 장악 '+leadShare.toFixed(0)+'%');
+  if(B.maxStreak>14)pool.push('💥 누군가 ×'+comboMult(B.maxStreak).toFixed(1)+' 콤보 폭발!');
+  bt.taunts.forEach(function(x){pool.push('🗣️ '+x);});
+  pool.push('🚀 단톡방에 소문이 퍼지는 중…','👀 옆 반도 참전했다는데?','📣 지금 흐름 끌어올 타이밍!');
+  t.textContent=pool[Math.floor(Math.random()*pool.length)];
+  t.classList.remove('beat'); void t.offsetWidth; t.classList.add('beat');
+}
+function endBattle(){
+  if(!B||B.ended)return; B.ended=true;
+  cancelAnimationFrame(B.raf); clearInterval(B.tick);
+  var bt=B.bt, side=B.side, me=B.me, foe=B.foe;
+  var contrib=Math.floor(B.tapsF), myShare=side==='a'?B.aShare:100-B.aShare, maxStreak=B.maxStreak;
+  var newBest=contrib>(F.best||0); if(newBest)F.best=contrib; persist();
+  var title=titleForTaps(contrib), rank=rankEstimate(contrib), streak=F.streak;
+  var verdict=myShare>=53?{t:'우리 편이 전국을 먹었다! 🎉',c:'win'}:myShare<=47?{t:'오늘은 밀렸다… 내일 설욕 🔥',c:'lose'}:{t:'초접전 무승부 ⚔️',c:'tie'};
+  if(newBest){chord([523,659,784,1047]);buzz([20,40,20]);}
+  LAST={bt:bt,me:me,contrib:contrib,title:title,rank:rank};
+  B=null;
+  app.innerHTML=
+    '<div class="brandbar"><b>⚡ 광클대전</b><small>'+mdLabel(todayStr())+'</small></div>'+
+    '<h2 class="fb-verdict '+verdict.c+'">'+verdict.t+'</h2>'+
+    '<div class="fb-card" style="--c:'+me.color+';--foe:'+foe.color+'">'+
+      '<div class="fb-card-top"><span class="fb-card-emo">'+me.emoji+'</span>'+
+        '<div class="grow"><b>'+me.name+'</b><small>'+bt.q+'</small></div>'+
+        '<span class="fb-card-badge">'+title+'</span></div>'+
+      '<div class="fb-card-stats"><div><b>'+comma(contrib)+'</b><small>내 기여</small></div>'+
+        '<div><b>×'+comboMult(maxStreak).toFixed(1)+'</b><small>최고 콤보</small></div>'+
+        '<div><b>'+comma(rank)+'위</b><small>예상 전국</small></div></div>'+
+      '<div class="fb-card-gauge" style="background:'+foe.color+'"><i style="width:'+myShare.toFixed(1)+'%;background:'+me.color+'"></i></div>'+
+      '<div class="fb-card-foot"><span>'+me.emoji+' '+me.name+' '+myShare.toFixed(1)+'%</span><span class="fb-card-tag">#광클대전 #'+bt.tag+'</span></div>'+
+    '</div>'+
+    (newBest?'<div class="g-newbest">🏆 내 최고 기여 갱신!</div>':'<p class="hint" style="text-align:center;margin-top:10px">내 최고 기여 '+comma(F.best||0)+'</p>')+
+    (streak>1?'<p class="hint" style="text-align:center">🔥 '+streak+'일 연속 참전 중!</p>':'')+
+    '<div class="btn-row">'+
+      '<button class="btn btn-primary" onclick="SHARE()">📣 결과 자랑 + 친구 소환</button>'+
+      '<button class="btn" onclick="GO(\''+side+'\')">🔁 한 판 더</button>'+
+      '<button class="btn" onclick="intro()">⚡ 오늘의 대전</button>'+
+    '</div>';
+}
+
+/* ── 자랑/소환 ── */
+var LAST=null;
+function SHARE(){
+  if(!LAST)return;
+  var link=location.href.split('?')[0];
+  var text='⚡광클대전⚡ 나는 '+LAST.me.name+'!\n'+LAST.bt.q+' → '+LAST.title+'\n내 기여 '+comma(LAST.contrib)+' · 예상 전국 '+comma(LAST.rank)+'위\n너는 어느 편? 참전해라 👉';
+  if(navigator.share){navigator.share({title:'광클대전',text:text,url:link}).catch(function(){});return;}
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text+' '+link).then(function(){toast('링크 복사 완료 — 단톡방에 뿌리기 📣');},function(){toast('스크린샷 해서 자랑해보세요 📸');});
+  }else{toast('스크린샷 해서 자랑해보세요 📸');}
+}
+
+function cleanup(){if(B){cancelAnimationFrame(B.raf);clearInterval(B.tick);B=null;}}
+
+/* 전역 노출 (onclick에서 호출) */
+window.GO=GO; window.SHARE=SHARE; window.intro=intro;
+
+/* 시작 */
+intro();
+
+</script>
+</body>
+</html>

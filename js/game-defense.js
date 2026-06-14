@@ -104,6 +104,7 @@ export function gameDefense() {
       </div>
       <div class="gx-shopbar">
         <button class="gx-speed" id="def-speed" onclick="UI.defSpeed()">⏩ 1배속</button>
+        <button class="gx-adcoin" onclick="UI.defAdCoin()">📺 광고 보고 코인</button>
         <span class="gx-diff" id="def-difflbl"></span>
       </div>
       <div class="gx-shop" id="def-shop"></div>
@@ -311,9 +312,75 @@ function loop(now) {
   }
   render(dt);
   D.shopT -= dt; if (D.shopT <= 0) { renderShop(); D.shopT = 0.25; }
-  if (D.over) { endGame(); return; }
+  if (D.over) { offerRevive(); return; }
   if (D.pendingDraft) { D.pendingDraft = false; bossDraft(); return; } // 보스 처치 → 스킬 3택
   D.raf = requestAnimationFrame(loop);
+}
+
+/* ── 인게임 광고(스테이지 오버레이 — 캔버스 유지) → 아이템/보상 ── */
+function stageAd(label, onReward) {
+  D.running = false; cancelAnimationFrame(D.raf); clearInterval(D._adTimer);
+  D._adReward = onReward;
+  const stage = D.canvas.parentElement;
+  const ov = document.createElement('div'); ov.className = 'draft-overlay'; ov.id = 'def-ad';
+  ov.innerHTML = `<div class="draft-in">
+    <div class="draft-title">📺 광고</div><p>${label}</p>
+    <div class="adx-stage" style="margin:8px 0 10px"><div class="adx-slime">🧊</div><b>냉비서 프리미엄이 곧 나와요</b></div>
+    <div class="ad-progress"><i id="def-adbar"></i></div>
+    <button class="gx-btn-go" id="def-adbtn" disabled>광고 시청 중… 15초</button>
+    <button class="qz-skip" onclick="UI.defAdSkip()">건너뛰기 (보상 없음)</button></div>`;
+  stage.appendChild(ov);
+  const bar = ov.querySelector('#def-adbar'); if (bar) { bar.style.transitionDuration = '15s'; requestAnimationFrame(() => { bar.style.width = '100%'; }); }
+  let t = 15;
+  D._adTimer = setInterval(() => {
+    const b = document.getElementById('def-adbtn'); if (!b) { clearInterval(D._adTimer); return; }
+    t--; if (t > 0) { b.textContent = `광고 시청 중… ${t}초`; return; }
+    clearInterval(D._adTimer); b.disabled = false; b.textContent = '✅ 보상 받기'; b.onclick = () => UI_defAdDone();
+  }, 1000);
+}
+function UI_defAdDone() {
+  const cb = D._adReward; D._adReward = null;
+  document.getElementById('def-ad')?.remove();
+  if (cb) cb();
+  D.running = true; D.last = performance.now(); D.raf = requestAnimationFrame(loop);
+}
+export function defAdSkip() {
+  clearInterval(D._adTimer); D._adReward = null;
+  // 부활 광고를 건너뛰면 게임 종료
+  const wasRevive = D._reviveAd; D._reviveAd = false;
+  document.getElementById('def-ad')?.remove();
+  if (wasRevive && D.hp <= 0) { endGame(); return; }
+  D.running = true; D.last = performance.now(); D.raf = requestAnimationFrame(loop);
+}
+export function defAdDone() { UI_defAdDone(); }
+
+function offerRevive() {
+  if (D.revived) { endGame(); return; } // 부활은 1회
+  D.running = false; cancelAnimationFrame(D.raf);
+  const stage = D.canvas.parentElement;
+  const ov = document.createElement('div'); ov.className = 'draft-overlay'; ov.id = 'def-rev';
+  ov.innerHTML = `<div class="draft-in">
+    <div class="draft-title" style="color:#ff4d6a">냉장고 위기!</div>
+    <p>광고 한 번이면 <b>신선도 60% 회복</b>하고 이어서 버틸 수 있어요</p>
+    <button class="gx-btn-go" onclick="UI.defRevive()">📺 광고 보고 부활</button>
+    <button class="qz-skip" onclick="UI.defGiveUp()">여기서 끝내기 (결과 보기)</button></div>`;
+  stage.appendChild(ov);
+  chord([196, 165, 131], 0.2, 'sawtooth');
+}
+export function defRevive() {
+  document.getElementById('def-rev')?.remove();
+  D._reviveAd = true;
+  stageAd('광고 보고 부활 — 신선도 60% 회복', () => {
+    D.revived = true; D.over = false; D.hp = Math.round(D.maxHp * 0.6);
+    D.enemies = []; D.shots = []; D.flash = 0.7; D.shake.add(8, 0.4);
+    D.fx.add(D.W / 2, D.H / 2, '부활!', { color: '#5ef0b0', size: 26 });
+  });
+}
+export function defGiveUp() { document.getElementById('def-rev')?.remove(); endGame(); }
+export function defAdCoin() {
+  if (!D || !D.running) return;
+  const reward = Math.max(25, Math.round(D.wave * 18 * D.diff.coin));
+  stageAd(`광고 보고 보너스 코인 +${reward}`, () => { D.coins += reward; D.coinsFly.push({ x: D.W / 2, y: 40, t: 0, val: 0 }); D.fx.add(D.W / 2, 60, `+${reward}🪙`, { color: '#ffe04a', size: 20 }); });
 }
 
 /* ── 보스 처치 → 스페셜 스킬 3택 (캔버스 위 오버레이, 각 랜덤 수치) ── */

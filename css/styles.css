@@ -1165,3 +1165,31 @@ input:focus, select:focus, textarea:focus { outline: none; box-shadow: 0 0 0 3px
 .draft-card small { color: #bdffe4; font-size: 0.78rem; }
 .draft-card .draft-cur { margin-left: auto; font-size: 0.68rem; color: #9b8bbd; flex-shrink: 0; }
 .draft-card .draft-cur.new { color: #ffe04a; font-weight: 800; }
+
+/* ══════════ 장보기/레시피/보관 디테일 + 인게임 광고 버튼 ══════════ */
+/* 보관 꿀팁 박스 */
+.tipbox { background: var(--green-bg); border-radius: 12px; padding: 11px 13px; font-size: 0.84rem; line-height: 1.55; color: #1f7a44; margin: 4px 0 8px; }
+.tipbox b { color: #176b3a; }
+/* 레시피 도구 행 (타이머·광고·게임·음성 — 아이콘) */
+.rcp-tools { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; margin-top: 10px; }
+.rcp-tools button {
+  display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 10px 4px;
+  border: 1px solid var(--hairline); background: var(--card); border-radius: 14px; box-shadow: var(--shadow-card);
+  font-size: 0.72rem; font-weight: 800; color: var(--label-2); cursor: pointer; transition: transform .1s;
+}
+.rcp-tools button span { font-size: 1.35rem; }
+.rcp-tools button:active { transform: scale(0.94); }
+.rcp-tools button.hot { background: var(--orange-bg); color: var(--orange); border-color: transparent; }
+.rcp-tools button.on { background: var(--green-bg); color: var(--green); border-color: transparent; }
+/* 장보기 미리 담기 제안 */
+.sug-box { background: var(--card); border: 1px solid var(--hairline); border-radius: 14px; padding: 11px 12px; margin-bottom: 10px; box-shadow: var(--shadow-card); }
+.sug-h { font-size: 0.82rem; font-weight: 800; margin-bottom: 8px; }
+.sug-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.sug-chip { background: var(--amber-bg); color: var(--amber); border: none; border-radius: 99px; padding: 7px 11px; font-size: 0.8rem; font-weight: 700; cursor: pointer; }
+.sug-chip:disabled { background: var(--green-bg); color: var(--green); }
+/* 홈/레시피 게임·광고 바: 4칸 + 광고 강조 */
+.home-games.four { grid-template-columns: 1fr 1fr 1fr 1fr; }
+.home-games button.ad { background: var(--orange-bg); color: var(--orange); }
+/* 디펜스 인게임 광고 코인 버튼 */
+.gx-adcoin { background: rgba(255,224,74,0.16); color: #ffe04a; border: none; border-radius: 99px; padding: 6px 12px; font-family: 'Jua', sans-serif; font-size: 0.82rem; font-weight: 800; cursor: pointer; }
+.gx-adcoin:active { transform: scale(0.95); }

@@ -1,6 +1,6 @@
 // 냉비서 — 화면 렌더링과 상호작용 전부. 프레임워크 없는 단일 페이지 앱.
 import { S, save, uid, today, addDays, daysLeft, won } from './store.js';
-import { ING, findIng, defaultShelf, defaultLocation } from './data/ingredients.js';
+import { ING, findIng, defaultShelf, defaultLocation, ingredientTip } from './data/ingredients.js';
 import { recommend, recipesUsing, expiringItems, activeLeftovers, deductionPlan, modeList, getMode, allRecipes, buildCookPlan } from './engine.js';
 import { scanImage, extractRecipeFromYouTube, claimReward, redeemAiCredit, searchYouTube } from './ai.js';
 import { initSync, sync, makeSpaceCode, setSpaceCode, loginGoogle, logoutGoogle, syncAvailable, submitScore, topScores } from './sync.js';
@@ -8,7 +8,7 @@ import { AI_ENDPOINT } from './config.js';
 import { canListen, speak, stopSpeak, startListen, stopListen, isListening, parseCommand } from './voice.js';
 import { earn, spend, refund, EARN, earnedToday, SHOP, adFreeNow, gameBest } from './points.js';
 import { initGames, openGames, GAMES, gameFresh, gameVoice, gameVoicePass, gameDouble } from './games.js';
-import { gameDefense, defBuy, defStart, defSpeed, defPick } from './game-defense.js';
+import { gameDefense, defBuy, defStart, defSpeed, defPick, defRevive, defGiveUp, defAdSkip, defAdCoin } from './game-defense.js';
 import { gamePuzzle } from './game-puzzle.js';
 import { gameQuiz, quizPick, quizNext, quizReveal, quizRevealAll, quizFinish } from './game-quiz.js';
 import { tossRewardedAd } from './toss.js';
@@ -258,8 +258,9 @@ function renderHome() {
       <div class="stat-card waste" onclick="UI.explainLedger()"><small>버린 돈</small><b>${won(S.ledger.wasted)}</b></div>
       <div class="stat-card point" onclick="UI.openPoints()"><small>🅿 포인트</small><b>${(S.points?.bal || 0).toLocaleString()}P</b></div>
     </div>
-    <div class="home-games">
-      <button onclick="UI.openGames()">🎮 미니게임</button>
+    <div class="home-games four">
+      <button onclick="UI.openGames()">🎮 게임</button>
+      <button class="ad" onclick="UI.waitAd()">📺 광고+P</button>
       <button onclick="UI.openRanks()">🏆 랭킹</button>
       <button onclick="UI.openPoints()">🎁 포인트샵</button>
     </div>
@@ -517,6 +518,8 @@ UI.editPantry = (id) => {
     <div class="field"><label>소비기한</label>
       <input type="date" value="${p.expiresAt || ''}" onchange="UI.setExpiry('${id}',this.value)" />
       <p class="hint">권장 보관기한 기준 자동 입력 — 기한이 불확실하면 짧게 잡는 게 안전해요</p></div>
+    ${ingredientTip(p.name) ? `<div class="tipbox">💡 <b>보관 꿀팁</b><br>${esc(ingredientTip(p.name))}</div>` : ''}
+    <button class="btn btn-soft btn-block" style="margin-top:2px" onclick="UI.addShopping('${esc(p.name)}', false, '떨어져감 메모');UI.closeSheet()">🧺 장보기 목록에 미리 담기</button>
     <div class="field"><label>실사 사진 (선반에서 진짜 내 재료로 보여요)</label>
       <div class="btn-row" style="margin-top:0">
         <label class="btn btn-soft">📸 사진 ${p.photo ? '바꾸기' : '추가'}<input type="file" accept="image/*" capture="environment" style="display:none" onchange="UI.itemPhoto('${id}',this)" /></label>
@@ -889,6 +892,10 @@ UI.defBuy = (k) => defBuy(k);
 UI.defStart = (d) => defStart(d);
 UI.defSpeed = () => defSpeed();
 UI.defPick = (i) => defPick(i);
+UI.defRevive = () => defRevive();
+UI.defGiveUp = () => defGiveUp();
+UI.defAdSkip = () => defAdSkip();
+UI.defAdCoin = () => defAdCoin();
 UI.gamePuzzle = () => gamePuzzle();
 UI.gameQuiz = () => gameQuiz();
 UI.quizPick = (i) => quizPick(i);
@@ -1030,6 +1037,10 @@ function renderRecipes() {
       ? `<div class="banner warn">🤰 임신 중 <b>섭취 주의 재료</b>(참치의 수은 등)가 든 레시피 ${blocked.length}개를 가렸어요 — 상해서가 아니라 안 드시는 게 좋은 재료라서예요. 다른 모드로 바꾸면 그대로 보입니다. (의학적 조언 아님 · 식단은 의료진과 상의)</div>` : ''}
     <button class="btn ${selMode ? 'btn-tint' : 'btn-soft'} btn-block" style="margin:2px 0 8px" onclick="UI.toggleSelMode()">
       ${selMode ? '✕ 같이 요리 선택 끝내기' : '👩‍🍳 같이 요리 — 여러 개 골라 통합 순서 만들기'}</button>
+    <div class="home-games" style="margin-bottom:10px">
+      <button onclick="UI.openGames()">🎮 게임하기</button>
+      <button class="ad" onclick="UI.waitAd()">📺 광고 보고 포인트</button>
+    </div>
     <div id="recipe-list">${recipeListHtml()}</div>
     ${adBanner('recipes')}
     ${selMode && cookSel.size ? `
@@ -1137,10 +1148,15 @@ UI.openRecipe = (rid) => {
       <button class="heart ${a.fav ? 'on' : ''}" onclick="UI.toggleFav('${r.id}');this.classList.toggle('on')">❤️</button>
     </div>
     ${r.caution ? `<div class="banner warn">⚠️ ${esc(r.caution)}</div>` : ''}
+    <div class="rcp-tools">
+      <button onclick="UI.recipeTimer(${r.time || 10})"><span>⏲️</span>타이머</button>
+      <button class="hot" onclick="UI.waitAd()"><span>📺</span>광고+P</button>
+      <button onclick="UI.openGames()"><span>🎮</span>게임</button>
+      <button id="mic-btn" class="${canListen ? 'on' : ''}" onclick="UI.micToggle()"><span>🎤</span>음성</button>
+    </div>
     <div class="btn-row" style="margin-top:8px">
       <button class="btn btn-soft btn-sm" onclick="UI.readIngs()">🔊 재료 읽어줘</button>
       <button class="btn btn-soft btn-sm" onclick="UI.readStep()">🔊 단계 읽어줘</button>
-      <button id="mic-btn" class="btn btn-sm ${canListen ? 'btn-tint' : 'btn-soft'}" onclick="UI.micToggle()">🎤 음성</button>
     </div>
     <div class="section-title" style="margin-top:12px"><h2>재료</h2><small>${a.have}/${a.total} 보유 · 인분을 바꾸면 양이 환산돼요</small></div>
     <div class="seg" id="dt-serv" style="margin:2px 0 10px">
@@ -1153,7 +1169,7 @@ UI.openRecipe = (rid) => {
         return `<span class="chip ${miss ? 'miss' : 'have'}" ${miss ? `onclick="UI.addShopping('${esc(g.n)}')"` : ''}>${miss ? '＋ ' : '✓ '}${esc(g.n)} <b class="amt" data-b="${g.a || 0}" data-u="${esc(g.u || '')}">${g.a ? fmtAmt(g.a) + (g.u || '') : ''}</b></span>`;
       }).join('')}
     </div>
-    ${r.steps?.length ? `<div class="section-title"><h2>만드는 법</h2><small class="timer-quick" onclick="UI.recipeTimer(${r.time || 10})">⏲ ${r.time || 10}분 타이머 시작</small></div>
+    ${r.steps?.length ? `<div class="section-title"><h2>만드는 법</h2><small class="timer-quick" onclick="UI.recipeTimer(${r.time || 10})">⏲️ ${r.time || 10}분</small></div>
     <div class="card flat" style="padding:6px 15px"><ul class="steps">${r.steps.map((st) => {
       const pm = passiveMin(st);
       return `<li>${esc(st)}${pm ? `<button class="step-wait" onclick="UI.waitGame(${pm})">⏳ ${pm}분 — 타이머·게임</button>` : ''}</li>`;
@@ -2000,7 +2016,11 @@ function renderShopping() {
       <input id="shop-new" placeholder="직접 추가 (예: 올리브유…)" onkeydown="if(event.key==='Enter')UI.shopAdd()" />
       <button class="btn btn-tint" onclick="UI.shopAdd()">담기</button>
     </div>
-    ${open.length ? `<button class="btn btn-soft btn-block" style="margin-bottom:10px" onclick="UI.copyShopList()">📋 목록 전체 복사 — 마트 메모·다른 앱에서 쓰기</button>` : ''}
+    ${shopSuggestHtml()}
+    ${open.length ? `<div class="btn-row" style="margin:0 0 10px">
+      <button class="btn btn-soft" onclick="UI.copyShopList()">📋 목록 복사 (오프라인 메모)</button>
+      <button class="btn btn-accent" onclick="UI.shopCoupangAll()">🛒 쿠팡에서 보기 (온라인)</button>
+    </div>` : ''}
     ${open.length === 0 && done.length === 0
       ? `<div class="empty"><span class="e-emoji">🧺</span><b>장보기 바구니가 비었어요</b><small>레시피의 부족 재료를 탭하거나<br>재료가 다 떨어지면 자동으로 담겨요</small></div>` : ''}
     ${shopGroupsHtml(open)}
@@ -2015,6 +2035,32 @@ function renderShopping() {
       <button class="btn btn-primary btn-block" onclick="UI.shopCommit()">🧊 산 것들 냉장고로 입고 (${done.length})</button>` : ''}
     ${adBanner('shopping')}`;
 }
+// 부족·임박 재료를 미리 메모로 제안 (장보기 전 한눈에)
+function shopSuggestHtml() {
+  const inList = new Set(S.shopping.filter((x) => !x.done).map((x) => x.name));
+  const low = S.pantry.filter((p) => {
+    if (inList.has(p.name)) return false;
+    if (p.qtyType === 'level') return p.level === 'low' || p.level === 'empty';
+    if (typeof p.qty === 'number') return p.qty <= 1;
+    return false;
+  });
+  const soon = expiringItems(S, 2).filter((p) => !inList.has(p.name) && !low.includes(p));
+  const sug = [...low, ...soon].slice(0, 10);
+  if (!sug.length) return '';
+  return `<div class="sug-box">
+    <div class="sug-h">🧠 떨어져가요 · 미리 담아둘까요?</div>
+    <div class="sug-chips">${sug.map((p) => `<button class="sug-chip" onclick="UI.shopSug('${esc(p.name)}',this)">＋ ${p.emoji || ''} ${esc(p.name)}</button>`).join('')}</div>
+  </div>`;
+}
+UI.shopSug = (name, el) => { UI.addShopping(name, true, '떨어져감'); if (el) { el.disabled = true; el.textContent = '✓ 담음'; } toast(`🧺 ${name} 담았어요`); };
+UI.shopCoupangAll = () => {
+  const items = S.shopping.filter((x) => !x.done);
+  if (!items.length) return;
+  // 쿠팡은 단일 검색어 — 첫 품목을 열고, 전체 목록은 클립보드에 복사해 이어서 검색
+  copyText(items.map((x) => x.name).join(' '));
+  window.open(coupangUrl(items[0].name), '_blank');
+  toast('쿠팡을 열었어요 — 전체 목록은 복사돼 있어 검색창에 붙여 쓰면 돼요');
+};
 UI.shopAdd = () => {
   const v = $('#shop-new').value.trim();
   if (!v) return;

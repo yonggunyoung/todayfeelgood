@@ -2,6 +2,7 @@
 // 프리셋 모드 + 사용자가 만든 맞춤 모드를 같은 파이프라인으로 처리한다.
 import { RECIPES } from './data/recipes.js';
 import { findIng } from './data/ingredients.js';
+import { recipeNeedBase } from './units.js';
 import { daysLeft } from './store.js';
 
 /* ── 모드 정의 ───────────────────────────── */
@@ -155,7 +156,9 @@ export function deductionPlan(recipe, state, servings = 1) {
       plan.push({ item: batches[0], skip: true, label: '양념 — 차감 안 함' });
       continue;
     }
-    let need = Math.round((g.a || 1) * servings * 100) / 100;
+    // 레시피 단위(근·팩·개…)를 재고의 base 단위(g·ml·고유)로 환산해 정확히 차감
+    const ing = findIng(g.n);
+    let need = Math.round(recipeNeedBase(ing, g.a, g.u) * servings * 100) / 100;
     for (const item of batches) {
       if (need <= 0) break;
       const take = Math.min(item.qty, need);

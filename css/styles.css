@@ -1251,3 +1251,47 @@ html, body { overscroll-behavior: none; }
 
 /* 게임이 열리면 시트를 꽉 찬 화면으로 (브라우저에서도 몰입) */
 .sheet:has(.gx) { max-height: 100dvh; height: 100dvh; border-radius: 0; padding: 4px 10px calc(10px + env(safe-area-inset-bottom)); }
+
+/* ── 정밀 입고/수정 — 수량·단위 에디터 ── */
+.qty-edit { display: inline-flex; align-items: center; gap: 4px; background: rgba(118,118,128,0.08); border-radius: var(--r-sm); padding: 2px 4px; }
+.qty-edit button { width: 38px; height: 38px; font-size: 1.1rem; font-weight: 800; color: var(--green); }
+.qty-edit input { width: 78px; text-align: center; font-size: 0.95rem; font-weight: 800; border: none; background: transparent; }
+.qty-edit .qty-unit { font-size: 0.82rem; font-weight: 700; color: var(--label-2); min-width: 18px; }
+.add-qty { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.add-qty input { width: 92px; font-size: 1.05rem; font-weight: 800; text-align: center; padding: 10px; border-radius: var(--r-sm); border: 1.5px solid var(--hairline); background: var(--card); }
+.add-units { display: inline-flex; flex: 1; min-width: 150px; gap: 0; }
+.add-units button { flex: 1; padding: 9px 4px; font-size: 0.82rem; }
+input[type=number]::-webkit-outer-spin-button, input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+/* 차감 시트 미니 버튼 (다 씀 / 건너뛰기) */
+.r-mini { margin-left: 6px; font-size: .7rem; font-weight: 800; color: var(--label-3); border: 1px solid var(--hairline); border-radius: 99px; padding: 3px 9px; background: transparent; }
+.r-mini.on { background: var(--green); color: #fff; border-color: var(--green); }
+
+/* 장보기 출처 태그 + 범례 */
+.shop-tag { display: inline-block; font-size: .68rem; font-weight: 800; padding: 2px 8px; border-radius: 99px; }
+.shop-tag.s-recipe { background: rgba(47,174,95,.14); color: var(--green); }
+.shop-tag.s-low { background: var(--orange-bg); color: var(--orange); }
+.shop-tag.s-out { background: rgba(255,77,106,.14); color: var(--red); }
+.shop-tag.s-manual { background: rgba(91,118,216,.16); color: #5b76d8; }
+.shop-legend { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 2px; }
+
+/* 위트 한마디 — 잠시 떴다 공중으로 사라짐 (버리면 따끔 / 아끼면 흐뭇) */
+.proverb {
+  position: fixed; left: 50%; bottom: 42%; transform: translateX(-50%); z-index: 120; pointer-events: none;
+  display: flex; align-items: center; gap: 8px; white-space: nowrap;
+  background: rgba(23,24,28,0.92); color: #fff; font-weight: 800; font-size: .85rem;
+  padding: 11px 16px; border-radius: 16px; box-shadow: var(--shadow-float); backdrop-filter: blur(8px);
+  animation: pv-float 2.6s cubic-bezier(.2,.7,.3,1) forwards;
+}
+.proverb .pv-ico { font-size: 1.2rem; }
+.proverb-waste { background: rgba(70,22,28,0.93); }
+.proverb-save { background: rgba(18,48,32,0.93); }
+@keyframes pv-float {
+  0% { opacity: 0; transform: translate(-50%, 16px) scale(.9); }
+  14% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+  68% { opacity: 1; transform: translate(-50%, -30px) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -96px) scale(1.02); }
+}
+
+/* 시트 — 상단 잡고 아래로 스와이프 닫기 (스냅백 부드럽게) */
+.sheet { will-change: transform; transition: transform .22s ease; }

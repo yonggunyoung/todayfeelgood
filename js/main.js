@@ -1,6 +1,7 @@
 // 냉비서 — 화면 렌더링과 상호작용 전부. 프레임워크 없는 단일 페이지 앱.
 import { S, save, uid, today, addDays, daysLeft, won } from './store.js';
 import { ING, findIng, defaultShelf, defaultLocation, ingredientTip } from './data/ingredients.js';
+import { isWeight, measureOf, baseUnit, unitOptions, toBase, perBase, fmtBase, fmtRaw, stepFor, defaultEntry } from './units.js';
 import { recommend, recipesUsing, expiringItems, activeLeftovers, deductionPlan, modeList, getMode, allRecipes, buildCookPlan } from './engine.js';
 import { scanImage, extractRecipeFromYouTube, claimReward, redeemAiCredit, searchYouTube } from './ai.js';
 import { initSync, sync, makeSpaceCode, setSpaceCode, loginGoogle, logoutGoogle, syncAvailable, submitScore, topScores } from './sync.js';
@@ -84,6 +85,51 @@ function toast(msg) {
   setTimeout(() => el.remove(), 2300);
 }
 
+/* ── 금액 현실화: 입고 시 기록한 실구매가(없으면 사전가)를 base 단위 단가로 환산 ── */
+const LEVEL_FRAC = { full: 1, half: 0.5, low: 0.25, empty: 0 };
+// 사전가(ing.price)는 '고유 단위(ing.unit) 1개' 기준 → base 1단위당 단가로 환산
+function baseUnitPrice(ing) {
+  if (!ing) return 0;
+  return (ing.price || 2000) / Math.max(1, perBase(ing, ing.unit));
+}
+function unitPriceOf(p) {
+  if (typeof p.unitPrice === 'number' && p.unitPrice > 0) return p.unitPrice;
+  return baseUnitPrice(findIng(p.name));
+}
+function moneyFor(p, qty) {
+  if (!p) return 0;
+  if (p.qtyType === 'level') return Math.round((p.price || findIng(p.name)?.price || 2000) * (LEVEL_FRAC[p.level] ?? 0.5));
+  const q = qty != null ? qty : (Number(p.qty) || 0);
+  return Math.round(unitPriceOf(p) * q);
+}
+
+/* ── 위트 한마디 — 버리면 따끔(부정), 아끼면 흐뭇(긍정). 아이콘과 함께 떴다 공중으로 사라짐 ── */
+const PROVERBS = {
+  waste: [
+    ['🌍', '버리면 지구 CO₂가 늘어요'],
+    ['☔', '가랑비에 옷 젖듯… 버린 게 쌓여요'],
+    ['🗑️', '음식물 1kg = CO₂ 약 2.5kg'],
+    ['🥲', '아까워라 — 다음엔 딱 필요한 만큼만'],
+    ['💸', '티끌 모아 태산… 버린 돈도 태산'],
+  ],
+  save: [
+    ['⛰️', '티끌 모아 태산 — 잘 아꼈어요!'],
+    ['🌱', '지구가 한숨 돌렸어요'],
+    ['🪙', '가랑비에 옷 젖듯, 절약도 차곡차곡'],
+    ['🌟', '버릴 뻔한 재료를 구출했어요'],
+    ['💪', '오늘도 냉장고 알뜰살뜰'],
+  ],
+};
+function proverbFloat(kind) {
+  const pool = PROVERBS[kind] || PROVERBS.save;
+  const [icon, text] = pool[Math.floor(Math.random() * pool.length)];
+  const el = document.createElement('div');
+  el.className = `proverb proverb-${kind}`;
+  el.innerHTML = `<span class="pv-ico">${icon}</span><span>${esc(text)}</span>`;
+  ($('#toast-root') || document.body).appendChild(el);
+  setTimeout(() => el.remove(), 2600);
+}
+
 function openSheet(html, { lock = false } = {}) {
   // lock: 보상형 광고처럼 바깥 탭으로 닫히면 안 되는 시트 (명시적 버튼으로만 종료)
   $('#modal-root').innerHTML =
@@ -91,6 +137,35 @@ function openSheet(html, { lock = false } = {}) {
        <div class="sheet">${lock ? '' : '<div class="grip"></div>'}${html}</div>
      </div>`;
   if (!sheetPushed) { history.pushState({ nb: 'sheet' }, ''); sheetPushed = true; }
+  if (!lock) attachSheetDrag();
+}
+// 상단(그립·헤더)을 잡고 아래로 슬라이드하면 닫힘
+function attachSheetDrag() {
+  const sheet = $('#modal-root .sheet'); if (!sheet) return;
+  let startY = 0, dy = 0, dragging = false;
+  sheet.addEventListener('pointerdown', (e) => {
+    if (sheet.scrollTop > 2) return; // 내용이 스크롤된 상태면 스크롤 우선
+    const r = sheet.getBoundingClientRect();
+    if (e.clientY - r.top > 72) return; // 상단 영역에서 시작할 때만
+    if (e.target.closest('button, input, textarea, select, a, canvas')) return;
+    dragging = true; startY = e.clientY; dy = 0;
+    sheet.style.transition = 'none';
+    try { sheet.setPointerCapture(e.pointerId); } catch { /* noop */ }
+  });
+  sheet.addEventListener('pointermove', (e) => {
+    if (!dragging) return;
+    dy = Math.max(0, e.clientY - startY);
+    sheet.style.transform = `translateY(${dy}px)`;
+    sheet.style.opacity = String(Math.max(0.4, 1 - dy / 600));
+  });
+  const end = () => {
+    if (!dragging) return;
+    dragging = false; sheet.style.transition = ''; sheet.style.opacity = '';
+    if (dy > 96) { sheet.style.transform = 'translateY(100%)'; UI.closeSheet(); }
+    else sheet.style.transform = '';
+  };
+  sheet.addEventListener('pointerup', end);
+  sheet.addEventListener('pointercancel', end);
 }
 let sheetPushed = false;   // 뒤로가기로 시트가 닫히도록 히스토리에 한 칸 쌓아둠
 let ignoreNextPop = false;
@@ -109,7 +184,7 @@ function stampFor(days) {
 }
 function qtyLabel(p) {
   if (p.qtyType === 'level') return (LEVELS.find(([v]) => v === p.level) || [])[1] || '보통';
-  return `${p.qty}${p.unit || ''}`;
+  return fmtRaw(p.unit, p.qty); // g/kg·ml/L·개수 단위 인식 표시
 }
 
 const catClass = (name) => `t-${findIng(name)?.cat || '기타'}`;
@@ -223,6 +298,7 @@ function renderHome() {
           <div class="grow" onclick="UI.editPantry('${p.id}')"><div class="name">${esc(p.name)}</div><div class="sub">${qtyLabel(p)} · ${LOC_LABEL[p.location]}</div></div>
           ${stampFor(daysLeft(p.expiresAt))}
           <button class="btn btn-sm btn-tint" onclick="UI.useIdeas('${esc(p.name)}')">활용 →</button>
+          <button class="btn btn-sm btn-soft" onclick="UI.wasteItem('${p.id}')">버렸어요</button>
         </div>`).join('');
   }
 
@@ -432,41 +508,138 @@ UI.openLocList = (loc) => { pantryView = 'list'; pantryLoc = loc; render(); };
 let qaLoc = null; // 냉장고 ＋타일로 들어온 경우 그 칸으로 바로 담기
 UI.quickAddAt = (loc) => { qaLoc = loc; UI.openQuickAdd(); };
 
-function addPantryByName(rawName, { qty = 1, location, silentToast = false } = {}) {
+// 입고 — amount+unit(또는 legacy qty)을 base 단위(g·ml·고유)로 환산해 저장. price=실구매 총액(선택).
+function addPantryByName(rawName, { amount, unit, qty, price, location, silentToast = false } = {}) {
   const ing = findIng(rawName);
   const name = ing ? ing.name : rawName;
   const loc = location || qaLoc || defaultLocation(ing);
+  const bu = baseUnit(ing);
+  // 입력 단위/수량 결정: 명시 > legacy 숫자(무게·부피는 '팩' 단위로 해석) > 추천 기본값
+  const n = amount != null ? amount : (qty != null ? qty : null);
+  const inU = unit || (n != null ? ((isWeight(ing) || measureOf(ing) === 'volume') ? '팩' : bu) : defaultEntry(ing).u);
+  const inAmt = n != null ? n : defaultEntry(ing).amount;
+  const base = toBase(ing, inAmt, inU);
+  // 실구매가(있으면) 우선 — 없으면 사전가를 이번 수량에 비례해 추정. 단가(base당)도 기록.
+  const estUnit = ing ? baseUnitPrice(ing) : 2000 / Math.max(1, base || 1);
+  const paid = price != null ? Math.round(price) : Math.round(estUnit * (base || 1));
+  const unitPrice = (ing?.qtyType === 'level') ? undefined : (base > 0 ? Math.round((paid / base) * 100) / 100 : estUnit);
   const existing = S.pantry.find((p) => p.name === name && p.location === loc);
 
   if (existing && existing.qtyType === 'level') {
-    existing.level = 'full'; // 양념류는 새로 사면 가득으로 갱신
+    existing.level = 'full'; existing.price = paid; // 양념류는 새로 사면 가득으로 갱신
   } else if (existing && daysLeft(existing.expiresAt) <= 7) {
     // 선입선출: 기존 재고가 남아있으면 합치지 않고 새 배치로 — 옛 것부터 먼저!
     S.pantry.push({
       id: uid(), name, emoji: ing?.emoji || '🍽️',
-      qtyType: ing?.qtyType || 'count', unit: ing?.unit || '개',
-      qty, level: 'full',
-      location: loc, expiresAt: addDays(defaultShelf(ing, loc)),
-      price: ing?.price || 2000,
+      qtyType: ing?.qtyType || 'count', unit: bu, qty: base, level: 'full',
+      location: loc, expiresAt: addDays(defaultShelf(ing, loc)), price: paid, unitPrice,
     });
     save();
     if (!silentToast) toast(`${name} 새로 입고 — 기존 ${name}(D-${Math.max(0, daysLeft(existing.expiresAt))})부터 먼저 드세요! 🔄`);
     return;
   } else if (existing) {
-    existing.qty = Math.round((existing.qty + qty) * 100) / 100;
+    existing.qty = Math.round((existing.qty + base) * 100) / 100;
+    existing.unit = bu;
+    existing.price = Math.round((existing.price || 0) + paid);
+    if (unitPrice) existing.unitPrice = unitPrice; // 최근 단가로 갱신
   } else {
     S.pantry.push({
       id: uid(), name, emoji: ing?.emoji || '🍽️',
-      qtyType: ing?.qtyType || 'count', unit: ing?.unit || '개',
-      qty: ing?.qtyType === 'level' ? 1 : qty, level: 'full',
-      location: loc, expiresAt: addDays(defaultShelf(ing, loc)),
-      price: ing?.price || 2000,
+      qtyType: ing?.qtyType || 'count', unit: bu,
+      qty: ing?.qtyType === 'level' ? 1 : base, level: 'full',
+      location: loc, expiresAt: addDays(defaultShelf(ing, loc)), price: paid, unitPrice,
     });
   }
   save();
   if (!silentToast) toast(`${name} 담았어요`);
 }
 UI.addPantryByName = (n) => { addPantryByName(n); renderQuickAddGrid(); };
+
+// 구버전 보정: 무게·부피 품목을 base(g·ml) 기준으로 환산 (idempotent — 이미 base면 그대로)
+function migratePantryUnits() {
+  let changed = false;
+  for (const p of S.pantry) {
+    if (p.qtyType === 'level') continue;
+    const ing = findIng(p.name); if (!ing) continue;
+    const bu = baseUnit(ing);
+    if ((isWeight(ing) || measureOf(ing) === 'volume') && p.unit !== bu) {
+      p.qty = toBase(ing, p.qty, p.unit || ing.unit || bu);
+      p.unit = bu; changed = true;
+    }
+  }
+  if (changed) save({ silent: true });
+}
+
+/* ── 정밀 입고 폼: 재료 선택 후 수량·단위·위치·기한을 정확히 ── */
+let addDraft = null;
+function openAddItem(rawName) {
+  const ing = findIng(rawName);
+  const de = defaultEntry(ing);
+  const loc = qaLoc || defaultLocation(ing);
+  addDraft = {
+    name: ing ? ing.name : rawName, emoji: ing?.emoji || '🍽️',
+    level: ing?.qtyType === 'level', amount: de.amount, unit: de.u, price: null,
+    location: loc, expiresAt: addDays(defaultShelf(ing, loc)),
+  };
+  renderAddItem();
+}
+// 현재 입력 수량의 예상 구매가 (실구매가 미입력 시 사용)
+function estPaid(d) {
+  const ing = findIng(d.name); if (!ing) return 2000;
+  return Math.max(0, Math.round(baseUnitPrice(ing) * (toBase(ing, d.amount, d.unit) || 1)));
+}
+function renderAddItem() {
+  const d = addDraft; if (!d) return;
+  const ing = findIng(d.name);
+  const opts = unitOptions(ing);
+  const qtyBlock = d.level
+    ? `<p class="hint" style="margin:2px 0 0">양념·가루류는 가득/절반/조금으로 관리돼요 — 담으면 <b>가득</b>으로 채워집니다</p>`
+    : `<div class="add-qty">
+         <input type="number" min="0" step="${ing && isWeight(ing) ? 50 : 'any'}" inputmode="decimal" value="${d.amount}" onchange="UI.addAmt(this.value)" oninput="UI.addAmt(this.value,1)" />
+         <div class="seg add-units">${opts.map((o) => `<button class="${d.unit === o.u ? 'on' : ''}" onclick="UI.addUnit('${o.u}')">${o.u}</button>`).join('')}</div>
+       </div>
+       <p class="hint" id="add-prev" style="margin:6px 0 0">재고에 <b>${fmtBase(ing, toBase(ing, d.amount, d.unit))}</b> 담겨요</p>`;
+  openSheet(`
+    <div class="row" style="margin-bottom:6px">
+      <span class="emoji ${catClass(d.name)}" style="font-size:1.5rem;width:52px;height:52px;display:grid;place-items:center;border-radius:15px">${d.emoji}</span>
+      <div class="grow"><h2 style="margin:0">${esc(d.name)} 입고</h2>
+        <p class="sub" style="margin:0">수량·단위를 정확히 — 계란 30구/5구, 고기 g까지</p></div>
+    </div>
+    <div class="field"><label>수량 · 단위</label>${qtyBlock}</div>
+    ${d.level ? '' : `<div class="field"><label>구매 금액 (선택 — 아낀돈·버린돈 정확히 계산)</label>
+      <input type="number" min="0" step="100" inputmode="numeric" value="${d.price != null ? d.price : ''}" placeholder="예상 ${won(estPaid(d))}" onchange="UI.addPrice(this.value)" />
+      <p class="hint">실제로 낸 금액을 적으면 폐기·절약 금액이 그만큼 정확해져요</p></div>`}
+    <div class="field"><label>보관 위치</label>
+      <div class="seg" style="margin:0">${['fridge', 'freezer', 'room'].map((l) =>
+        `<button class="${d.location === l ? 'on' : ''}" onclick="UI.addLoc('${l}')">${LOC_LABEL[l]}</button>`).join('')}</div></div>
+    <div class="field"><label>소비기한</label>
+      <input type="date" value="${d.expiresAt || ''}" onchange="UI.addExp(this.value)" />
+      <p class="hint">권장 보관기한 기준 자동 입력 — 불확실하면 짧게 잡는 게 안전해요</p></div>
+    <div class="btn-row">
+      <button class="btn" onclick="UI.closeSheet()">취소</button>
+      <button class="btn btn-primary" onclick="UI.commitAdd()">🧊 담기</button></div>`);
+}
+UI.openAddItem = (n) => openAddItem(n);
+UI.addAmt = (v, live) => {
+  if (!addDraft) return;
+  addDraft.amount = Math.max(0, Number(v) || 0);
+  if (live) { const el = $('#add-prev'); if (el) el.innerHTML = `재고에 <b>${fmtBase(findIng(addDraft.name), toBase(findIng(addDraft.name), addDraft.amount, addDraft.unit))}</b> 담겨요`; }
+  else renderAddItem();
+};
+UI.addUnit = (u) => { if (addDraft) { addDraft.unit = u; renderAddItem(); } };
+UI.addPrice = (v) => { if (addDraft) { const n = Number(v); addDraft.price = (v === '' || isNaN(n)) ? null : Math.max(0, Math.round(n)); } };
+UI.addLoc = (l) => { if (addDraft) { addDraft.location = l; addDraft.expiresAt = addDays(defaultShelf(findIng(addDraft.name), l)); renderAddItem(); } };
+UI.addExp = (v) => { if (addDraft) addDraft.expiresAt = v; };
+UI.commitAdd = () => {
+  const d = addDraft; if (!d) return;
+  addPantryByName(d.name, { amount: d.amount, unit: d.unit, price: d.price, location: d.location, silentToast: true });
+  // 방금 담은(또는 합쳐진) 항목 기한을 폼 값으로 맞춤
+  const it = [...S.pantry].reverse().find((p) => p.name === d.name && p.location === d.location);
+  if (it && d.expiresAt) { it.expiresAt = d.expiresAt; save(); }
+  toast(`${d.name} ${d.level ? '담았어요' : fmtBase(findIng(d.name), toBase(findIng(d.name), d.amount, d.unit)) + ' 입고'} 🧊`);
+  addDraft = null;
+  UI.openQuickAdd(); // 연속 입고 — 빠른 추가 화면으로 복귀
+};
 
 UI.openQuickAdd = () => {
   openSheet(`
@@ -486,25 +659,29 @@ function renderQuickAddGrid() {
   if (!grid) return;
   grid.innerHTML = list.map((it) => {
     const owned = S.pantry.find((p) => p.name === it.name);
-    return `<button class="ing-pick" onclick="UI.addPantryByName('${it.name}')">
+    return `<button class="ing-pick" onclick="UI.openAddItem('${it.name}')">
       <span>${it.emoji}</span>${it.name}${owned ? `<small>보유 ${qtyLabel(owned)}</small>` : ''}</button>`;
   }).join('');
   // 사전에 없어도 막히지 않도록 — 정확히 같은 이름이 없으면 직접 추가를 항상 제안
   const exact = list.some((it) => it.name === q);
   $('#qa-custom').innerHTML = (q && !exact)
-    ? `<button class="btn btn-soft btn-block" style="margin-top:8px" onclick="UI.addPantryByName('${esc(q)}')">＂${esc(q)}＂ 그대로 직접 추가 — 사전에 없어도 담겨요</button>` : '';
+    ? `<button class="btn btn-soft btn-block" style="margin-top:8px" onclick="UI.openAddItem('${esc(q)}')">＂${esc(q)}＂ 그대로 직접 추가 — 수량·단위 지정해서 담기</button>` : '';
 }
 UI.qaFilter = renderQuickAddGrid;
 
 UI.editPantry = (id) => {
   const p = S.pantry.find((x) => x.id === id);
   if (!p) return;
+  const ing = findIng(p.name);
   const qtyControl = p.qtyType === 'level'
     ? `<div class="level-row">${LEVELS.map(([v, l]) =>
         `<button class="${p.level === v ? 'on' : ''}" onclick="UI.setLevel('${id}','${v}')">${l}</button>`).join('')}</div>`
-    : `<div class="stepper">
-         <button onclick="UI.bumpQty('${id}',-1)">−</button><b id="qty-val">${p.qty}${p.unit || ''}</b>
-         <button onclick="UI.bumpQty('${id}',1)">＋</button></div>`;
+    : `<div class="qty-edit">
+         <button onclick="UI.bumpQty('${id}',-1)">−</button>
+         <input id="qty-in" type="number" min="0" step="${stepFor(ing)}" inputmode="decimal" value="${p.qty}" onchange="UI.setQty('${id}',this.value)" />
+         <span class="qty-unit">${p.unit || ''}</span>
+         <button onclick="UI.bumpQty('${id}',1)">＋</button></div>
+       ${ing && isWeight(ing) ? '<p class="hint" style="margin:6px 0 0">고기·해산물은 g(그램) 기준 — 실제 무게로 정확히 맞춰요</p>' : ''}`;
   openSheet(`
     <div class="row" style="margin-bottom:4px">
       <span class="emoji ${catClass(p.name)}" style="font-size:1.5rem;width:52px;height:52px;display:grid;place-items:center;border-radius:15px;overflow:hidden">
@@ -520,7 +697,7 @@ UI.editPantry = (id) => {
       <input type="date" value="${p.expiresAt || ''}" onchange="UI.setExpiry('${id}',this.value)" />
       <p class="hint">권장 보관기한 기준 자동 입력 — 기한이 불확실하면 짧게 잡는 게 안전해요</p></div>
     ${ingredientTip(p.name) ? `<div class="tipbox">💡 <b>보관 꿀팁</b><br>${esc(ingredientTip(p.name))}</div>` : ''}
-    <button class="btn btn-soft btn-block" style="margin-top:2px" onclick="UI.addShopping('${esc(p.name)}', false, '떨어져감 메모');UI.closeSheet()">🧺 장보기 목록에 미리 담기</button>
+    <button class="btn btn-soft btn-block" style="margin-top:2px" onclick="UI.addShopping('${esc(p.name)}', false, '', 'low');UI.closeSheet()">🧺 장보기 목록에 미리 담기</button>
     <div class="field"><label>실사 사진 (선반에서 진짜 내 재료로 보여요)</label>
       <div class="btn-row" style="margin-top:0">
         <label class="btn btn-soft">📸 사진 ${p.photo ? '바꾸기' : '추가'}<input type="file" accept="image/*" capture="environment" style="display:none" onchange="UI.itemPhoto('${id}',this)" /></label>
@@ -532,9 +709,14 @@ UI.editPantry = (id) => {
 };
 UI.bumpQty = (id, d) => {
   const p = S.pantry.find((x) => x.id === id); if (!p) return;
-  p.qty = Math.max(0, Math.round((p.qty + d * (p.qty >= 1 || d > 0 ? 1 : 0.5)) * 100) / 100);
+  const step = stepFor(findIng(p.name));
+  p.qty = Math.max(0, Math.round((p.qty + d * step) * 100) / 100);
   save();
-  const el = $('#qty-val'); if (el) el.textContent = `${p.qty}${p.unit || ''}`;
+  const el = $('#qty-in'); if (el) el.value = p.qty;
+};
+UI.setQty = (id, v) => {
+  const p = S.pantry.find((x) => x.id === id); if (!p) return;
+  p.qty = Math.max(0, Math.round((Number(v) || 0) * 100) / 100); save();
 };
 UI.setLevel = (id, v) => { const p = S.pantry.find((x) => x.id === id); if (p) { p.level = v; save(); UI.editPantry(id); } };
 UI.setItemLoc = (id, l) => { const p = S.pantry.find((x) => x.id === id); if (p) { p.location = l; save(); UI.editPantry(id); } };
@@ -548,11 +730,28 @@ UI.itemPhoto = async (id, input) => {
 };
 UI.itemPhotoClear = (id) => { const p = S.pantry.find((x) => x.id === id); if (p) { delete p.photo; save(); UI.editPantry(id); } };
 UI.removePantry = (id) => {
-  const p = S.pantry.find((x) => x.id === id);
-  if (p && daysLeft(p.expiresAt) < 0) { S.ledger.wasted += p.price || 2000; toast(`${p.name} 폐기 — 버린 돈에 기록했어요`); }
+  const p = S.pantry.find((x) => x.id === id); if (!p) return;
+  const empty = p.qtyType === 'level' ? p.level === 'empty' : (Number(p.qty) || 0) <= 0;
+  if (empty) { doRemovePantry(id, 'used'); return; } // 이미 빈 것은 바로 정리
+  // 남은 재고가 있으면 — 미세 차이가 날 수 있으니 처리 방식을 직접 선택
+  openSheet(`
+    <h2>🗑️ ${esc(p.name)} 정리</h2>
+    <p class="sub">아직 <b>${qtyLabel(p)}</b> 남아 있어요. 어떻게 처리할까요?</p>
+    <div style="display:grid;gap:8px;margin-top:6px">
+      <button class="btn btn-soft btn-block" onclick="UI.removeWith('${id}','used')">✅ 다 썼어요 — 남김없이 소진</button>
+      <button class="btn btn-soft btn-block" onclick="UI.removeWith('${id}','wasted')">🗑️ 상해서 버렸어요 — 폐기(버린 돈 기록)</button>
+      <button class="btn btn-block" onclick="UI.editPantry('${id}')">↩ 취소</button>
+    </div>`);
+};
+UI.removeWith = (id, how) => doRemovePantry(id, how);
+UI.wasteItem = (id) => doRemovePantry(id, 'wasted'); // 홈 임박 재료에서 바로 버리기
+function doRemovePantry(id, how) {
+  const p = S.pantry.find((x) => x.id === id); if (!p) return;
+  if (how === 'wasted') { const cost = moneyFor(p); S.ledger.wasted += cost; toast(`${p.name} 폐기 — ${won(cost)} 버린 돈에 기록`); proverbFloat('waste'); }
+  else { toast(`${p.name} 정리 완료`); proverbFloat('save'); }
   S.pantry = S.pantry.filter((x) => x.id !== id);
   save(); UI.closeSheet(); render();
-};
+}
 UI.refresh = () => render();
 
 /* ── AI 스캔 ─────────────────────────────── */
@@ -1003,7 +1202,7 @@ function recipeCard(a) {
             ? '<span class="chip">🎬 영상만 저장됨 — 탭해서 재료 채우기</span>'
             : `<span class="chip have">재료 ${a.have}/${a.total}</span>
           ${a.missing.slice(0, 3).map((m) =>
-            `<span class="chip miss" onclick="event.stopPropagation();UI.addShopping('${esc(m)}')">＋ ${esc(m)}</span>`).join('')}
+            `<span class="chip miss" onclick="event.stopPropagation();UI.addShopping('${esc(m)}', false, '', 'recipe')">＋ ${esc(m)}</span>`).join('')}
           ${a.missing.length > 3 ? `<span class="chip">외 ${a.missing.length - 3}</span>` : ''}`}
         </div>
       </div>
@@ -1647,6 +1846,10 @@ UI.openYtSearch = (prefill) => {
     <div class="g-hubhead"><h2 style="margin:0">🎬 유튜브 레시피</h2>
       <button class="btn btn-sm" onclick="UI.closeSheet()">✕</button></div>
     <p class="sub" style="margin:2px 0 8px">고르면 영상이 내 레시피로 들어와요${aiReady().ok ? ' — AI가 재료·순서·키포인트까지 자동 정리' : ''}</p>
+    <div class="tipbox" style="margin:2px 0 10px">📥 <b>영상 가져오는 법</b> — 유튜브로 가기 전에 확인하세요
+      <br>① 아래 <b>검색 결과를 탭</b> → 앱에서 미리 보고 바로 저장 (가장 쉬움)
+      <br>② 유튜브에서 찾았다면 영상 <b>공유 → 링크 복사</b> 후 아래 칸에 <b>붙여넣기</b> → 자동으로 들어와요
+      <br>③ <b>“영상만 저장”</b>은 재료 없이도 📒 내 레시피·❤️ 찜에 보관돼요 (나중에 재료 채우면 매칭)</div>
     <div class="yt-search">
       <span class="yt-ico">🔍</span>
       <input id="yts-q" placeholder="요리 이름·재료로 검색" value="${esc(q0)}" onkeydown="if(event.key==='Enter')UI.ytSearch()" />
@@ -1718,8 +1921,8 @@ UI.ytPick = (id, title) => {
       <button class="btn btn-primary" onclick="UI.ytToRecipe('${id}','${esc(t.replace(/'/g, '’'))}')">🤖 영상+레시피로 저장</button>
       <button class="btn btn-tint" onclick="UI.ytSaveOnly('${id}','${esc(t.replace(/'/g, '’'))}')">⭐ 영상만 저장</button>
     </div>
-    <p class="hint" style="text-align:center;margin-top:6px">둘 다 저장돼요 — "영상+레시피"는 나중에 [▶영상 보며 / 📒레시피만]을 골라 볼 수 있어요</p>
-    <a class="btn btn-soft btn-block" style="margin-top:9px" href="https://youtu.be/${id}" target="_blank" rel="noreferrer">↗ 유튜브 앱에서 보기</a>`);
+    <p class="hint" style="text-align:center;margin-top:6px">위 버튼을 눌러야 <b>내 레시피로 저장</b>돼요 · 아래 ↗는 저장이 아니라 유튜브에서 크게 보기예요</p>
+    <a class="btn btn-soft btn-block" style="margin-top:9px" href="https://youtu.be/${id}" target="_blank" rel="noreferrer">↗ 유튜브 앱에서 크게 보기 (저장 아님)</a>`);
 };
 UI.ytToRecipe = (id, title) => {
   UI.openRecipeForm();
@@ -1737,8 +1940,9 @@ UI.ytSaveOnly = (id, title) => {
     emoji: '🎬', yt: id, ingredients: [], steps: [], tags: [],
   });
   if (!S.favs.includes(rid)) S.favs.push(rid);
+  recipeQuery = ''; // 검색어가 남아 새로 담은 영상이 필터로 가려지지 않게
   save(); UI.closeSheet(); rTab = 'mine'; tab = 'recipes'; render();
-  toast('⭐ 영상 저장 완료 — 찜에도 들어갔어요');
+  toast('⭐ 영상 저장 완료 — 📒 내 레시피·❤️ 찜에 담겼어요');
 };
 UI.ytPickLink = () => {
   const id = ytId($('#yts-link').value);
@@ -1860,29 +2064,32 @@ function handleShareCode(code) {
 /* ── 요리 완료 → 차감 ─────────────────────── */
 UI.openDeduct = (rid) => {
   const r = allRecipes(S).find((x) => x.id === rid);
-  deductCtx = { recipe: r, servings: detailServings || 1, skips: new Set() };
+  deductCtx = { recipe: r, servings: detailServings || 1, skips: new Set(), emptyAll: new Set() };
   renderDeduct();
 };
 
 function renderDeduct() {
-  const { recipe, servings, skips } = deductCtx;
+  const { recipe, servings, skips, emptyAll } = deductCtx;
   const plan = deductionPlan(recipe, S, servings);
   openSheet(`
     <h2>🧾 재고 차감</h2>
-    <p class="sub">${esc(recipe.title)} — 몇 인분 하셨어요? 확인만 누르면 끝나요.</p>
+    <p class="sub">${esc(recipe.title)} — 몇 인분 하셨어요? 양이 안 맞으면 <b>다 씀</b>으로 남김없이 비울 수 있어요.</p>
     <div class="seg" style="margin-top:0">
       ${[1, 2, 3, 4].map((n) =>
         `<button class="${servings === n ? 'on' : ''}" onclick="UI.setServ(${n})">${n}인분</button>`).join('')}
     </div>
     <div class="receipt">
       ${plan.length === 0 ? '<div class="r-line"><span>차감할 재고 없음 (등록 안 된 재료)</span></div>' : ''}
-      ${plan.map((p, idx) => p.skip
-        ? `<div class="r-line" style="color:var(--label-3)"><span>${p.item.emoji} ${esc(p.item.name)}</span><small>${p.label}</small></div>`
-        : `<div class="r-line" style="${skips.has(idx) ? 'opacity:.4;text-decoration:line-through' : ''}">
+      ${plan.map((p, idx) => {
+        if (p.skip) return `<div class="r-line" style="color:var(--label-3)"><span>${p.item.emoji} ${esc(p.item.name)}</span><small>${p.label}</small></div>`;
+        const ingg = findIng(p.item.name); const used = emptyAll.has(idx); const after = used ? 0 : p.after;
+        return `<div class="r-line" style="${skips.has(idx) ? 'opacity:.4;text-decoration:line-through' : ''}">
              <span>${p.item.emoji} ${esc(p.item.name)}${p.fifo ? ' <small style="color:var(--blue);font-weight:800">선입선출 D-' + Math.max(0, daysLeft(p.item.expiresAt)) + '</small>' : ''}</span>
-             <span>${p.item.qty}${p.item.unit || ''} → <b>${p.after}${p.item.unit || ''}</b>
-               <button style="margin-left:6px;font-size:.7rem;color:var(--label-3)" onclick="UI.toggleSkip(${idx})">${skips.has(idx) ? '되돌리기' : '건너뛰기'}</button>
-             </span></div>`).join('')}
+             <span>${fmtBase(ingg, p.item.qty)} → <b>${fmtBase(ingg, after)}</b>
+               <button class="r-mini ${used ? 'on' : ''}" onclick="UI.toggleEmpty(${idx})">다 씀</button>
+               <button class="r-mini" onclick="UI.toggleSkip(${idx})">${skips.has(idx) ? '되돌리기' : '건너뛰기'}</button>
+             </span></div>`;
+      }).join('')}
       <div class="r-line r-total"><span>합계</span><span>${plan.filter((p, i) => !p.skip && !skips.has(i)).length}개 품목 차감</span></div>
     </div>
     <div class="btn-row">
@@ -1892,23 +2099,27 @@ function renderDeduct() {
 }
 UI.setServ = (n) => { deductCtx.servings = n; renderDeduct(); };
 UI.toggleSkip = (idx) => { deductCtx.skips.has(idx) ? deductCtx.skips.delete(idx) : deductCtx.skips.add(idx); renderDeduct(); };
+UI.toggleEmpty = (idx) => { deductCtx.emptyAll.has(idx) ? deductCtx.emptyAll.delete(idx) : deductCtx.emptyAll.add(idx); renderDeduct(); };
 
 UI.applyDeduct = () => {
-  const { recipe, servings, skips } = deductCtx;
+  const { recipe, servings, skips, emptyAll } = deductCtx;
   const plan = deductionPlan(recipe, S, servings);
   let savedFromExpiring = 0;
   plan.forEach((p, idx) => {
     if (p.skip || skips.has(idx)) return;
-    if (daysLeft(p.item.expiresAt) <= 3) savedFromExpiring += Math.round((p.item.price || 2000) * 0.5);
-    p.item.qty = p.after;
-    if (p.after <= 0) {
+    const before = Number(p.item.qty) || 0;
+    p.item.qty = emptyAll.has(idx) ? 0 : p.after;
+    const used = Math.max(0, before - p.item.qty);
+    if (daysLeft(p.item.expiresAt) <= 3) savedFromExpiring += moneyFor(p.item, used); // 임박 재료를 실제 사용량·단가로 구출
+    if (p.item.qty <= 0) {
       S.pantry = S.pantry.filter((x) => x.id !== p.item.id);
-      UI.addShopping(p.item.name, true, '다 떨어짐');
+      UI.addShopping(p.item.name, true, '', 'out');
     }
   });
   S.ledger.cooked += 1;
   S.ledger.saved += savedFromExpiring;
   save();
+  if (savedFromExpiring > 0) proverbFloat('save'); // 절약 위트 한마디
   // 포인트: 요리 완료 +10P, 임박 재료를 구출했으면 +20P 추가 (각각 일일 상한)
   const pCook = earn('cook');
   const pRescue = savedFromExpiring > 0 ? earn('rescue') : { ok: false };
@@ -2007,17 +2218,37 @@ UI.leftoverDone = (id, result) => {
   if (result === 'eaten') {
     S.ledger.leftoverEaten += 1; S.ledger.saved += 4000;
     const p = earn('leftover');
-    toast(`한 끼 해결! 약 ₩4,000 아꼈어요 🪙${p.ok ? ` · 🅿+${p.p}P` : ''}`);
-  } else { S.ledger.leftoverWasted += 1; S.ledger.wasted += 3000; toast('버린 기록을 장부에 남겼어요'); }
+    toast(`한 끼 해결! 약 ₩4,000 아꼈어요 🪙${p.ok ? ` · 🅿+${p.p}P` : ''}`); proverbFloat('save');
+  } else { S.ledger.leftoverWasted += 1; S.ledger.wasted += 3000; toast('버린 기록을 장부에 남겼어요'); proverbFloat('waste'); }
   save(); render();
 };
 
 /* ── 장보기 ─────────────────────────────── */
-UI.addShopping = (name, silent = false, reason = '레시피 재료') => {
-  if (!S.shopping.find((x) => x.name === name && !x.done)) {
-    S.shopping.push({ id: uid(), name, reason, done: false });
-    save();
+// 담긴 이유를 명확한 출처(src)로 분류 — recipe(레시피 필요)·low(거의 떨어짐)·out(다 떨어짐)·manual(내가 추가)
+const SHOP_SRC = {
+  recipe: { label: '레시피에 필요', cls: 's-recipe' },
+  low: { label: '거의 떨어짐', cls: 's-low' },
+  out: { label: '다 떨어짐', cls: 's-out' },
+  manual: { label: '내가 추가', cls: 's-manual' },
+};
+function srcFromReason(r) { // 구버전 데이터 보정
+  if (!r) return 'manual';
+  if (r.includes('레시피')) return 'recipe';
+  if (r.includes('다 떨어')) return 'out';
+  if (r.includes('떨어져')) return 'low';
+  return 'manual';
+}
+const shopSrcOf = (x) => x.src || srcFromReason(x.reason);
+UI.addShopping = (name, silent = false, reason = '', src = '') => {
+  const s = src || srcFromReason(reason || '레시피 재료');
+  const ex = S.shopping.find((x) => x.name === name && !x.done);
+  if (ex) { // 이미 있으면 더 시급한 출처로 승격(out>low>recipe>manual)
+    const rank = { out: 3, low: 2, recipe: 1, manual: 0 };
+    if ((rank[s] || 0) > (rank[shopSrcOf(ex)] || 0)) { ex.src = s; ex.reason = reason || SHOP_SRC[s].label; }
+  } else {
+    S.shopping.push({ id: uid(), name, reason: reason || SHOP_SRC[s].label, src: s, done: false, addedAt: Date.now() });
   }
+  save();
   if (!silent) { toast(`🧺 ${name} 장보기에 담았어요`); render(); }
 };
 
@@ -2039,7 +2270,8 @@ function shopGroupsHtml(open) {
     ${groups[c].map((x) => `
       <div class="item">
         <button style="font-size:1.25rem" onclick="UI.shopToggle('${x.id}')">⚪</button>
-        <div class="grow"><div class="name">${esc(x.name)}</div><div class="sub">${esc(x.reason)}</div></div>
+        <div class="grow"><div class="name">${esc(x.name)}</div>
+          <div class="sub"><span class="shop-tag ${SHOP_SRC[shopSrcOf(x)].cls}">${SHOP_SRC[shopSrcOf(x)].label}</span></div></div>
         <a class="btn btn-sm btn-accent" href="${coupangUrl(x.name)}" target="_blank" rel="noreferrer">쿠팡 🛒</a>
         <button style="color:var(--label-3)" onclick="UI.shopRemove('${x.id}')">✕</button>
       </div>`).join('')}`).join('');
@@ -2050,10 +2282,14 @@ function renderShopping() {
   const done = S.shopping.filter((x) => x.done);
   $('#view').innerHTML = `
     <div class="hero"><h1>오늘의 <em>장보기</em></h1>
-      <p>부족·소진 재료가 자동으로 담겨요 — 쿠팡 버튼이면 두 탭에 장바구니</p></div>
+      <p>태그로 출처가 한눈에 — <b>레시피에 필요·거의 떨어짐·다 떨어짐</b>은 자동, <b>내가 추가</b>는 직접</p></div>
     <div class="search-row">
-      <input id="shop-new" placeholder="직접 추가 (예: 올리브유…)" onkeydown="if(event.key==='Enter')UI.shopAdd()" />
-      <button class="btn btn-tint" onclick="UI.shopAdd()">담기</button>
+      <input id="shop-new" placeholder="내가 필요한 것 직접 추가 (예: 올리브유, 키친타올…)" onkeydown="if(event.key==='Enter')UI.shopAdd()" />
+      <button class="btn btn-tint" onclick="UI.shopAdd()">＋ 내가 추가</button>
+    </div>
+    <div class="shop-legend">
+      <span class="shop-tag s-recipe">레시피에 필요</span><span class="shop-tag s-low">거의 떨어짐</span>
+      <span class="shop-tag s-out">다 떨어짐</span><span class="shop-tag s-manual">내가 추가</span>
     </div>
     ${shopSuggestHtml()}
     ${open.length ? `<div class="btn-row" style="margin:0 0 10px">
@@ -2091,7 +2327,7 @@ function shopSuggestHtml() {
     <div class="sug-chips">${sug.map((p) => `<button class="sug-chip" onclick="UI.shopSug('${esc(p.name)}',this)">＋ ${p.emoji || ''} ${esc(p.name)}</button>`).join('')}</div>
   </div>`;
 }
-UI.shopSug = (name, el) => { UI.addShopping(name, true, '떨어져감'); if (el) { el.disabled = true; el.textContent = '✓ 담음'; } toast(`🧺 ${name} 담았어요`); };
+UI.shopSug = (name, el) => { UI.addShopping(name, true, '', 'low'); if (el) { el.disabled = true; el.textContent = '✓ 담음'; } toast(`🧺 ${name} 담았어요`); };
 UI.shopCoupangAll = () => {
   const items = S.shopping.filter((x) => !x.done);
   if (!items.length) return;
@@ -2103,7 +2339,8 @@ UI.shopCoupangAll = () => {
 UI.shopAdd = () => {
   const v = $('#shop-new').value.trim();
   if (!v) return;
-  UI.addShopping(v, true, '직접 추가');
+  UI.addShopping(v, true, '', 'manual');
+  toast(`🧺 ${v} — 내가 추가한 장보기에 담았어요`);
   render();
 };
 UI.copyShopList = () => {
@@ -2407,6 +2644,7 @@ if (AI_ENDPOINT && !S.settings.aiEndpoint) {
   save({ silent: true });
 }
 
+migratePantryUnits(); // 무게·부피 재고를 g·ml 기준으로 일괄 정렬(구버전 데이터 보정)
 render();
 initSync(() => { renderTop(); if (tab === 'settings') renderSettings(); });
 

@@ -261,7 +261,7 @@ function renderHome() {
     </div>
     <div class="home-games four">
       <button onclick="UI.openGames()">🎮 게임</button>
-      <button class="ad" onclick="UI.waitAd()">📺 광고+P</button>
+      <button class="ad" onclick="UI.waitAd()">🕒 짬시간 포인트</button>
       <button onclick="UI.openRanks()">🏆 랭킹</button>
       <button onclick="UI.openPoints()">🎁 포인트샵</button>
     </div>
@@ -735,7 +735,7 @@ function houseAd({ onComplete, note, reward }) {
   // 잠금 시트: 바깥 탭으로 안 닫힘 — 완주해야 보상 (보상형 광고 표준 동작)
   openSheet(`
     <div class="adx">
-      <div class="adx-head"><b>📺 잠깐 광고 보고 받기</b>
+      <div class="adx-head"><b>🕒 짬시간에 잠깐 보고 받기</b>
         <button class="adx-skip" onclick="UI.adQuit()">건너뛰기 ›</button></div>
       ${reward ? `<div class="adx-reward">🎁 ${reward}</div>` : ''}
       <div class="adx-stage">
@@ -884,6 +884,11 @@ UI.redeem = async (id) => {
 
 /* ── 🎮 게임 글루 — 각 게임 모듈의 시트가 onclick 문자열로 부른다 ── */
 UI.openGames = () => openGames();
+UI.gameFull = () => {
+  const el = document.querySelector('.gx'); if (!el) return;
+  try { if (document.fullscreenElement) (document.exitFullscreen || document.webkitExitFullscreen).call(document); else (el.requestFullscreen || el.webkitRequestFullscreen).call(el); }
+  catch { toast('이 브라우저는 전체화면을 지원하지 않아요'); }
+};
 UI.setGameDiff = (d) => setGameDiff(d);
 UI.gameGomoku = () => gameGomoku();
 UI.gomokuUndo = () => gomokuUndo();
@@ -1047,7 +1052,7 @@ function renderRecipes() {
       ${selMode ? '✕ 같이 요리 선택 끝내기' : '👩‍🍳 같이 요리 — 여러 개 골라 통합 순서 만들기'}</button>
     <div class="home-games" style="margin-bottom:10px">
       <button onclick="UI.openGames()">🎮 게임하기</button>
-      <button class="ad" onclick="UI.waitAd()">📺 광고 보고 포인트</button>
+      <button class="ad" onclick="UI.waitAd()">🕒 짬시간 포인트</button>
     </div>
     <div id="recipe-list">${recipeListHtml()}</div>
     ${adBanner('recipes')}
@@ -1158,7 +1163,7 @@ UI.openRecipe = (rid) => {
     ${r.caution ? `<div class="banner warn">⚠️ ${esc(r.caution)}</div>` : ''}
     <div class="rcp-tools">
       <button onclick="UI.recipeTimer(${r.time || 10})"><span>⏲️</span>타이머</button>
-      <button class="hot" onclick="UI.waitAd()"><span>📺</span>광고+P</button>
+      <button class="hot" onclick="UI.waitAd()"><span>🕒</span>짬시간P</button>
       <button onclick="UI.openGames()"><span>🎮</span>게임</button>
       <button id="mic-btn" class="${canListen ? 'on' : ''}" onclick="UI.micToggle()"><span>🎤</span>음성</button>
     </div>
@@ -1323,10 +1328,30 @@ UI.endTutorial = () => {
   if (!S.tutorialDone) { S.tutorialDone = true; save({ silent: true }); }
 };
 
-/* ── 주방 타이머 — 떠있는 위젯(남은 시간·＋1분·게임 입구). 화면 어디서나 보인다 ── */
+/* ── 주방 타이머 — 떠있는 위젯(드래그로 빈 공간 어디든 이동). ── */
 let ktTimer = null;
 let ktTick = null;
 let ktEnd = 0;
+let timerPos = null; // 사용자가 옮긴 위치 기억
+function makeTimerDraggable(chip) {
+  let drag = null;
+  chip.addEventListener('pointerdown', (e) => {
+    if (e.target.closest('.tc-x, .tc-game, .tc-mini')) return; // 버튼은 드래그 아님
+    const r = chip.getBoundingClientRect();
+    drag = { dx: e.clientX - r.left, dy: e.clientY - r.top };
+    chip.setPointerCapture?.(e.pointerId); chip.classList.add('dragging');
+  });
+  chip.addEventListener('pointermove', (e) => {
+    if (!drag) return;
+    const w = chip.offsetWidth, h = chip.offsetHeight;
+    const x = Math.max(6, Math.min(window.innerWidth - w - 6, e.clientX - drag.dx));
+    const y = Math.max(6, Math.min(window.innerHeight - h - 6, e.clientY - drag.dy));
+    chip.style.left = x + 'px'; chip.style.top = y + 'px'; chip.style.right = 'auto'; chip.style.bottom = 'auto';
+    timerPos = { x, y };
+  });
+  const end = () => { drag = null; chip.classList.remove('dragging'); };
+  chip.addEventListener('pointerup', end); chip.addEventListener('pointercancel', end);
+}
 function killTimerChip() { clearTimeout(ktTimer); clearInterval(ktTick); ktEnd = 0; $('#timer-chip')?.remove(); }
 function startKitchenTimer(min) {
   clearTimeout(ktTimer); clearInterval(ktTick);
@@ -1338,12 +1363,14 @@ function startKitchenTimer(min) {
     chip = document.createElement('div');
     chip.id = 'timer-chip';
     document.body.appendChild(chip);
+    if (timerPos) { chip.style.left = timerPos.x + 'px'; chip.style.top = timerPos.y + 'px'; chip.style.right = 'auto'; chip.style.bottom = 'auto'; }
+    makeTimerDraggable(chip);
   }
   chip.innerHTML = `
-    <div class="tc-top"><span class="tc-time" id="tc-time">0:00</span>
+    <div class="tc-top"><span class="tc-grip">⋮⋮</span><span class="tc-time" id="tc-time">0:00</span>
       <span class="tc-x" onclick="UI.timerStop()">✕</span></div>
-    <div class="tc-game" onclick="UI.openGames()">🎮 기다리는 동안 한 판?</div>
-    <div class="tc-game" style="background:rgba(255,255,255,.1)" onclick="UI.timerPlus()">＋1분</div>`;
+    <div class="tc-game" onclick="UI.openGames()">🎮 한 판?</div>
+    <div class="tc-row"><span class="tc-mini" onclick="UI.timerPlus(-1)">－</span><span class="tc-mini" onclick="UI.timerPlus(1)">＋1분</span></div>`;
   const tick = () => {
     const left = Math.max(0, ktEnd - Date.now());
     const el = $('#tc-time'); if (!el) { clearInterval(ktTick); return; }
@@ -1360,11 +1387,11 @@ function timerDone() {
   navigator.vibrate?.([220, 110, 220]);
 }
 UI.timerStop = () => { killTimerChip(); toast('타이머를 껐어요'); };
-UI.timerPlus = () => {
+UI.timerPlus = (d = 1) => {
   if (!ktEnd) return;
-  ktEnd += 60000; clearTimeout(ktTimer);
+  ktEnd = Math.max(Date.now() + 1000, ktEnd + d * 60000); clearTimeout(ktTimer);
   ktTimer = setTimeout(timerDone, Math.max(0, ktEnd - Date.now()));
-  toast('⏲ +1분');
+  toast(d > 0 ? '⏲ +1분' : '⏲ −1분');
 };
 // 원클릭: 레시피 시간으로 즉시 시작, 떠있는 칩이 이미 있으면 시간 변경 시트
 UI.recipeTimer = (min) => {
@@ -1395,7 +1422,7 @@ UI.waitGame = (min) => {
     <p class="sub">타이머를 켰어요. 기다리는 동안 게임 한 판 어때요? — 점수는 포인트로!</p>
     <div class="btn-row" style="flex-direction:column">
       <button class="btn btn-primary btn-block" onclick="UI.closeSheet();UI.openGames()">🎮 게임하고 포인트 받기</button>
-      <button class="btn btn-accent btn-block" onclick="UI.waitAd()">📺 광고 보고 포인트 받기</button>
+      <button class="btn btn-accent btn-block" onclick="UI.waitAd()">🕒 짬시간 포인트 받기</button>
       <button class="btn btn-block" onclick="UI.closeSheet()">그냥 기다릴게요</button>
     </div>`);
 };

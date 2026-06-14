@@ -821,16 +821,22 @@ a { color: var(--blue); text-decoration: none; }
 
 /* ── 타이머 위젯 (확장형) ── */
 #timer-chip {
-  position: fixed; right: 14px; bottom: 92px; z-index: 58;
+  position: fixed; right: 12px; top: 68px; bottom: auto; z-index: 60;
   background: linear-gradient(145deg, #2e3540, #1d2733); color: #fff;
-  border-radius: 16px; padding: 10px 14px; box-shadow: 0 8px 22px rgba(20,24,33,0.35);
-  animation: chip-in 0.4s cubic-bezier(0.2,0.9,0.3,1.2); min-width: 132px;
+  border-radius: 14px; padding: 8px 11px; box-shadow: 0 8px 22px rgba(20,24,33,0.4);
+  animation: chip-in 0.4s cubic-bezier(0.2,0.9,0.3,1.2); width: 118px;
+  cursor: grab; touch-action: none; opacity: 0.96;
 }
-#timer-chip .tc-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-#timer-chip .tc-time { font-size: 1.05rem; font-weight: 800; font-variant-numeric: tabular-nums; }
-#timer-chip .tc-x { opacity: 0.7; cursor: pointer; font-size: 0.85rem; }
+#timer-chip.dragging { cursor: grabbing; opacity: 1; box-shadow: 0 12px 30px rgba(20,24,33,0.5); }
+#timer-chip .tc-top { display: flex; align-items: center; gap: 6px; }
+#timer-chip .tc-grip { opacity: 0.4; font-size: 0.7rem; letter-spacing: -2px; }
+#timer-chip .tc-time { font-size: 1.02rem; font-weight: 800; font-variant-numeric: tabular-nums; flex: 1; }
+#timer-chip .tc-x { opacity: 0.7; cursor: pointer; font-size: 0.85rem; padding: 0 2px; }
 #timer-chip .tc-game { margin-top: 6px; font-size: 0.72rem; font-weight: 700; background: rgba(255,255,255,0.16); border-radius: 8px; padding: 5px 8px; text-align: center; cursor: pointer; }
-@keyframes chip-in { from { transform: translateY(16px) scale(0.8); opacity: 0; } }
+#timer-chip .tc-row { display: flex; gap: 5px; margin-top: 5px; }
+#timer-chip .tc-mini { flex: 1; text-align: center; font-size: 0.72rem; font-weight: 800; background: rgba(255,255,255,0.1); border-radius: 8px; padding: 5px 0; cursor: pointer; }
+#timer-chip .tc-mini:active { background: rgba(255,255,255,0.22); }
+@keyframes chip-in { from { transform: translateY(-16px) scale(0.8); opacity: 0; } }
 
 /* 긴 조리 단계의 '대기 시간' 유도 버튼 */
 .step-wait {
@@ -1220,3 +1226,15 @@ input:focus, select:focus, textarea:focus { outline: none; box-shadow: 0 0 0 3px
 .gx-wall.arming { background: #73cbff; color: #0a2030; animation: fdOn 0.8s ease-in-out infinite; }
 .gx-wall:active { transform: scale(0.95); }
 .up-card.cant { opacity: 0.5; }
+
+/* ══════════ 게임 터치: 브라우저 당겨서새로고침·스크롤 방지 + 전체화면 ══════════ */
+html, body { overscroll-behavior: none; }
+.gx, .gx-stage, .gx-stage canvas, #def-c, #gf-stage, .g-track, .pz-wrap, .pz-canvas, #gmk-c {
+  touch-action: none; overscroll-behavior: contain; user-select: none; -webkit-user-select: none;
+}
+.gx:fullscreen, .gx:-webkit-full-screen { width: 100vw; height: 100vh; display: flex; flex-direction: column; justify-content: center; background: #120a1e; }
+.gx:fullscreen .gx-stage, .gx:-webkit-full-screen .gx-stage { flex: 1; align-items: center; }
+.gx-full { background: none; border: none; color: #cdbde8; font-size: 1rem; cursor: pointer; padding: 0 6px; }
+
+/* 게임이 열리면 시트를 꽉 찬 화면으로 (브라우저에서도 몰입) */
+.sheet:has(.gx) { max-height: 100dvh; height: 100dvh; border-radius: 0; padding: 4px 10px calc(10px + env(safe-area-inset-bottom)); }

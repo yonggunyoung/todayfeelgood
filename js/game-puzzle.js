@@ -67,16 +67,18 @@ export function gamePuzzle() {
     return Math.abs(ax - bx) + Math.abs(ay - by) === 1;
   }
   function trySwap(a, b) {
-    P.phase = 'busy';
-    [P.grid[a], P.grid[b]] = [P.grid[b], P.grid[a]];
-    if (findMatches().size === 0) { // 매치 없음 → 되돌리기
-      [P.grid[a], P.grid[b]] = [P.grid[b], P.grid[a]];
-      beep(200, 0.12, 'square', 0.08); buzz(20);
-      P.phase = 'idle'; return;
-    }
-    P.combo = 0;
-    buzz(10);
-    resolve();
+    P.phase = 'swap'; P.swap = { a, b, t: 0, back: false }; // 부드러운 이동 애니메이션
+  }
+  // 스왑 애니메이션 진행(loop에서 호출)
+  function stepSwap(dt) {
+    const sw = P.swap; if (!sw) return;
+    sw.t += dt / 0.2; // 0.2초 이동
+    if (sw.t < 1) return;
+    if (!sw.back) {
+      [P.grid[sw.a], P.grid[sw.b]] = [P.grid[sw.b], P.grid[sw.a]];
+      if (findMatches().size === 0) { sw.back = true; sw.t = 0; beep(200, 0.12, 'square', 0.08); buzz(20); [P.grid[sw.a], P.grid[sw.b]] = [P.grid[sw.b], P.grid[sw.a]]; return; }
+      P.swap = null; P.combo = 0; buzz(10); resolve();
+    } else { P.swap = null; P.phase = 'idle'; }
   }
   function findMatches() {
     const m = new Set();
@@ -134,11 +136,12 @@ export function gamePuzzle() {
     if (!P || !P.running) return;
     const dt = Math.min(0.034, (now - P.last) / 1000); P.last = now;
     if (!P.canvas.isConnected) { P.running = false; return; }
-    P.time -= dt;
+    if (P.phase !== 'swap') P.time -= dt; // 스왑 애니 중엔 시간 정지
     const tEl = document.getElementById('pz-time'); if (tEl) tEl.textContent = Math.max(0, P.time).toFixed(1) + '초';
-    // 낙하 이징
-    for (let i = 0; i < P.oy.length; i++) if (P.oy[i] < 0) { P.oy[i] = Math.min(0, P.oy[i] + dt * 1600); }
-    for (let i = 0; i < P.pop.length; i++) if (P.pop[i] > 0) P.pop[i] = Math.max(0, P.pop[i] - dt * 6);
+    if (P.phase === 'swap') stepSwap(dt);
+    // 낙하 이징 (부드럽게 — 속도 완화 + 가속감)
+    for (let i = 0; i < P.oy.length; i++) if (P.oy[i] < 0) { P.oy[i] = Math.min(0, P.oy[i] + dt * (700 + (-P.oy[i]) * 6)); }
+    for (let i = 0; i < P.pop.length; i++) if (P.pop[i] > 0) P.pop[i] = Math.max(0, P.pop[i] - dt * 4);
     render(); setHud();
     if (P.time <= 0) { offerPuzzleTime(); return; }
     P.raf = requestAnimationFrame(loop);
@@ -149,10 +152,18 @@ export function gamePuzzle() {
     c.save();
     if (P.shakeT > 0) { P.shakeT -= 1 / 60; const a = P.shakeA * Math.max(0, P.shakeT) * 3; c.translate((Math.random() - 0.5) * a, (Math.random() - 0.5) * a); }
     c.fillStyle = '#1a0f2b'; c.fillRect(-20, -20, P.W + 40, P.H + 40);
+    // 스왑 이동 오프셋(부드럽게 — easeInOut)
+    let sox = {}, soy = {};
+    if (P.swap) {
+      const sw = P.swap, f0 = Math.max(0, Math.min(1, sw.t)), f = sw.back ? 1 - f0 : f0, e = f < 0.5 ? 2 * f * f : 1 - Math.pow(-2 * f + 2, 2) / 2;
+      const ax = sw.a % COLS, ay = (sw.a / COLS) | 0, bx = sw.b % COLS, by = (sw.b / COLS) | 0;
+      sox[sw.a] = (bx - ax) * cell * e; soy[sw.a] = (by - ay) * cell * e;
+      sox[sw.b] = (ax - bx) * cell * e; soy[sw.b] = (ay - by) * cell * e;
+    }
     for (let r = 0; r < ROWS; r++) for (let col = 0; col < COLS; col++) {
       const idx = r * COLS + col, v = P.grid[idx];
       if (v < 0) continue;
-      const x = col * cell, y = r * cell + (P.oy[idx] || 0);
+      const x = col * cell + (sox[idx] || 0), y = r * cell + (P.oy[idx] || 0) + (soy[idx] || 0);
       const k = KINDS[v];
       const sc = P.pop[idx] > 0 ? P.pop[idx] : 1;
       const pad = cell * 0.08 + (1 - sc) * cell * 0.4;

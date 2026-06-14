@@ -101,7 +101,7 @@ export function gameDefense() {
     <div class="gx gx-def">
       <div class="gx-bar">
         <b class="gx-title">🧊 냉장고 지키기</b>
-        <button class="gx-x" onclick="UI.closeSheet()">✕</button>
+        <span><button class="gx-full" onclick="UI.gameFull()">⛶</button><button class="gx-x" onclick="UI.closeSheet()">✕</button></span>
       </div>
       <div class="gx-stage"><canvas id="def-c"></canvas>
         <div class="gx-start" id="def-start">

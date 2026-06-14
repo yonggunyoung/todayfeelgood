@@ -3,9 +3,9 @@ import { S, save, uid, today, addDays, daysLeft, won } from './store.js';
 import { ING, findIng, defaultShelf, defaultLocation, ingredientTip } from './data/ingredients.js';
 import { isWeight, measureOf, baseUnit, unitOptions, toBase, perBase, fmtBase, fmtRaw, stepFor, defaultEntry } from './units.js';
 import { recommend, recipesUsing, expiringItems, activeLeftovers, deductionPlan, modeList, getMode, allRecipes, buildCookPlan } from './engine.js';
-import { scanImage, extractRecipeFromYouTube, claimReward, redeemAiCredit, searchYouTube } from './ai.js';
+import { scanImage, extractRecipeFromYouTube, claimReward, redeemAiCredit } from './ai.js';
 import { initSync, sync, makeSpaceCode, setSpaceCode, loginGoogle, logoutGoogle, syncAvailable, submitScore, topScores } from './sync.js';
-import { AI_ENDPOINT } from './config.js';
+import { AI_ENDPOINT, COUPANG_TAG } from './config.js';
 import { canListen, speak, stopSpeak, startListen, stopListen, isListening, parseCommand } from './voice.js';
 import { earn, spend, refund, EARN, earnedToday, SHOP, adFreeNow, gameBest } from './points.js';
 import { initGames, openGames, GAMES, gameFresh, gameVoice, gameVoicePass, gameDouble, setGameDiff } from './games.js';
@@ -1900,7 +1900,7 @@ UI.openYtSearch = (prefill) => {
       <button class="btn btn-tint btn-sm" onclick="UI.ytSearch()">검색</button>
     </div>
     <div class="yt-chips">${YT_POPULAR.map((p) => `<button class="yt-chip" onclick="UI.ytChip('${p}')">${p}</button>`).join('')}</div>
-    <div id="yts-out">${(S.settings.ytKey || (S.settings.aiMode === 'server' && (S.settings.aiEndpoint || AI_ENDPOINT))) ? `
+    <div id="yts-out">${S.settings.ytKey ? `
       <p class="hint" style="text-align:center;padding:14px 0">위에서 검색하거나 인기 키워드를 눌러보세요 👆</p>` : `
       <p class="hint">키워드를 누르거나 검색하면 유튜브가 열려요. 마음에 든 영상 링크를 붙여넣으면 바로 담깁니다:</p>
       <a id="yts-ext" class="btn btn-block" style="margin:8px 0" target="_blank" rel="noreferrer"
@@ -1918,8 +1918,8 @@ UI.ytChip = (q) => { const i = $('#yts-q'); if (i) i.value = q; UI.ytSearch(); }
 UI.ytSearch = async () => {
   const q = $('#yts-q').value.trim();
   if (!q) return;
-  const canServer = S.settings.aiMode === 'server' && (S.settings.aiEndpoint || AI_ENDPOINT);
-  if (!S.settings.ytKey && !canServer) {
+  // 인앱 검색은 YouTube Data API 키가 있어야 가능(게이트웨이 워커로는 불가) → 없으면 외부 검색+링크 붙여넣기로 안내
+  if (!S.settings.ytKey) {
     const a = $('#yts-ext');
     if (a) a.href = 'https://www.youtube.com/results?search_query=' + encodeURIComponent(q + ' 레시피');
     toast('아래 "유튜브에서 검색하기"를 눌러주세요');
@@ -1928,17 +1928,12 @@ UI.ytSearch = async () => {
   const out = $('#yts-out');
   out.innerHTML = '<p class="hint">검색 중…</p>';
   try {
-    let items;
-    if (S.settings.ytKey) {
-      const res = await fetch(
-        `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=8&regionCode=KR&relevanceLanguage=ko&videoEmbeddable=true&q=${encodeURIComponent(q + ' 레시피')}&key=${encodeURIComponent(S.settings.ytKey)}`);
-      const j = await res.json();
-      if (!res.ok) throw new Error(j.error?.message || '검색에 실패했어요');
-      items = (j.items || []).filter((x) => x.id?.videoId)
-        .map((x) => ({ id: x.id.videoId, title: x.snippet?.title || '', channel: x.snippet?.channelTitle || '' }));
-    } else {
-      items = await searchYouTube(q, S.settings); // 서버 경유 — 사용자는 키 없이도 앱 안 검색
-    }
+    const res = await fetch(
+      `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=8&regionCode=KR&relevanceLanguage=ko&videoEmbeddable=true&q=${encodeURIComponent(q + ' 레시피')}&key=${encodeURIComponent(S.settings.ytKey)}`);
+    const j = await res.json();
+    if (!res.ok) throw new Error(j.error?.message || '검색에 실패했어요');
+    const items = (j.items || []).filter((x) => x.id?.videoId)
+      .map((x) => ({ id: x.id.videoId, title: x.snippet?.title || '', channel: x.snippet?.channelTitle || '' }));
     out.innerHTML = items.length
       ? items.map((x) => `
         <div class="item" onclick="UI.ytPick('${x.id}','${esc(String(x.title).replace(/'/g, '’'))}')">
@@ -2298,7 +2293,13 @@ UI.addShopping = (name, silent = false, reason = '', src = '') => {
   if (!silent) { toast(`🧺 ${name} 장보기에 담았어요`); render(); }
 };
 
-const coupangUrl = (name) => `https://www.coupang.com/np/search?q=${encodeURIComponent(name)}`;
+// 쿠팡 파트너스 제휴 링크 — 설정의 개별 ID가 우선, 없으면 배포 기본값(config.COUPANG_TAG).
+const coupangUrl = (name) => {
+  const u = `https://www.coupang.com/np/search?q=${encodeURIComponent(name)}`;
+  const tag = (S.settings.coupangId || COUPANG_TAG || '').trim();
+  return tag ? `${u}&lptag=${encodeURIComponent(tag)}` : u;
+};
+const coupangActive = () => !!((S.settings.coupangId || COUPANG_TAG || '').trim());
 
 // 마트 코너별 묶음 — 앱 안에서 장보기 동선이 끝나도록 (채소 코너 → 정육 코너 → …)
 const SHOP_CAT_ORDER = ['채소', '과일', '신선', '육류', '수산', '유제품', '가공', '주식', '양념', '기타'];
@@ -2342,6 +2343,7 @@ function renderShopping() {
       <button class="btn btn-soft" onclick="UI.copyShopList()">📋 목록 복사 (오프라인 메모)</button>
       <button class="btn btn-accent" onclick="UI.shopCoupangAll()">🛒 쿠팡에서 보기 (온라인)</button>
     </div>` : ''}
+    ${open.length && coupangActive() ? `<p class="hint" style="margin:-4px 4px 10px;font-size:.72rem;color:var(--label-3)">이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.</p>` : ''}
     ${open.length === 0 && done.length === 0
       ? `<div class="empty"><span class="e-emoji">🧺</span><b>장보기 바구니가 비었어요</b><small>레시피의 부족 재료를 탭하거나<br>재료가 다 떨어지면 자동으로 담겨요</small></div>` : ''}
     ${shopGroupsHtml(open)}
@@ -2484,9 +2486,9 @@ function renderSettings() {
       <div class="field" style="margin-top:4px"><label>유튜브 검색 API 키 (선택 — 앱 안 검색용 · 이 기기에만)</label>
         <input id="set-ytkey" placeholder="AIza…" value="${esc(st.ytKey)}" />
         <p class="hint">Google Cloud 콘솔에서 YouTube Data API v3 키 발급 (무료 일 100회 검색) — 없으면 링크 붙여넣기 방식으로 동작해요</p></div>
-      <div class="field"><label>쿠팡 파트너스 추적 ID (선택 — 예: AF1234567)</label>
-        <input id="set-coupang" placeholder="AF…" value="${esc(st.coupangId)}" />
-        <p class="hint">파트너스 가입·승인 후 발급되는 ID — 수익이 잡히는 딥링크 변환은 서버(파트너스 API) 단계에서 연결돼요. 그 전까지 장보기 버튼은 일반 쿠팡 검색으로 열립니다.</p></div>
+      <div class="field"><label>쿠팡 파트너스 추적 ID (선택 — 비우면 배포 기본값 사용)</label>
+        <input id="set-coupang" placeholder="${esc(COUPANG_TAG) || 'AF…'}" value="${esc(st.coupangId)}" />
+        <p class="hint">장보기 "쿠팡" 버튼에 이 ID가 <code>lptag</code>로 붙어요. 실제 적립 여부는 파트너스 대시보드에서 꼭 확인하세요 — 안 잡히면 대시보드에서 만든 딥링크(link.coupang.com)로 바꿔야 합니다. 공정위 고지 문구는 장보기 화면에 자동 노출됩니다.</p></div>
       <button class="btn btn-block btn-tint" style="margin-top:6px" onclick="UI.saveAI()">저장</button>
       <p class="hint" style="margin-top:8px">터미널 테스트: <b>tools/ai-test.mjs</b> — 폰 없이 스캔·레시피 정리 파이프라인을 검증할 수 있어요 (docs/07)</p>
     </div>`}

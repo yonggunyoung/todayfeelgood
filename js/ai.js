@@ -20,39 +20,40 @@ async function throwApiError(res) {
   throw new Error(STATUS_MSG[res.status] || `AI 호출 실패 (${res.status}) ${detail}`);
 }
 
-/* ── 서버 경유 모드 (유료화) — 운영자 서버가 키·한도를 관리 ── */
+/* ── 서버 경유 모드 — Cloudflare 게이트웨이(워커)가 Anthropic 키만 보관·주입.
+   클라이언트가 프롬프트/스키마/도구를 모두 만들어 보내고, 워커는 키를 끼워 그대로 전달한다. ── */
 import { AI_ENDPOINT } from './config.js';
 const endpointOf = (settings) => settings.aiEndpoint || AI_ENDPOINT;
 const isServer = (settings) => settings.aiMode === 'server' && !!endpointOf(settings);
 
-async function serverPost(path, payload, settings) {
-  const { getIdToken } = await import('./sync.js');
-  const token = await getIdToken();
-  if (!token) throw new Error('먼저 로그인해 주세요 — 설정에서 "구글로 시작하기" 한 번이면 돼요.');
-  const res = await fetch(endpointOf(settings).replace(/\/+$/, '') + path, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', authorization: 'Bearer ' + token },
-    body: JSON.stringify(payload),
-  });
-  if (!res.ok) {
-    let detail = '';
-    try { detail = (await res.json()).error || ''; } catch { /* ignore */ }
-    const err = new Error(detail || `서버 호출 실패 (${res.status})`);
-    err.status = res.status;
-    throw err;
+// 서버 모드 사용 모델(운영자 부담 → 저가 Haiku) / 본인 키 모드는 기본 Opus
+const modelFor = (settings) => settings.aiModel || (isServer(settings) ? 'claude-haiku-4-5-20251001' : 'claude-opus-4-8');
+
+// Anthropic 호출 통합 — 서버 모드면 게이트웨이(워커)로 전체 payload 전달(워커가 키만 끼움), 아니면 본인 키로 직접.
+async function callClaude(body, settings) {
+  if (isServer(settings)) {
+    const res = await fetch(endpointOf(settings).replace(/\/+$/, ''), {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
   }
+  if (!settings.aiKey) throw new Error('설정에서 Claude API 키를 등록하거나, 서버 연결(엔드포인트)을 켜주세요.');
+  const res = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', headers: aiHeaders(settings), body: JSON.stringify(body) });
+  if (!res.ok) await throwApiError(res);
   return res.json();
 }
-
-// 광고 시청 보상 → 서버에 +1회 충전 요청
-export async function claimReward(settings) {
-  return serverPost('/reward', {}, settings);
+const extractText = (msg) => (Array.isArray(msg && msg.content) ? msg.content.filter((b) => b.type === 'text').map((b) => b.text).join('\n') : '') || '';
+function parseJsonLoose(text) {
+  try { return JSON.parse(text); } catch { /* 본문에서 JSON 블록만 추출 시도 */ }
+  const s = text.indexOf('{'), e = text.lastIndexOf('}');
+  if (s >= 0 && e > s) { try { return JSON.parse(text.slice(s, e + 1)); } catch { /* ignore */ } }
+  return null;
 }
 
-// 포인트샵 "AI 1회권" → 서버에 +1회 충전 요청 (포인트 차감은 클라이언트)
-export async function redeemAiCredit(settings) {
-  return serverPost('/redeem', {}, settings);
-}
+// 광고/포인트 보상 충전 — Cloudflare 게이트웨이엔 서버 한도가 없으니 클라이언트 적립으로 처리(성공 반환)
+export async function claimReward() { return { ok: true }; }
+export async function redeemAiCredit() { return { ok: true }; }
 
 const SCHEMA = {
   type: 'object',
@@ -102,41 +103,24 @@ async function downscale(file, max = 1280) {
 }
 
 export async function scanImage(file, settings) {
-  if (isServer(settings)) {
-    const b64 = await downscale(file);
-    const out = await serverPost('/scan', { image: b64 }, settings);
-    if (!Array.isArray(out.items) || !out.items.length) throw new Error('사진에서 식재료를 찾지 못했습니다.');
-    return out.items;
-  }
-  if (!settings.aiKey) throw new Error('설정에서 Claude API 키를 먼저 등록해 주세요.');
+  if (!isServer(settings) && !settings.aiKey) throw new Error('설정에서 Claude API 키를 등록하거나, 서버 연결을 켜주세요.');
   const b64 = await downscale(file);
 
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: aiHeaders(settings),
-    body: JSON.stringify({
-      model: settings.aiModel || 'claude-opus-4-8',
-      max_tokens: 2048,
-      messages: [{
-        role: 'user',
-        content: [
-          { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: b64 } },
-          { type: 'text', text: PROMPT },
-        ],
-      }],
-      output_config: { format: { type: 'json_schema', schema: SCHEMA } },
-    }),
-  });
+  const msg = await callClaude({
+    model: modelFor(settings),
+    max_tokens: 2048,
+    messages: [{
+      role: 'user',
+      content: [
+        { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: b64 } },
+        { type: 'text', text: PROMPT },
+      ],
+    }],
+    output_config: { format: { type: 'json_schema', schema: SCHEMA } },
+  }, settings);
 
-  if (!res.ok) await throwApiError(res);
-
-  const msg = await res.json();
   if (msg.stop_reason === 'refusal') throw new Error('이미지를 분석할 수 없습니다. 다른 사진으로 시도해 주세요.');
-  let parsed;
-  try {
-    const text = (Array.isArray(msg.content) ? (msg.content.find((b) => b.type === 'text') || {}) : {}).text || '{}';
-    parsed = JSON.parse(text);
-  } catch { throw new Error('사진 분석 결과를 읽지 못했어요. 잠시 후 다시 시도해 주세요.'); }
+  const parsed = parseJsonLoose(extractText(msg) || '{}');
   if (!parsed || !Array.isArray(parsed.items) || parsed.items.length === 0) {
     throw new Error('사진에서 식재료를 찾지 못했습니다. 더 선명한 사진으로 시도해 주세요.');
   }
@@ -162,14 +146,7 @@ const YT_PROMPT = (url) => `유튜브 요리 영상에서 레시피를 정리하
 레시피를 찾지 못하면 {"ok":false,"reason":"이유"} 만 출력하세요.`;
 
 export async function extractRecipeFromYouTube(url, settings) {
-  if (isServer(settings)) {
-    const data = await serverPost('/ytrecipe', { url }, settings);
-    if (!data.ok || !Array.isArray(data.ingredients) || !data.ingredients.length) {
-      throw new Error(data.reason || '이 영상에서 레시피를 찾지 못했어요.');
-    }
-    return data;
-  }
-  if (!settings.aiKey) throw new Error('설정에서 Claude API 키를 먼저 등록해 주세요.');
+  if (!isServer(settings) && !settings.aiKey) throw new Error('설정에서 Claude API 키를 등록하거나, 서버 연결을 켜주세요.');
   const tools = [
     { type: 'web_fetch_20260209', name: 'web_fetch' },
     { type: 'web_search_20260209', name: 'web_search' },
@@ -179,18 +156,12 @@ export async function extractRecipeFromYouTube(url, settings) {
 
   // 서버측 도구 루프가 길어지면 pause_turn으로 끊겨 돌아온다 → 그대로 이어서 재호출 (최대 3회)
   for (let i = 0; i < 4; i++) {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: aiHeaders(settings),
-      body: JSON.stringify({
-        model: settings.aiModel || 'claude-opus-4-8',
-        max_tokens: 4096,
-        tools,
-        messages,
-      }),
-    });
-    if (!res.ok) await throwApiError(res);
-    msg = await res.json();
+    msg = await callClaude({
+      model: modelFor(settings),
+      max_tokens: 4096,
+      tools,
+      messages,
+    }, settings);
     if (msg.stop_reason === 'pause_turn') {
       messages = [...messages, { role: 'assistant', content: msg.content }];
       continue;
@@ -201,7 +172,7 @@ export async function extractRecipeFromYouTube(url, settings) {
   if (!msg) throw new Error('AI 응답이 없어요. 다시 시도해 주세요.');
   if (msg.stop_reason === 'refusal') throw new Error('이 영상은 분석할 수 없어요.');
 
-  const text = msg.content.filter((b) => b.type === 'text').map((b) => b.text).join('\n');
+  const text = extractText(msg);
   const start = text.lastIndexOf('{"ok"');
   const end = text.lastIndexOf('}');
   if (start < 0 || end <= start) throw new Error('레시피를 정리하지 못했어요. 다른 영상으로 시도해 주세요.');
@@ -214,8 +185,19 @@ export async function extractRecipeFromYouTube(url, settings) {
   return data;
 }
 
-// 서버 경유 유튜브 검색 — 사용자는 키 없이도 앱 안에서 검색 (운영자 YT_API_KEY 사용)
+// 유튜브 검색은 운영자 YouTube Data API 키가 필요(워커 게이트웨이로는 불가) → 본인 ytKey가 있을 때만 노출.
 export async function searchYouTube(q, settings) {
-  const out = await serverPost('/ytsearch', { q }, settings);
-  return out.items || [];
+  if (!settings.ytKey) throw new Error('유튜브 검색은 설정에서 YouTube API 키를 등록해야 사용할 수 있어요.');
+  const res = await fetch(
+    'https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=12&q='
+    + encodeURIComponent(q + ' 레시피') + '&key=' + encodeURIComponent(settings.ytKey),
+  );
+  if (!res.ok) await throwApiError(res);
+  const data = await res.json();
+  return (data.items || []).map((it) => ({
+    id: it.id?.videoId,
+    title: it.snippet?.title || '',
+    channel: it.snippet?.channelTitle || '',
+    thumb: it.snippet?.thumbnails?.medium?.url || it.snippet?.thumbnails?.default?.url || '',
+  })).filter((v) => v.id);
 }

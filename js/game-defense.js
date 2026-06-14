@@ -2,7 +2,8 @@
 // 플레이어는 적을 직접 탭하지 않는다: 냉장고가 자동 발사 → 점수=코인으로 무기/방어수단 강화.
 // 슬라임 렌더러 + 파티클·셰이크·히트스톱·코인흡수 손맛. 모든 밸런스는 BALANCE 한 곳.
 import { gameUI, beep, chord, buzz, finishGame } from './games.js';
-import { drawSlime, blinkTick, Particles, Shake, Floaters, ease, clamp, setupCanvas } from './slime.js';
+import { blinkTick, Particles, Shake, Floaters, ease, clamp, setupCanvas } from './slime.js';
+import { enemySprite, fridgeSprite, itemSprite, drawSprite } from './pixel.js';
 
 const BALANCE = {
   enemy: {
@@ -75,7 +76,7 @@ export function gameDefense() {
     hp: 100, maxHp: 100,
     fireCd: 0, sideCd: 0, homingCd: 0, laserCd: 0, bombCd: 0, orbAng: 0, beams: [], rings: [], chains: [],
     aimAng: -Math.PI / 2, muzzle: 0,
-    banner: '', bannerT: 0, hitStop: 0, vign: 0, flash: 0, bossIntro: 0, coinDisp: 0, fridge: { blink: 1 },
+    banner: '', bannerT: 0, hitStop: 0, vign: 0, flash: 0, bossIntro: 0, coinDisp: 0, upText: '', upT: 0, fridge: { blink: 1 },
     last: 0, raf: 0, running: false, over: false, shopT: 0,
   };
 
@@ -206,7 +207,7 @@ function loop(now) {
 
 function update(dt) {
   const f = fridgePos();
-  D.bannerT -= dt; D.muzzle -= dt; D.vign *= 0.92; D.flash *= 0.86; if (D.bossIntro > 0) D.bossIntro -= dt;
+  D.bannerT -= dt; D.muzzle -= dt; D.vign *= 0.92; D.flash *= 0.86; if (D.bossIntro > 0) D.bossIntro -= dt; if (D.upT > 0) D.upT -= dt;
   D.coinDisp += (D.coins - D.coinDisp) * Math.min(1, dt * 9); // 코인 카운트업 롤링
   D.maxHp = 100 + D.lv.maxHp * BALANCE.up.maxHp.add;
   if (D.lv.regen) D.hp = Math.min(D.maxHp, D.hp + D.lv.regen * BALANCE.up.regen.add * dt);
@@ -379,16 +380,18 @@ function render(dt) {
     c.globalAlpha = clamp(rg.t / 0.5, 0, 1); c.strokeStyle = '#73cbff'; c.lineWidth = 4;
     c.beginPath(); c.arc(rg.x, rg.y, rg.r, 0, 6.28); c.stroke(); c.globalAlpha = 1;
   }
-  // 적 (등장 스케일인 + HP 깊이 색)
+  // 적 — 픽셀 슬라임 스프라이트 (등장 스케일인 + 호흡 + 피격 화이트 + 깜빡임)
   for (const en of D.enemies) {
     const pop = en.age < 0.32 ? ease.outBack(clamp(en.age / 0.32, 0, 1)) : 1;
-    const lowHp = clamp(en.hp / en.maxhp, 0, 1);
-    const col = en.flash > 0 ? '#ffffff' : en.color;
-    drawSlime(c, { x: en.x, y: en.y, r: en.r * pop, color: col, t: en.ph, squash: en.squash, blink: en.blinkS.blink, look: { x: 0, y: 0.5 }, expr: 'angry', badge: en.badge, glow: en.boss ? 18 : (en.maxhp > BALANCE.enemy.baseHP * 3 ? 8 : 0), alpha: 0.45 + lowHp * 0.55 });
+    const breath = Math.sin(en.ph) * 0.05;
+    const spr = enemySprite(en.key, en.blinkS.blink < 0.4 ? 'blink' : '');
+    const th = en.r * 2 * pop;
+    const cv = en.flash > 0 && spr.white ? spr.white : spr.base;
+    drawSprite(c, cv, en.x, en.y, th, { sx: (1 + breath + en.squash), sy: (1 - breath - en.squash * 0.8) * pop, glow: en.boss ? 'rgba(207,134,255,0.8)' : '', glowR: 18 });
     if (en.boss || en.maxhp > BALANCE.enemy.baseHP * 3) {
       const w = en.r * 1.8, hpx = en.x - w / 2, hpy = en.y - en.r - 12;
       c.fillStyle = 'rgba(0,0,0,0.4)'; rr(c, hpx, hpy, w, 5, 2.5); c.fill();
-      c.fillStyle = en.boss ? '#ff4d6a' : '#9bd36a'; rr(c, hpx, hpy, w * clamp(en.hp / en.maxhp, 0, 1), 5, 2.5); c.fill();
+      c.fillStyle = en.boss ? '#ff4d6a' : '#9bffe6'; rr(c, hpx, hpy, w * clamp(en.hp / en.maxhp, 0, 1), 5, 2.5); c.fill();
     }
   }
   // 발사체 (트레일 + 글로우, 치명타는 금색)
@@ -406,16 +409,17 @@ function render(dt) {
     c.globalAlpha = clamp(ch.t / 0.18, 0, 1); c.strokeStyle = '#bdffe4'; c.lineWidth = 2.5; c.shadowColor = '#5ef0b0'; c.shadowBlur = 8;
     c.beginPath(); c.moveTo(ch.x1, ch.y1); c.lineTo(ch.x2, ch.y2); c.stroke(); c.shadowBlur = 0; c.globalAlpha = 1;
   }
-  // 얼음 위성
+  // 얼음 위성 — 픽셀 눈송이
   if (D.lv.orbital && D.orbPos) {
-    for (const o of D.orbPos) drawSlime(c, { x: o.x, y: o.y, r: 12, color: '#bdffe4', t: D.orbAng * 2, blink: 1, expr: 'happy', glow: 8 });
+    const snow = itemSprite('snow').base;
+    for (const o of D.orbPos) drawSprite(c, snow, o.x, o.y, 22, { glow: 'rgba(115,203,255,0.8)', glowR: 8 });
   }
   D.parts.draw(c);
-  // 코인 흡수 모션
+  // 코인 흡수 모션 — 픽셀 코인이 HUD로 빨려 들어감
+  const coin = itemSprite('coin').base;
   for (const cn of D.coinsFly) {
-    const tx = 30, ty = 26; const t = ease.inQuad(cn.t);
-    const x = cn.x + (tx - cn.x) * t, y = cn.y + (ty - cn.y) * t;
-    c.font = '14px serif'; c.textAlign = 'center'; c.fillText('🪙', x, y);
+    const tx = 42, ty = 26, t = ease.inQuad(cn.t);
+    drawSprite(c, coin, cn.x + (tx - cn.x) * t, cn.y + (ty - cn.y) * t, 16);
   }
   D.fx.draw(c);
   drawHud(c, W, H);
@@ -430,6 +434,20 @@ function render(dt) {
   if (D.bossIntro > 0) { c.fillStyle = `rgba(8,4,16,${clamp(D.bossIntro * 0.5, 0, 0.5)})`; c.fillRect(0, 0, W, H); }
   // 업그레이드/파워업 화면 번쩍
   if (D.flash > 0.02) { c.fillStyle = `rgba(94,240,176,${clamp(D.flash * 0.4, 0, 0.4)})`; c.fillRect(0, 0, W, H); }
+  // UPGRADE! 텍스트 (시안)
+  if (D.upT > 0) {
+    const k = clamp((1 - D.upT) / 0.25, 0, 1), sc = ease.outBack(k);
+    c.save(); c.translate(W / 2, H * 0.46); c.scale(sc, sc); c.globalAlpha = clamp(D.upT * 1.6, 0, 1); c.textAlign = 'center';
+    c.fillStyle = '#5ef0b0'; c.shadowColor = '#5ef0b0'; c.shadowBlur = 16;
+    c.font = "20px 'Press Start 2P', Jua, monospace"; c.fillText('UPGRADE!', 0, 0);
+    c.shadowBlur = 0; c.fillStyle = '#bdffe4'; c.font = "800 14px Jua, sans-serif"; c.fillText(D.upText, 0, 26);
+    c.restore(); c.globalAlpha = 1;
+  }
+  // 위험! (신선도 낮을 때 냉장고 위 점멸)
+  if (D.hp <= D.maxHp * 0.3 && Math.sin(performance.now() / 150) > 0) {
+    c.textAlign = 'center'; c.fillStyle = '#ff4d6a'; c.font = "12px 'Press Start 2P', Jua, monospace";
+    c.shadowColor = '#ff4d6a'; c.shadowBlur = 10; c.fillText('! 위험 !', f.x, f.y - 52); c.shadowBlur = 0;
+  }
   // 웨이브 배너 (슬라이드+스케일 인)
   if (D.bannerT > 0) {
     const k = clamp((1.7 - D.bannerT) / 0.3, 0, 1), sc = ease.outBack(k);
@@ -458,24 +476,8 @@ function drawFridge(c, f) {
     if (D.muzzle > 0) { c.globalAlpha = clamp(D.muzzle / 0.08, 0, 1); c.fillStyle = 'rgba(255,240,150,0.95)'; c.beginPath(); c.arc(0, -bl, 7, 0, 6.28); c.fill(); c.globalAlpha = 1; }
     c.restore();
   }
-  // 냉장고 바디 (시안 컬러 #9fb2d6 + 성에 글로우 / 위험 경고)
-  const w = 98, h = 48;
-  if (!low) { c.shadowColor = 'rgba(115,203,255,0.6)'; c.shadowBlur = 16; }
-  const bodyG = c.createLinearGradient(0, f.y - 20, 0, f.y + h - 18);
-  bodyG.addColorStop(0, '#b7c6e0'); bodyG.addColorStop(1, '#8ea0c4');
-  c.fillStyle = low ? '#caa' : bodyG; rr(c, f.x - w / 2, f.y - 20, w, h, 13); c.fill(); c.shadowBlur = 0;
-  c.strokeStyle = low ? '#ff4d6a' : '#160b22'; c.lineWidth = 2; c.stroke();
-  // 문 손잡이 세로 라인
-  c.fillStyle = 'rgba(22,11,34,.5)'; rr(c, f.x - 3, f.y - 14, 2.5, h - 12, 1.2); c.fill();
-  // 얼굴 (눈 + 입 — 시안 미소 #5ef0b0)
-  c.fillStyle = '#fff';
-  c.beginPath(); c.ellipse(f.x - 16, f.y + 4, 6.5, low ? 4 : 7.5, 0, 0, 6.28); c.ellipse(f.x + 12, f.y + 4, 6.5, low ? 4 : 7.5, 0, 0, 6.28); c.fill();
-  c.fillStyle = '#160b22';
-  c.beginPath(); c.arc(f.x - 16, f.y + 5, 3, 0, 6.28); c.arc(f.x + 12, f.y + 5, 3, 0, 6.28); c.fill();
-  c.strokeStyle = low ? '#ff4d6a' : '#5ef0b0'; c.lineWidth = 3; c.lineCap = 'round'; c.beginPath();
-  if (low) c.arc(f.x - 2, f.y + 22, 6, Math.PI, 2 * Math.PI);
-  else c.arc(f.x - 2, f.y + 16, 7, 0.1 * Math.PI, 0.9 * Math.PI);
-  c.stroke();
+  // 냉장고 바디 — 시안 픽셀 스프라이트(내장 카와이 얼굴) + 성에 글로우 / 위험 경고
+  drawSprite(c, fridgeSprite().base, f.x, f.y + 6, 80, { glow: low ? 'rgba(255,77,106,0.8)' : 'rgba(115,203,255,0.6)', glowR: low ? 18 : 14 });
 }
 
 function drawHud(c, W, H) {
@@ -485,16 +487,29 @@ function drawHud(c, W, H) {
   c.fillStyle = '#ffe04a'; c.shadowColor = 'rgba(255,224,74,.5)'; c.shadowBlur = 8;
   c.font = "14px 'Press Start 2P', Jua, monospace";
   c.fillText(`${Math.round(D.coinDisp)}`, 34, 27); c.shadowBlur = 0;
-  // 웨이브
-  c.fillStyle = '#9fb2d6'; c.font = "700 12px Jua, sans-serif"; c.textAlign = 'center';
-  c.fillText(`WAVE ${D.wave}  ·  ${D.kills}처치`, W / 2, 18);
-  // 신선도 바
-  const bw = 120, bx = W - bw - 14, by = 18;
-  c.textAlign = 'right'; c.font = '13px serif'; c.fillText('❄️', bx - 4, 24);
-  c.fillStyle = 'rgba(255,255,255,0.15)'; rr(c, bx, by, bw, 10, 5); c.fill();
+  // DPS 칩 (시안) — 우상단
+  const dps = Math.round(stat.dmg() * stat.rate() * stat.multi() * (1 + stat.pierce() * 0.4) * (1 + D.lv.sideTurret * 0.5));
+  c.textAlign = 'right'; c.font = "9px 'Press Start 2P', Jua, monospace";
+  c.fillStyle = '#5ef0b0'; c.fillText(`DPS ${dps}`, W - 12, 22);
+  // 웨이브 (좌중)
+  c.fillStyle = '#9fb2d6'; c.font = "8px 'Press Start 2P', Jua, monospace"; c.textAlign = 'left';
+  c.fillText(`WAVE ${D.wave}`, 12, 48); c.fillStyle = '#7d6aa6'; c.fillText(`${D.kills} KILL`, 96, 48);
+  // 신선도 바 (좌상단, 코인 아래)
+  const bw = 120, bx = 12, by = 34;
+  c.fillStyle = 'rgba(255,255,255,0.14)'; rr(c, bx, by, bw, 8, 4); c.fill();
   const hpRatio = clamp(D.hp / D.maxHp, 0, 1);
   c.fillStyle = hpRatio > 0.5 ? '#5ef0b0' : hpRatio > 0.25 ? '#ffe04a' : '#ff4d6a';
-  rr(c, bx, by, bw * hpRatio, 10, 5); c.fill();
+  rr(c, bx, by, bw * hpRatio, 8, 4); c.fill();
+  // 보스 등장 시 상단 전체 HP바 + PHASE (시안)
+  const boss = D.enemies.find((e) => e.boss);
+  if (boss) {
+    const r = clamp(boss.hp / boss.maxhp, 0, 1), phase = r > 0.66 ? 1 : r > 0.33 ? 2 : 3;
+    c.textAlign = 'left'; c.fillStyle = '#cf86ff'; c.font = "9px 'Press Start 2P', Jua, monospace";
+    c.fillText('곰팡이대왕', 12, 64);
+    c.textAlign = 'right'; c.fillStyle = '#ff4d6a'; c.fillText(`PHASE ${phase}`, W - 12, 64);
+    c.fillStyle = 'rgba(0,0,0,0.45)'; rr(c, 12, 70, W - 24, 9, 4); c.fill();
+    c.fillStyle = '#ff4d6a'; rr(c, 12, 70, (W - 24) * r, 9, 4); c.fill();
+  }
   c.textBaseline = 'alphabetic';
 }
 
@@ -526,7 +541,7 @@ export function defBuy(k) {
   D.coins -= cst; D.lv[k] += 1;
   if (k === 'maxHp') D.hp += BALANCE.up.maxHp.add;
   chord([523, 698, 880]); buzz(16); D.shake.add(3, 0.12); D.flash = 0.6; // 파워업 모먼트(화면 번쩍)
-  D.fx.add(D.W / 2, D.H - 60, `${BALANCE.up[k].icon} Lv.${D.lv[k]}!`, { color: '#5ef0b0', size: 18 });
+  D.upText = `${BALANCE.up[k].name} Lv.${D.lv[k]}`; D.upT = 1.0;
   renderShop();
 }
 

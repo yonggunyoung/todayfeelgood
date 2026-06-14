@@ -1115,3 +1115,21 @@ input:focus, select:focus, textarea:focus { outline: none; box-shadow: 0 0 0 3px
 .f-sec-label { background: linear-gradient(180deg, rgba(255,255,255,.5), rgba(220,232,243,.3)); border-radius: 8px; padding: 4px 8px; margin: 0 3px 8px; box-shadow: inset 0 1px 0 rgba(255,255,255,.8); }
 .basket .f-sec-label { background: linear-gradient(180deg, rgba(255,252,244,.6), rgba(235,224,202,.4)); }
 @media (prefers-reduced-motion: reduce) { .f-display .fd-on { animation: none; } }
+
+/* ══════════════ 픽셀 캔버스 선명 + 냉장고 김(스팀) 강화 ══════════════ */
+#def-c { image-rendering: pixelated; image-rendering: crisp-edges; }
+/* 냉장고 문 열릴 때 솔솔 나오는 냉기(김) — 더 또렷하고 풍성하게 */
+.f-steam { position: absolute; top: 0; left: 0; right: 0; height: 100%; pointer-events: none; z-index: 1; overflow: hidden; }
+.f-steam .mist {
+  top: 24px; width: 64px; height: 22px;
+  background: radial-gradient(ellipse, rgba(232,247,255,0.95), rgba(200,237,255,0) 72%);
+  filter: blur(6px); animation-duration: 5.6s;
+}
+.f-steam .mist.cold { background: radial-gradient(ellipse, rgba(255,255,255,0.98), rgba(160,215,255,0) 72%); filter: blur(7px); }
+@keyframes mist {
+  0% { transform: translate(0,0) scale(0.5); opacity: 0; }
+  18% { opacity: 0.95; }
+  60% { opacity: 0.7; }
+  100% { transform: translate(var(--dx,12px), 80px) scale(2.1); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) { .f-steam { display: none; } }

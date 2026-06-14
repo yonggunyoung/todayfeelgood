@@ -203,8 +203,22 @@ export function gameDefense() {
     const f = fridgePos();
     if (Math.hypot(x - f.x, y - (f.y - 6)) < 62) { defElem(); return; }
   });
+  // 스테이지 크기가 바뀔 때마다(열기·전체화면·회전·키패드) 캔버스를 정확히 맞춰 모든 요소가 보이게
+  if (typeof ResizeObserver !== 'undefined') {
+    if (defRO) defRO.disconnect();
+    defRO = new ResizeObserver(() => resizeDefCanvas());
+    defRO.observe(wrap);
+  }
   requestAnimationFrame(() => resizeDefCanvas()); // 레이아웃 확정 후 실제 스테이지 크기로 스냅
+  // 큰 화면 게임은 처음부터 전체화면으로(지원 시). 미지원(아이폰 등)이면 인앱 최대화로 모두 보임.
+  try {
+    const gxEl = canvas.closest('.gx');
+    if (gxEl && document.fullscreenEnabled && !document.fullscreenElement && gxEl.requestFullscreen) {
+      const p = gxEl.requestFullscreen(); if (p && p.catch) p.catch(() => {});
+    }
+  } catch { /* 전체화면 불가 — 인앱 최대화로 충분 */ }
 }
+let defRO = null;
 // 화면/전체화면 변화에 맞춰 플레이그라운드를 꽉 차게 리사이즈
 function resizeDefCanvas() {
   if (!D || !D.canvas || !D.canvas.isConnected) return;

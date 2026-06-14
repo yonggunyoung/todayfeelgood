@@ -137,6 +137,9 @@ function openSheet(html, { lock = false } = {}) {
        <div class="sheet">${lock ? '' : '<div class="grip"></div>'}${html}</div>
      </div>`;
   if (!sheetPushed) { history.pushState({ nb: 'sheet' }, ''); sheetPushed = true; }
+  // 게임(.gx) 시트는 화면을 꽉 채우는 풀 레이아웃 — :has() 미지원 대비 클래스로도 지정
+  const sheetEl = $('#modal-root .sheet');
+  if (sheetEl && sheetEl.querySelector('.gx')) sheetEl.classList.add('sheet-full');
   if (!lock) attachSheetDrag();
   relocateTimerChip(); // 게임 시트가 열리면 타이머를 컴팩트/전면으로
 }

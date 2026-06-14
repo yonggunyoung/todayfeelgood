@@ -1254,10 +1254,11 @@ html, body { overscroll-behavior: none; }
 .gx-full { background: none; border: none; color: #cdbde8; font-size: 1rem; cursor: pointer; padding: 0 6px; }
 
 /* 게임이 열리면 시트를 꽉 찬 화면으로 (브라우저에서도 몰입) */
-.sheet:has(.gx) { width: 100%; max-width: 100%; max-height: 100dvh; height: 100dvh; border-radius: 0; padding: 4px 8px calc(8px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; }
-.sheet:has(.gx) > .gx { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+/* :has() 미지원 브라우저(일부 웹뷰) 대비해 JS가 .sheet-full 클래스도 붙임 */
+.sheet:has(.gx), .sheet-full { width: 100%; max-width: 100%; max-height: 100dvh; height: 100dvh; border-radius: 0; padding: 4px 8px calc(8px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; }
+.sheet:has(.gx) > .gx, .sheet-full > .gx { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 /* 디펜스: 플레이그라운드(스테이지)를 화면에 맞춰 확장, 상점바·상점은 고정 */
-.gx-def .gx-stage { flex: 1 1 auto; min-height: 0; align-items: center; }
+.gx-def .gx-stage { flex: 1 1 auto; min-height: 0; align-items: center; overflow: hidden; }
 .gx-def .gx-shopbar, .gx-def .gx-shop { flex: 0 0 auto; }
 /* 타이머: 게임/전체화면 중엔 작고 은은하게 (플레이 방해 최소화) */
 #timer-chip.compact { width: auto; padding: 5px 9px; opacity: 0.68; }
@@ -1317,6 +1318,7 @@ input[type=number]::-webkit-outer-spin-button, input[type=number]::-webkit-inner
 .op-title { display: block; color: #ff4d6a !important; font-family: 'Press Start 2P', Jua, monospace; font-size: 1.02rem !important; letter-spacing: -.02em; margin: 8px 0 10px !important; text-shadow: 0 0 14px rgba(255,77,106,.5); opacity: 0; animation: op-in .5s ease .5s forwards; }
 .op-story { margin: 0 0 4px; }
 .op-story p { margin: 5px 0; opacity: 0; transform: translateY(6px); animation: op-rise .5s ease forwards; }
+.op-story b { display: inline; color: #fff; font-size: inherit; font-weight: 800; margin: 0; } /* 서사 강조: 인라인 흰색 볼드(블록·민트 안 됨) */
 .op-story p:nth-child(1) { animation-delay: .7s; } .op-story p:nth-child(2) { animation-delay: .95s; }
 .op-story p:nth-child(3) { animation-delay: 1.2s; } .op-story p:nth-child(4) { animation-delay: 1.45s; }
 .op-story p:nth-child(5) { animation-delay: 1.7s; }

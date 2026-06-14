@@ -808,13 +808,13 @@ UI.openScan = () => {
     <p class="hint" style="margin:-2px 0 10px">${aiUnlimited() ? '⭐ 프리미엄 — <b>무제한</b>' : `이번 달 무료 <b>${aiLeft().freeLeft}/${FREE_AI}회</b> 남음${aiLeft().credits ? ` · 충전권 ${aiLeft().credits}회` : ''}`}</p>
     <label class="btn btn-block" style="margin-bottom:10px">
       🖼️ 사진 선택 / 촬영
-      <input id="scan-file" type="file" accept="image/*" capture="environment" style="display:none" onchange="UI.scanPicked(this)" />
+      <input id="scan-file" type="file" accept="image/*" style="display:none" onchange="UI.scanPicked(this)" />
     </label>
     <div id="scan-preview"></div>
     <div id="scan-result"></div>
     <div class="btn-row">
       <button class="btn" onclick="UI.closeSheet()">닫기</button>
-      <button id="scan-go" class="btn btn-accent" disabled onclick="UI.runScan()">🤖 AI 분석</button></div>`);
+      <button id="scan-go" class="btn btn-accent" onclick="UI.runScan()">🤖 AI 분석</button></div>`);
 };
 UI.scanPicked = (input) => {
   scanFile = input.files?.[0] || null;
@@ -825,6 +825,7 @@ UI.scanPicked = (input) => {
 };
 UI.runScan = async () => {
   const btn = $('#scan-go');
+  if (!scanFile) { toast('먼저 사진을 선택하거나 촬영해 주세요 📷'); return; }
   const f = scanFile; // 광고 완주 후 같은 사진으로 분석을 이어가기 위해 보관
   const retry = () => {
     UI.openScan();
@@ -942,7 +943,12 @@ UI.openRecharge = (retry) => {
       <div class="grow"><b>포인트로 1회권</b>
         <p class="hint" style="margin:2px 0 0">100P · 모아둔 포인트로 바로 충전</p></div>
       <button class="btn btn-sm btn-tint" onclick="UI.redeem('ai1')">100P</button>
-    </div>` : ''}
+    </div>` : `<div class="card flat row" style="gap:12px">
+      <div style="font-size:1.7rem">🎮</div>
+      <div class="grow"><b>게임하고 포인트 모으기</b>
+        <p class="hint" style="margin:2px 0 0">100P 모으면 1회권으로 바로 충전돼요</p></div>
+      <button class="btn btn-sm btn-tint" onclick="UI.closeSheet();UI.openGames()">게임</button>
+    </div>`}
     <div class="card flat row" style="gap:12px">
       <div style="font-size:1.7rem">⭐</div>
       <div class="grow"><b>프리미엄 — 무제한 · 광고 없음</b>

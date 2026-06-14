@@ -1327,7 +1327,5 @@ input[type=number]::-webkit-outer-spin-button, input[type=number]::-webkit-inner
 @keyframes op-pop { 0% { opacity: 0; transform: scale(.5); } 100% { opacity: 1; transform: scale(1); } }
 @keyframes op-rise { to { opacity: 1; transform: none; } }
 
-/* 디자인 시안: 게임별 필드 배경 (다크 셸 위 컬러 필드) */
-#gf-stage { background: linear-gradient(180deg, #7be0c4, #46c79e, #2a9e7a); border-radius: 18px; }   /* 프레시 캐치 — 민트 그린 */
-#gv-stage { background: linear-gradient(180deg, #7a32b8, #4d1c7a, #2a0f44); border-radius: 18px; }   /* 외쳐! 재료 — 퍼플 */
-.gx.gx-quiz { background: linear-gradient(180deg, #1f6feb, #154aa8, #0e3170); }                       /* 상식 퀴즈 — 블루 */
+/* 게임 필드 배경은 기본(앱 테마) 유지 — 과채도 배경이 글자 가독성을 해쳐 제거. 가벼운 톤만 살짝. */
+#gf-stage { background: linear-gradient(180deg, #effaf4, #ffffff); border-radius: 16px; }  /* 프레시 — 아주 옅은 민트(글자 가독) */

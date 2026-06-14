@@ -1,16 +1,11 @@
 // 재료 매치 — 같은 재료 3개 이상을 맞춰 터뜨리는 매치3 퍼즐. 연쇄(캐스케이드) 콤보로 점수 폭발.
 // 60초 안에 최대한 — 인접 두 칸을 탭해서 교환. 캔버스 렌더 + 낙하/팝 애니메이션.
 import { gameUI, beep, chord, buzz, finishGame, diffMul, gameDiffRow, inStageAd } from './games.js';
-import { veggieSprite, drawSprite } from './pixel.js';
 
-// 시안 6종: 색 + 형태 마크 이중 인코딩(색맹 대응) + 식자재 슬라임
+// 재료 이미지(이모지) — 한눈에 알아보는 깔끔한 타일. 색 + 모양(이모지) 이중 구분.
 const KINDS = [
-  { key: 'tomato', col: '#ff5a4d', sh: '#c2371f', mark: 'circle' },
-  { key: 'lemon', col: '#ffd24a', sh: '#c99a16', mark: 'square' },
-  { key: 'broccoli', col: '#56c66a', sh: '#2c7d3c', mark: 'cloud' },
-  { key: 'eggplant', col: '#9b6bff', sh: '#5e3bb0', mark: 'diamond' },
-  { key: 'blueberry', col: '#5b8def', sh: '#2f57a8', mark: 'dot' },
-  { key: 'carrot', col: '#ff8a3d', sh: '#c45e16', mark: 'triangle' },
+  { e: '🍅', c: '#ff6b5e' }, { e: '🍋', c: '#ffcf3e' }, { e: '🥦', c: '#5fcf72' },
+  { e: '🍆', c: '#a785f0' }, { e: '🫐', c: '#6e9bf0' }, { e: '🥕', c: '#ff9f43' },
 ];
 const COLS = 7, ROWS = 8, TIME = 60;
 let P = null;
@@ -158,9 +153,9 @@ export function gamePuzzle() {
     c.clearRect(0, 0, P.W, P.H);
     c.save();
     if (P.shakeT > 0) { P.shakeT -= 1 / 60; const a = P.shakeA * Math.max(0, P.shakeT) * 3; c.translate((Math.random() - 0.5) * a, (Math.random() - 0.5) * a); }
-    // 따뜻한 주방 톤(시안: 매치3 라이트 필드)
+    // 부드러운 주방 크림 톤(눈 편하게) — 타일이 또렷이 보이도록
     const bg = c.createLinearGradient(0, 0, 0, P.H);
-    bg.addColorStop(0, '#ffe7c2'); bg.addColorStop(0.5, '#ffd49a'); bg.addColorStop(1, '#ffc074');
+    bg.addColorStop(0, '#fff3df'); bg.addColorStop(1, '#ffe6c2');
     c.fillStyle = bg; c.fillRect(-20, -20, P.W + 40, P.H + 40);
     // 스왑 이동 오프셋(부드럽게 — easeInOut)
     let sox = {}, soy = {};
@@ -177,17 +172,15 @@ export function gamePuzzle() {
       const k = KINDS[v];
       const sc = P.pop[idx] > 0 ? P.pop[idx] : 1;
       const pad = cell * 0.08 + (1 - sc) * cell * 0.4;
-      const a = P.pop[idx] > 0 ? P.pop[idx] : 1;
-      // 타일 배경 — 선택 시 노랑, 평소엔 타일색 12%(시안). 시각 피로 줄이려 은은하게.
-      c.globalAlpha = a * (idx === P.sel ? 1 : 0.12);
-      c.fillStyle = idx === P.sel ? '#ffe9a8' : k.col;
+      c.globalAlpha = P.pop[idx] > 0 ? P.pop[idx] : 1;
+      // 또렷한 컬러 타일 + 재료 이모지(한눈에 인식)
+      c.fillStyle = idx === P.sel ? '#fff0b8' : k.c;
       roundRect(c, x + pad, y + pad, cell - pad * 2, cell - pad * 2, cell * 0.24); c.fill();
-      c.globalAlpha = a;
+      c.fillStyle = 'rgba(255,255,255,0.22)'; // 상단 광택
+      roundRect(c, x + pad, y + pad, cell - pad * 2, (cell - pad * 2) * 0.42, cell * 0.22); c.fill();
       if (idx === P.sel) { c.strokeStyle = '#ff8a3d'; c.lineWidth = 3; c.stroke(); }
-      // 식자재 슬라임 스프라이트 (시안: 색 + 볼터치만)
-      drawSprite(c, veggieSprite(k.key).base, x + cell / 2, y + cell / 2, cell * 0.8 * sc);
-      // 형태 마크(좌상단, 작게) — 색맹 대응 이중 인코딩
-      drawMark(c, k.mark, x + cell * 0.2, y + cell * 0.2, cell * 0.085, k.sh, a);
+      c.font = `${Math.round(cell * 0.5)}px serif`; c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.fillText(k.e, x + cell / 2, y + cell / 2 + 1);
     }
     c.globalAlpha = 1; c.textBaseline = 'alphabetic';
     c.restore();
@@ -196,17 +189,6 @@ export function gamePuzzle() {
     c.beginPath(); c.moveTo(x + r, y);
     c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r);
     c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath();
-  }
-  // 형태 마크 — 시안의 코너 8px 마크(솔리드, opacity .9). 모양으로 종류 구분(색맹 대응).
-  function drawMark(c, type, cx, cy, s, col, a) {
-    c.save(); c.globalAlpha = a * 0.9; c.fillStyle = col; c.beginPath();
-    if (type === 'circle') c.arc(cx, cy, s, 0, 6.28);
-    else if (type === 'dot') c.arc(cx, cy, s * 0.62, 0, 6.28);
-    else if (type === 'square') c.rect(cx - s, cy - s, s * 2, s * 2);
-    else if (type === 'diamond') { c.moveTo(cx, cy - s); c.lineTo(cx + s, cy); c.lineTo(cx, cy + s); c.lineTo(cx - s, cy); c.closePath(); }
-    else if (type === 'triangle') { c.moveTo(cx, cy - s); c.lineTo(cx + s, cy + s); c.lineTo(cx - s, cy + s); c.closePath(); }
-    else if (type === 'cloud') { [[-s * 0.55, s * 0.1], [s * 0.55, s * 0.1], [0, -s * 0.4]].forEach(([dx, dy]) => { c.moveTo(cx + dx + s * 0.6, cy + dy); c.arc(cx + dx, cy + dy, s * 0.6, 0, 6.28); }); }
-    c.fill(); c.restore();
   }
   function offerPuzzleTime() {
     cancelAnimationFrame(P.raf);

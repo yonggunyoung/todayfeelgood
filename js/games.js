@@ -271,7 +271,15 @@ const choseong = (s) => [...s].map((ch) => {
   const c = ch.charCodeAt(0) - 0xac00;
   return c >= 0 && c <= 11171 ? CHO[Math.floor(c / 588)] : ch;
 }).join('');
-const VOICE_POOL = ING.filter((i) => i.name.length <= 4 && ['채소', '과일', '육류', '수산', '유제품', '주식', '신선'].includes(i.cat));
+// 누구나 또렷이 알고 발음 쉬운 재료만 — 이름을 화면에 보여주고 외치는 게임(애매함 제거)
+const VOICE_WORDS = [
+  ['사과', '🍎'], ['바나나', '🍌'], ['당근', '🥕'], ['토마토', '🍅'], ['우유', '🥛'],
+  ['계란', '🥚', ['달걀']], ['감자', '🥔'], ['양파', '🧅'], ['옥수수', '🌽'], ['딸기', '🍓'],
+  ['포도', '🍇'], ['레몬', '🍋'], ['가지', '🍆'], ['고구마', '🍠'], ['수박', '🍉'],
+  ['치즈', '🧀'], ['식빵', '🍞', ['빵']], ['생선', '🐟', ['물고기']], ['새우', '🦐'], ['버섯', '🍄'],
+  ['브로콜리', '🥦'], ['오이', '🥒'], ['귤', '🍊', ['감귤']], ['호박', '🎃'],
+];
+const VOICE_POOL = VOICE_WORDS.map(([name, emoji, aliases]) => ({ name, emoji, aliases: aliases || [] }));
 let vg = null; // {list, idx, t0, passes, iv, hintTimer}
 
 export function gameVoice() {
@@ -282,13 +290,15 @@ export function gameVoice() {
   ui.openSheet(`
     <div class="g-stage" id="gv-stage">
       <div class="g-hud"><span id="gv-dots"></span><b id="gv-time">0.0초</b></div>
-      <div class="g-itembox big"><span id="gv-emoji"></span></div>
+      <div class="g-itembox big" id="gv-item"><span id="gv-emoji"></span><b id="gv-name" style="display:block;font-size:1.8rem;margin-top:2px">…</b></div>
       <div class="g-hint" id="gv-hint">🎤 이름을 외치세요!</div>
       <div class="g-heard" id="gv-heard">…</div>
       <div class="btn-row">
         <button class="btn btn-block" onclick="UI.gameVoicePass()">패스 (+8초)</button>
       </div>
+      <p class="hint" style="text-align:center;margin-top:6px">마이크가 어렵나요? 위 재료를 <b>탭</b>해도 정답 처리돼요</p>
     </div>`);
+  document.getElementById('gv-item')?.addEventListener('click', () => { if (vg) voiceAdvance(); }); // 탭 폴백(접근성)
   const ok = startListen(voiceHeard, (on, why) => {
     if (why === 'denied') { ui.toast('마이크 권한을 허용해 주세요'); ui.closeSheet(); }
   });
@@ -311,6 +321,7 @@ function clearVoice() {
 function voiceRound() {
   const it = vg.list[vg.idx];
   document.getElementById('gv-emoji').textContent = it.emoji;
+  const nm = document.getElementById('gv-name'); if (nm) nm.textContent = it.name + '!'; // 이름을 크게 보여줌(애매함 제거)
   document.getElementById('gv-dots').textContent = '●'.repeat(vg.idx) + '○'.repeat(vg.list.length - vg.idx);
   document.getElementById('gv-hint').textContent = '🎤 이름을 외치세요!';
   clearTimeout(vg.hintTimer);
@@ -328,6 +339,10 @@ function voiceHeard(t) {
   const names = [it.name, ...(it.aliases || [])];
   const hit = names.some((n) => bare.includes(n)) || (bare.length >= 2 && it.name.includes(bare));
   if (!hit) return;
+  voiceAdvance();
+}
+function voiceAdvance() {
+  if (!vg) return;
   beep(1318, 0.09); buzz(12);
   document.getElementById('gv-stage')?.classList.add('g-flash');
   setTimeout(() => document.getElementById('gv-stage')?.classList.remove('g-flash'), 220);

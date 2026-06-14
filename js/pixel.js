@@ -170,19 +170,6 @@ export function enemySprite(type, expr) {
   });
 }
 export function mascotSprite(expr = 'happy') { return cached(`m:${expr}`, () => ({ base: bakeGrid(slime(20, PAL.mascot, expr, null, { blush: true })), n: 20 })); }
-// 식자재 슬라임 — 매치3 6종. 시안 그대로 색 + 볼터치(cheeks)만. 종류 구분은 색 + 코너 형태마크(게임).
-const vp = (body, hi, sh) => ({ body, hi, sh, out: C.out });
-const VEG = {
-  tomato: vp('#ff5a4d', '#ff9b91', '#c2371f'),
-  lemon: vp('#ffd24a', '#ffe9a3', '#c99a16'),
-  broccoli: vp('#56c66a', '#9be8a8', '#2c7d3c'),
-  eggplant: vp('#9b6bff', '#c9aeff', '#5e3bb0'),
-  blueberry: vp('#5b8def', '#a6c4ff', '#2f57a8'),
-  carrot: vp('#ff8a3d', '#ffbb86', '#c45e16'),
-};
-export function veggieSprite(key) {
-  return cached(`v:${key}`, () => { const pal = VEG[key] || VEG.tomato; return { base: bakeGrid(slime(14, pal, 'happy', null, { blush: true })), n: 14 }; });
-}
 export function fridgeSprite() { return cached('fridge', () => { const g = fridgeGrid(); return { base: bakeGrid(g), white: bakeGrid(g, C.white), w: g[0].length, h: g.length }; }); }
 export function itemSprite(key) { return cached(`i:${key}`, () => { const cv = bakeGrid(mapGrid(ROWS[key], ITEM_PAL[key])); return { base: cv, w: cv.width, h: cv.height }; }); }
 

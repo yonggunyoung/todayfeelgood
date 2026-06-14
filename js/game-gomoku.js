@@ -1,6 +1,5 @@
 // ⚫ 냉장고 오목 — 슬라임 알로 AI와 5목 대결. 난이도(하/중/상)로 AI 강함, 광고로 무르기·힌트.
 import { gameUI, beep, chord, buzz, finishGame, diffMul, getDiff, gameDiffRow, inStageAd } from './games.js';
-import { mascotSprite, enemySprite, drawSprite, C } from './pixel.js';
 import { setupCanvas } from './slime.js';
 
 const N = 13, WIN = 5;
@@ -180,11 +179,10 @@ function render() {
   for (let i = 0; i < N; i++) { const p = i * cell + cell / 2; c.beginPath(); c.moveTo(cell / 2, p); c.lineTo(W - cell / 2, p); c.moveTo(p, cell / 2); c.lineTo(p, W - cell / 2); c.stroke(); }
   // 힌트
   if (G.hint) { c.fillStyle = 'rgba(47,140,90,0.32)'; c.fillRect(G.hint.x * cell + 2, G.hint.y * cell + 2, cell - 4, cell - 4); }
-  // 알
-  const me = mascotSprite('happy').base, ai = enemySprite('grunt', '').base;
+  // 오목돌 — 광택 있는 흑/백 돌(나=흑, 상대=백)
   for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
     const v = G.board[idx(x, y)]; if (!v) continue;
-    drawSprite(c, v === 1 ? me : ai, x * cell + cell / 2, y * cell + cell / 2, cell * 0.84);
+    drawStone(c, x * cell + cell / 2, y * cell + cell / 2, cell * 0.4, v === 1);
   }
   // 승리 라인 강조
   if (G.win) {
@@ -194,6 +192,18 @@ function render() {
   }
 }
 
+// 광택 오목돌 — black=내 돌(흑), 아니면 백돌. 라이트 보드에서 또렷.
+function drawStone(c, cx, cy, r, black) {
+  c.save();
+  c.fillStyle = 'rgba(25,45,80,0.22)'; c.beginPath(); c.ellipse(cx, cy + r * 0.34, r * 0.92, r * 0.4, 0, 0, 6.28); c.fill();
+  const g = c.createRadialGradient(cx - r * 0.35, cy - r * 0.4, r * 0.2, cx, cy, r);
+  if (black) { g.addColorStop(0, '#5d6c88'); g.addColorStop(0.5, '#2b3650'); g.addColorStop(1, '#141b2c'); }
+  else { g.addColorStop(0, '#ffffff'); g.addColorStop(0.6, '#eef4fb'); g.addColorStop(1, '#ccd8ea'); }
+  c.fillStyle = g; c.beginPath(); c.arc(cx, cy, r, 0, 6.28); c.fill();
+  c.lineWidth = 1.2; c.strokeStyle = black ? 'rgba(8,12,20,0.55)' : 'rgba(120,150,185,0.75)'; c.stroke();
+  c.fillStyle = 'rgba(255,255,255,0.55)'; c.beginPath(); c.ellipse(cx - r * 0.32, cy - r * 0.4, r * 0.3, r * 0.17, -0.5, 0, 6.28); c.fill();
+  c.restore();
+}
 function endGame(playerWon) {
   G.over = true;
   const stage = G.canvas.parentElement;

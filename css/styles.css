@@ -1072,3 +1072,46 @@ input:focus, select:focus, textarea:focus { outline: none; box-shadow: 0 0 0 3px
 
 /* 토스트 — 프리미엄 다크 */
 .toast { box-shadow: var(--shadow-float); }
+
+/* ══════════════ 냉장고 화면 프리미엄(B) — 스마트 디스플레이·글라스 도어·핸들 ══════════════ */
+.fridge { padding-right: 16px; } /* 손잡이 공간 */
+/* 상단 스마트 디스플레이 */
+.f-display {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  margin: 1px 3px 10px; padding: 8px 13px; border-radius: 13px;
+  background: linear-gradient(180deg, #11161d, #0a0d12);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.08), inset 0 0 18px rgba(90,180,255,.12), 0 2px 6px rgba(0,0,0,.3);
+  font-variant-numeric: tabular-nums;
+}
+.f-display .fd-temp { color: #8fd6ff; font-weight: 800; font-size: .82rem; letter-spacing: .02em; text-shadow: 0 0 10px rgba(120,200,255,.5); }
+.f-display .fd-stat { color: #cfe3f2; font-size: .74rem; font-weight: 600; }
+.f-display .fd-stat b { color: #fff; font-weight: 800; }
+.f-display .fd-stat em { color: #ffb14d; font-style: normal; font-weight: 800; }
+.f-display .fd-on { color: #46d07f; font-size: .6rem; font-weight: 800; letter-spacing: .05em; animation: fdOn 2.4s ease-in-out infinite; }
+@keyframes fdOn { 0%,100%{ opacity:1 } 50%{ opacity:.45 } }
+/* 우측 도어 손잡이 */
+.f-handle {
+  position: absolute; top: 64px; bottom: 70px; right: 4px; width: 7px; border-radius: 99px; pointer-events: none;
+  background: linear-gradient(90deg, #6a727f, #b3bfcd 45%, #79828f);
+  box-shadow: 0 2px 5px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.5);
+}
+/* 유리 도어 사선 반사 */
+.f-glass {
+  position: absolute; inset: 11px 16px 11px 11px; border-radius: 19px; pointer-events: none; z-index: 3; overflow: hidden;
+}
+.f-glass::before {
+  content: ''; position: absolute; top: -20%; left: -30%; width: 55%; height: 160%;
+  background: linear-gradient(105deg, rgba(255,255,255,0) 30%, rgba(255,255,255,.22) 48%, rgba(255,255,255,0) 60%);
+  transform: rotate(8deg);
+}
+/* 유리 선반 — 앞면 엣지 + 반사로 깊이감 */
+.f-shelf {
+  height: 8px; border-radius: 5px;
+  background: linear-gradient(180deg, rgba(255,255,255,.98), rgba(150,185,212,.5));
+  box-shadow: 0 5px 9px rgba(70,108,142,.3), 0 1px 0 rgba(255,255,255,.9) inset, 0 -1px 3px rgba(120,160,195,.4) inset;
+  border-top: 1px solid rgba(255,255,255,.95);
+}
+/* 칸 라벨 — 음각 칩 */
+.f-sec-label { background: linear-gradient(180deg, rgba(255,255,255,.5), rgba(220,232,243,.3)); border-radius: 8px; padding: 4px 8px; margin: 0 3px 8px; box-shadow: inset 0 1px 0 rgba(255,255,255,.8); }
+.basket .f-sec-label { background: linear-gradient(180deg, rgba(255,252,244,.6), rgba(235,224,202,.4)); }
+@media (prefers-reduced-motion: reduce) { .f-display .fd-on { animation: none; } }

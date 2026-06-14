@@ -347,8 +347,16 @@ function fridgeHtml(all) {
   let best = 4;
   for (const p of all) { const d = daysLeft(p.expiresAt); if (d <= 3 && d < best) { best = d; bubbleKey = 'p:' + p.id; } }
   for (const l of foods) { const d = daysLeft(l.expiresAt); if (d <= 3 && d < best) { best = d; bubbleKey = 'f:' + l.id; } }
+  const expN = all.filter((p) => daysLeft(p.expiresAt) <= 3).length;
   return `
     <div class="fridge">
+      <div class="f-display">
+        <span class="fd-temp">❄ 3°C</span>
+        <span class="fd-stat"><b>${all.length}</b>개 보관${expN ? ` · <em>임박 ${expN}</em>` : ' · 신선'}</span>
+        <span class="fd-on">●&#xfe0e; ON</span>
+      </div>
+      <span class="f-handle"></span>
+      <div class="f-glass"></div>
       <div class="fridge-inner" data-loc="fridge">
         <div class="f-led"></div>
         <div class="f-vent"><i></i><i></i><i></i><i></i></div>

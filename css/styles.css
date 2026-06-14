@@ -888,3 +888,49 @@ a { color: var(--blue); text-decoration: none; }
   border-radius: 12px; padding: 11px 6px; font-size: 0.82rem; cursor: pointer;
 }
 .home-games button:active { transform: scale(0.97); }
+
+/* ════════ 게임 셸 (다크 슬라임 테마) ════════ */
+.gx {
+  margin: -4px -4px 0; border-radius: 20px; overflow: hidden;
+  background: linear-gradient(180deg, #1a0f2b, #120a1e);
+  font-family: 'Jua', 'Pretendard Variable', sans-serif;
+}
+.gx-bar { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; }
+.gx-title { color: #fff; font-size: 1.05rem; }
+.gx-x { background: rgba(255,255,255,0.1); color: #cdbde8; border: none; width: 30px; height: 30px; border-radius: 99px; font-size: 0.9rem; cursor: pointer; }
+.gx-stage { position: relative; display: flex; justify-content: center; padding: 0 8px; }
+.gx-stage canvas { border-radius: 16px; touch-action: none; display: block; box-shadow: 0 8px 30px rgba(0,0,0,0.4); }
+.gx-start { position: absolute; inset: 0 8px; display: grid; place-items: center; text-align: center;
+  background: rgba(18,10,30,0.88); border-radius: 16px; backdrop-filter: blur(2px); }
+.gx-start-in { padding: 20px; max-width: 300px; }
+.gx-start b { display: block; color: #5ef0b0; font-size: 1.2rem; margin: 10px 0 6px; }
+.gx-start p { color: #b9a7d6; font-size: 0.86rem; line-height: 1.6; }
+.gx-btn-go {
+  margin-top: 14px; width: 100%; border: none; border-radius: 14px; padding: 14px;
+  background: linear-gradient(145deg, #5ef0b0, #33caa6); color: #08221a; font-family: 'Jua', sans-serif;
+  font-size: 1.05rem; cursor: pointer; box-shadow: 0 6px 18px rgba(94,240,176,0.4);
+}
+.gx-btn-go:active { transform: scale(0.97); }
+
+/* 강화 상점 */
+.gx-shop {
+  display: flex; gap: 8px; overflow-x: auto; padding: 12px; -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.gx-shop::-webkit-scrollbar { display: none; }
+.up-card {
+  flex-shrink: 0; width: 88px; border: 1.5px solid #3a2b52; border-radius: 14px;
+  background: #1f1338; color: #cdbde8; padding: 9px 6px; text-align: center; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; gap: 2px; font-family: 'Jua', sans-serif;
+  transition: transform 0.1s, border-color 0.15s;
+}
+.up-card .up-ico { font-size: 1.4rem; }
+.up-card b { font-size: 0.76rem; color: #fff; }
+.up-card .up-lv { font-size: 0.66rem; color: #9b8bbd; }
+.up-card .up-cost { font-size: 0.72rem; color: #ffe04a; font-weight: 700; }
+.up-card.can { border-color: #5ef0b0; box-shadow: 0 0 12px rgba(94,240,176,0.25); }
+.up-card.can:active { transform: scale(0.94); }
+.up-card:disabled { opacity: 0.55; cursor: default; }
+.up-card.locked small { color: #7d6aa6; }
+.up-card.maxed { border-color: #ffe04a; }
+.up-card.maxed small { color: #ffe04a; }

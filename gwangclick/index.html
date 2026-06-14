@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no" />
 <title>⚡ 광클대전 — 오늘 내 편은?</title>
-<meta name="theme-color" content="#1d2330" />
+<meta name="theme-color" content="#0a0b0d" />
 <meta name="description" content="민초 vs 반민초? 부먹 vs 찍먹? 오늘의 떡밥에 내 편을 골라 60초 광클! 전국 흐름을 내 편으로 끌어와라." />
 <link rel="manifest" href="./manifest.webmanifest" />
 <link rel="icon" href="./icon.svg" type="image/svg+xml" />
@@ -13,155 +13,150 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <!-- 토스 미니앱 어댑터(선택) — 토스 밖에서는 안전한 폴백, 의존성 없음 -->
 <script src="./toss.js"></script>
-<!-- 폰트는 있으면 좋고 없어도(오프라인/파일실행) 시스템 폰트로 자동 폴백 -->
 <link rel="stylesheet" as="style" crossorigin
       href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
 <style>
+/* ⚡ 광클대전 — 디자인: 심야 아레나 / 네오 아케이드 스코어보드 (진영색은 --team-a/--team-b/--me로 런타임 리스킨) */
 :root{
-  --bg:#0b0d13; --card:rgba(255,255,255,.055); --label:#f4f5f8; --label-2:#a7acba; --label-3:#71768a;
-  --hairline:rgba(255,255,255,.1); --green:#34c46e; --green-bg:rgba(52,196,110,.16); --orange:#ff9a4d;
-  --orange-bg:rgba(255,138,61,.16); --red:#ff5b50; --amber:#ffc24d;
-  --sans:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,'Noto Sans KR',sans-serif;
-  --r-lg:22px;
+  --bg:#0a0b0d; --bg-2:#111317; --bg-3:#191c22; --bg-card:#0e1014;
+  --ink:#f2f3f6; --ink-2:#9da3ad; --ink-3:#646a74;
+  --line:rgba(255,255,255,.07); --line-2:rgba(255,255,255,.15);
+  --team-a:#12b39a; --team-b:#7b6ef0; --me:#12b39a; --foe:#7b6ef0; --tapink:#04130f; --live:#ff3a3a;
+  --r-sm:9px; --r-md:14px; --r-lg:20px;
+  --ease-snap:cubic-bezier(.2,.9,.25,1.05); --ease-wipe:cubic-bezier(.74,0,.18,1);
+  --mono:ui-monospace,'SF Mono',Menlo,monospace;
 }
-*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
-html{font-size:16px;}
-body{font-family:var(--sans);background:var(--bg);color:var(--label);min-height:100dvh;-webkit-font-smoothing:antialiased;}
-button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit;}
-#app{max-width:480px;margin:0 auto;min-height:100dvh;padding:20px 16px 34px;position:relative;
-  background:
-    radial-gradient(125% 55% at 50% -8%, rgba(123,110,240,.20), transparent 60%),
-    radial-gradient(110% 50% at 50% 108%, rgba(18,179,154,.16), transparent 58%),
-    linear-gradient(180deg,#12141d 0%,#0a0c12 62%);}
-.brandbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
-.brandbar b{font-size:1.05rem;font-weight:900;}
-.brandbar small{color:var(--label-2);font-size:.74rem;}
-.sub{color:var(--label-2);font-size:.86rem;}
-.hint{color:var(--label-3);font-size:.8rem;line-height:1.5;}
-.btn{display:block;width:100%;background:rgba(255,255,255,.07);color:var(--label);font-weight:800;
-  border-radius:14px;padding:14px;font-size:.95rem;text-align:center;border:1px solid var(--hairline);
-  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);}
-.btn:active{transform:scale(.98);}
-.btn-primary{background:var(--green);color:#fff;box-shadow:0 4px 14px rgba(47,174,95,.3);}
-.btn-accent{background:var(--orange);color:#fff;box-shadow:0 4px 14px rgba(255,138,61,.32);}
-.btn-row{display:flex;flex-direction:column;gap:9px;margin-top:14px;}
-.g-earn{margin-top:8px;font-weight:900;color:#ffd76a;background:rgba(255,200,70,.14);border:1px solid rgba(255,200,70,.28);border-radius:12px;padding:9px;text-align:center;}
-.g-newbest{margin-top:8px;text-align:center;font-weight:900;color:var(--orange);}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{font-size:16px}
+body{background:var(--bg);color:var(--ink);min-height:100dvh;
+  font-family:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,system-ui,'Apple SD Gothic Neo',sans-serif;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+body::before{content:'';position:fixed;inset:0;z-index:60;pointer-events:none;opacity:.05;mix-blend-mode:overlay;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+#app{max-width:480px;margin:0 auto;min-height:100dvh;padding:20px 18px 32px;position:relative}
+.screen{display:flex;flex-direction:column;gap:15px}
 
-/* ── 게이지 (공용) ── */
-.fb-gauge{position:relative;height:18px;border-radius:99px;overflow:hidden;}
-.fb-gauge i{display:block;height:100%;box-shadow:2px 0 0 rgba(255,255,255,.85);}
-.fb-gauge.live{height:20px;}
-.fb-glabels{display:flex;justify-content:space-between;align-items:center;margin-top:6px;font-size:.82rem;font-weight:800;}
-.fb-livetag{font-size:.66rem;font-weight:800;color:var(--label-3);letter-spacing:.03em;}
+/* 유틸 */
+.mono{font-family:var(--mono);font-weight:600;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-3);line-height:1}
+.tnum{font-variant-numeric:tabular-nums}
+.rule{height:1px;background:var(--line)}
+.hint{color:var(--ink-3);font-size:12.5px;line-height:1.55;text-align:center;margin-top:2px}
+.dot{color:var(--live);animation:liveBlink 1.4s steps(1) infinite}
+.hdr{display:flex;justify-content:space-between;align-items:center}
+.hdr .brand{font-family:var(--mono);font-weight:800;font-size:12px;letter-spacing:.04em}
+.hdr .live{display:flex;align-items:center;gap:7px;font-family:var(--mono);font-weight:700;font-size:10px;letter-spacing:.14em;color:var(--ink-2)}
 
-/* ── 인트로 ── */
-.fb-q{text-align:center;font-size:1.5rem;font-weight:900;margin:10px 0 16px;}
-.fb-vs{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;margin-bottom:14px;}
-.fb-team{text-align:center;padding:16px 8px;border-radius:18px;background:var(--card);border:1px solid var(--hairline);
-  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);transition:all .2s;}
-.fb-team.on{border-color:var(--c);background:color-mix(in srgb,var(--c) 18%,rgba(255,255,255,.04));box-shadow:0 10px 30px color-mix(in srgb,var(--c) 32%,transparent);}
-.fb-team .fb-emo{font-size:2.7rem;display:block;}
-.fb-team b{display:block;margin-top:4px;color:var(--c);font-size:1.04rem;}
-.fb-team small{display:block;margin-top:3px;color:var(--label-2);font-size:.72rem;line-height:1.35;}
-.fb-vsmark{font-weight:900;color:var(--label-3);font-size:1.05rem;}
-.fb-streak{text-align:center;margin:12px 0 2px;padding:9px;border-radius:12px;background:var(--orange-bg);color:#ffc24d;font-weight:800;font-size:.82rem;border:1px solid rgba(255,154,77,.2);}
-.fb-pick{display:grid;gap:10px;margin-top:16px;}
-.fb-pickbtn{position:relative;overflow:hidden;border:none;border-radius:16px;color:#fff;font-weight:900;font-size:1.06rem;padding:18px 12px;box-shadow:0 8px 20px rgba(20,24,33,.18);}
-.fb-pickbtn::before{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.22),rgba(0,0,0,.06));pointer-events:none;}
-.fb-pickbtn:active{transform:scale(.98);}
+@keyframes liveBlink{0%,55%{opacity:1}75%,100%{opacity:.2}}
+@keyframes wipeIn{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@keyframes urgent{0%,100%{opacity:1}50%{opacity:.3}}
+@keyframes comboBob{0%,100%{transform:rotate(-4deg) scale(1)}50%{transform:rotate(-4deg) scale(1.08)}}
+@keyframes auraPulse{0%{box-shadow:0 0 0 0 color-mix(in oklch,var(--me) 55%,transparent),0 18px 38px -16px var(--me)}100%{box-shadow:0 0 0 16px color-mix(in oklch,var(--me) 0%,transparent),0 18px 38px -16px var(--me)}}
+@keyframes tickBeat{0%{opacity:0;transform:translateY(4px)}100%{opacity:1;transform:none}}
+@keyframes fb-rise{0%{opacity:0;transform:translate(-50%,-50%) scale(.6)}25%{opacity:1;transform:translate(-50%,-120%) scale(1.1)}100%{opacity:0;transform:translate(-50%,-240%) scale(1)}}
+@keyframes fb-shk{0%,100%{transform:translate(0,0)}20%{transform:translate(-6px,3px)}40%{transform:translate(5px,-4px)}60%{transform:translate(-4px,-3px)}80%{transform:translate(4px,3px)}}
 
-/* ── 배틀 ── */
-.fb-stage{user-select:none;-webkit-user-select:none;touch-action:manipulation;position:relative;}
-.fb-time{font-variant-numeric:tabular-nums;font-weight:900;font-size:1.1rem;background:rgba(255,255,255,.1);padding:2px 12px;border-radius:99px;}
-.fb-ticker{margin:12px 0;text-align:center;font-weight:800;font-size:.88rem;min-height:1.3em;padding:10px;border-radius:12px;background:rgba(255,255,255,.06);border:1px solid var(--hairline);}
-.fb-ticker.beat{animation:fb-tick .4s ease;}
-@keyframes fb-tick{0%{opacity:0;transform:translateY(5px);}100%{opacity:1;transform:none;}}
-.fb-mid{display:flex;justify-content:space-between;align-items:flex-end;margin:4px 4px 12px;}
-.fb-count b{font-size:2.8rem;font-weight:900;line-height:1;font-variant-numeric:tabular-nums;color:var(--me);}
-.fb-count span{display:block;font-size:.74rem;color:var(--label-2);font-weight:700;}
-.fb-combo{font-size:1.4rem;font-weight:900;color:var(--label-3);font-variant-numeric:tabular-nums;transition:all .12s;}
-.fb-combo.hot{color:var(--orange);transform:scale(1.18);text-shadow:0 0 14px rgba(255,138,61,.5);}
-.fb-tap{position:relative;overflow:hidden;width:100%;height:200px;border-radius:28px;color:#fff;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
-  box-shadow:0 12px 30px rgba(20,24,33,.22);touch-action:manipulation;}
-.fb-tap::before{content:'';position:absolute;inset:0;
-  background:radial-gradient(circle at 50% 30%,rgba(255,255,255,.30),transparent 60%),linear-gradient(180deg,rgba(255,255,255,.10),rgba(0,0,0,.12));pointer-events:none;}
-.fb-tap:active{transform:scale(.97);box-shadow:0 6px 16px rgba(20,24,33,.22);}
-.fb-tapemo{font-size:3.4rem;line-height:1;}
-.fb-taplabel{font-size:1.6rem;font-weight:900;letter-spacing:.06em;}
-.fb-pops{position:absolute;inset:0;pointer-events:none;overflow:hidden;}
-.fb-pop{position:absolute;transform:translate(-50%,-50%);font-weight:900;font-size:1.15rem;color:#fff;text-shadow:0 2px 6px rgba(0,0,0,.35);animation:fb-rise .56s ease-out forwards;}
-.fb-pop.x2{font-size:1.5rem;color:#ffe27a;}
-.fb-pop.x3{font-size:1.85rem;color:#ff8a3d;}
-@keyframes fb-rise{0%{opacity:0;transform:translate(-50%,-50%) scale(.6);}25%{opacity:1;transform:translate(-50%,-120%) scale(1.1);}100%{opacity:0;transform:translate(-50%,-240%) scale(1);}}
+/* 인트로 */
+.kicker{font-family:var(--mono);font-weight:600;font-size:10.5px;letter-spacing:.16em;color:var(--ink-3);line-height:1.5}
+.q{font-size:clamp(34px,10.5vw,46px);font-weight:900;line-height:.97;letter-spacing:-.04em}
+.qa{color:var(--team-a)}
+.teams{display:flex;flex-direction:column;gap:9px}
+.team{display:flex;gap:13px;align-items:center;padding:13px 14px;background:var(--bg-3);border:1px solid var(--line);border-radius:var(--r-sm)}
+.team .em{font-size:28px;line-height:1}
+.team .nm{display:flex;align-items:baseline;gap:8px}
+.team .nm b{font-weight:800;font-size:16px}
+.team .tg{font-family:var(--mono);font-weight:600;font-size:9px;letter-spacing:.14em;color:var(--ink-3)}
+.team .sl{font-size:12.5px;color:var(--ink-2);margin-top:3px}
+.gauge-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:9px}
+.chip-soft{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:var(--ink-2);border:1px solid var(--line-2);border-radius:99px;padding:4px 9px}
+.gnums{display:flex;justify-content:space-between;align-items:flex-end}
+.gnum{font-size:30px;font-weight:900;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.gauge{display:flex;height:10px;border-radius:99px;overflow:hidden;background:var(--bg-3);border:1px solid var(--line)}
+.gauge.tall{height:8px}
+.gauge i{height:100%;display:block}
+.go{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.go button{border-radius:var(--r-md);font-weight:800;font-size:14px;padding:16px 6px;letter-spacing:-.01em;transition:transform .12s var(--ease-snap)}
+.go button:active{transform:scale(.96)}
+.streak-chip{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:var(--ink-2);border:1px solid var(--line-2);border-radius:99px;padding:5px 10px;align-self:flex-start}
 
-/* ── 결과 ── */
-.fb-verdict{text-align:center;margin:0 0 12px;font-size:1.3rem;font-weight:900;}
-.fb-verdict.win{color:var(--green);} .fb-verdict.lose{color:var(--red);} .fb-verdict.tie{color:var(--amber);}
-.fb-card{border-radius:20px;padding:16px;color:#fff;position:relative;overflow:hidden;
-  background:linear-gradient(150deg,color-mix(in srgb,var(--c) 88%,#000),color-mix(in srgb,var(--foe) 55%,#1a1a22));
-  box-shadow:0 16px 44px rgba(20,24,33,.3);}
-.fb-card-top{display:flex;align-items:center;gap:11px;}
-.fb-card-emo{font-size:2.7rem;}
-.fb-card-top .grow{flex:1;}
-.fb-card-top b{font-size:1.14rem;}
-.fb-card-top small{display:block;opacity:.85;font-size:.76rem;}
-.fb-card-badge{background:rgba(255,255,255,.22);padding:5px 11px;border-radius:99px;font-weight:900;font-size:.74rem;white-space:nowrap;}
-.fb-card-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:14px 0 12px;text-align:center;}
-.fb-card-stats b{font-size:1.4rem;font-weight:900;font-variant-numeric:tabular-nums;}
-.fb-card-stats small{display:block;opacity:.82;font-size:.7rem;margin-top:1px;}
-.fb-card-gauge{height:13px;border-radius:99px;overflow:hidden;}
-.fb-card-gauge i{display:block;height:100%;box-shadow:2px 0 0 rgba(255,255,255,.9);}
-.fb-card-foot{display:flex;justify-content:space-between;align-items:center;margin-top:9px;font-size:.78rem;font-weight:800;}
-.fb-card-tag{opacity:.85;font-size:.72rem;}
+/* 배틀 스테이지 */
+.stage{position:relative;display:flex;flex-direction:column;gap:13px;touch-action:manipulation;user-select:none;-webkit-user-select:none}
+.urgentbar{height:3px;border-radius:99px;background:transparent}
+.stage.urgent .urgentbar{background:var(--live);animation:urgent .7s steps(1) infinite}
+.bhdr{display:flex;justify-content:space-between;align-items:center}
+.bhdr .l{display:flex;align-items:center;gap:7px;font-family:var(--mono);font-weight:800;font-size:10px;letter-spacing:.14em}
+.chip{font-family:var(--mono);font-weight:700;font-size:10px;letter-spacing:.06em;color:var(--ink-3);border:1px solid var(--line-2);border-radius:99px;padding:5px 9px}
+.stage.combo .chip{color:var(--tapink);background:var(--me);border-color:transparent}
+.stage.urgent .chip{color:#fff;background:var(--live);border-color:transparent;animation:urgent .7s steps(1) infinite}
+.ticker{overflow:hidden;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:8px 0;font-size:12.5px;font-weight:600;color:var(--ink-2);text-align:center;min-height:1.2em}
+.ticker.beat{animation:tickBeat .4s ease}
+.stage.urgent .ticker{color:var(--live);font-weight:700}
+.brow{display:flex;justify-content:space-between;font-family:var(--mono);font-weight:700;font-size:11px;font-variant-numeric:tabular-nums}
+.mid{display:flex;justify-content:space-between;align-items:flex-end;gap:14px}
+.lbl{font-family:var(--mono);font-weight:600;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3)}
+.contrib{font-size:46px;font-weight:900;line-height:.9;font-variant-numeric:tabular-nums;letter-spacing:-.04em;margin-top:5px}
+.stage.combo .contrib{color:var(--me);text-shadow:0 0 24px color-mix(in oklch,var(--me) 55%,transparent)}
+.combo-line{font-family:var(--mono);font-weight:700;font-size:12px;color:var(--ink-2);margin-top:8px}
+.combo-line b{color:var(--me)}
+.timer{font-size:42px;font-weight:900;line-height:.9;font-variant-numeric:tabular-nums;letter-spacing:-.03em;margin-top:5px}
+.stage.urgent .timer{color:var(--live);animation:urgent .7s steps(1) infinite}
+.tap{position:relative;width:100%;border-radius:20px;padding:22px 0;display:flex;flex-direction:column;align-items:center;gap:11px;z-index:1;
+  color:var(--tapink);
+  background:var(--me);
+  background:linear-gradient(180deg,color-mix(in oklch,var(--me) 80%,#fff) 0%,var(--me) 46%,color-mix(in oklch,var(--me) 80%,#000) 100%);
+  box-shadow:inset 0 2px 0 color-mix(in oklch,var(--me) 55%,#fff),inset 0 -3px 1px color-mix(in oklch,var(--me) 70%,#000),0 8px 0 color-mix(in oklch,var(--me) 50%,#000),0 22px 30px -14px color-mix(in oklch,var(--me) 62%,transparent);
+  transition:transform .09s var(--ease-snap),box-shadow .09s var(--ease-snap)}
+.tap:active{transform:translateY(6px);box-shadow:inset 0 2px 0 color-mix(in oklch,var(--me) 55%,#fff),inset 0 -3px 1px color-mix(in oklch,var(--me) 70%,#000),0 2px 0 color-mix(in oklch,var(--me) 50%,#000),0 9px 16px -12px color-mix(in oklch,var(--me) 62%,transparent)}
+.tap .orb{display:grid;place-items:center;width:60px;height:60px;border-radius:50%;font-size:30px;line-height:1;
+  background:radial-gradient(circle at 38% 28%,rgba(255,255,255,.6),rgba(255,255,255,0) 58%),color-mix(in oklch,var(--me) 72%,#000);
+  box-shadow:inset 0 2px 5px rgba(255,255,255,.45),inset 0 -6px 10px rgba(0,0,0,.4),0 5px 12px rgba(0,0,0,.35)}
+.tap .lab{font-size:27px;font-weight:900;letter-spacing:.06em;text-shadow:0 2px 0 color-mix(in oklch,var(--me) 68%,#000),0 3px 6px rgba(0,0,0,.22)}
+.stage.combo .tap{transform:translateY(-2px)}
+.stage.combo .tap::after{content:'';position:absolute;inset:-7px;border-radius:27px;pointer-events:none;animation:auraPulse .7s var(--ease-snap) infinite alternate}
+.stage.urgent .tap{box-shadow:inset 0 2px 0 color-mix(in oklch,var(--me) 55%,#fff),inset 0 -3px 1px color-mix(in oklch,var(--me) 70%,#000),0 8px 0 color-mix(in oklch,var(--me) 50%,#000),0 0 0 2px var(--live),0 16px 30px -14px color-mix(in oklch,var(--live) 60%,transparent)}
+.combobadge{position:absolute;top:-15px;right:12px;z-index:2;font-family:var(--mono);font-weight:900;font-size:12px;letter-spacing:.04em;color:#08110d;background:#fff;border-radius:8px;padding:7px 10px;box-shadow:0 8px 18px -6px rgba(0,0,0,.65);display:none}
+.stage.combo .combobadge{display:block;animation:comboBob .55s var(--ease-snap) infinite}
+.third{display:flex;align-items:center;gap:11px}
+.third .bar{width:3px;height:30px;background:var(--me);display:block;flex:none}
+.third .k{font-family:var(--mono);font-weight:600;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3)}
+.third .v{font-weight:800;font-size:13px;margin-top:3px}
+.stage.urgent .third .bar{background:var(--live);animation:urgent .7s steps(1) infinite}
+#fb-fx{position:absolute;inset:0;pointer-events:none;z-index:3}
+#fb-sky{position:fixed;inset:0;pointer-events:none;z-index:62}
+.fb-pops{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:4}
+.fb-pop{position:absolute;transform:translate(-50%,-50%);font-weight:900;font-size:1.1rem;color:#fff;text-shadow:0 2px 6px rgba(0,0,0,.45);animation:fb-rise .56s ease-out forwards}
+.fb-pop.x2{font-size:1.4rem;color:#ffe27a}
+.fb-pop.x3{font-size:1.7rem;color:#ff9a4d}
+.fb-shake{animation:fb-shk .3s ease}
 
-/* ── 화려한 액션(이펙트) ── */
-#fb-fx{position:absolute;inset:0;pointer-events:none;z-index:3;}
-#fb-sky{position:fixed;inset:0;pointer-events:none;z-index:60;}
-.fb-stage{overflow:hidden;}
-.fb-glow{position:absolute;left:50%;bottom:54px;width:300px;height:300px;transform:translateX(-50%);
-  border-radius:50%;pointer-events:none;z-index:0;opacity:0;
-  background:radial-gradient(circle,var(--me),transparent 64%);filter:blur(20px);transition:opacity .15s;}
-.fb-pops{z-index:4;}
-.fb-tap{z-index:1;}
-/* 게이지 줄무늬 + 선두 글로우 */
-.fb-gauge.live{box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);}
-.fb-gauge.live i{position:relative;}
-.fb-gauge.live i::after{content:'';position:absolute;inset:0;
-  background:repeating-linear-gradient(45deg,rgba(255,255,255,.14) 0 10px,transparent 10px 20px);
-  animation:fb-stripe .6s linear infinite;}
-.fb-gauge.live i::before{content:'';position:absolute;top:-1px;bottom:-1px;right:-2px;width:5px;
-  background:#fff;border-radius:4px;box-shadow:0 0 12px 3px var(--me);}
-@keyframes fb-stripe{to{background-position:28px 0;}}
-/* 콤보 오라 — 팀 컬러 소프트 헤일로(무지개 X, 세련되게) */
-.fb-tap.combo-hot{animation:fb-pulse 1s ease-in-out infinite;}
-.fb-tap.combo-hot::after{content:'';position:absolute;inset:-6px;border-radius:32px;z-index:-1;
-  background:radial-gradient(circle at 50% 50%,color-mix(in srgb,var(--me) 78%,#fff),transparent 70%);
-  filter:blur(12px);opacity:.7;animation:fb-aura 1s ease-in-out infinite;}
-@keyframes fb-aura{0%,100%{opacity:.42;transform:scale(1);}50%{opacity:.82;transform:scale(1.05);}}
-@keyframes fb-pulse{0%,100%{box-shadow:0 14px 34px rgba(0,0,0,.45);}
-  50%{box-shadow:0 14px 46px rgba(0,0,0,.5),0 0 44px 6px color-mix(in srgb,var(--me) 55%,transparent);}}
-/* 화면 흔들림 */
-.fb-shake{animation:fb-shk .3s ease;}
-@keyframes fb-shk{0%,100%{transform:translate(0,0);}20%{transform:translate(-7px,3px);}40%{transform:translate(6px,-5px);}60%{transform:translate(-5px,-3px);}80%{transform:translate(4px,3px);}}
-/* 막판 10초 긴급 타이머 */
-.fb-time.urgent{color:#fff;background:var(--red);animation:fb-urg .5s ease-in-out infinite;}
-@keyframes fb-urg{0%,100%{transform:scale(1);}50%{transform:scale(1.2);box-shadow:0 0 16px 3px var(--red);}}
-/* 결과 연출 */
-.fb-verdict{animation:fb-vpop .55s cubic-bezier(.2,1.5,.4,1) both;}
-@keyframes fb-vpop{0%{opacity:0;transform:scale(.55) rotate(-4deg);}100%{opacity:1;transform:none;}}
-.fb-card{animation:fb-cardin .5s cubic-bezier(.2,1,.3,1) both;}
-@keyframes fb-cardin{0%{opacity:0;transform:translateY(26px) scale(.95);}100%{opacity:1;transform:none;}}
-.fb-card::after{content:'';position:absolute;top:0;left:-60%;width:55%;height:100%;
-  background:linear-gradient(100deg,transparent,rgba(255,255,255,.5),transparent);
-  transform:skewX(-18deg);animation:fb-shine 1.5s ease .35s 1;}
-@keyframes fb-shine{to{left:135%;}}
+/* 결과 */
+.acc{height:4px}
+.verdict{font-size:30px;font-weight:900;line-height:1.05;letter-spacing:-.035em}
+.rcard{position:relative;background:var(--bg-2);border:1px solid var(--line);border-left:3px solid var(--me);border-radius:var(--r-sm);padding:16px 15px}
+.rcard .frow{display:flex;align-items:center;gap:10px}
+.rcard .frow .em{font-size:24px}
+.rcard .frow .nm{font-weight:800;font-size:15px;white-space:nowrap}
+.rcard .frow .rq{font-family:var(--mono);font-weight:600;font-size:10px;color:var(--ink-3);letter-spacing:.06em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rlbl{font-family:var(--mono);font-weight:600;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-3);margin-top:16px}
+.title{font-size:28px;font-weight:900;letter-spacing:-.03em;margin-top:5px}
+.stats{display:grid;grid-template-columns:1fr 1fr 1fr;border:1px solid var(--line);border-radius:var(--r-sm);overflow:hidden}
+.stats>div{padding:13px 12px}
+.stats>div+div{border-left:1px solid var(--line)}
+.stats .k{font-family:var(--mono);font-weight:600;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+.stats .v{font-size:21px;font-weight:900;font-variant-numeric:tabular-nums;letter-spacing:-.02em;margin-top:6px}
+.stats .v small{font-size:13px;color:var(--ink-2);font-weight:700}
+.tags{display:flex;gap:8px;font-family:var(--mono);font-weight:700;font-size:12px;color:var(--me)}
+.newbest{font-weight:800;font-size:12px;color:#ffd76a}
+.actions{display:flex;flex-direction:column;gap:9px;margin-top:2px}
+.btn{border-radius:var(--r-md);font-weight:800;font-size:14px;padding:15px 0;text-align:center;transition:transform .12s var(--ease-snap)}
+.btn:active{transform:scale(.97)}
+.btn-primary{background:var(--me)}
+.btn-ghost{border:1px solid var(--line-2);background:transparent;color:var(--ink);font-weight:700}
 
 /* 토스트 */
-#toast{position:fixed;left:50%;bottom:32px;transform:translateX(-50%);background:rgba(20,24,33,.92);color:#fff;
-  padding:11px 18px;border-radius:99px;font-size:.85rem;font-weight:700;opacity:0;transition:opacity .2s;z-index:50;pointer-events:none;max-width:90vw;text-align:center;}
-#toast.on{opacity:1;}
+#toast{position:fixed;left:50%;bottom:30px;transform:translateX(-50%);background:rgba(255,255,255,.96);color:#0a0b0d;
+  padding:11px 18px;border-radius:99px;font-size:13px;font-weight:800;opacity:0;transition:opacity .2s;z-index:70;pointer-events:none;max-width:90vw;text-align:center}
+#toast.on{opacity:1}
 </style>
 </head>
 <body>
@@ -169,8 +164,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 <div id="toast"></div>
 <script>
 "use strict";
-/* ⚡ 광클대전 — 단독 실행 버전 (서버·빌드·백엔드 없이 파일 하나로 동작)
-   냉비서 앱(js/game-faction.js)의 게임을 모듈 없이 1파일로 포팅한 데모. */
+/* ⚡ 광클대전 — 단독 실행 버전 (서버·빌드·백엔드 없이 파일 하나로 동작) */
 
 /* ── 소재(밈 떡밥) ── */
 var BATTLES = [
@@ -219,10 +213,17 @@ function titleForTaps(t){var l=TITLES[0][1];for(var i=0;i<TITLES.length;i++)if(t
 function rankEstimate(t){var pop=87431,f=Math.max(0,Math.min(1,1-t/2000));return Math.max(1,Math.round(pop*(0.0002+0.9998*f*f)));}
 function comma(n){return Math.round(n).toLocaleString('ko-KR');}
 function clamp(v,lo,hi){return Math.max(lo,Math.min(hi,v));}
+function pad2(n){return (n<10?'0':'')+n;}
 function todayStr(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function mdLabel(d){var p=String(d).split('-');return (+p[1])+'월 '+(+p[2])+'일';}
+function mdShort(d){var p=String(d).split('-');return (+p[1])+'.'+(+p[2]);}
 function addDaysStr(n,from){var d=new Date(from+'T00:00:00');d.setDate(d.getDate()+n);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function withEuro(name){var c=name.charCodeAt(name.length-1)-0xac00;var jong=c>=0&&c<=11171&&c%28!==0;return name+(jong?'으로':'로');}
+function introQ(q){return q.replace(/, /,',<br>').replace(/\?$/,'<span class="qa">?</span>');}
+/* 진영색 위 가독 텍스트색 (밝으면 먹색, 어두우면 흰색) */
+function ink(hex){var c=String(hex).replace('#','');if(c.length===3)c=c[0]+c[0]+c[1]+c[1]+c[2]+c[2];
+  var r=parseInt(c.slice(0,2),16)/255,g=parseInt(c.slice(2,4),16)/255,b=parseInt(c.slice(4,6),16)/255;
+  return (0.2126*r+0.7152*g+0.0722*b)>0.58?'#08110d':'#ffffff';}
 
 /* ── 저장 ── */
 var KEY='gwangclick.v1';
@@ -301,31 +302,40 @@ function skyLoop(){
 /* ── DOM 헬퍼 ── */
 var app=document.getElementById('app');
 function el(id){return document.getElementById(id);}
+function setTxt(id,v){var e=el(id);if(e)e.textContent=v;}
 function toast(msg){var t=el('toast');t.textContent=msg;t.classList.add('on');clearTimeout(toast._t);toast._t=setTimeout(function(){t.classList.remove('on');},2200);}
 
 /* ── 인트로 ── */
+function teamCard(t,letter){
+  return '<div class="team" style="border-left:3px solid '+t.color+'"><div class="em">'+t.emoji+'</div>'+
+    '<div style="flex:1;min-width:0"><div class="nm"><b>'+t.name+'</b><span class="tg">TEAM '+letter+'</span></div>'+
+    '<div class="sl">'+t.slogan+'</div></div></div>';
+}
 function intro(){
   cleanup();
-  var date=todayStr(), bt=battleOfDay(date), base=clamp(50+dailyBias(date,bt),12,88);
-  var picked=F.picks[bt.id];
+  var date=todayStr(), bt=battleOfDay(date), base=clamp(50+dailyBias(date,bt),12,88), ra=Math.round(base);
   app.innerHTML=
-    '<div class="brandbar"><b>⚡ 광클대전</b><small>'+mdLabel(date)+' · 전국 동시</small></div>'+
-    '<p class="sub" style="text-align:center;margin:2px 0 6px">오늘의 대전 — 내 편을 골라라</p>'+
-    '<div class="fb-q">'+bt.q+'</div>'+
-    '<div class="fb-vs">'+
-      '<div class="fb-team'+(picked==='a'?' on':'')+'" style="--c:'+bt.a.color+'"><span class="fb-emo">'+bt.a.emoji+'</span><b>'+bt.a.name+'</b><small>'+bt.a.slogan+'</small></div>'+
-      '<div class="fb-vsmark">VS</div>'+
-      '<div class="fb-team'+(picked==='b'?' on':'')+'" style="--c:'+bt.b.color+'"><span class="fb-emo">'+bt.b.emoji+'</span><b>'+bt.b.name+'</b><small>'+bt.b.slogan+'</small></div>'+
-    '</div>'+
-    '<div class="fb-gauge intro" style="background:'+bt.b.color+'"><i style="width:'+base+'%;background:'+bt.a.color+'"></i></div>'+
-    '<div class="fb-glabels"><span style="color:'+bt.a.color+'">'+bt.a.emoji+' '+base.toFixed(1)+'%</span>'+
-      '<span class="fb-livetag">전국 흐름 ●LIVE</span><span style="color:'+bt.b.color+'">'+(100-base).toFixed(1)+'% '+bt.b.emoji+'</span></div>'+
-    (F.streak>1?'<div class="fb-streak">🔥 '+F.streak+'일 연속 참전 중 — 오늘도 출석!</div>':'')+
-    '<div class="fb-pick">'+
-      '<button class="fb-pickbtn" style="background:'+bt.a.color+'" onclick="GO(\'a\')">'+bt.a.emoji+' '+withEuro(bt.a.name)+' 참전</button>'+
-      '<button class="fb-pickbtn" style="background:'+bt.b.color+'" onclick="GO(\'b\')">'+bt.b.emoji+' '+withEuro(bt.b.name)+' 참전</button>'+
-    '</div>'+
-    '<p class="hint" style="text-align:center;margin-top:12px">60초 동안 미친듯이 탭 → 내 편 흐름을 끌어와라.<br>콤보를 이어가면 한 탭이 <b>×3</b>까지 불어난다 ⚡</p>';
+    '<div class="screen" style="--team-a:'+bt.a.color+';--team-b:'+bt.b.color+';--me:'+bt.a.color+';--foe:'+bt.b.color+'">'+
+      '<div class="hdr"><span class="brand">⚡ 광클대전</span><span class="live"><span class="dot">●</span>LIVE · 전국 동시</span></div>'+
+      '<div class="rule"></div>'+
+      '<div class="kicker">광클대전 · '+mdLabel(date)+' · 전국 동시</div>'+
+      '<h1 class="q">'+introQ(bt.q)+'</h1>'+
+      '<div class="teams">'+teamCard(bt.a,'A')+teamCard(bt.b,'B')+'</div>'+
+      '<div>'+
+        '<div class="gauge-head"><span class="mono">전국 흐름</span>'+
+          (F.streak>1?'<span class="chip-soft">🔥 '+F.streak+'일 연속 참전</span>':'<span class="chip-soft"><span class="dot">●</span> LIVE</span>')+'</div>'+
+        '<div class="gnums"><span class="gnum" style="color:var(--team-a)">'+ra+'</span>'+
+          '<span class="mono" style="align-self:center">VS</span>'+
+          '<span class="gnum" style="color:var(--team-b)">'+(100-ra)+'</span></div>'+
+        '<div class="gauge" style="margin-top:9px"><i style="width:'+base+'%;background:var(--team-a);transform-origin:left;animation:wipeIn .8s var(--ease-wipe) both"></i>'+
+          '<i style="width:'+(100-base)+'%;background:var(--team-b);transform-origin:right;animation:wipeIn .8s var(--ease-wipe) both"></i></div>'+
+      '</div>'+
+      '<div class="go">'+
+        '<button style="background:'+bt.a.color+';color:'+ink(bt.a.color)+'" onclick="GO(\'a\')">'+bt.a.emoji+' '+withEuro(bt.a.name)+' 참전</button>'+
+        '<button style="background:'+bt.b.color+';color:'+ink(bt.b.color)+'" onclick="GO(\'b\')">'+bt.b.emoji+' '+withEuro(bt.b.name)+' 참전</button>'+
+      '</div>'+
+      '<p class="hint">60초 동안 미친듯이 탭 → 내 편 흐름을 끌어와라. 콤보를 이으면 한 탭이 <b style="color:var(--team-a)">×3</b>까지.</p>'+
+    '</div>';
 }
 
 /* ── 배틀 ── */
@@ -341,18 +351,27 @@ function GO(side){
   B={date:date,bt:bt,side:side,me:me,foe:foe,base:base,tapsF:0,presses:0,streak:0,maxStreak:0,
      lastTap:now,aShare:base,mean:base,target:base,push:0,simT:0,lastFrame:now,endsAt:now+DURATION*1000,raf:0,tick:0,ended:false};
   app.innerHTML=
-    '<div class="fb-stage" id="fb-stage" style="--me:'+me.color+';--foe:'+foe.color+'">'+
-      '<div class="fb-glow" id="fb-glow"></div>'+
-      '<div class="fb-gauge live" style="background:'+bt.b.color+'"><i id="fb-fill" style="width:'+base+'%;background:'+bt.a.color+'"></i></div>'+
-      '<div class="fb-glabels"><span style="color:'+bt.a.color+'">'+bt.a.emoji+' <b id="fb-pa">'+base.toFixed(1)+'</b>%</span>'+
-        '<span class="fb-time" id="fb-time">'+DURATION+'</span>'+
-        '<span style="color:'+bt.b.color+'"><b id="fb-pb">'+(100-base).toFixed(1)+'</b>% '+bt.b.emoji+'</span></div>'+
-      '<div class="fb-ticker" id="fb-ticker">전국에서 광클이 시작됐다… '+me.emoji+' '+me.name+' 가즈아!</div>'+
-      '<div class="fb-mid"><div class="fb-count"><b id="fb-taps">0</b><span>내 기여</span></div><div class="fb-combo" id="fb-combo">×1.0</div></div>'+
-      '<button class="fb-tap" id="fb-tap" style="background:'+me.color+'"><span class="fb-tapemo">'+me.emoji+'</span><span class="fb-taplabel">TAP!</span></button>'+
+    '<div class="stage" id="fb-stage" style="--team-a:'+bt.a.color+';--team-b:'+bt.b.color+';--me:'+me.color+';--foe:'+foe.color+';--tapink:'+ink(me.color)+'">'+
+      '<div class="urgentbar"></div>'+
+      '<div class="bhdr"><span class="l"><span class="dot">●</span>LIVE · BATTLE</span><span class="chip" id="fb-chip">평상</span></div>'+
+      '<div class="ticker" id="fb-ticker">전국에서 광클 시작 — '+me.emoji+' '+me.name+' 가즈아!</div>'+
+      '<div>'+
+        '<div class="brow"><span style="color:var(--team-a)">A <b id="fb-pa" class="tnum">'+base.toFixed(0)+'</b>%</span>'+
+          '<span style="color:var(--team-b)">B <b id="fb-pb" class="tnum">'+(100-base).toFixed(0)+'</b>%</span></div>'+
+        '<div class="gauge tall" style="margin-top:7px"><i id="fb-fill-a" style="width:'+base+'%;background:var(--team-a)"></i>'+
+          '<i id="fb-fill-b" style="width:'+(100-base)+'%;background:var(--team-b)"></i></div>'+
+      '</div>'+
+      '<div class="mid">'+
+        '<div><div class="lbl">내 기여</div><div class="contrib tnum"><b id="fb-taps">0</b></div>'+
+          '<div class="combo-line">콤보 <b id="fb-combo">×1.0</b></div></div>'+
+        '<div style="text-align:right"><div class="lbl">Time</div><div class="timer tnum" id="fb-time">'+DURATION+'</div></div>'+
+      '</div>'+
+      '<button class="tap" id="fb-tap"><span class="combobadge" id="fb-combobadge">COMBO ×1.0</span>'+
+        '<span class="orb">'+me.emoji+'</span><span class="lab">TAP!</span></button>'+
+      '<div class="third"><span class="bar"></span><div><div class="k" id="fb-thirdk">전국 실시간</div>'+
+        '<div class="v" id="fb-thirdv">'+me.name+' · 흐름 잡아라</div></div></div>'+
       '<div class="fb-pops" id="fb-pops"></div>'+
       '<canvas id="fb-fx"></canvas>'+
-      '<p class="hint" style="text-align:center;margin-top:8px"><b style="color:'+me.color+'">'+me.name+'</b> · 화면 아무 데나 빠르게 탭!</p>'+
     '</div>';
   el('fb-stage').addEventListener('pointerdown',onTap,{passive:true});
   fxInit();
@@ -389,8 +408,8 @@ function popNum(px,py,mult){
   box.appendChild(s); setTimeout(function(){s.remove();},560);
 }
 function frame(now){
-  var fill=el('fb-fill');
-  if(!B||B.ended||!fill){cleanup();return;}
+  var fa=el('fb-fill-a'), stage=el('fb-stage');
+  if(!B||B.ended||!fa){cleanup();return;}
   var dt=Math.min(0.05,(now-B.lastFrame)/1000); B.lastFrame=now; var k=dt*60;
   B.simT+=dt;
   if(B.simT>0.9){B.simT=0;B.target=clamp(B.mean+(Math.random()*2-1)*7,8,92);}
@@ -399,18 +418,24 @@ function frame(now){
   B.aShare+=B.push*0.05*k; B.push*=Math.pow(0.86,k);
   B.aShare=clamp(B.aShare,5,95);
   if(now-B.lastTap>320&&B.streak>0)B.streak=Math.max(0,B.streak-0.5*k);
-  fill.style.width=B.aShare.toFixed(2)+'%';
-  setTxt('fb-pa',B.aShare.toFixed(1)); setTxt('fb-pb',(100-B.aShare).toFixed(1));
-  setTxt('fb-time',String(Math.max(0,Math.ceil((B.endsAt-now)/1000))));
-  var c=el('fb-combo'); if(c){c.textContent='×'+comboMult(B.streak).toFixed(1);c.classList.toggle('hot',B.streak>10);}
+  var bShare=100-B.aShare;
+  fa.style.width=B.aShare.toFixed(2)+'%';
+  var fbEl=el('fb-fill-b'); if(fbEl)fbEl.style.width=bShare.toFixed(2)+'%';
+  setTxt('fb-pa',Math.round(B.aShare)); setTxt('fb-pb',Math.round(bShare));
+  setTxt('fb-time',pad2(Math.max(0,Math.ceil((B.endsAt-now)/1000))));
+  var cm=comboMult(B.streak).toFixed(1);
+  setTxt('fb-combo','×'+cm);
+  var cb=el('fb-combobadge'); if(cb)cb.textContent='COMBO ×'+cm;
   fxStep();
-  var glow=el('fb-glow'); if(glow)glow.style.opacity=String(Math.min(0.8,B.streak/32));
-  var tapb=el('fb-tap'); if(tapb&&tapb.classList)tapb.classList.toggle('combo-hot',B.streak>14);
-  var tEl=el('fb-time'); if(tEl&&tEl.classList)tEl.classList.toggle('urgent',(B.endsAt-now)/1000<=10);
+  var hot=B.streak>14, urg=(B.endsAt-now)/1000<=10;
+  if(stage&&stage.classList){stage.classList.toggle('combo',hot);stage.classList.toggle('urgent',urg);}
+  setTxt('fb-chip',urg?'막판 10초':(hot?'콤보!':'평상'));
+  var lead=B.aShare>=50?B.bt.a:B.bt.b, diff=Math.abs(B.aShare-50)*2;
+  setTxt('fb-thirdk',urg?'긴급':(hot?'콤보 가속':'전국 실시간'));
+  setTxt('fb-thirdv',urg?'막판 10초 · 총력전':(hot?'버튼 발광 · 기여 강조':(lead.name+' 우세 · 차이 '+diff.toFixed(0)+'%p')));
   if(now>=B.endsAt){endBattle();return;}
   B.raf=requestAnimationFrame(frame);
 }
-function setTxt(id,v){var e=el(id);if(e)e.textContent=v;}
 function tickerBeat(){
   var t=el('fb-ticker'); if(!B||!t){cleanup();return;}
   var bt=B.bt, lead=B.aShare>=50?bt.a:bt.b, leadShare=Math.max(B.aShare,100-B.aShare), pool=[];
@@ -428,31 +453,36 @@ function endBattle(){
   var bt=B.bt, side=B.side, me=B.me, foe=B.foe;
   var contrib=Math.floor(B.tapsF), myShare=side==='a'?B.aShare:100-B.aShare, maxStreak=B.maxStreak;
   var newBest=contrib>(F.best||0); if(newBest)F.best=contrib; persist();
-  var title=titleForTaps(contrib), rank=rankEstimate(contrib), streak=F.streak;
-  var verdict=myShare>=53?{t:'우리 편이 전국을 먹었다! 🎉',c:'win'}:myShare<=47?{t:'오늘은 밀렸다… 내일 설욕 🔥',c:'lose'}:{t:'초접전 무승부 ⚔️',c:'tie'};
+  var title=titleForTaps(contrib), rank=rankEstimate(contrib), streak=F.streak, rs=Math.round(myShare);
+  var verdict=myShare>=53?{t:'우리 편이 전국을 먹었다 🎉',c:'win'}:myShare<=47?{t:'오늘은 밀렸다…<br>내일 설욕 🔥',c:'lose'}:{t:'초접전 무승부 ⚔️',c:'tie'};
+  var acc=verdict.c==='win'?'var(--me)':verdict.c==='lose'?'var(--foe)':'linear-gradient(90deg,var(--me) 0 50%,var(--foe) 50% 100%)';
   if(newBest){chord([523,659,784,1047]);buzz([20,40,20]);}
   if(verdict.c==='win'||newBest){skyConfetti([me.emoji,'✨'],[me.color,'#ffffff','#ffd76a']);}
   LAST={bt:bt,me:me,contrib:contrib,title:title,rank:rank};
   B=null;
   app.innerHTML=
-    '<div class="brandbar"><b>⚡ 광클대전</b><small>'+mdLabel(todayStr())+'</small></div>'+
-    '<h2 class="fb-verdict '+verdict.c+'">'+verdict.t+'</h2>'+
-    '<div class="fb-card" style="--c:'+me.color+';--foe:'+foe.color+'">'+
-      '<div class="fb-card-top"><span class="fb-card-emo">'+me.emoji+'</span>'+
-        '<div class="grow"><b>'+me.name+'</b><small>'+bt.q+'</small></div>'+
-        '<span class="fb-card-badge">'+title+'</span></div>'+
-      '<div class="fb-card-stats"><div><b>'+comma(contrib)+'</b><small>내 기여</small></div>'+
-        '<div><b>×'+comboMult(maxStreak).toFixed(1)+'</b><small>최고 콤보</small></div>'+
-        '<div><b>'+comma(rank)+'위</b><small>예상 전국</small></div></div>'+
-      '<div class="fb-card-gauge" style="background:'+foe.color+'"><i style="width:'+myShare.toFixed(1)+'%;background:'+me.color+'"></i></div>'+
-      '<div class="fb-card-foot"><span>'+me.emoji+' '+me.name+' '+myShare.toFixed(1)+'%</span><span class="fb-card-tag">#광클대전 #'+bt.tag+'</span></div>'+
-    '</div>'+
-    (newBest?'<div class="g-newbest">🏆 내 최고 기여 갱신!</div>':'<p class="hint" style="text-align:center;margin-top:10px">내 최고 기여 '+comma(F.best||0)+'</p>')+
-    (streak>1?'<p class="hint" style="text-align:center">🔥 '+streak+'일 연속 참전 중!</p>':'')+
-    '<div class="btn-row">'+
-      '<button class="btn btn-primary" onclick="SHARE()">📣 결과 자랑 + 친구 소환</button>'+
-      '<button class="btn" onclick="GO(\''+side+'\')">🔁 한 판 더</button>'+
-      '<button class="btn" onclick="intro()">⚡ 오늘의 대전</button>'+
+    '<div class="screen" style="--team-a:'+bt.a.color+';--team-b:'+bt.b.color+';--me:'+me.color+';--foe:'+foe.color+';--tapink:'+ink(me.color)+'">'+
+      '<div class="acc" style="background:'+acc+'"></div>'+
+      '<div class="hdr"><span class="brand">⚡ 광클대전</span><span class="mono">RESULT · '+mdShort(todayStr())+'</span></div>'+
+      '<h2 class="verdict">'+verdict.t+'</h2>'+
+      '<div class="rcard">'+
+        '<div class="frow"><span class="em">'+me.emoji+'</span><span class="nm">'+me.name+'</span><span class="rq">'+bt.q+'</span></div>'+
+        '<div class="rlbl">칭호</div><div class="title">'+title+'</div>'+
+        '<div style="margin-top:16px"><div class="brow"><span style="color:var(--me)">최종 '+rs+'%</span><span style="color:var(--foe)">'+(100-rs)+'%</span></div>'+
+          '<div class="gauge tall" style="margin-top:7px"><i style="width:'+myShare.toFixed(1)+'%;background:var(--me)"></i>'+
+            '<i style="width:'+(100-myShare).toFixed(1)+'%;background:var(--foe)"></i></div></div>'+
+      '</div>'+
+      '<div class="stats"><div><div class="k">내 기여</div><div class="v">'+comma(contrib)+'</div></div>'+
+        '<div><div class="k">최고 콤보</div><div class="v">×'+comboMult(maxStreak).toFixed(1)+'</div></div>'+
+        '<div><div class="k">예상 전국</div><div class="v">'+comma(rank)+'<small>위</small></div></div></div>'+
+      '<div class="tags"><span>#광클대전</span><span>#'+bt.tag+'</span></div>'+
+      (newBest?'<div class="newbest">🏆 내 최고 기여 갱신 · '+comma(contrib)+'</div>':'')+
+      (streak>1?'<div class="streak-chip">🔥 '+streak+'일 연속 참전 중</div>':'')+
+      '<div class="actions">'+
+        '<button class="btn btn-primary" style="color:'+ink(me.color)+'" onclick="SHARE()">📣 결과 자랑 + 친구 소환</button>'+
+        '<button class="btn btn-ghost" onclick="GO(\''+side+'\')">🔁 한 판 더</button>'+
+        '<button class="btn btn-ghost" onclick="intro()">⚡ 오늘의 대전</button>'+
+      '</div>'+
     '</div>';
 }
 

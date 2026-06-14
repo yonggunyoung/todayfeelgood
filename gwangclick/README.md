@@ -42,9 +42,19 @@
 | 도메인 | **dduckkit.com** | (별도) |
 | 저장 키 | `localStorage['gwangclick.v1']` | `naengbiseo.v1` |
 
+## 💰 광고 수익화 (보상형 · 옵트인)
+**보상형 광고만** 씁니다(배너·전면 없음 → 10대 이탈·정책 리스크 최소화).
+- 위치: **결과 화면 '📺 광고 보고 기여 2배 ⚡2X'** — 자발적. 보면 자랑 카드의 기여·등수·칭호가 2배로 커짐(밈 자랑과 시너지).
+- 자동 분기: **토스 안 → 토스 보상형 SDK / 웹 → 웹 보상형 훅 / 둘 다 없으면 하우스(데모) 광고**로 흐름 유지(지금 바로 테스트 가능).
+- **실광고 전환** — `index.html`/`offline.html` 상단 `AD` 객체만 채우면 됨:
+  - 토스: 입점 후 콘솔 광고단위 ID → `AD.tossRewardUnitId = '...'`
+  - 웹: 제공자 보상형 함수 연결 → `AD.webRewarded = function(o){ /* ... */ return Promise; }` (해결값 `true`=완주보상 · `false`=중도이탈 · `null`=하우스폴백)
+- ⚠️ **비개인화 광고 필수**: 10대 대상이라 `AD.nonPersonalized = true`(기본값). 각 광고 제공자 콘솔에서도 **child-directed / non-personalized** 플래그를 켜세요(청소년보호·COPPA).
+- **배틀(60초) 화면엔 광고 없음** — 탭 영역 오탭 방지·정책 준수.
+
 ## 🟦 토스 미니앱 입점 메모
 - 토스 WebView SDK 환경이면 `toss.js`가 자동 감지해 **햅틱**을 네이티브로 처리(밖에선 `navigator.vibrate` 폴백).
-- 보상형 광고 등 수익화는 토스 콘솔 광고 단위 ID를 발급받아 `toss.js`의 `rewardedAd(adUnitId)` 호출로 연결.
+- 보상형 광고는 위 `AD.tossRewardUnitId`에 토스 콘솔 광고단위 ID를 넣으면 `toss.js`의 `rewardedAd()`로 자동 연결됩니다.
 
 ## 🎨 디자인 리스킨
 진영색은 런타임에 `--team-a` / `--team-b` / `--me`로 주입됩니다(떡밥마다 자동 교체). 베이스·텍스트·보더는 진영색 비의존이라, 두 색만 바꿔도 전체 톤이 유지됩니다.

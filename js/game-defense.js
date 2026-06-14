@@ -118,7 +118,7 @@ export function gameDefense() {
       </div>
       <div class="gx-shopbar">
         <button class="gx-speed" id="def-speed" onclick="UI.defSpeed()">⏩ 1배속</button>
-        <button class="gx-adcoin" onclick="UI.defAdCoin()">📺 광고 보고 코인</button>
+        <button class="gx-adcoin" onclick="UI.defAdSkill()">📺 광고 보고 스페셜 스킬</button>
         <span class="gx-diff" id="def-difflbl"></span>
       </div>
       <div class="gx-shop" id="def-shop"></div>
@@ -421,10 +421,9 @@ export function defRevive() {
   });
 }
 export function defGiveUp() { document.getElementById('def-rev')?.remove(); endGame(); }
-export function defAdCoin() {
+export function defAdSkill() {
   if (!D || !D.running) return;
-  const reward = Math.max(25, Math.round(D.wave * 18 * D.diff.coin));
-  stageAd(`광고 보고 보너스 코인 +${reward}`, () => { D.coins += reward; D.coinsFly.push({ x: D.W / 2, y: 40, t: 0, val: 0 }); D.fx.add(D.W / 2, 60, `+${reward}🪙`, { color: '#ffe04a', size: 20 }); });
+  stageAd('광고 보고 스페셜 스킬 3택', () => bossDraft()); // 광고 → 스킬 드래프트(코인 대신 스킬)
 }
 
 // 등급 가중 추첨 (해당 등급 후보 中)

@@ -9,7 +9,7 @@ import { AI_ENDPOINT } from './config.js';
 import { canListen, speak, stopSpeak, startListen, stopListen, isListening, parseCommand } from './voice.js';
 import { earn, spend, refund, EARN, earnedToday, SHOP, adFreeNow, gameBest } from './points.js';
 import { initGames, openGames, GAMES, gameFresh, gameVoice, gameVoicePass, gameDouble, setGameDiff } from './games.js';
-import { gameDefense, defBuy, defStart, defSpeed, defPick, defRevive, defGiveUp, defAdSkip, defAdSkill, defResume, defDraftAd, defWallMode, defElem, defMidSkill, defMidSkip } from './game-defense.js';
+import { gameDefense, defBuy, defStart, defSpeed, defPick, defRevive, defGiveUp, defAdSkip, defAdSkill, defResume, defDraftAd, defWallMode, defElem, defMidSkill, defMidSkip, defActive } from './game-defense.js';
 import { gamePuzzle } from './game-puzzle.js';
 import { gameGomoku, gomokuUndo, gomokuHintAd } from './game-gomoku.js';
 import { gameQuiz, quizPick, quizNext, quizReveal, quizRevealAll, quizFinish } from './game-quiz.js';
@@ -161,7 +161,7 @@ function attachSheetDrag() {
   const end = () => {
     if (!dragging) return;
     dragging = false; sheet.style.transition = ''; sheet.style.opacity = '';
-    if (dy > 96) { sheet.style.transform = 'translateY(100%)'; UI.closeSheet(); }
+    if (dy > 96) { UI.closeSheet(); if (sheet.isConnected) sheet.style.transform = ''; } // 가드로 안 닫혔으면 제자리로
     else sheet.style.transform = '';
   };
   sheet.addEventListener('pointerup', end);
@@ -169,13 +169,34 @@ function attachSheetDrag() {
 }
 let sheetPushed = false;   // 뒤로가기로 시트가 닫히도록 히스토리에 한 칸 쌓아둠
 let ignoreNextPop = false;
+let closeForce = false; // 게임 나가기 확인을 거친 강제 종료
 UI.closeSheet = (fromPop = false) => {
+  // 게임 진행 중엔 실수로 빠져나가지 않도록 경고 (이어하기로 저장됨)
+  if (!closeForce && document.querySelector('.gx-def') && defActive()) {
+    if (fromPop && !sheetPushed) { history.pushState({ nb: 'sheet' }, ''); sheetPushed = true; } // 뒤로가기로 들어와도 다음 back까지 가드
+    confirmExitGame();
+    return;
+  }
   $('#modal-root').innerHTML = '';
   scanFile = null; scanResults = null; deductCtx = null; draft = null; qaLoc = null;
   vc = null; stopListen(); stopSpeak();
   if (sheetPushed && !fromPop) { ignoreNextPop = true; history.back(); }
   sheetPushed = false;
 };
+// 게임 나가기 확인 — 캔버스를 살린 채 스테이지 위 오버레이로
+function confirmExitGame() {
+  const stage = document.querySelector('.gx-def .gx-stage'); if (!stage) { closeForce = true; UI.closeSheet(); closeForce = false; return; }
+  if (stage.querySelector('.def-exit')) return;
+  const ov = document.createElement('div'); ov.className = 'draft-overlay def-exit';
+  ov.innerHTML = `<div class="draft-in">
+    <div class="draft-title">나가시겠어요?</div>
+    <p>진행 상황은 <b>이어서 하기</b>로 저장돼요</p>
+    <button class="gx-btn-go" onclick="UI.exitGameStay()">🛡️ 계속 지키기</button>
+    <button class="qz-skip" onclick="UI.exitGameLeave()">나가기 (저장됨)</button></div>`;
+  stage.appendChild(ov);
+}
+UI.exitGameStay = () => { document.querySelector('.def-exit')?.remove(); };
+UI.exitGameLeave = () => { document.querySelector('.def-exit')?.remove(); closeForce = true; UI.closeSheet(); closeForce = false; };
 
 function stampFor(days) {
   if (days <= 1) return `<span class="stamp stamp-danger">${days < 0 ? '기한지남' : 'D-' + Math.max(0, days)}</span>`;
@@ -1088,6 +1109,17 @@ UI.gameFull = () => {
   try { if (document.fullscreenElement) (document.exitFullscreen || document.webkitExitFullscreen).call(document); else (el.requestFullscreen || el.webkitRequestFullscreen).call(el); }
   catch { toast('이 브라우저는 전체화면을 지원하지 않아요'); }
 };
+// 전체화면에서도 타이머 칩이 보이도록 — 전체화면 요소 안/밖으로 옮겨 붙임
+function relocateTimerChip() {
+  const chip = $('#timer-chip'); if (!chip) return;
+  const host = document.fullscreenElement || document.body;
+  if (chip.parentElement !== host) {
+    host.appendChild(chip);
+    if (timerPos) { chip.style.left = timerPos.x + 'px'; chip.style.top = timerPos.y + 'px'; chip.style.right = 'auto'; chip.style.bottom = 'auto'; }
+  }
+}
+document.addEventListener('fullscreenchange', relocateTimerChip);
+document.addEventListener('webkitfullscreenchange', relocateTimerChip);
 UI.setGameDiff = (d) => setGameDiff(d);
 UI.gameSetDiff = (d, key) => { setGameDiff(d); if (key && typeof UI[key] === 'function') UI[key](); };
 UI.gameGomoku = () => gameGomoku();
@@ -1565,7 +1597,7 @@ function startKitchenTimer(min) {
   if (!chip) {
     chip = document.createElement('div');
     chip.id = 'timer-chip';
-    document.body.appendChild(chip);
+    (document.fullscreenElement || document.body).appendChild(chip); // 전체화면 중엔 그 안에 붙여 보이게
     if (timerPos) { chip.style.left = timerPos.x + 'px'; chip.style.top = timerPos.y + 'px'; chip.style.right = 'auto'; chip.style.bottom = 'auto'; }
     makeTimerDraggable(chip);
   }

@@ -124,6 +124,9 @@ const SP = (id) => (D.spec[id] ? D.spec[id].val : 0);
 let D = null;
 let savedRun = null; // 나갔다 들어와도 이어서 하기
 
+// 게임이 진행 중인지 (나가기 경고용) — 시작 전 화면/종료 후엔 false
+export function defActive() { return !!(D && !D.over && D.wave >= 1); }
+
 export function gameDefense() {
   const ui = gameUI();
   const resume = (savedRun && !savedRun.over)
@@ -136,16 +139,22 @@ export function gameDefense() {
       </div>
       <div class="gx-stage"><canvas id="def-c"></canvas>
         <div class="gx-start" id="def-start">
-          <div class="gx-start-in">
-            <div style="font-size:2.4rem">🧊🛡️</div>
-            <b>냉장고가 알아서 쏩니다</b>
-            <p>강화 안 하면 못 버텨요. 보스를 잡으면 <b>스페셜 스킬</b>로 무한 성장!</p>
-            <p class="diff-hint">🔨화염❄️ 공격 속성을 바꿔 적의 <b>약점(상극)</b>을 노리면 피해 ↑ · 50웨이브부턴 <b>오염·좀비화</b></p>
+          <div class="gx-start-in def-opening">
+            <div class="op-foes">🦠 🧟 ❄️ 🗑️ 🦴</div>
+            <div class="op-hero">🧊🛡️</div>
+            <b class="op-title">신선도 방어 작전</b>
+            <div class="op-story">
+              <p>한밤, 문틈으로 스며든 <b>곰팡이 군단</b>.</p>
+              <p>상온의 부패균·음식물 쓰레기, 정체불명의 <b>뼈다귀</b>까지—</p>
+              <p>바깥의 오염이 마지막 보루, <b>냉장고</b>로 몰려온다.</p>
+              <p>냉장고는 스스로 싸운다. 당신은 그 힘을 <b>강화</b>하라.</p>
+              <p class="op-warn">⚠ 신선도가 0이 되면… 모든 것이 상한다.</p>
+            </div>
             ${resume}
             <div class="diff-row">
               ${Object.values(DIFF).map((d) => `<button class="diff-btn" style="--dc:${d.color}" onclick="UI.defStart('${d.key}')"><b>${d.name}</b><small>${d.sub}</small></button>`).join('')}
             </div>
-            <p class="diff-hint">난이도 선택 · 게임 중 ⏩ 2·3배속 · 나가도 이어서 가능</p>
+            <p class="diff-hint">난이도를 고르면 방어 개시 · 게임 중 ⏩ 2·3배속 · 🔨🔥❄️ 속성 상극 · 50웨이브부터 <b>공포·좀비화</b></p>
           </div>
         </div>
       </div>

@@ -79,6 +79,21 @@ function cellScore(b, x, y, who) {
   }
   return total;
 }
+// 한 칸에 who가 두면 생기는 "강한 위협" 방향 수 (열린4=2, 열린3=1) → 2 이상이면 양수겸장(포크)
+function threatCount(b, x, y, who) {
+  let t = 0;
+  for (const [dx, dy] of DIRS) {
+    let cnt = 1, open = 0;
+    for (const dir of [1, -1]) {
+      let s = 1; for (; s < WIN; s++) { const nx = x + dx * dir * s, ny = y + dy * dir * s; if (inB(nx, ny) && b[idx(nx, ny)] === who) cnt++; else break; }
+      const ex = x + dx * dir * s, ey = y + dy * dir * s; if (inB(ex, ey) && b[idx(ex, ey)] === 0) open++;
+    }
+    if (cnt >= 4 && open >= 1) t += 2;        // 열린 4 (막기 어려움)
+    else if (cnt === 3 && open === 2) t += 1; // 열린 3
+  }
+  return t;
+}
+const isFork = (b, x, y, who) => threatCount(b, x, y, who) >= 2;
 // 돌 주변(한 칸 이내) 빈칸 후보
 function genCands(b) {
   const cand = [];
@@ -99,20 +114,32 @@ function aiMove() {
   // 1) 즉시 이기는 수  2) 상대 즉승 방어 (난이도 무관 — 기본기)
   for (const c of cands) if (cellScore(b, c.x, c.y, 2) >= 1000000) { place(c.x, c.y, 2); return; }
   for (const c of cands) if (cellScore(b, c.x, c.y, 1) >= 1000000) { place(c.x, c.y, 2); return; }
-  // 난이도: 하=방어 약·랜덤↑, 중=균형, 상=공수 강 + 2수 앞 예측(무 노이즈)
-  const defW = d === 'hard' ? 1.25 : d === 'normal' ? 1.0 : 0.72;
+  if (d !== 'easy') {
+    // 3) 내가 양수겸장(포크)을 만들 수 있으면 — 사실상 승리 확정
+    for (const c of cands) { b[idx(c.x, c.y)] = 2; const f = isFork(b, c.x, c.y, 2); b[idx(c.x, c.y)] = 0; if (f) { place(c.x, c.y, 2); return; } }
+    // 4) 상대의 열린4·포크를 미리 차단 (그 자리에 상대가 두면 막기 힘든 지점 선점)
+    let blk = null, bs = 1;
+    for (const c of cands) { b[idx(c.x, c.y)] = 1; const tc = threatCount(b, c.x, c.y, 1); b[idx(c.x, c.y)] = 0; if (tc >= 2 && tc > bs) { bs = tc; blk = c; } }
+    if (blk) { place(blk.x, blk.y, 2); return; }
+  }
+  // 난이도: 하=방어 약·랜덤↑, 중=균형+기본 수읽기, 상=공수 강 + 2수 앞 예측(무 노이즈)
+  const defW = d === 'hard' ? 1.4 : d === 'normal' ? 1.0 : 0.72;
   const noise = d === 'hard' ? 0 : d === 'normal' ? 45 : 240;
   for (const c of cands) c.base = cellScore(b, c.x, c.y, 2) + cellScore(b, c.x, c.y, 1) * defW;
   if (d === 'hard') {
-    // 상위 후보에 대해 내가 둔 뒤 상대 최선 응수의 위협을 차감 → 함정·양수겸장 회피
+    // 상위 후보에 내가 둔 뒤, 상대 최선 응수(위협·포크 포함)를 차감 → 함정·되치기 회피
     cands.sort((a, b2) => b2.base - a.base);
-    const top = cands.slice(0, 8);
+    const top = cands.slice(0, 12);
     for (const c of top) {
       b[idx(c.x, c.y)] = 2;
       let opp = 0;
-      for (const o of genCands(b)) { const s = cellScore(b, o.x, o.y, 1); if (s > opp) opp = s; }
+      for (const o of genCands(b)) {
+        let s = cellScore(b, o.x, o.y, 1);
+        b[idx(o.x, o.y)] = 1; if (isFork(b, o.x, o.y, 1)) s += 80000; b[idx(o.x, o.y)] = 0;
+        if (s > opp) opp = s;
+      }
       b[idx(c.x, c.y)] = 0;
-      c.look = c.base - opp * 0.85;
+      c.look = c.base - opp * 0.9;
     }
     top.sort((a, b2) => b2.look - a.look);
     place(top[0].x, top[0].y, 2);

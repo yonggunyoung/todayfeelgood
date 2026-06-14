@@ -8,8 +8,8 @@ import { enemySprite, fridgeSprite, itemSprite, drawSprite } from './pixel.js';
 // ── 밸런스: 100+ 웨이브용 완만한 곡선. 초반은 아주 너그럽게(잘 안 죽음), 후반은 업그레이드로 따라잡기. ──
 const BALANCE = {
   enemy: {
-    baseHP: 7, hpGrow: 1.098, speedBase: 16, speedGrow: 1.014, speedCap: 46,
-    countBase: 4, countGrow: 1.25, countCap: 36,
+    baseHP: 7, hpGrow: 1.107, speedBase: 16, speedGrow: 1.015, speedCap: 48,
+    countBase: 4, countGrow: 1.28, countCap: 40,
     // dmg=냉장고에 닿을 때 깎는 신선도 (작게 — 누적 실수만 위험). from=등장 시작 웨이브.
     // elem=속성(상극 시스템): mold곰팡이 / bug벌레 / frozen냉동 / waste음식물 / bone뼈
     types: {
@@ -25,7 +25,7 @@ const BALANCE = {
       brute:  { hpx: 13,   spx: 0.36, dmg: 11, r: 30, from: 30, w: 0.3, elem: 'waste',  name: '거대 폐기물' },
     },
   },
-  economy: { scorePerHP: 0.3 },
+  economy: { scorePerHP: 0.27 },
   weapon: { dmg: 4, fireRate: 1.5, fireRateMax: 7, projSpeed: 500, projR: 8 },
   // boss=10웨이브 대형보스, mid=5웨이브 중간보스(스킬은 짧은 광고로 획득)
   boss: { every: 10, hpMult: 17, dmg: 18, reward: 90, midEvery: 5, midHpMult: 6, midDmg: 10, midReward: 45 },
@@ -88,36 +88,42 @@ const counters = (en, atk) => { const a = atk || D.atkElem; return !!(en.elem &&
 const SIZE_BASE = 18;
 const sizeDmgMul = (en) => (en.boss ? 1 : clamp(Math.pow(SIZE_BASE / en.r, 0.85), 0.55, 1.6));
 
-// ── 스페셜 스킬(로그라이크) — 등급: 일반/레어/유니크 + 트랩(쓰레기). 보스 처치 시 3택, 수치 랜덤 ──
+// ── 스페셜 스킬(로그라이크) — 등급 C/B/A/S. 드래프트 3택: A급 1개 보장 + S급 확률 등장. 수치 랜덤 ──
 const rnd = (a, b) => a + Math.random() * (b - a);
-const RARITY = { common: { w: 60, label: '일반', col: '#9fb2d6' }, rare: { w: 26, label: '레어', col: '#73cbff' }, unique: { w: 10, label: '유니크', col: '#ffe04a' }, mythic: { w: 22, label: '광고한정', col: '#ff8adf' }, junk: { w: 4, label: '트랩', col: '#7d6aa6' } };
+const RARITY = {
+  common: { grade: 'C', label: 'C', col: '#9fb2d6' },
+  rare:   { grade: 'B', label: 'B', col: '#73cbff' },
+  unique: { grade: 'A', label: 'A', col: '#ffe04a' },
+  mythic: { grade: 'S', label: 'S', col: '#ff8adf' },
+  junk:   { grade: 'C', label: '⚠', col: '#7d6aa6' },
+};
 const SPECIALS = [
-  // 일반
+  // C급 (일반)
   { id: 'power', r: 'common', icon: '⚡', name: '고출력 회로', max: 99, roll: () => Math.round(rnd(12, 22)), desc: (v) => `데미지 +${v}%` },
   { id: 'overload', r: 'common', icon: '🔥', name: '과부하', max: 99, roll: () => Math.round(rnd(12, 22)), desc: (v) => `연사속도 +${v}%` },
   { id: 'gold', r: 'common', icon: '🪙', name: '황금 회로', max: 99, roll: () => Math.round(rnd(18, 35)), desc: (v) => `코인 +${v}%` },
   { id: 'bigshot', r: 'common', icon: '🔵', name: '대구경탄', max: 99, roll: () => Math.round(rnd(14, 26)), desc: (v) => `발사체 크기·피해 +${v}%` },
   { id: 'thorn', r: 'common', icon: '🌵', name: '서리 가시', max: 99, roll: () => Math.round(rnd(6, 14)), desc: (v) => `근처 적 초당 ${v} 피해` },
-  // 레어
+  // B급 (희귀)
   { id: 'critdmg', r: 'rare', icon: '💥', name: '치명 강화', max: 99, roll: () => Math.round(rnd(40, 75)), desc: (v) => `치명타 피해 +${v}%` },
   { id: 'pierceUp', r: 'rare', icon: '➶', name: '관통 코어', max: 6, roll: () => 1, desc: (v) => `관통 +${v}` },
   { id: 'fire', r: 'rare', icon: '🔥', name: '화염탄', max: 99, roll: () => Math.round(rnd(22, 40)), desc: (v) => `명중 시 화상(초당 ${v}%, 3초)` },
   { id: 'frost', r: 'rare', icon: '❄️', name: '빙결탄', max: 60, roll: () => Math.round(rnd(14, 26)), desc: (v) => `명중 시 ${v}% 둔화` },
   { id: 'vamp', r: 'rare', icon: '🩸', name: '흡혈 코어', max: 40, roll: () => Math.round(rnd(8, 15)), desc: (v) => `처치 시 ${v}% 확률 신선도+1` },
-  { id: 'splash', r: 'rare', icon: '💥', name: '폭발탄', max: 99, roll: () => Math.round(rnd(20, 36)), desc: (v) => `명중 시 주변 적에게 ${v}% 광역 피해` },
-  // 유니크 (강력·희귀)
+  { id: 'splash', r: 'rare', icon: '💥', name: '폭발탄', max: 99, roll: () => Math.round(rnd(18, 30)), desc: (v) => `명중 시 주변 적에게 ${v}% 광역 피해` },
+  // A급 (고급) — 드래프트마다 최소 1개 보장
   { id: 'double', r: 'unique', icon: '➿', name: '더블샷', max: 3, roll: () => 1, desc: (v) => `발사마다 +${v}발 부채꼴` },
   { id: 'volley', r: 'unique', icon: '✳️', name: '일제 사격', max: 3, roll: () => 1, desc: (v) => `동시 타겟 +${v}` },
   { id: 'exec', r: 'unique', icon: '☠️', name: '처형 칼날', max: 25, roll: () => Math.round(rnd(8, 15)), desc: (v) => `체력 ${v}% 이하 즉사` },
   { id: 'splitp', r: 'unique', icon: '💠', name: '분열탄', max: 2, roll: () => 1, desc: (v) => `명중 시 파편 ${v}개` },
-  // 트랩(쓰레기) — 그럴듯하지만 함정. 승부욕·리스크 다양화
+  // 트랩 — 그럴듯하지만 함정. 승부욕·리스크
   { id: 'glass', r: 'junk', icon: '🩹', name: '유리 대포', max: 1, roll: () => 60, desc: () => '데미지 +60%, 단 최대 신선도 −30', trap: true },
   { id: 'rush', r: 'junk', icon: '🌀', name: '폭주 회로', max: 1, roll: () => 40, desc: () => '연사 +40%, 단 코인 획득 −25%', trap: true },
   { id: 'gamble', r: 'junk', icon: '🎲', name: '도박수', max: 1, roll: () => 1, desc: () => '50%: 데미지 +80% / 50%: 꽝(+5%)', trap: true },
-  // 광고 한정 — 보스 일반 드래프트엔 안 나오고 광고에서만 등장하는 강력 스킬
-  { id: 'overdrive', r: 'mythic', adOnly: true, icon: '🌟', name: '광폭 코어', max: 99, roll: () => Math.round(rnd(32, 46)), desc: (v) => `데미지 +${v}% · 연사 +${Math.round(v * 0.6)}%` },
-  { id: 'fortress', r: 'mythic', adOnly: true, icon: '🏰', name: '철벽 단열', max: 99, roll: () => Math.round(rnd(80, 130)), desc: (v) => `최대 신선도 +${v} · 초당 회복↑` },
-  { id: 'annihilate', r: 'mythic', adOnly: true, icon: '💀', name: '말살 칼날', max: 45, roll: () => Math.round(rnd(24, 34)), desc: (v) => `체력 ${v}% 이하 즉사(보스 제외)` },
+  // S급 (전설) — 강력하지만 너프됨. 보스 구간부터, A급 보장과 별개로 30% 확률 등장
+  { id: 'overdrive', r: 'mythic', icon: '🌟', name: '광폭 코어', max: 99, roll: () => Math.round(rnd(16, 26)), desc: (v) => `데미지 +${v}% · 연사 +${Math.round(v * 0.5)}%` },
+  { id: 'fortress', r: 'mythic', icon: '🏰', name: '철벽 단열', max: 99, roll: () => Math.round(rnd(45, 75)), desc: (v) => `최대 신선도 +${v} · 초당 회복↑` },
+  { id: 'annihilate', r: 'mythic', icon: '💀', name: '말살 칼날', max: 45, roll: () => Math.round(rnd(14, 22)), desc: (v) => `체력 ${v}% 이하 즉사(보스 제외)` },
 ];
 const SP_BY = Object.fromEntries(SPECIALS.map((s) => [s.id, s]));
 const SP = (id) => (D.spec[id] ? D.spec[id].val : 0);
@@ -162,7 +168,7 @@ export function gameDefense() {
       <div class="gx-shopbar">
         <button class="gx-speed" id="def-speed" onclick="UI.defSpeed()">⏩ 1배속</button>
         <button class="gx-elem" id="def-elem" onclick="UI.defElem()">🔨 물리</button>
-        <button class="gx-adcoin" onclick="UI.defAdSkill()">📺 스페셜</button>
+        <button class="gx-adcoin" id="def-special" onclick="UI.defAdSkill()">✨ 비책 (1)</button>
         <button class="gx-wall" id="def-wall" style="display:none" onclick="UI.defWallMode()">🧱 벽 설치</button>
         <span class="gx-diff" id="def-difflbl"></span>
       </div>
@@ -177,11 +183,11 @@ export function gameDefense() {
   const { ctx } = setupCanvas(canvas, cssW, cssH);
 
   D = {
-    ctx, canvas, W: cssW, H: cssH, diff: DIFF.normal, speed: 1, spec: {}, atkElem: 'blunt', turretElem: [],
+    ctx, canvas, W: cssW, H: cssH, diff: DIFF.normal, speed: 1, spec: {}, atkElem: 'blunt', turretElem: [], special: { charges: 1 },
     enemies: [], shots: [], coinsFly: [], parts: new Particles(320), fx: new Floaters(), shake: new Shake(),
     lv: { damage: 0, fireRate: 0, projspd: 0, multiShot: 0, pierce: 0, crit: 0, chain: 0, wall: 0, homing: 0, orbital: 0, laser: 0, bomb: 0, sideTurret: 0, frostAura: 0, regen: 0, maxHp: 0, boost: 0 },
     walls: [], wallUsed: 0, placingWall: false,
-    coins: 0, score: 0, kills: 0, bossesKilled: 0,
+    coins: 0, score: 0, kills: 0, bossesKilled: 0, midKilled: 0, revived: false, pendingMidAd: false,
     wave: 0, toSpawn: 0, spawnGap: 1, since: 0,
     hp: 100, maxHp: 100,
     fireCd: 0, sideCd: 0, homingCd: 0, laserCd: 0, bombCd: 0, orbAng: 0, beams: [], rings: [], chains: [],
@@ -267,15 +273,15 @@ function updateWallBtn() {
   const n = wallAvail();
   b.style.display = (D.lv.wall > 0) ? '' : 'none';
   if (D.placingWall) b.textContent = '🧱 터치해 설치!';
-  else if (n <= 0) b.textContent = '🧱 📺 충전'; // 설치권 소진 → 광고 충전 유도
+  else if (n <= 0) b.textContent = '🧱 충전'; // 설치권 소진 → 충전
   else b.textContent = `🧱 벽 설치 (${n})`;
   b.classList.toggle('arming', D.placingWall);
   b.classList.toggle('adcharge', !D.placingWall && n <= 0);
 }
 export function defWallMode() {
   if (!D || !D.running) return;
-  if (wallAvail() <= 0) { // 설치권 소진 → 광고 보고 충전(벽 갱신)
-    stageAd('광고 보고 칸막이 설치권 충전', () => {
+  if (wallAvail() <= 0) { // 설치권 소진 → 잠깐 보고 충전(벽 갱신)
+    stageAd('잠깐 보고 칸막이 설치권 충전', () => {
       D.wallUsed = 0; updateWallBtn();
       D.fx.add(D.W / 2, D.H * 0.4, '🧱 설치권 충전!', { color: '#73cbff', size: 18, font: 'Jua' });
       chord([523, 659, 784]);
@@ -290,14 +296,14 @@ function snapshotRun() {
   if (!D || D.over || D.wave < 1) { savedRun = null; return; }
   savedRun = {
     diffKey: D.diff.key, speed: D.speed, lv: { ...D.lv }, spec: JSON.parse(JSON.stringify(D.spec)),
-    coins: D.coins, score: D.score, kills: D.kills, bossesKilled: D.bossesKilled, midKilled: D.midKilled, hp: D.hp, maxHp: D.maxHp, wave: D.wave, revived: D.revived, atkElem: D.atkElem, turretElem: [...(D.turretElem || [])],
+    coins: D.coins, score: D.score, kills: D.kills, bossesKilled: D.bossesKilled, midKilled: D.midKilled, hp: D.hp, maxHp: D.maxHp, wave: D.wave, revived: D.revived, atkElem: D.atkElem, turretElem: [...(D.turretElem || [])], special: { charges: D.special ? D.special.charges : 1 },
   };
 }
 export function defResume() {
   if (!savedRun || !D) return;
   const sv = savedRun; savedRun = null;
   document.getElementById('def-start')?.remove();
-  D.diff = DIFF[sv.diffKey] || DIFF.normal; D.speed = sv.speed || 1; D.spec = sv.spec || {}; D.atkElem = sv.atkElem || 'blunt'; D.turretElem = sv.turretElem || [];
+  D.diff = DIFF[sv.diffKey] || DIFF.normal; D.speed = sv.speed || 1; D.spec = sv.spec || {}; D.atkElem = sv.atkElem || 'blunt'; D.turretElem = sv.turretElem || []; D.special = sv.special || { charges: 1 };
   Object.assign(D.lv, sv.lv);
   D.coins = sv.coins; D.score = sv.score; D.kills = sv.kills; D.bossesKilled = sv.bossesKilled || 0; D.midKilled = sv.midKilled || 0;
   D.maxHp = sv.maxHp; D.hp = sv.hp; D.revived = sv.revived; D.wave = sv.wave - 1;
@@ -343,7 +349,7 @@ const maxed = (k) => BALANCE.up[k].max != null && D.lv[k] >= BALANCE.up[k].max;
 const locked = (k) => BALANCE.up[k].unlock != null && D.score < BALANCE.up[k].unlock && D.lv[k] === 0;
 const stat = {
   dmg: () => (BALANCE.weapon.dmg + D.lv.damage * BALANCE.up.damage.add) * (1 + (SP('power') + SP('bigshot') + SP('glass') + SP('gamble') + SP('overdrive')) / 100),
-  rate: () => Math.min(BALANCE.weapon.fireRateMax, (BALANCE.weapon.fireRate + D.lv.fireRate * BALANCE.up.fireRate.add) * (1 + (SP('overload') + SP('rush') + SP('overdrive') * 0.6) / 100)),
+  rate: () => Math.min(BALANCE.weapon.fireRateMax, (BALANCE.weapon.fireRate + D.lv.fireRate * BALANCE.up.fireRate.add) * (1 + (SP('overload') + SP('rush') + SP('overdrive') * 0.5) / 100)),
   multi: () => 1 + D.lv.multiShot + SP('volley'),
   pierce: () => D.lv.pierce + SP('pierceUp'),
   crit: () => Math.min(0.85, D.lv.crit * BALANCE.up.crit.add),
@@ -410,7 +416,7 @@ function spawnOne() {
   let r = Math.random() * total, key = pool[0][0], t = pool[0][1];
   for (let i = 0; i < pool.length; i++) { r -= wts[i]; if (r <= 0) { key = pool[i][0]; t = pool[i][1]; break; } }
   const n = t.group || 1; // 세균 떼는 한 번에 여러 마리
-  const dmg = Math.max(1, Math.round(t.dmg * D.diff.dmg * (1 + w * 0.02))); // 후반 침투 피해↑(긴장)
+  const dmg = Math.max(1, Math.round(t.dmg * D.diff.dmg * (1 + w * 0.026))); // 후반 침투 피해↑(긴장)
   for (let i = 0; i < n; i++) {
     D.enemies.push(mkEnemy(key, waveHP(w) * t.hpx, t.r, waveSpd(w) * t.spx, dmg, { split: t.split, elem: t.elem, affix: rollAffix(w) }));
   }
@@ -539,8 +545,8 @@ function killEnemy(en) {
     }
   }
   if (SP('vamp') && Math.random() < SP('vamp') / 100) { D.hp = Math.min(D.maxHp, D.hp + 1); D.fx.add(en.x, en.y - 8, '+1', { color: '#ff5d9e', size: 12 }); }
-  if (en.boss) { chord([523, 659, 784, 1047]); D.shake.add(12, 0.5); D.hitStop = 0.18; D.flash = 0.5; D.parts.burst(en.x, en.y, '#cf86ff', 40, { up: 60, life: 0.8, spread: 1.4 }); D.hp = Math.min(D.maxHp, D.hp + 12); D.bossesKilled += 1; D.pendingDraft = true; }
-  else if (en.midboss) { chord([523, 659, 784], 0.16); D.shake.add(8, 0.45); D.hitStop = 0.12; D.flash = 0.4; D.parts.burst(en.x, en.y, '#ffd24a', 26, { up: 50, life: 0.7, spread: 1.2 }); D.hp = Math.min(D.maxHp, D.hp + 8); D.midKilled = (D.midKilled || 0) + 1; D.pendingMidAd = true; }
+  if (en.boss) { chord([523, 659, 784, 1047]); D.shake.add(12, 0.5); D.hitStop = 0.18; D.flash = 0.5; D.parts.burst(en.x, en.y, '#cf86ff', 40, { up: 60, life: 0.8, spread: 1.4 }); D.hp = Math.min(D.maxHp, D.hp + 12); D.bossesKilled += 1; D.pendingDraft = true; if (D.special) { D.special.charges += 1; updateSpecialBtn(); } D.fx.add(en.x, en.y - 30, '✨ 비책 +1', { color: '#ff8adf', size: 15, font: 'Jua' }); } // 보스 처치 → 비책 기회 +1
+  else if (en.midboss) { chord([523, 659, 784], 0.16); D.shake.add(8, 0.45); D.hitStop = 0.12; D.flash = 0.4; D.parts.burst(en.x, en.y, '#ffd24a', 26, { up: 50, life: 0.7, spread: 1.2 }); D.hp = Math.min(D.maxHp, D.hp + 10); D.midKilled = (D.midKilled || 0) + 1; D.fx.add(en.x, en.y - 24, '+회복', { color: '#5ef0b0', size: 14, font: 'Jua' }); } // 중간보스 → 코인·회복만
   else beep(900 + Math.random() * 120, 0.05, 'triangle', 0.08);
   buzz(en.boss || en.midboss ? [18, 30, 18] : 5);
 }
@@ -570,18 +576,18 @@ function stageAd(label, onReward, secs = 15) {
   const stage = D.canvas.parentElement;
   const ov = document.createElement('div'); ov.className = 'draft-overlay'; ov.id = 'def-ad';
   ov.innerHTML = `<div class="draft-in">
-    <div class="draft-title">📺 광고</div><p>${label}</p>
-    <div class="adx-stage" style="margin:8px 0 10px"><div class="adx-slime">🧊</div><b>냉비서 프리미엄이 곧 나와요</b></div>
+    <div class="draft-title">✨ 잠깐의 응원</div><p>${label}</p>
+    <div class="adx-stage" style="margin:8px 0 10px"><div class="adx-slime">🧊</div><b>냉비서와 함께 — 잠시 기다려 주세요</b></div>
     <div class="ad-progress"><i id="def-adbar"></i></div>
-    <button class="gx-btn-go" id="def-adbtn" disabled>광고 시청 중… ${secs}초</button>
-    <button class="qz-skip" onclick="UI.defAdSkip()">건너뛰기 (보상 없음)</button></div>`;
+    <button class="gx-btn-go" id="def-adbtn" disabled>잠시만요… ${secs}초</button>
+    <button class="qz-skip" onclick="UI.defAdSkip()">그냥 닫기</button></div>`;
   stage.appendChild(ov);
   const bar = ov.querySelector('#def-adbar'); if (bar) { bar.style.transitionDuration = secs + 's'; requestAnimationFrame(() => { bar.style.width = '100%'; }); }
   let t = secs;
   D._adTimer = setInterval(() => {
     const b = document.getElementById('def-adbtn'); if (!b) { clearInterval(D._adTimer); return; }
-    t--; if (t > 0) { b.textContent = `광고 시청 중… ${t}초`; return; }
-    clearInterval(D._adTimer); b.disabled = false; b.textContent = '✅ 보상 받기'; b.onclick = () => UI_defAdDone();
+    t--; if (t > 0) { b.textContent = `잠시만요… ${t}초`; return; }
+    clearInterval(D._adTimer); b.disabled = false; b.textContent = '🎁 보상 받기'; b.onclick = () => UI_defAdDone();
   }, 1000);
 }
 function UI_defAdDone() {
@@ -608,8 +614,8 @@ function offerRevive() {
   const ov = document.createElement('div'); ov.className = 'draft-overlay'; ov.id = 'def-rev';
   ov.innerHTML = `<div class="draft-in">
     <div class="draft-title" style="color:#ff4d6a">냉장고 위기!</div>
-    <p>광고 한 번이면 <b>신선도 60% 회복</b>하고 이어서 버틸 수 있어요</p>
-    <button class="gx-btn-go" onclick="UI.defRevive()">📺 광고 보고 부활</button>
+    <p>잠깐의 응원이면 <b>신선도 60% 회복</b>하고 이어서 버틸 수 있어요</p>
+    <button class="gx-btn-go" onclick="UI.defRevive()">✨ 도움 받아 부활</button>
     <button class="qz-skip" onclick="UI.defGiveUp()">여기서 끝내기 (결과 보기)</button></div>`;
   stage.appendChild(ov);
   chord([196, 165, 131], 0.2, 'sawtooth');
@@ -617,7 +623,7 @@ function offerRevive() {
 export function defRevive() {
   document.getElementById('def-rev')?.remove();
   D._reviveAd = true;
-  stageAd('광고 보고 부활 — 신선도 60% 회복', () => {
+  stageAd('도움 받아 부활 — 신선도 60% 회복', () => {
     D.revived = true; D.over = false; D.hp = Math.round(D.maxHp * 0.6);
     D.enemies = []; D.shots = []; D.flash = 0.7; D.shake.add(8, 0.4);
     D.fx.add(D.W / 2, D.H / 2, '부활!', { color: '#5ef0b0', size: 26 });
@@ -626,77 +632,83 @@ export function defRevive() {
 export function defGiveUp() { document.getElementById('def-rev')?.remove(); endGame(); }
 export function defAdSkill() {
   if (!D || !D.running) return;
-  stageAd('광고 보고 강력 스킬 3택 (광고 한정)', () => bossDraft('ad')); // 광고 → 강력 스킬(광고 한정) 드래프트
+  if (!D.special || D.special.charges <= 0) { toastNo(); D.fx.add(D.W / 2, D.H * 0.4, '보스를 잡으면 비책을 또 받아요', { color: '#ffe04a', size: 13, font: 'Jua' }); return; }
+  D.special.charges -= 1; updateSpecialBtn();
+  stageAd('그대의 노력에 하늘도 감동 — 비책 3택', () => bossDraft('ad'), 12);
 }
-// 중간보스 격파 → 짧은 광고로 스페셜 스킬 획득
-function offerMidSkill() {
-  D.running = false; cancelAnimationFrame(D.raf);
-  const stage = D.canvas.parentElement;
-  const ov = document.createElement('div'); ov.className = 'draft-overlay'; ov.id = 'def-mid';
-  ov.innerHTML = `<div class="draft-in">
-    <div class="draft-title" style="color:#ffd24a">⚔ 중간보스 격파!</div>
-    <p><b>짧은 광고</b> 한 번이면 강력한 <b>스페셜 스킬</b>을 받아요</p>
-    <button class="gx-btn-go" onclick="UI.defMidSkill()">📺 짧은 광고 보고 스킬 받기</button>
-    <button class="qz-skip" onclick="UI.defMidSkip()">그냥 진행 (코인만)</button></div>`;
-  stage.appendChild(ov);
-  chord([523, 659, 784], 0.14);
+function updateSpecialBtn() {
+  const b = document.getElementById('def-special'); if (!b || !D) return;
+  const n = D.special ? D.special.charges : 0;
+  b.textContent = n > 0 ? `✨ 비책 (${n})` : '✨ 비책 (보스)';
+  b.classList.toggle('arming', n > 0);
+  b.style.opacity = n > 0 ? '' : '0.5';
 }
-export function defMidSkill() {
-  document.getElementById('def-mid')?.remove();
-  stageAd('짧은 광고 보고 강력 스킬 (광고 한정)', () => bossDraft('ad'), 8); // 짧은 광고(8초)
-}
-export function defMidSkip() {
-  document.getElementById('def-mid')?.remove();
-  D.running = true; D.last = performance.now(); D.raf = requestAnimationFrame(loop);
-}
+// 중간보스 처치 보상은 코인·회복(별도 보상창 없음). 아래 둘은 main.js 임포트 호환용(미사용).
+function offerMidSkill() { D.pendingMidAd = false; D.running = true; D.last = performance.now(); D.raf = requestAnimationFrame(loop); }
+export function defMidSkill() { document.getElementById('def-mid')?.remove(); if (D) { D.running = true; D.last = performance.now(); D.raf = requestAnimationFrame(loop); } }
+export function defMidSkip() { document.getElementById('def-mid')?.remove(); if (D) { D.running = true; D.last = performance.now(); D.raf = requestAnimationFrame(loop); } }
 
-// 등급 가중 추첨 (해당 등급 후보 中)
-function pickByRarity(bag) {
-  const tot = bag.reduce((s, sp) => s + RARITY[sp.r].w, 0);
-  let r = Math.random() * tot;
-  for (const sp of bag) { r -= RARITY[sp.r].w; if (r <= 0) return sp; }
-  return bag[0];
-}
 function makeDraftCardData(s) {
   let val = s.roll();
   if (s.id === 'gamble') val = Math.random() < 0.5 ? 80 : 5; // 도박수 즉시 판정
   return { id: s.id, r: s.r, icon: s.icon, name: s.name, val, desc: s.desc, trap: s.trap };
 }
-/* ── 보스 처치 → 스페셜 스킬 3택. mode='ad'면 광고 한정 강력 스킬 풀(캔버스 오버레이) ── */
+// 드래프트 3택 — 비책(ad)만 A급 1개 보장 + S 30%(보스 구간부터). 무료 보스 드래프트는 B·C만(약)
+function buildDraft(opts) {
+  const o = opts || {};
+  const avail = SPECIALS.filter((s) => !D.spec[s.id] || D.spec[s.id].lv < (s.max || 99));
+  const grade = (s) => RARITY[s.r].grade;
+  const pool = (g) => avail.filter((s) => !s.trap && grade(s) === g);
+  const traps = avail.filter((s) => s.trap);
+  const picks = [];
+  const take = (arr) => (arr.length ? arr.splice(Math.floor(Math.random() * arr.length), 1)[0] : null);
+  if (o.allowAS) {
+    const Spool = D.wave >= 10 ? pool('S') : [];
+    if (Spool.length && Math.random() < (o.sChance || 0)) { const s = take(Spool); if (s) picks.push(s); } // S 30%
+    if (o.guaranteeA) { const s = take(pool('A')); if (s) picks.push(s); } // A급 1개 보장(비책 한정)
+  }
+  const rest = [...pool('B'), ...pool('B'), ...pool('C'), ...pool('C')];
+  if (o.allowAS) rest.push(...pool('A'));
+  if (Math.random() < 0.2 && traps.length) rest.push(traps[Math.floor(Math.random() * traps.length)]);
+  while (picks.length < 3 && rest.length) { const s = take(rest); if (s && !picks.includes(s)) picks.push(s); }
+  if (picks.length < 3) { const left = avail.filter((s) => !picks.includes(s)); while (picks.length < 3 && left.length) picks.push(take(left)); }
+  for (let i = picks.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [picks[i], picks[j]] = [picks[j], picks[i]]; }
+  return picks.slice(0, 3).map(makeDraftCardData);
+}
+/* ── 스킬 3택 — 보스 처치=무료(B·C 위주), 비책(ad)=강(A 보장·S 30%). 캔버스 오버레이 ── */
 function bossDraft(mode) {
   D.running = false; cancelAnimationFrame(D.raf);
   const ad = mode === 'ad';
-  let bag = SPECIALS.filter((s) => !D.spec[s.id] || D.spec[s.id].lv < (s.max || 99));
-  bag = ad ? bag.filter((s) => s.adOnly || s.r === 'unique') : bag.filter((s) => !s.adOnly); // 강력 스킬은 광고에서만
-  if (!bag.length) bag = SPECIALS.filter((s) => !D.spec[s.id] || D.spec[s.id].lv < (s.max || 99)); // 다 찼으면 전체에서
-  const picks = [];
-  for (let i = 0; i < 3 && bag.length; i++) { const s = pickByRarity(bag); bag = bag.filter((x) => x !== s); picks.push(makeDraftCardData(s)); }
-  D.draft = picks;
+  D.draft = buildDraft(ad ? { sChance: 0.30, guaranteeA: true, allowAS: true } : {});
+  if (!D.draft.length) { D.draft = null; D.running = true; D.last = performance.now(); D.raf = requestAnimationFrame(loop); return; } // 모든 스킬 만렙 → 드래프트 생략(소프트락 방지)
   chord([659, 880, 1175], 0.16); buzz([20, 40, 20]);
   const stage = D.canvas.parentElement;
   const ov = document.createElement('div'); ov.className = 'draft-overlay'; ov.id = 'def-draft';
+  const charges = D.special ? D.special.charges : 0;
   ov.innerHTML = `
     <div class="draft-in">
-      <div class="draft-title">${ad ? '✨ 광고 한정 강력 스킬!' : '⭐ 보스 격파!'}</div>
-      <p>${ad ? '광고로만 나오는 <b>강력한 스킬</b> 3택' : '스페셜 스킬 <b>3택</b> — 등급·수치 랜덤'}</p>
+      <div class="draft-title">${ad ? '✨ 하늘의 비책' : '⭐ 보스 격파!'}</div>
+      <p>${ad ? '그대의 노력에 하늘도 감동 — <b>A급 보장 · S 등장</b>' : '스페셜 스킬 <b>3택</b> (더 강한 비책은 ✨)'}</p>
       <div class="draft-row">
         ${D.draft.map((s, i) => {
           const cur = D.spec[s.id] ? D.spec[s.id].val : 0; const rr = RARITY[s.r];
           return `<button class="draft-card r-${s.r}" style="--rc:${rr.col}" onclick="UI.defPick(${i})">
             <span class="draft-ico">${s.icon}</span>
-            <div class="grow"><div class="draft-name"><b>${s.name}</b><span class="draft-rar" style="color:${rr.col}">${s.trap ? '⚠ 트랩' : rr.label}</span></div>
+            <div class="grow"><div class="draft-name"><b>${s.name}</b><span class="draft-rar" style="color:${rr.col}">${s.trap ? '⚠' : rr.label + '급'}</span></div>
               <small>${s.desc(s.val)}</small></div>
             <span class="draft-cur ${cur ? '' : 'new'}">${cur ? `Lv${(D.spec[s.id].lv) + 1}` : 'NEW'}</span>
           </button>`;
         }).join('')}
       </div>
-      ${ad ? '' : '<button class="draft-ad" onclick="UI.defDraftAd()">📺 광고 보고 <b>광고 한정 강력 스킬</b> 받기</button>'}
+      ${(!ad && charges > 0) ? `<button class="draft-ad" onclick="UI.defDraftAd()">✨ 비책 더 받기 (${charges})</button>` : ''}
     </div>`;
   stage.appendChild(ov);
 }
 export function defDraftAd() {
+  if (!D || !D.special || D.special.charges <= 0) return;
+  D.special.charges -= 1; updateSpecialBtn();
   document.getElementById('def-draft')?.remove(); D.draft = null;
-  stageAd('광고 보고 강력 스킬 3택 (광고 한정)', () => bossDraft('ad'));
+  stageAd('하늘의 비책 — 3택', () => bossDraft('ad'), 12);
 }
 export function defPick(i) {
   if (!D || !D.draft) return;
@@ -716,7 +728,7 @@ function update(dt) {
   D.coinDisp += (D.coins - D.coinDisp) * Math.min(1, dt * 9); // 코인 카운트업 롤링
   D.maxHp = Math.max(20, 100 + D.lv.maxHp * BALANCE.up.maxHp.add + SP('fortress') - (D.spec.glass ? 30 : 0));
   if (D.hp > D.maxHp) D.hp = D.maxHp;
-  const regenPS = D.lv.regen * BALANCE.up.regen.add + (D.spec.fortress ? 3 : 0);
+  const regenPS = D.lv.regen * BALANCE.up.regen.add + (D.spec.fortress ? 2 : 0);
   if (regenPS) D.hp = Math.min(D.maxHp, D.hp + regenPS * dt);
   // 공포 구간 떠다니는 포자(분위기) — 파티클 풀은 상한 320이라 메모리 안전
   if (D.horror && (D._ambT = (D._ambT || 0) - dt) <= 0) { D._ambT = 0.55; D.parts.burst(Math.random() * D.W, D.H * 0.92, 'rgba(122,160,60,0.5)', 1, { up: 36, life: 2.0, grav: -8, spread: 0.3 }); }
@@ -1181,7 +1193,7 @@ function renderShop() {
   const el = document.getElementById('def-shop'); if (!el || !D) return;
   // 변화 없으면 다시 그리지 않음(탭 유실 방지) + 위임 클릭(innerHTML 교체에도 유지)
   if (!el._bound) { el._bound = true; el.addEventListener('click', (e) => { const b = e.target.closest('[data-k]'); if (b && !b.classList.contains('locked') && !b.classList.contains('maxed')) defBuy(b.dataset.k); }); }
-  updateWallBtn();
+  updateWallBtn(); updateSpecialBtn();
   const sig = UP_ORDER.map((k) => locked(k) ? 'L' : maxed(k) ? 'M' : (D.coins >= cost(k) ? '1' : '0') + D.lv[k]).join(',');
   if (sig === D.shopSig) return;
   D.shopSig = sig;

@@ -132,9 +132,12 @@ export async function scanImage(file, settings) {
 
   const msg = await res.json();
   if (msg.stop_reason === 'refusal') throw new Error('이미지를 분석할 수 없습니다. 다른 사진으로 시도해 주세요.');
-  const text = (msg.content.find((b) => b.type === 'text') || {}).text || '{}';
-  const parsed = JSON.parse(text);
-  if (!Array.isArray(parsed.items) || parsed.items.length === 0) {
+  let parsed;
+  try {
+    const text = (Array.isArray(msg.content) ? (msg.content.find((b) => b.type === 'text') || {}) : {}).text || '{}';
+    parsed = JSON.parse(text);
+  } catch { throw new Error('사진 분석 결과를 읽지 못했어요. 잠시 후 다시 시도해 주세요.'); }
+  if (!parsed || !Array.isArray(parsed.items) || parsed.items.length === 0) {
     throw new Error('사진에서 식재료를 찾지 못했습니다. 더 선명한 사진으로 시도해 주세요.');
   }
   return parsed.items;

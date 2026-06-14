@@ -1,8 +1,9 @@
 // 냉비서 아케이드 — 미니게임 5종 독립 실행 엔트리 (게임 모듈 재사용, 자기완결 셸).
 // 광고/저장은 어댑터로 분리: showRewardedAd(더미 15초) / 점수는 localStorage(points.js).
-import { initGames, openGames, gameFresh, gameVoice, gameVoicePass, gameDouble } from './games.js';
-import { gameDefense, defBuy } from './game-defense.js';
+import { initGames, openGames, gameFresh, gameVoice, gameVoicePass, gameDouble, setGameDiff } from './games.js';
+import { gameDefense, defBuy, defStart, defSpeed, defPick, defRevive, defGiveUp, defAdSkip, defAdSkill, defResume, defDraftAd, defWallMode, defElem, defMidSkill, defMidSkip } from './game-defense.js';
 import { gamePuzzle } from './game-puzzle.js';
+import { gameGomoku, gomokuUndo, gomokuHintAd } from './game-gomoku.js';
 import { gameQuiz, quizPick, quizNext, quizReveal, quizRevealAll, quizFinish } from './game-quiz.js';
 import { S } from './store.js';
 
@@ -16,6 +17,7 @@ function openSheet(html, { lock = false } = {}) {
   $('#sheet').innerHTML =
     `<div class="overlay" ${lock ? '' : 'onclick="if(event.target===this)UI.closeSheet()"'}>
        <div class="sheet">${lock ? '' : '<div class="grip"></div>'}${html}</div></div>`;
+  const sh = $('#sheet .sheet'); if (sh && sh.querySelector('.gx')) sh.classList.add('sheet-full'); // 게임은 풀 레이아웃(:has 미지원 대비)
   sheetOpen = true;
 }
 UI.closeSheet = () => { $('#sheet').innerHTML = ''; sheetOpen = false; renderHome(); };
@@ -68,6 +70,27 @@ UI.quizReveal = () => quizReveal();
 UI.quizRevealAll = () => quizRevealAll();
 UI.quizFinish = () => quizFinish();
 UI.gameDouble = (p) => gameDouble(p);
+// 디펜스 — 시작/조작 핸들러 전부 (안 그러면 아케이드에서 버튼이 죽음)
+UI.defStart = (d) => defStart(d);
+UI.defResume = () => defResume();
+UI.defSpeed = () => defSpeed();
+UI.defElem = () => defElem();
+UI.defWallMode = () => defWallMode();
+UI.defPick = (i) => defPick(i);
+UI.defRevive = () => defRevive();
+UI.defGiveUp = () => defGiveUp();
+UI.defAdSkip = () => defAdSkip();
+UI.defAdSkill = () => defAdSkill();
+UI.defDraftAd = () => defDraftAd();
+UI.defMidSkill = () => defMidSkill();
+UI.defMidSkip = () => defMidSkip();
+// 오목
+UI.gameGomoku = () => gameGomoku();
+UI.gomokuUndo = () => gomokuUndo();
+UI.gomokuHintAd = () => gomokuHintAd();
+// 게임 내 난이도 칩 + 전체화면
+UI.gameSetDiff = (d, key) => { setGameDiff(d); if (key && typeof UI[key] === 'function') UI[key](); };
+UI.gameFull = () => { const el = document.querySelector('.gx'); if (!el) return; try { if (document.fullscreenElement) (document.exitFullscreen || document.webkitExitFullscreen).call(document); else (el.requestFullscreen || el.webkitRequestFullscreen).call(el); } catch { toast('전체화면을 지원하지 않아요'); } };
 UI.openRanks = () => toast('랭킹은 냉비서 앱(로그인)에서 제공돼요');
 UI.openPoints = () => toast(`🅿 ${(S.points?.bal || 0).toLocaleString()}P 보유 중`);
 

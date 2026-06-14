@@ -89,7 +89,8 @@ export function toBase(ing, amount, u) {
 // 레시피 재료(a, u) → 이 재료의 base 필요량
 export function recipeNeedBase(ing, a, u) {
   const amt = a || 1;
-  if (isWeight(ing) || isVolume(ing)) return Math.round(amt * perBase(ing, u || (isWeight(ing) ? '근' : 'ml')));
+  // 단위 미지정이면 재료의 고유 단위로 해석(근/팩 하드코딩 금지)
+  if (isWeight(ing) || isVolume(ing)) return Math.round(amt * perBase(ing, u || (ing && ing.unit) || (isWeight(ing) ? 'g' : 'ml')));
   return Math.round(amt * 100) / 100; // 개수형: 레시피·재고가 같은 고유 단위라고 가정
 }
 

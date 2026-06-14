@@ -182,6 +182,10 @@ UI.closeSheet = (fromPop = false) => {
     confirmExitGame();
     return;
   }
+  // 전체화면 게임이면 먼저 빠져나오고, 진행 중인 타이머 칩은 body로 옮겨 보존(모달 비우기에 같이 지워지지 않게)
+  try { if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen(); } catch { /* noop */ }
+  const chip = document.getElementById('timer-chip');
+  if (chip && chip.parentElement !== document.body) document.body.appendChild(chip);
   $('#modal-root').innerHTML = '';
   scanFile = null; scanResults = null; deductCtx = null; draft = null; qaLoc = null;
   vc = null; stopListen(); stopSpeak();
@@ -1908,7 +1912,7 @@ UI.openYtSearch = (prefill) => {
         </div></div>`}
     </div>`);
   if (q0) setTimeout(() => UI.ytSearch(), 80);
-  else setTimeout(() => $('#yts-q')?.focus(), 60);
+  // 자동 포커스 제거 — 시트 뜨자마자 키패드가 올라오는 출렁임 방지(탭하면 입력)
 };
 UI.ytChip = (q) => { const i = $('#yts-q'); if (i) i.value = q; UI.ytSearch(); };
 UI.ytSearch = async () => {
@@ -2120,16 +2124,16 @@ function renderDeduct() {
     </div>
     <div class="receipt">
       ${plan.length === 0 ? '<div class="r-line"><span>차감할 재고 없음 (등록 안 된 재료)</span></div>' : ''}
-      ${plan.map((p, idx) => {
+      ${(() => { const emptyNames = new Set(); plan.forEach((p, i) => { if (!p.skip && emptyAll.has(i)) emptyNames.add(p.item.name); }); return plan.map((p, idx) => {
         if (p.skip) return `<div class="r-line" style="color:var(--label-3)"><span>${p.item.emoji} ${esc(p.item.name)}</span><small>${p.label}</small></div>`;
-        const ingg = findIng(p.item.name); const used = emptyAll.has(idx); const after = used ? 0 : p.after;
+        const ingg = findIng(p.item.name); const used = emptyAll.has(idx) || emptyNames.has(p.item.name); const after = used ? 0 : p.after;
         return `<div class="r-line" style="${skips.has(idx) ? 'opacity:.4;text-decoration:line-through' : ''}">
              <span>${p.item.emoji} ${esc(p.item.name)}${p.fifo ? ' <small style="color:var(--blue);font-weight:800">선입선출 D-' + Math.max(0, daysLeft(p.item.expiresAt)) + '</small>' : ''}</span>
              <span>${fmtBase(ingg, p.item.qty)} → <b>${fmtBase(ingg, after)}</b>
                <button class="r-mini ${used ? 'on' : ''}" onclick="UI.toggleEmpty(${idx})">다 씀</button>
                <button class="r-mini" onclick="UI.toggleSkip(${idx})">${skips.has(idx) ? '되돌리기' : '건너뛰기'}</button>
              </span></div>`;
-      }).join('')}
+      }).join(''); })()}
       <div class="r-line r-total"><span>합계</span><span>${plan.filter((p, i) => !p.skip && !skips.has(i)).length}개 품목 차감</span></div>
     </div>
     <div class="btn-row">
@@ -2144,11 +2148,13 @@ UI.toggleEmpty = (idx) => { deductCtx.emptyAll.has(idx) ? deductCtx.emptyAll.del
 UI.applyDeduct = () => {
   const { recipe, servings, skips, emptyAll } = deductCtx;
   const plan = deductionPlan(recipe, S, servings);
+  const emptyNames = new Set(); // "다 씀"은 같은 재료의 모든 배치를 비움(멀티배치 의도 반영)
+  plan.forEach((p, i) => { if (!p.skip && emptyAll.has(i)) emptyNames.add(p.item.name); });
   let savedFromExpiring = 0;
   plan.forEach((p, idx) => {
     if (p.skip || skips.has(idx)) return;
     const before = Number(p.item.qty) || 0;
-    p.item.qty = emptyAll.has(idx) ? 0 : p.after;
+    p.item.qty = (emptyAll.has(idx) || emptyNames.has(p.item.name)) ? 0 : p.after;
     const used = Math.max(0, before - p.item.qty);
     if (daysLeft(p.item.expiresAt) <= 3) savedFromExpiring += moneyFor(p.item, used); // 임박 재료를 실제 사용량·단가로 구출
     if (p.item.qty <= 0) {
@@ -2553,6 +2559,14 @@ UI.famCreate = async () => {
   renderSettings(); renderTop();
   copyText(`🧊 우리집 냉장고 같이 써요!\n냉비서 앱 → 설정 → "코드 입력"에 이 코드를 넣어주세요: ${code}\n앱: ${location.origin}${location.pathname}`);
 };
+UI.famShare = () => {
+  const code = S.settings.spaceCode;
+  if (!code) { toast('먼저 가족 공유를 시작해 주세요'); return; }
+  const text = `🧊 우리집 냉장고 같이 써요!\n냉비서 앱 → 설정 → "코드 입력"에 이 코드를 넣어주세요: ${code}\n앱: ${location.origin}${location.pathname}`;
+  if (navigator.share) navigator.share({ title: '냉비서 가족 공유', text }).catch(() => copyText(text));
+  else copyText(text);
+  toast('초대 메시지를 복사했어요 📋');
+};
 UI.famJoin = async () => {
   const code = prompt('가족에게 받은 코드를 입력하세요 (예: 두부-x3k9)');
   if (!code) return;
@@ -2581,6 +2595,7 @@ UI.importData = (input) => {
     try {
       const data = JSON.parse(reader.result);
       for (const k of ['settings', 'pantry', 'leftovers', 'shopping', 'myRecipes', 'favs', 'ledger']) if (data[k]) S[k] = data[k];
+      migratePantryUnits(); // 구버전 내보내기(근/팩/병)도 g·ml 기준으로 보정
       save(); render(); toast('데이터를 불러왔어요');
     } catch { toast('파일을 읽을 수 없어요'); }
   };

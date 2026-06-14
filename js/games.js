@@ -184,18 +184,24 @@ function freshLoop(now) {
   if (!fg || !m || !m.isConnected) { fg = null; return; } // 시트가 닫히면 루프 종료
   const dt = Math.min(0.032, (now - fg.last) / 1000);
   fg.last = now;
-  fg.pos += fg.dir * fg.speed * dt;
-  if (fg.pos >= 1) { fg.pos = 1; fg.dir = -1; }
-  if (fg.pos <= 0) { fg.pos = 0; fg.dir = 1; }
-  m.style.left = fg.pos * 100 + '%';
+  if (fg.freeze > 0) { fg.freeze -= dt; } // 탭 직후 잠깐 멈춰 '맞았는데 빗나감' 방지
+  else {
+    fg.pos += fg.dir * fg.speed * dt;
+    if (fg.pos >= 1) { fg.pos = 1; fg.dir = -1; }
+    if (fg.pos <= 0) { fg.pos = 0; fg.dir = 1; }
+    m.style.left = fg.pos * 100 + '%';
+  }
   fg.raf = requestAnimationFrame(freshLoop);
 }
 function freshTap() {
-  if (!fg) return;
+  if (!fg || fg.freeze > 0) return; // 멈춤 동안 중복 탭 무시
+  fg.freeze = 0.2; // 판정 후 잠깐 정지(시각=판정 일치)
   const dist = Math.abs(fg.pos - fg.zc);
   const half = fg.zw / 2;
   const pop = document.getElementById('gf-pop');
-  if (dist <= half * 0.4) {
+  document.getElementById('gf-stage')?.classList.add('g-flash');
+  setTimeout(() => document.getElementById('gf-stage')?.classList.remove('g-flash'), 150);
+  if (dist <= half * 0.5) {
     fg.score += 10 * fg.combo;
     fg.combo = Math.min(5, fg.combo + 1);
     pop.textContent = `PERFECT ×${fg.combo - 1 > 1 ? fg.combo - 1 : 1}!`;
@@ -221,9 +227,9 @@ function freshTap() {
   document.getElementById('gf-lives').textContent = '❤'.repeat(Math.max(0, fg.lives)) || '💔';
   document.getElementById('gf-combo').textContent = fg.combo > 1 ? `🔥 콤보 ×${fg.combo}` : '';
   if (fg.lives <= 0) { offerFreshRevive(); return; }
-  // 다음 라운드 — 더 빠르게, 존은 더 좁게 + 위치 랜덤 (긴장 상승)
-  fg.speed = Math.min(1.9, fg.speed * 1.07);
-  fg.zw = Math.max(0.12, fg.zw * 0.965);
+  // 다음 라운드 — 더 빠르게, 존은 더 좁게 + 위치 랜덤 (속도 상한 낮춰 '맞았는데 빗나감' 방지)
+  fg.speed = Math.min(1.15 * diffMul(), fg.speed * 1.05);
+  fg.zw = Math.max(0.15, fg.zw * 0.97);
   fg.zc = 0.18 + Math.random() * 0.64;
   fg.item = pickItem();
   const em = document.getElementById('gf-emoji');

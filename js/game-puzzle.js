@@ -36,18 +36,28 @@ export function gamePuzzle() {
   do { for (let i = 0; i < COLS * ROWS; i++) { P.grid[i] = rnd(); P.oy[i] = 0; P.pop[i] = 0; } }
   while (findMatches().size);
 
+  const cellAt = (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const cx = Math.floor((e.clientX - rect.left) / cell), cy = Math.floor((e.clientY - rect.top) / cell);
+    return (cx < 0 || cx >= COLS || cy < 0 || cy >= ROWS) ? -1 : cy * COLS + cx;
+  };
   canvas.addEventListener('pointerdown', (e) => {
     if (!P || P.phase !== 'idle') return;
-    const rect = canvas.getBoundingClientRect();
-    const cx = Math.floor((e.clientX - rect.left) / cell);
-    const cy = Math.floor((e.clientY - rect.top) / cell);
-    if (cx < 0 || cx >= COLS || cy < 0 || cy >= ROWS) return;
-    const idx = cy * COLS + cx;
-    if (P.sel < 0) { P.sel = idx; beep(660, 0.04); return; }
-    if (P.sel === idx) { P.sel = -1; return; }
-    if (adjacent(P.sel, idx)) { trySwap(P.sel, idx); P.sel = -1; }
-    else { P.sel = idx; beep(660, 0.04); }
+    const i = cellAt(e); if (i < 0) return;
+    P.down = i; P.dragged = false;
+    if (P.sel < 0) { P.sel = i; beep(660, 0.04); }
+    else if (P.sel === i) { P.sel = -1; }
+    else if (adjacent(P.sel, i)) { trySwap(P.sel, i); P.sel = -1; }
+    else { P.sel = i; beep(660, 0.04); }
   });
+  canvas.addEventListener('pointermove', (e) => {
+    if (!P || P.phase !== 'idle' || P.down == null || P.dragged) return;
+    const i = cellAt(e);
+    if (i >= 0 && i !== P.down && adjacent(P.down, i)) { P.dragged = true; trySwap(P.down, i); P.sel = -1; P.down = null; } // 슬라이드 스왑
+  });
+  const endDrag = () => { if (P) P.down = null; };
+  canvas.addEventListener('pointerup', endDrag);
+  canvas.addEventListener('pointercancel', endDrag);
 
   P.raf = requestAnimationFrame(loop);
 
@@ -89,7 +99,8 @@ export function gamePuzzle() {
     const gain = Math.round(m.size * 10 * P.combo);
     P.score += gain;
     setHud(P.combo > 1 ? `🔥 연쇄 ×${P.combo}` : '');
-    beep(700 + P.combo * 80, 0.07); if (P.combo > 1) chord([523, 659, 784].slice(0, P.combo)); buzz(8);
+    beep(700 + P.combo * 80, 0.07); if (P.combo > 1) chord([523, 659, 784].slice(0, P.combo)); buzz(8 + P.combo * 4);
+    P.shakeT = Math.min(0.35, 0.08 + m.size * 0.02 + P.combo * 0.04); P.shakeA = 3 + P.combo * 2; // 타격감
     for (const i of m) P.pop[i] = 1; // 팝 애니메이션 시작
     setTimeout(() => {
       for (const i of m) { P.grid[i] = -1; P.pop[i] = 0; }
@@ -135,7 +146,9 @@ export function gamePuzzle() {
   function render() {
     const c = P.ctx;
     c.clearRect(0, 0, P.W, P.H);
-    c.fillStyle = '#f4f7fa'; c.fillRect(0, 0, P.W, P.H);
+    c.save();
+    if (P.shakeT > 0) { P.shakeT -= 1 / 60; const a = P.shakeA * Math.max(0, P.shakeT) * 3; c.translate((Math.random() - 0.5) * a, (Math.random() - 0.5) * a); }
+    c.fillStyle = '#1a0f2b'; c.fillRect(-20, -20, P.W + 40, P.H + 40);
     for (let r = 0; r < ROWS; r++) for (let col = 0; col < COLS; col++) {
       const idx = r * COLS + col, v = P.grid[idx];
       if (v < 0) continue;
@@ -152,6 +165,7 @@ export function gamePuzzle() {
       c.fillText(k.e, x + cell / 2, y + cell / 2 + 1);
     }
     c.globalAlpha = 1; c.textBaseline = 'alphabetic';
+    c.restore();
   }
   function roundRect(c, x, y, w, h, r) {
     c.beginPath(); c.moveTo(x + r, y);

@@ -8,8 +8,8 @@ import { enemySprite, fridgeSprite, itemSprite, drawSprite } from './pixel.js';
 // ── 밸런스: 100+ 웨이브용 완만한 곡선. 초반은 아주 너그럽게(잘 안 죽음), 후반은 업그레이드로 따라잡기. ──
 const BALANCE = {
   enemy: {
-    baseHP: 7, hpGrow: 1.092, speedBase: 16, speedGrow: 1.013, speedCap: 44,
-    countBase: 4, countGrow: 1.15, countCap: 34,
+    baseHP: 7, hpGrow: 1.098, speedBase: 16, speedGrow: 1.014, speedCap: 46,
+    countBase: 4, countGrow: 1.25, countCap: 36,
     // dmg=냉장고에 닿을 때 깎는 신선도 (작게 — 누적 실수만 위험). from=등장 시작 웨이브.
     types: {
       grunt:  { hpx: 1.0,  spx: 1.0,  dmg: 3, r: 18, from: 1,  w: 1.0,  name: '곰팡이빵' },
@@ -31,7 +31,8 @@ const BALANCE = {
     crit: { base: 60, ratio: 1.4, add: 0.06, max: 0.7, name: '치명타', icon: '💥', unit: '확률' },
     chain:   { base: 80,  ratio: 1.65, add: 1, max: 4, unlock: 60,  name: '냉기 전이', icon: '🔗', unit: '연쇄' },
     frostAura: { base: 110, ratio: 1.7, add: 1, max: 6, unlock: 90,  name: '냉기 오라', icon: '❄️', unit: 'Lv' },
-    sideTurret: { base: 160, ratio: 2.0, add: 1, max: 3, unlock: 130, name: '보조 포탑', icon: '🛰️', unit: '문' },
+    sideTurret: { base: 150, ratio: 1.9, add: 1, max: 4, unlock: 120, name: '보조 포탑', icon: '🛰️', unit: '문' },
+    wall: { base: 90, ratio: 1.7, add: 2, max: 6, unlock: 70, name: '칸막이 설치권', icon: '🧱', unit: '회' }, // 터치로 벽 설치(횟수제)
     homing:  { base: 150, ratio: 1.7, add: 1, max: 4, unlock: 160, name: '유도 눈송이', icon: '❇️', unit: 'Lv' },
     bomb:    { base: 180, ratio: 1.8, add: 1, max: 5, unlock: 200, name: '서리 폭탄', icon: '💣', unit: 'Lv' },
     orbital: { base: 200, ratio: 1.75, add: 1, max: 5, unlock: 240, name: '얼음 위성', icon: '💫', unit: '개' },
@@ -42,7 +43,7 @@ const BALANCE = {
     boost: { base: 120, ratio: 1.65, add: 0.16, name: '코인 부스트', icon: '🪙', unit: '+' },
   },
 };
-const UP_ORDER = ['damage', 'fireRate', 'projspd', 'multiShot', 'pierce', 'crit', 'chain', 'homing', 'orbital', 'laser', 'bomb', 'frostAura', 'sideTurret', 'regen', 'maxHp', 'boost'];
+const UP_ORDER = ['damage', 'fireRate', 'projspd', 'multiShot', 'pierce', 'crit', 'chain', 'wall', 'homing', 'orbital', 'laser', 'bomb', 'frostAura', 'sideTurret', 'regen', 'maxHp', 'boost'];
 
 // 난이도 (하/중/상) — 적 HP·속도·물량·침투피해·코인·어픽스 확률 배수
 const DIFF = {
@@ -118,7 +119,8 @@ export function gameDefense() {
       </div>
       <div class="gx-shopbar">
         <button class="gx-speed" id="def-speed" onclick="UI.defSpeed()">⏩ 1배속</button>
-        <button class="gx-adcoin" onclick="UI.defAdSkill()">📺 광고 보고 스페셜 스킬</button>
+        <button class="gx-adcoin" onclick="UI.defAdSkill()">📺 스페셜</button>
+        <button class="gx-wall" id="def-wall" style="display:none" onclick="UI.defWallMode()">🧱 벽 설치</button>
         <span class="gx-diff" id="def-difflbl"></span>
       </div>
       <div class="gx-shop" id="def-shop"></div>
@@ -132,7 +134,8 @@ export function gameDefense() {
   D = {
     ctx, canvas, W: cssW, H: cssH, diff: DIFF.normal, speed: 1, spec: {},
     enemies: [], shots: [], coinsFly: [], parts: new Particles(320), fx: new Floaters(), shake: new Shake(),
-    lv: { damage: 0, fireRate: 0, projspd: 0, multiShot: 0, pierce: 0, crit: 0, chain: 0, homing: 0, orbital: 0, laser: 0, bomb: 0, sideTurret: 0, frostAura: 0, regen: 0, maxHp: 0, boost: 0 },
+    lv: { damage: 0, fireRate: 0, projspd: 0, multiShot: 0, pierce: 0, crit: 0, chain: 0, wall: 0, homing: 0, orbital: 0, laser: 0, bomb: 0, sideTurret: 0, frostAura: 0, regen: 0, maxHp: 0, boost: 0 },
+    walls: [], wallUsed: 0, placingWall: false,
     coins: 0, score: 0, kills: 0, bossesKilled: 0,
     wave: 0, toSpawn: 0, spawnGap: 1, since: 0,
     hp: 100, maxHp: 100,
@@ -141,7 +144,36 @@ export function gameDefense() {
     banner: '', bannerT: 0, hitStop: 0, vign: 0, flash: 0, bossIntro: 0, coinDisp: 0, upText: '', upT: 0, upPulse: 0, fridge: { blink: 1 },
     last: 0, raf: 0, running: false, over: false, shopT: 0,
   };
+  // 칸막이 설치: 설치 모드일 때 전장 터치 → 그 위치에 벽
+  canvas.addEventListener('pointerdown', (e) => {
+    if (!D || !D.placingWall) return;
+    const r = canvas.getBoundingClientRect();
+    const x = (e.clientX - r.left), y = clamp(e.clientY - r.top, 90, D.H - 70);
+    placeWall(x, y);
+  });
 }
+const wallAvail = () => (D ? D.lv.wall * BALANCE.up.wall.add - D.wallUsed : 0);
+function placeWall(x, y) {
+  if (wallAvail() <= 0) { D.placingWall = false; return; }
+  const w = Math.min(140, D.W * 0.42), hp = 60 + D.wave * 14;
+  D.walls.push({ x: clamp(x, w / 2, D.W - w / 2), y, w, hp, maxhp: hp });
+  D.wallUsed += 1; D.placingWall = false;
+  chord([523, 440, 392]); buzz(18); D.parts.burst(x, y, '#73cbff', 14, { spread: 1, life: 0.5 });
+  updateWallBtn();
+}
+function updateWallBtn() {
+  const b = document.getElementById('def-wall'); if (!b) return;
+  const n = wallAvail();
+  b.textContent = D.placingWall ? '🧱 터치해 설치!' : `🧱 벽 설치 (${n})`;
+  b.style.display = (D.lv.wall > 0) ? '' : 'none';
+  b.classList.toggle('arming', D.placingWall);
+}
+export function defWallMode() {
+  if (!D || !D.running) return;
+  if (wallAvail() <= 0) { toastNo(); return; }
+  D.placingWall = !D.placingWall; updateWallBtn();
+}
+function toastNo() { beep(200, 0.1, 'square', 0.08); }
 
 function snapshotRun() {
   if (!D || D.over || D.wave < 1) { savedRun = null; return; }
@@ -227,7 +259,7 @@ function spawnOne() {
   let total = pool.reduce((s, [, t]) => s + t.w, 0), r = Math.random() * total, key = 'grunt', t = pool[0][1];
   for (const [k, tt] of pool) { r -= tt.w; if (r <= 0) { key = k; t = tt; break; } }
   const n = t.group || 1; // 세균 떼는 한 번에 여러 마리
-  const dmg = Math.max(1, Math.round(t.dmg * D.diff.dmg));
+  const dmg = Math.max(1, Math.round(t.dmg * D.diff.dmg * (1 + w * 0.02))); // 후반 침투 피해↑(긴장)
   for (let i = 0; i < n; i++) {
     D.enemies.push(mkEnemy(key, waveHP(w) * t.hpx, t.r, waveSpd(w) * t.spx, dmg, { split: t.split, affix: rollAffix(w) }));
   }
@@ -569,7 +601,16 @@ function update(dt) {
     let sp = en.spd;
     if (en.slowT > 0) { en.slowT -= dt; sp *= en.slowMul; }
     if (auraR && Math.hypot(en.x - f.x, en.y - f.y) < auraR) sp *= slow;
-    en.y += sp * dt; en.x += Math.sin(en.ph) * 6 * dt;
+    // 칸막이: 벽 윗선에서 막히고 벽 HP를 깎음
+    let blocked = false;
+    for (const wl of D.walls) {
+      if (en.y + en.r >= wl.y - 4 && en.y < wl.y && Math.abs(en.x - wl.x) < wl.w / 2 + en.r) {
+        en.y = wl.y - en.r - 4; blocked = true; wl.hp -= (en.dmg * 4 + 6) * dt;
+        if ((en._wt = (en._wt || 0) - dt) <= 0) { en._wt = 0.4; D.parts.burst(en.x, wl.y, '#73cbff', 2, { life: 0.3 }); }
+        break;
+      }
+    }
+    if (!blocked) { en.y += sp * dt; en.x += Math.sin(en.ph) * 6 * dt; }
     if (en.boss) { en.minionT -= dt; if (en.minionT <= 0) { en.minionT = 2.4; if (D.enemies.length < 22) { const sw = BALANCE.enemy.types.swarm; const m = mkEnemy('swarm', en.maxhp * 0.03 + 4, sw.r, waveSpd(D.wave) * sw.spx, Math.max(1, Math.round(sw.dmg * D.diff.dmg)), {}); m.x = en.x + (Math.random() - 0.5) * 40; m.y = en.y + 20; D.enemies.push(m); } } }
     if (en.y >= f.y - 8) { // 냉장고 침투
       D.enemies.splice(i, 1); D.hp -= en.dmg; D.vign = 1; D.shake.add(en.boss ? 12 : 7, 0.3);
@@ -605,6 +646,8 @@ function update(dt) {
     const c = D.coinsFly[i]; c.t += dt * 2.2;
     if (c.t >= 1) { D.coins += c.val; D.coinsFly.splice(i, 1); }
   }
+  // 칸막이 파괴
+  for (let i = D.walls.length - 1; i >= 0; i--) { if (D.walls[i].hp <= 0) { const wl = D.walls[i]; D.parts.burst(wl.x, wl.y, '#73cbff', 16, { spread: 1.2, life: 0.5 }); D.walls.splice(i, 1); D.shake.add(4, 0.18); } }
   // 스킬 이펙트 수명
   for (let i = D.beams.length - 1; i >= 0; i--) if ((D.beams[i].t -= dt) <= 0) D.beams.splice(i, 1);
   for (let i = D.rings.length - 1; i >= 0; i--) { const rg = D.rings[i]; rg.t -= dt; rg.r += (rg.max - rg.r) * Math.min(1, dt * 8); if (rg.t <= 0) D.rings.splice(i, 1); }
@@ -707,6 +750,16 @@ function render(dt) {
     }
     c.restore(); c.shadowBlur = 0;
   }
+  // 칸막이(얼음 벽) — HP 비율로 투명도
+  for (const wl of D.walls) {
+    const a = clamp(wl.hp / wl.maxhp, 0.25, 1);
+    c.save(); c.globalAlpha = a; c.fillStyle = '#bfe7ff'; c.shadowColor = '#73cbff'; c.shadowBlur = 10;
+    rr(c, wl.x - wl.w / 2, wl.y - 6, wl.w, 12, 5); c.fill(); c.shadowBlur = 0;
+    c.globalAlpha = 1; c.fillStyle = '#73cbff'; rr(c, wl.x - wl.w / 2, wl.y - 6, wl.w * a, 3, 1.5); c.fill();
+    c.restore();
+  }
+  // 설치 모드 안내
+  if (D.placingWall) { c.fillStyle = 'rgba(115,203,255,0.12)'; c.fillRect(0, 90, W, H - 160); c.fillStyle = '#bdffe4'; c.font = "10px 'Press Start 2P', Jua, monospace"; c.textAlign = 'center'; c.fillText('터치해서 벽 설치', W / 2, H / 2); }
   drawFridge(c, f);
   // 냉기 전이(체인) 라인
   for (const ch of D.chains) {
@@ -835,17 +888,22 @@ function rr(c, x, y, w, h, r) {
 /* ── 강화 상점 (DOM) ── */
 function renderShop() {
   const el = document.getElementById('def-shop'); if (!el || !D) return;
-  const cards = UP_ORDER.map((k) => {
+  // 변화 없으면 다시 그리지 않음(탭 유실 방지) + 위임 클릭(innerHTML 교체에도 유지)
+  if (!el._bound) { el._bound = true; el.addEventListener('click', (e) => { const b = e.target.closest('[data-k]'); if (b && !b.classList.contains('locked') && !b.classList.contains('maxed')) defBuy(b.dataset.k); }); }
+  updateWallBtn();
+  const sig = UP_ORDER.map((k) => locked(k) ? 'L' : maxed(k) ? 'M' : (D.coins >= cost(k) ? '1' : '0') + D.lv[k]).join(',');
+  if (sig === D.shopSig) return;
+  D.shopSig = sig;
+  el.innerHTML = UP_ORDER.map((k) => {
     const u = BALANCE.up[k];
-    if (locked(k)) return `<button class="up-card locked" disabled><span class="up-ico">${u.icon}</span><b>${u.name}</b><small>🔒 ${u.unlock}점</small></button>`;
-    if (maxed(k)) return `<button class="up-card maxed" disabled><span class="up-ico">${u.icon}</span><b>${u.name}</b><small>MAX</small></button>`;
+    if (locked(k)) return `<button class="up-card locked"><span class="up-ico">${u.icon}</span><b>${u.name}</b><small>🔒 ${u.unlock}점</small></button>`;
+    if (maxed(k)) return `<button class="up-card maxed"><span class="up-ico">${u.icon}</span><b>${u.name}</b><small>MAX</small></button>`;
     const cst = cost(k); const can = D.coins >= cst;
-    return `<button class="up-card ${can ? 'can' : ''}" ${can ? '' : 'disabled'} onclick="UI.defBuy('${k}')">
+    return `<button class="up-card ${can ? 'can' : 'cant'}" data-k="${k}">
       <span class="up-ico">${u.icon}</span><b>${u.name}</b>
       <span class="up-lv">Lv.${D.lv[k]}</span>
       <small class="up-cost">🪙 ${cst}</small></button>`;
   }).join('');
-  el.innerHTML = cards;
 }
 export function defBuy(k) {
   if (!D || locked(k) || maxed(k)) return;

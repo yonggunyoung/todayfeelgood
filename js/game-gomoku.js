@@ -3,7 +3,7 @@ import { gameUI, beep, chord, buzz, finishGame, diffMul, getDiff, inStageAd } fr
 import { mascotSprite, enemySprite, drawSprite, C } from './pixel.js';
 import { setupCanvas } from './slime.js';
 
-const N = 9, WIN = 5;
+const N = 13, WIN = 5;
 let G = null;
 
 export function gameGomoku() {

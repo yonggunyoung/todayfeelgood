@@ -1214,3 +1214,9 @@ input:focus, select:focus, textarea:focus { outline: none; box-shadow: 0 0 0 3px
 /* 인게임 오버레이가 스테이지에 정확히 덮이도록 */
 #gf-stage, .pz-wrap, .gx-gmk .gx-stage { position: relative; }
 .gmk-msg { position: absolute; inset: 0; display: grid; place-items: center; }
+
+/* 디펜스 벽 설치 버튼 */
+.gx-wall { background: rgba(115,203,255,0.18); color: #73cbff; border: none; border-radius: 99px; padding: 6px 12px; font-family: 'Jua',sans-serif; font-size: 0.82rem; font-weight: 800; cursor: pointer; }
+.gx-wall.arming { background: #73cbff; color: #0a2030; animation: fdOn 0.8s ease-in-out infinite; }
+.gx-wall:active { transform: scale(0.95); }
+.up-card.cant { opacity: 0.5; }

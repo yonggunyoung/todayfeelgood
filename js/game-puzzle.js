@@ -1,6 +1,6 @@
 // 재료 매치 — 같은 재료 3개 이상을 맞춰 터뜨리는 매치3 퍼즐. 연쇄(캐스케이드) 콤보로 점수 폭발.
 // 60초 안에 최대한 — 인접 두 칸을 탭해서 교환. 캔버스 렌더 + 낙하/팝 애니메이션.
-import { gameUI, beep, chord, buzz, finishGame } from './games.js';
+import { gameUI, beep, chord, buzz, finishGame, diffMul, inStageAd } from './games.js';
 
 const KINDS = [
   { e: '🍎', c: '#ff6b6b' }, { e: '🥕', c: '#ff9f43' }, { e: '🥛', c: '#dfe6e9' },
@@ -29,7 +29,7 @@ export function gamePuzzle() {
   P = {
     ctx, canvas, cell, W, H, dpr,
     grid: [], oy: [], pop: [], // oy: 낙하 오프셋(px), pop: 사라지는 진행(1→0)
-    sel: -1, phase: 'idle', score: 0, combo: 0, time: TIME,
+    sel: -1, phase: 'idle', score: 0, combo: 0, time: Math.round(TIME / diffMul()), revived: false,
     last: performance.now(), raf: 0, running: true, t0: performance.now(),
   };
   // 초기 보드 (시작부터 매치가 없게)
@@ -129,7 +129,7 @@ export function gamePuzzle() {
     for (let i = 0; i < P.oy.length; i++) if (P.oy[i] < 0) { P.oy[i] = Math.min(0, P.oy[i] + dt * 1600); }
     for (let i = 0; i < P.pop.length; i++) if (P.pop[i] > 0) P.pop[i] = Math.max(0, P.pop[i] - dt * 6);
     render(); setHud();
-    if (P.time <= 0) { endPuzzle(); return; }
+    if (P.time <= 0) { offerPuzzleTime(); return; }
     P.raf = requestAnimationFrame(loop);
   }
   function render() {
@@ -157,6 +157,19 @@ export function gamePuzzle() {
     c.beginPath(); c.moveTo(x + r, y);
     c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r);
     c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath();
+  }
+  function offerPuzzleTime() {
+    cancelAnimationFrame(P.raf);
+    const stage = canvas.parentElement;
+    if (!stage || P.revived) { endPuzzle(); return; }
+    const ov = document.createElement('div'); ov.className = 'draft-overlay';
+    ov.innerHTML = `<div class="draft-in"><div class="draft-title">⏰ 시간 종료</div>
+      <p>광고 한 번이면 <b>+20초</b> 더 — 콤보를 이어가세요</p>
+      <button class="gx-btn-go" id="pz-rev">📺 광고 보고 +20초</button>
+      <button class="qz-skip" id="pz-end">결과 보기</button></div>`;
+    stage.appendChild(ov);
+    ov.querySelector('#pz-rev').onclick = () => { ov.remove(); inStageAd(stage, '광고 보고 +20초', () => { P.revived = true; P.time = 20; P.last = performance.now(); P.raf = requestAnimationFrame(loop); }, () => endPuzzle()); };
+    ov.querySelector('#pz-end').onclick = () => { ov.remove(); endPuzzle(); };
   }
   function endPuzzle() {
     const s = P; P = null; cancelAnimationFrame(s.raf);

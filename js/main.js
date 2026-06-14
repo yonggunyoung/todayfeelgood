@@ -7,9 +7,10 @@ import { initSync, sync, makeSpaceCode, setSpaceCode, loginGoogle, logoutGoogle,
 import { AI_ENDPOINT } from './config.js';
 import { canListen, speak, stopSpeak, startListen, stopListen, isListening, parseCommand } from './voice.js';
 import { earn, spend, refund, EARN, earnedToday, SHOP, adFreeNow, gameBest } from './points.js';
-import { initGames, openGames, GAMES, gameFresh, gameVoice, gameVoicePass, gameDouble } from './games.js';
+import { initGames, openGames, GAMES, gameFresh, gameVoice, gameVoicePass, gameDouble, setGameDiff } from './games.js';
 import { gameDefense, defBuy, defStart, defSpeed, defPick, defRevive, defGiveUp, defAdSkip, defAdCoin, defResume, defDraftAd } from './game-defense.js';
 import { gamePuzzle } from './game-puzzle.js';
+import { gameGomoku, gomokuUndo, gomokuHintAd } from './game-gomoku.js';
 import { gameQuiz, quizPick, quizNext, quizReveal, quizRevealAll, quizFinish } from './game-quiz.js';
 import { tossRewardedAd } from './toss.js';
 
@@ -883,6 +884,10 @@ UI.redeem = async (id) => {
 
 /* ── 🎮 게임 글루 — 각 게임 모듈의 시트가 onclick 문자열로 부른다 ── */
 UI.openGames = () => openGames();
+UI.setGameDiff = (d) => setGameDiff(d);
+UI.gameGomoku = () => gameGomoku();
+UI.gomokuUndo = () => gomokuUndo();
+UI.gomokuHintAd = () => gomokuHintAd();
 UI.gameFresh = () => gameFresh();
 UI.gameVoice = () => gameVoice();
 UI.gameVoicePass = () => gameVoicePass();

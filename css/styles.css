@@ -1204,3 +1204,13 @@ input:focus, select:focus, textarea:focus { outline: none; box-shadow: 0 0 0 3px
 .draft-rar { font-size: 0.62rem; font-weight: 800; }
 .draft-ad { width: 100%; margin-top: 10px; border: none; border-radius: 12px; padding: 11px; background: var(--orange-bg, rgba(255,138,61,.18)); color: #ff8a3d; font-family: 'Jua',sans-serif; font-weight: 800; cursor: pointer; }
 .draft-ad:active { transform: scale(0.97); }
+
+/* ══════════ 게임 난이도 바 + 스테이지 오버레이용 위치 + 오목 ══════════ */
+.g-diffbar { display: flex; align-items: center; gap: 6px; margin: 4px 0 10px; font-size: 0.8rem; color: var(--label-2); }
+.g-diffbar > span:first-child { font-weight: 800; }
+.g-diffchip { border: 1.5px solid var(--hairline); background: var(--card); border-radius: 99px; padding: 5px 13px; font-weight: 800; color: var(--label-2); cursor: pointer; }
+.g-diffchip.on { background: var(--ink); color: #fff; border-color: var(--ink); }
+.g-diffbar small { margin-left: auto; color: var(--label-3); font-size: 0.7rem; }
+/* 인게임 오버레이가 스테이지에 정확히 덮이도록 */
+#gf-stage, .pz-wrap, .gx-gmk .gx-stage { position: relative; }
+.gmk-msg { position: absolute; inset: 0; display: grid; place-items: center; }

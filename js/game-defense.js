@@ -20,7 +20,7 @@ const BALANCE = {
       shield: { hpx: 5.5,  spx: 0.62, dmg: 5, r: 21, from: 12, w: 0.45, name: '굳은 더께' },
     },
   },
-  economy: { scorePerHP: 0.42 },
+  economy: { scorePerHP: 0.3 },
   weapon: { dmg: 4, fireRate: 1.5, fireRateMax: 7, projSpeed: 500, projR: 8 },
   boss: { every: 10, hpMult: 17, dmg: 18, reward: 90 },
   up: {
@@ -138,7 +138,7 @@ export function gameDefense() {
     hp: 100, maxHp: 100,
     fireCd: 0, sideCd: 0, homingCd: 0, laserCd: 0, bombCd: 0, orbAng: 0, beams: [], rings: [], chains: [],
     aimAng: -Math.PI / 2, muzzle: 0,
-    banner: '', bannerT: 0, hitStop: 0, vign: 0, flash: 0, bossIntro: 0, coinDisp: 0, upText: '', upT: 0, fridge: { blink: 1 },
+    banner: '', bannerT: 0, hitStop: 0, vign: 0, flash: 0, bossIntro: 0, coinDisp: 0, upText: '', upT: 0, upPulse: 0, fridge: { blink: 1 },
     last: 0, raf: 0, running: false, over: false, shopT: 0,
   };
 }
@@ -259,6 +259,7 @@ function mkEnemy(key, hp, r, spd, dmg, opt = {}) {
 function projKind() {
   if (SP('fire')) return 'fire';
   if (SP('frost')) return 'frost';
+  if (stat.pierce() >= 3) return 'arrow';
   if (D.lv.chain) return 'spark';
   if (D.lv.damage >= 12) return 'heavy';
   return 'basic';
@@ -337,7 +338,7 @@ function killEnemy(en) {
     }
   }
   if (SP('vamp') && Math.random() < SP('vamp') / 100) { D.hp = Math.min(D.maxHp, D.hp + 1); D.fx.add(en.x, en.y - 8, '+1', { color: '#ff5d9e', size: 12 }); }
-  if (en.boss) { chord([523, 659, 784, 1047]); D.shake.add(10, 0.4); D.hp = Math.min(D.maxHp, D.hp + 12); D.bossesKilled += 1; D.pendingDraft = true; }
+  if (en.boss) { chord([523, 659, 784, 1047]); D.shake.add(12, 0.5); D.hitStop = 0.18; D.flash = 0.5; D.parts.burst(en.x, en.y, '#cf86ff', 40, { up: 60, life: 0.8, spread: 1.4 }); D.hp = Math.min(D.maxHp, D.hp + 12); D.bossesKilled += 1; D.pendingDraft = true; }
   else beep(900 + Math.random() * 120, 0.05, 'triangle', 0.08);
   buzz(en.boss ? [18, 30, 18] : 5);
 }
@@ -487,7 +488,7 @@ export function defPick(i) {
 
 function update(dt) {
   const f = fridgePos();
-  D.bannerT -= dt; D.muzzle -= dt; D.vign *= 0.92; D.flash *= 0.86; if (D.bossIntro > 0) D.bossIntro -= dt; if (D.upT > 0) D.upT -= dt;
+  D.bannerT -= dt; D.muzzle -= dt; D.vign *= 0.92; D.flash *= 0.86; if (D.bossIntro > 0) D.bossIntro -= dt; if (D.upT > 0) D.upT -= dt; if (D.upPulse > 0) D.upPulse = Math.max(0, D.upPulse - dt * 1.8);
   D.coinDisp += (D.coins - D.coinDisp) * Math.min(1, dt * 9); // 코인 카운트업 롤링
   D.maxHp = Math.max(20, 100 + D.lv.maxHp * BALANCE.up.maxHp.add - (D.spec.glass ? 30 : 0));
   if (D.hp > D.maxHp) D.hp = D.maxHp;
@@ -685,7 +686,7 @@ function render(dt) {
     }
   }
   // 발사체 — 속성/티어별 형태(불꽃·얼음·스파크·중탄)
-  const PK = { fire: ['#ffd24a', '#ff7a3d'], frost: ['#e8faff', '#73cbff'], spark: ['#ffffff', '#bdffe4'], heavy: ['#fff0b0', '#ffb24d'], basic: ['#bdffe4', '#5ef0b0'] };
+  const PK = { fire: ['#ffd24a', '#ff7a3d'], frost: ['#e8faff', '#73cbff'], spark: ['#ffffff', '#bdffe4'], heavy: ['#fff0b0', '#ffb24d'], arrow: ['#d2adf0', '#a172d4'], basic: ['#bdffe4', '#5ef0b0'] };
   for (const s of D.shots) {
     const [core, glow] = s.crit ? ['#fff', '#ffb24d'] : (PK[s.kind] || PK.basic);
     const rr0 = (s.r || BALANCE.weapon.projR) * (s.crit ? 1.3 : 1);
@@ -700,6 +701,8 @@ function render(dt) {
       c.beginPath(); c.moveTo(0, -rr0 * 1.6); c.quadraticCurveTo(rr0 * 1.1, 0, 0, rr0); c.quadraticCurveTo(-rr0 * 1.1, 0, 0, -rr0 * 1.6); c.fill();
     } else if (s.kind === 'spark') { // 별/스파크
       c.beginPath(); for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4, rr2 = i % 2 ? rr0 * 0.5 : rr0 * 1.3; c[i ? 'lineTo' : 'moveTo'](Math.cos(a) * rr2, Math.sin(a) * rr2); } c.closePath(); c.fill();
+    } else if (s.kind === 'arrow') { // 관통 화살
+      c.beginPath(); c.moveTo(0, -rr0 * 1.9); c.lineTo(rr0 * 0.8, rr0 * 0.6); c.lineTo(0, rr0 * 0.1); c.lineTo(-rr0 * 0.8, rr0 * 0.6); c.closePath(); c.fill();
     } else { // 기본/중탄 — 원 (중탄은 큼직)
       c.beginPath(); c.arc(0, 0, rr0 * (s.kind === 'heavy' ? 1.25 : 1), 0, 6.28); c.fill();
     }
@@ -786,8 +789,9 @@ function drawFridge(c, f) {
     c.fillStyle = tierCol; c.rotate(D.aimAng + Math.PI / 2); rr(c, -3, -16, 6, 16, 3); c.fill();
     c.restore();
   }
-  // 냉장고 바디 — 시안 픽셀 스프라이트(내장 카와이 얼굴) + 성에 글로우 / 위험 경고
-  drawSprite(c, fridgeSprite().base, f.x, f.y + 6, 80, { glow: low ? 'rgba(255,77,106,0.8)' : 'rgba(115,203,255,0.6)', glowR: low ? 18 : 14 });
+  // 냉장고 바디 — 시안 픽셀 스프라이트(내장 카와이 얼굴) + 성에 글로우 / 위험 경고 / 강화 펄스
+  const ps = 1 + (D.upPulse || 0) * 0.4;
+  drawSprite(c, fridgeSprite().base, f.x, f.y + 6, 80, { sx: ps, sy: ps, glow: D.upPulse > 0.05 ? 'rgba(94,240,176,0.9)' : (low ? 'rgba(255,77,106,0.8)' : 'rgba(115,203,255,0.6)'), glowR: low || D.upPulse > 0.05 ? 18 : 14 });
 }
 
 function drawHud(c, W, H) {
@@ -852,6 +856,11 @@ export function defBuy(k) {
   if (k === 'maxHp') D.hp += BALANCE.up.maxHp.add;
   chord([523, 698, 880]); buzz(16); D.shake.add(3, 0.12); D.flash = 0.6; // 파워업 모먼트(화면 번쩍)
   D.upText = `${BALANCE.up[k].name} Lv.${D.lv[k]}`; D.upT = 1.0;
+  // 업그레이드 모션: 냉장고 펄스 + 강화 입자 분출 + 링
+  const f = fridgePos(); D.upPulse = 0.35;
+  D.parts.burst(f.x, f.y - 10, '#5ef0b0', 16, { up: 60, life: 0.6, spread: 1.2 });
+  D.rings.push({ x: f.x, y: f.y - 10, r: 6, max: 70, t: 0.45 });
+  D.fx.add(f.x, f.y - 50, `${BALANCE.up[k].icon} Lv.${D.lv[k]}`, { color: '#bdffe4', size: 16 });
   renderShop();
 }
 

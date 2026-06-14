@@ -41,9 +41,19 @@ export const GAMES = [
     desc: '신선 존에서 탭! 원터치 타이밍 — 콤보로 점수 폭발', open: 'UI.gameFresh()' },
   { id: 'quiz', emoji: '🧠', name: '냉장고 상식 퀴즈', tag: '음성/탭',
     desc: '신기한 음식 상식 — 음성이나 탭으로 정답', open: 'UI.gameQuiz()' },
+  { id: 'gomoku', emoji: '⚫', name: '냉장고 오목', tag: '두뇌',
+    desc: '슬라임 알로 AI와 5목 대결 — 광고로 한 수 무르기', open: 'UI.gameGomoku()' },
   { id: 'voice', emoji: '🎤', name: '외쳐! 재료', tag: '음성', needVoice: true,
     desc: '재료 이름을 빨리 외치기 — 8문제 스피드런', open: 'UI.gameVoice()' },
 ];
+
+// 공통 난이도 (하/중/상) — 게임마다 속도·시간·물량에 반영
+let gameDiff = 'normal';
+export const DIFF_MUL = { easy: 0.82, normal: 1, hard: 1.32 };
+export const getDiff = () => gameDiff;
+export const diffMul = () => DIFF_MUL[gameDiff];
+export function setGameDiff(d) { gameDiff = d; openGames(); }
+const DIFF_LBL = { easy: '하', normal: '중', hard: '상' };
 
 /* ── 게임 허브 ── */
 export function openGames() {
@@ -67,6 +77,7 @@ export function openGames() {
       <button class="btn btn-sm btn-tint" onclick="UI.openRanks()">🏆 랭킹</button>
     </div>
     <p class="sub">끓는 동안 한 판 — 점수가 포인트로 (오늘 보상 ${left}판 남음 · 광고 보면 2배)</p>
+    <div class="g-diffbar"><span>난이도</span>${['easy', 'normal', 'hard'].map((d) => `<button class="g-diffchip ${gameDiff === d ? 'on' : ''}" onclick="UI.setGameDiff('${d}')">${DIFF_LBL[d]}</button>`).join('')}<small>어려울수록 점수·보상↑</small></div>
     <div class="g-grid">${cards}</div>
     <p class="hint" style="text-align:center;margin-top:10px">주간 기록은 월요일마다 리셋 — 이번 주 왕좌를 지키세요 👑</p>
     <div class="btn-row"><button class="btn btn-block" onclick="UI.closeSheet()">닫기</button></div>`);
@@ -118,12 +129,29 @@ export function gameDouble(p) {
   });
 }
 
+/* ── 인게임 광고(스테이지 오버레이, 시트 유지) → 이어하기/아이템 (전 게임 공용) ── */
+export function inStageAd(stageEl, label, onReward, onSkip) {
+  if (!stageEl) { onSkip && onSkip(); return; }
+  const ov = document.createElement('div'); ov.className = 'draft-overlay';
+  ov.innerHTML = `<div class="draft-in"><div class="draft-title">📺 광고</div><p>${label}</p>
+    <div class="adx-stage" style="margin:6px 0 10px"><div class="adx-slime">🧊</div><b>냉비서 프리미엄이 곧</b></div>
+    <div class="ad-progress"><i class="ad-bar"></i></div>
+    <button class="gx-btn-go ad-ok" disabled>광고 시청 중… 15초</button>
+    <button class="qz-skip ad-skip">건너뛰기 (보상 없음)</button></div>`;
+  stageEl.appendChild(ov);
+  const bar = ov.querySelector('.ad-bar'); if (bar) { bar.style.transitionDuration = '15s'; requestAnimationFrame(() => { bar.style.width = '100%'; }); }
+  const okb = ov.querySelector('.ad-ok'); let t = 15, done = false;
+  const fin = (reward) => { if (done) return; done = true; clearInterval(iv); ov.remove(); (reward ? onReward : onSkip) && (reward ? onReward() : onSkip()); };
+  const iv = setInterval(() => { if (!ov.isConnected) { clearInterval(iv); return; } t--; if (t > 0) { okb.textContent = `광고 시청 중… ${t}초`; return; } clearInterval(iv); okb.disabled = false; okb.textContent = '✅ 보상 받기'; okb.onclick = () => fin(true); }, 1000);
+  ov.querySelector('.ad-skip').onclick = () => fin(false);
+}
+
 /* ══ A. 프레시 캐치 — 원터치 타이밍 ══ */
 const FRESH_POOL = ING.filter((i) => ['채소', '과일', '수산', '육류', '유제품'].includes(i.cat));
 let fg = null; // {pos, dir, speed, zc, zw, combo, score, lives, raf, last}
 
 export function gameFresh() {
-  fg = { pos: 0.5, dir: 1, speed: 0.55, zc: 0.5, zw: 0.34, combo: 1, score: 0, lives: 3, item: pickItem(), last: 0 };
+  fg = { pos: 0.5, dir: 1, speed: 0.55 * diffMul(), zc: 0.5, zw: 0.34 / Math.max(1, diffMul() * 0.9), combo: 1, score: 0, lives: 3, item: pickItem(), last: 0, revived: false };
   ui.openSheet(`
     <div class="g-stage" id="gf-stage">
       <div class="g-hud">
@@ -192,7 +220,7 @@ function freshTap() {
   document.getElementById('gf-score').textContent = fg.score;
   document.getElementById('gf-lives').textContent = '❤'.repeat(Math.max(0, fg.lives)) || '💔';
   document.getElementById('gf-combo').textContent = fg.combo > 1 ? `🔥 콤보 ×${fg.combo}` : '';
-  if (fg.lives <= 0) { const sc = fg.score; endFresh(sc); return; }
+  if (fg.lives <= 0) { offerFreshRevive(); return; }
   // 다음 라운드 — 더 빠르게, 존은 더 좁게 + 위치 랜덤 (긴장 상승)
   fg.speed = Math.min(1.9, fg.speed * 1.07);
   fg.zw = Math.max(0.12, fg.zw * 0.965);
@@ -203,7 +231,24 @@ function freshTap() {
   if (em) { em.textContent = fg.item.emoji; nm.textContent = fg.item.name; }
   placeZone();
 }
-function endFresh(score) {
+function offerFreshRevive() {
+  cancelAnimationFrame(fg?.raf);
+  const stage = document.getElementById('gf-stage');
+  if (!stage || fg.revived) { endFresh(); return; }
+  const ov = document.createElement('div'); ov.className = 'draft-overlay';
+  ov.innerHTML = `<div class="draft-in"><div class="draft-title" style="color:#ff4d6a">아쉬워요!</div>
+    <p>광고 한 번이면 <b>생명 +2</b>로 이어서 점수를 더 쌓을 수 있어요</p>
+    <button class="gx-btn-go" id="fr-rev">📺 광고 보고 이어하기</button>
+    <button class="qz-skip" id="fr-end">결과 보기</button></div>`;
+  stage.appendChild(ov);
+  ov.querySelector('#fr-rev').onclick = () => {
+    ov.remove();
+    inStageAd(stage, '광고 보고 생명 +2 이어하기', () => { fg.revived = true; fg.lives = 2; document.getElementById('gf-lives').textContent = '❤❤'; fg.last = performance.now(); fg.raf = requestAnimationFrame(freshLoop); }, () => endFresh());
+  };
+  ov.querySelector('#fr-end').onclick = () => { ov.remove(); endFresh(); };
+}
+function endFresh() {
+  const score = fg ? fg.score : 0;
   cancelAnimationFrame(fg?.raf);
   fg = null;
   finishGame('fresh', '🥬 프레시 캐치', score, `${score}점`, 'UI.gameFresh()');

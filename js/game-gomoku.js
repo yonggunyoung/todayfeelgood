@@ -1,5 +1,5 @@
 // ⚫ 냉장고 오목 — 슬라임 알로 AI와 5목 대결. 난이도(하/중/상)로 AI 강함, 광고로 무르기·힌트.
-import { gameUI, beep, chord, buzz, finishGame, diffMul, getDiff, inStageAd } from './games.js';
+import { gameUI, beep, chord, buzz, finishGame, diffMul, getDiff, gameDiffRow, inStageAd } from './games.js';
 import { mascotSprite, enemySprite, drawSprite, C } from './pixel.js';
 import { setupCanvas } from './slime.js';
 
@@ -11,14 +11,14 @@ export function gameGomoku() {
   ui.openSheet(`
     <div class="gx gx-gmk">
       <div class="gx-bar"><b class="gx-title">⚫ 냉장고 오목</b><button class="gx-x" onclick="UI.closeSheet()">✕</button></div>
-      <p class="sub" style="margin:2px 0 8px;color:#cdbde8">민트 슬라임으로 먼저 <b>5개</b>를 한 줄로! (AI는 보라 슬라임)</p>
+      <p class="sub" style="margin:2px 0 6px;color:#cdbde8">민트 슬라임으로 먼저 <b>5개</b>를 한 줄로! (AI는 보라 슬라임)</p>
+      ${gameDiffRow('gameGomoku')}
       <div class="gx-stage" style="padding:0 8px"><canvas id="gmk-c"></canvas>
         <div id="gmk-msg" class="gmk-msg" style="display:none"></div>
       </div>
       <div class="gx-shopbar">
         <button class="gx-speed" onclick="UI.gomokuUndo()">↩ 무르기</button>
         <button class="gx-adcoin" onclick="UI.gomokuHintAd()">📺 광고 보고 힌트</button>
-        <span class="gx-diff">난이도 ${({ easy: '하', normal: '중', hard: '상' })[getDiff()]}</span>
       </div>
     </div>`);
   const canvas = document.getElementById('gmk-c');
@@ -72,32 +72,55 @@ function cellScore(b, x, y, who) {
       const ex = x + dx * dir * s, ey = y + dy * dir * s; if (inB(ex, ey) && b[idx(ex, ey)] === 0) open++;
     }
     if (cnt >= 5) total += 1000000;
-    else if (cnt === 4) total += open >= 1 ? 50000 : 0 + (open === 2 ? 100000 : 8000);
-    else if (cnt === 3) total += open === 2 ? 6000 : open === 1 ? 800 : 0;
-    else if (cnt === 2) total += open === 2 ? 300 : 40;
-    else total += open * 8;
+    else if (cnt === 4) total += open === 2 ? 200000 : open === 1 ? 50000 : 500;
+    else if (cnt === 3) total += open === 2 ? 10000 : open === 1 ? 1000 : 30;
+    else if (cnt === 2) total += open === 2 ? 500 : open === 1 ? 100 : 8;
+    else total += open * 10;
   }
   return total;
 }
-function aiMove() {
-  if (!G || G.over) return;
-  const b = G.board;
+// 돌 주변(한 칸 이내) 빈칸 후보
+function genCands(b) {
   const cand = [];
   for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
     if (b[idx(x, y)]) continue;
     let near = false;
     for (let dy = -1; dy <= 1 && !near; dy++) for (let dx = -1; dx <= 1; dx++) { const nx = x + dx, ny = y + dy; if (inB(nx, ny) && b[idx(nx, ny)]) { near = true; break; } }
-    if (!near && G.moves.length) continue;
-    const atk = cellScore(b, x, y, 2), def = cellScore(b, x, y, 1);
-    // 난이도: 하=방어 약·랜덤↑, 상=공수 모두 강
-    const d = getDiff();
-    const defW = d === 'hard' ? 1.15 : d === 'normal' ? 0.95 : 0.7;
-    const noise = d === 'hard' ? 1 : d === 'normal' ? 60 : 260;
-    cand.push({ x, y, s: atk + def * defW + Math.random() * noise });
+    if (near) cand.push({ x, y });
   }
-  if (!cand.length) { place((N - 1) / 2, (N - 1) / 2, 2); return; }
-  cand.sort((a, b2) => b2.s - a.s);
-  place(cand[0].x, cand[0].y, 2);
+  return cand;
+}
+function aiMove() {
+  if (!G || G.over) return;
+  const b = G.board, d = getDiff(), mid = (N - 1) / 2 | 0;
+  if (!G.moves.length) { place(mid, mid, 2); return; }
+  const cands = genCands(b);
+  if (!cands.length) { place(mid, mid, 2); return; }
+  // 1) 즉시 이기는 수  2) 상대 즉승 방어 (난이도 무관 — 기본기)
+  for (const c of cands) if (cellScore(b, c.x, c.y, 2) >= 1000000) { place(c.x, c.y, 2); return; }
+  for (const c of cands) if (cellScore(b, c.x, c.y, 1) >= 1000000) { place(c.x, c.y, 2); return; }
+  // 난이도: 하=방어 약·랜덤↑, 중=균형, 상=공수 강 + 2수 앞 예측(무 노이즈)
+  const defW = d === 'hard' ? 1.25 : d === 'normal' ? 1.0 : 0.72;
+  const noise = d === 'hard' ? 0 : d === 'normal' ? 45 : 240;
+  for (const c of cands) c.base = cellScore(b, c.x, c.y, 2) + cellScore(b, c.x, c.y, 1) * defW;
+  if (d === 'hard') {
+    // 상위 후보에 대해 내가 둔 뒤 상대 최선 응수의 위협을 차감 → 함정·양수겸장 회피
+    cands.sort((a, b2) => b2.base - a.base);
+    const top = cands.slice(0, 8);
+    for (const c of top) {
+      b[idx(c.x, c.y)] = 2;
+      let opp = 0;
+      for (const o of genCands(b)) { const s = cellScore(b, o.x, o.y, 1); if (s > opp) opp = s; }
+      b[idx(c.x, c.y)] = 0;
+      c.look = c.base - opp * 0.85;
+    }
+    top.sort((a, b2) => b2.look - a.look);
+    place(top[0].x, top[0].y, 2);
+    return;
+  }
+  let best = null, bs = -Infinity;
+  for (const c of cands) { const s = c.base + Math.random() * noise; if (s > bs) { bs = s; best = c; } }
+  place(best.x, best.y, 2);
 }
 
 export function gomokuUndo() {

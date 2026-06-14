@@ -1,6 +1,6 @@
 // 재료 매치 — 같은 재료 3개 이상을 맞춰 터뜨리는 매치3 퍼즐. 연쇄(캐스케이드) 콤보로 점수 폭발.
 // 60초 안에 최대한 — 인접 두 칸을 탭해서 교환. 캔버스 렌더 + 낙하/팝 애니메이션.
-import { gameUI, beep, chord, buzz, finishGame, diffMul, inStageAd } from './games.js';
+import { gameUI, beep, chord, buzz, finishGame, diffMul, gameDiffRow, inStageAd } from './games.js';
 
 const KINDS = [
   { e: '🍎', c: '#ff6b6b' }, { e: '🥕', c: '#ff9f43' }, { e: '🥛', c: '#dfe6e9' },
@@ -16,6 +16,7 @@ export function gamePuzzle() {
       <button class="btn btn-sm" onclick="UI.closeSheet()">✕</button></div>
     <div class="g-hud" style="padding:0 4px"><b id="pz-score">0</b><span id="pz-combo" class="g-combo"></span><b id="pz-time">${TIME}.0초</b></div>
     <div class="pz-wrap"><canvas id="pz" class="pz-canvas"></canvas></div>
+    ${gameDiffRow('gamePuzzle')}
     <p class="hint" style="text-align:center;margin:8px 0 0">인접한 두 재료를 탭해 자리를 바꾸세요 — 3개 이상이면 팡!</p>`);
   const canvas = document.getElementById('pz');
   const wrap = canvas.parentElement;

@@ -8,7 +8,7 @@ import { AI_ENDPOINT } from './config.js';
 import { canListen, speak, stopSpeak, startListen, stopListen, isListening, parseCommand } from './voice.js';
 import { earn, spend, refund, EARN, earnedToday, SHOP, adFreeNow, gameBest } from './points.js';
 import { initGames, openGames, GAMES, gameFresh, gameVoice, gameVoicePass, gameDouble, setGameDiff } from './games.js';
-import { gameDefense, defBuy, defStart, defSpeed, defPick, defRevive, defGiveUp, defAdSkip, defAdSkill, defResume, defDraftAd, defWallMode } from './game-defense.js';
+import { gameDefense, defBuy, defStart, defSpeed, defPick, defRevive, defGiveUp, defAdSkip, defAdSkill, defResume, defDraftAd, defWallMode, defElem, defMidSkill, defMidSkip } from './game-defense.js';
 import { gamePuzzle } from './game-puzzle.js';
 import { gameGomoku, gomokuUndo, gomokuHintAd } from './game-gomoku.js';
 import { gameQuiz, quizPick, quizNext, quizReveal, quizRevealAll, quizFinish } from './game-quiz.js';
@@ -890,6 +890,7 @@ UI.gameFull = () => {
   catch { toast('이 브라우저는 전체화면을 지원하지 않아요'); }
 };
 UI.setGameDiff = (d) => setGameDiff(d);
+UI.gameSetDiff = (d, key) => { setGameDiff(d); if (key && typeof UI[key] === 'function') UI[key](); };
 UI.gameGomoku = () => gameGomoku();
 UI.gomokuUndo = () => gomokuUndo();
 UI.gomokuHintAd = () => gomokuHintAd();
@@ -907,6 +908,9 @@ UI.defGiveUp = () => defGiveUp();
 UI.defAdSkip = () => defAdSkip();
 UI.defAdSkill = () => defAdSkill();
 UI.defWallMode = () => defWallMode();
+UI.defElem = () => defElem();
+UI.defMidSkill = () => defMidSkill();
+UI.defMidSkip = () => defMidSkip();
 UI.defResume = () => defResume();
 UI.defDraftAd = () => defDraftAd();
 UI.gamePuzzle = () => gamePuzzle();

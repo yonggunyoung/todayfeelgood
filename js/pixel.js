@@ -22,6 +22,9 @@ export const PAL = {
   boss: { body: C.boss, hi: C.bossH, sh: C.bossS, out: C.out },
   amber: { body: '#e0a64b', hi: '#f6d690', sh: '#9c6f22', out: C.out },
   steel: { body: C.steel, hi: C.steelH, sh: C.steelS, out: C.out },
+  ice: { body: C.ice, hi: C.iceH, sh: C.iceS, out: C.out },          // 냉동 속성
+  bone: { body: '#e8e2d0', hi: '#fffaf0', sh: '#a89f86', out: C.out }, // 뼈 속성
+  sludge: { body: '#7a8a3e', hi: '#aec06a', sh: '#46521f', out: C.out }, // 거대 음식물쓰레기
 };
 
 /* ── 눈/입 표정 (시안 포팅) ── */
@@ -142,12 +145,17 @@ const ENEMY_SPR = {
   shield: { N: 20, pal: PAL.steel, expr: 'angry' },
   split:  { N: 18, pal: PAL.mold,  expr: 'angry', drip: true },
   mini:   { N: 9,  pal: PAL.mold,  expr: 'angry' },
+  // 맷집 강한 신종(속성 다양화) — 냉동/뼈/거대 폐기물
+  frost:  { N: 26, pal: PAL.ice,   expr: 'dull',  drip: false },
+  bone:   { N: 24, pal: PAL.bone,  expr: 'angry' },
+  brute:  { N: 30, pal: PAL.sludge,expr: 'angry', drip: true },
+  midboss:{ N: 30, pal: PAL.rot,   expr: 'boss',  drip: true },
   boss:   { N: 40, pal: PAL.boss,  expr: 'boss',  crown: true },
 };
 export function enemySprite(type, expr) {
   return cached(`e:${type}:${expr}`, () => {
     const d = ENEMY_SPR[type] || ENEMY_SPR.grunt;
-    const ex = expr === 'blink' ? 'blink' : d.expr;
+    const ex = expr || d.expr;
     const extra = d.crown ? ((g, n, cx) => crown(g, n, cx)) : (d.drip ? ((g, n, cx) => drips(g, n, cx)) : null);
     const g = slime(d.N, d.pal, ex, extra);
     return { base: bakeGrid(g), white: bakeGrid(g, C.white), n: d.N };

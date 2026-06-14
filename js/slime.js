@@ -163,8 +163,8 @@ export class Shake {
 
 /* ── 떠오르는 점수 텍스트 ── */
 export class Floaters {
-  constructor() { this.f = []; }
-  add(x, y, txt, opt = {}) { this.f.push({ x, y, txt, t: opt.life || 0.9, max: opt.life || 0.9, vy: opt.vy || -38, color: opt.color || '#fff', size: opt.size || 17, font: opt.font || 'Jua' }); }
+  constructor(max = 60) { this.f = []; this.max = max; }
+  add(x, y, txt, opt = {}) { if (this.f.length >= this.max) this.f.shift(); this.f.push({ x, y, txt, t: opt.life || 0.9, max: opt.life || 0.9, vy: opt.vy || -38, color: opt.color || '#fff', size: opt.size || 17, font: opt.font || 'Jua' }); }
   update(dt) { for (let i = this.f.length - 1; i >= 0; i--) { const f = this.f[i]; f.t -= dt; if (f.t <= 0) { this.f.splice(i, 1); continue; } f.y += f.vy * dt; f.vy *= 0.94; } }
   draw(ctx) {
     ctx.textAlign = 'center';

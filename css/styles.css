@@ -1149,10 +1149,13 @@ input:focus, select:focus, textarea:focus { outline: none; box-shadow: 0 0 0 3px
 .diff-btn small { color: #b9a7d6; font-size: 0.72rem; }
 .diff-btn:active { transform: scale(0.95); }
 .diff-hint { color: #7d6aa6; font-size: 0.72rem; margin-top: 10px; }
-.gx-shopbar { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px 0; }
+.gx-shopbar { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; padding: 8px 12px 0; }
 .gx-speed { background: rgba(115,203,255,0.16); color: #73cbff; border: none; border-radius: 99px; padding: 6px 12px; font-family: 'Jua', sans-serif; font-size: 0.82rem; font-weight: 800; cursor: pointer; }
 .gx-speed:active { transform: scale(0.95); }
-.gx-diff { color: #9b8bbd; font-size: 0.76rem; font-weight: 700; }
+.gx-diff { color: #9b8bbd; font-size: 0.76rem; font-weight: 700; margin-left: auto; }
+/* 공격 속성 스왑(상극) — 현재 속성 색을 --ec로 반영 */
+.gx-elem { background: color-mix(in srgb, var(--ec, #ffd24a) 18%, transparent); color: var(--ec, #ffd24a); border: 1.5px solid color-mix(in srgb, var(--ec, #ffd24a) 50%, transparent); border-radius: 99px; padding: 5px 11px; font-family: 'Jua', sans-serif; font-size: 0.82rem; font-weight: 800; cursor: pointer; }
+.gx-elem:active { transform: scale(0.95); }
 /* 스킬 드래프트 오버레이 (캔버스 위) */
 .draft-overlay { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(11,6,18,0.86); backdrop-filter: blur(3px); border-radius: 16px; z-index: 5; animation: fade .2s ease; }
 .draft-in { width: 100%; padding: 14px; text-align: center; }
@@ -1204,6 +1207,7 @@ input:focus, select:focus, textarea:focus { outline: none; box-shadow: 0 0 0 3px
 .draft-card { position: relative; }
 .draft-card.r-rare { border-color: #2f5a8a; }
 .draft-card.r-unique { border-color: var(--rc); box-shadow: 0 0 14px rgba(255,224,74,.3); }
+.draft-card.r-mythic { border-color: var(--rc); box-shadow: 0 0 18px rgba(255,138,223,.45); background: linear-gradient(145deg, rgba(255,138,223,.14), rgba(115,203,255,.08)); }
 .draft-card.r-junk { border-color: #4a3a5e; opacity: 0.92; }
 .draft-card .grow { flex: 1; min-width: 0; }
 .draft-name { display: flex; align-items: center; gap: 6px; }
@@ -1217,6 +1221,11 @@ input:focus, select:focus, textarea:focus { outline: none; box-shadow: 0 0 0 3px
 .g-diffchip { border: 1.5px solid var(--hairline); background: var(--card); border-radius: 99px; padding: 5px 13px; font-weight: 800; color: var(--label-2); cursor: pointer; }
 .g-diffchip.on { background: var(--ink); color: #fff; border-color: var(--ink); }
 .g-diffbar small { margin-left: auto; color: var(--label-3); font-size: 0.7rem; }
+/* 게임 화면 내부 난이도 칩 (허브 대신 각 게임에서 조절) */
+.g-diffbar-in { margin: 2px 8px 8px; }
+.gx .g-diffbar-in { color: #cdbde8; }
+.gx .g-diffbar-in .g-diffchip { background: rgba(255,255,255,0.06); border-color: rgba(159,178,214,0.32); color: #cdbde8; }
+.gx .g-diffbar-in .g-diffchip.on { background: #5ef0b0; color: #0a2030; border-color: #5ef0b0; }
 /* 인게임 오버레이가 스테이지에 정확히 덮이도록 */
 #gf-stage, .pz-wrap, .gx-gmk .gx-stage { position: relative; }
 .gmk-msg { position: absolute; inset: 0; display: grid; place-items: center; }
@@ -1224,7 +1233,11 @@ input:focus, select:focus, textarea:focus { outline: none; box-shadow: 0 0 0 3px
 /* 디펜스 벽 설치 버튼 */
 .gx-wall { background: rgba(115,203,255,0.18); color: #73cbff; border: none; border-radius: 99px; padding: 6px 12px; font-family: 'Jua',sans-serif; font-size: 0.82rem; font-weight: 800; cursor: pointer; }
 .gx-wall.arming { background: #73cbff; color: #0a2030; animation: fdOn 0.8s ease-in-out infinite; }
+.gx-wall.adcharge { background: rgba(255,224,74,0.18); color: #ffe04a; animation: fdOn 1s ease-in-out infinite; }
 .gx-wall:active { transform: scale(0.95); }
+/* 광고 보상 버튼 — 은은한 맥동으로 광고 시청 유도 */
+.gx-adcoin { animation: adPulse 2.2s ease-in-out infinite; }
+@keyframes adPulse { 0%,100% { box-shadow: 0 0 0 rgba(255,224,74,0); } 50% { box-shadow: 0 0 12px rgba(255,224,74,.4); } }
 .up-card.cant { opacity: 0.5; }
 
 /* ══════════ 게임 터치: 브라우저 당겨서새로고침·스크롤 방지 + 전체화면 ══════════ */

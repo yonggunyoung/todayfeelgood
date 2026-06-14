@@ -52,8 +52,12 @@ let gameDiff = 'normal';
 export const DIFF_MUL = { easy: 0.82, normal: 1, hard: 1.32 };
 export const getDiff = () => gameDiff;
 export const diffMul = () => DIFF_MUL[gameDiff];
-export function setGameDiff(d) { gameDiff = d; openGames(); }
+export function setGameDiff(d) { gameDiff = d; }
 const DIFF_LBL = { easy: '하', normal: '중', hard: '상' };
+// 게임 화면 내부 난이도 칩 — 변경 시 해당 게임을 재시작(외부 허브 난이도 조절 대체)
+export function gameDiffRow(replayKey) {
+  return `<div class="g-diffbar g-diffbar-in"><span>난이도</span>${['easy', 'normal', 'hard'].map((d) => `<button class="g-diffchip ${gameDiff === d ? 'on' : ''}" onclick="UI.gameSetDiff('${d}','${replayKey}')">${DIFF_LBL[d]}</button>`).join('')}<small>높을수록 점수·난도↑</small></div>`;
+}
 
 /* ── 게임 허브 ── */
 export function openGames() {
@@ -77,7 +81,7 @@ export function openGames() {
       <button class="btn btn-sm btn-tint" onclick="UI.openRanks()">🏆 랭킹</button>
     </div>
     <p class="sub">끓는 동안 한 판 — 점수가 포인트로 (오늘 보상 ${left}판 남음 · 광고 보면 2배)</p>
-    <div class="g-diffbar"><span>난이도</span>${['easy', 'normal', 'hard'].map((d) => `<button class="g-diffchip ${gameDiff === d ? 'on' : ''}" onclick="UI.setGameDiff('${d}')">${DIFF_LBL[d]}</button>`).join('')}<small>어려울수록 점수·보상↑</small></div>
+    <p class="hint" style="text-align:center;margin:0 0 6px">난이도는 각 게임 화면에서 조절할 수 있어요</p>
     <div class="g-grid">${cards}</div>
     <p class="hint" style="text-align:center;margin-top:10px">주간 기록은 월요일마다 리셋 — 이번 주 왕좌를 지키세요 👑</p>
     <div class="btn-row"><button class="btn btn-block" onclick="UI.closeSheet()">닫기</button></div>`);
@@ -160,6 +164,7 @@ export function gameFresh() {
         <span id="gf-combo" class="g-combo"></span>
       </div>
       <div class="g-itembox"><span id="gf-emoji">${fg.item.emoji}</span><b id="gf-name">${fg.item.name}</b></div>
+      ${gameDiffRow('gameFresh')}
       <p class="hint" style="text-align:center;margin:4px 0 10px">초록 <b>신선 존</b>에서 탭! 가운데면 PERFECT</p>
       <div class="g-track"><div class="g-zone" id="gf-zone"><i></i></div><div class="g-marker" id="gf-marker"></div></div>
       <div class="g-pop" id="gf-pop"></div>

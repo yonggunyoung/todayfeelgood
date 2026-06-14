@@ -172,15 +172,19 @@ export function gamePuzzle() {
       const k = KINDS[v];
       const sc = P.pop[idx] > 0 ? P.pop[idx] : 1;
       const pad = cell * 0.08 + (1 - sc) * cell * 0.4;
+      const inner = cell - pad * 2;
       c.globalAlpha = P.pop[idx] > 0 ? P.pop[idx] : 1;
-      // 또렷한 컬러 타일 + 재료 이모지(한눈에 인식)
-      c.fillStyle = idx === P.sel ? '#fff0b8' : k.c;
-      roundRect(c, x + pad, y + pad, cell - pad * 2, cell - pad * 2, cell * 0.24); c.fill();
-      c.fillStyle = 'rgba(255,255,255,0.22)'; // 상단 광택
-      roundRect(c, x + pad, y + pad, cell - pad * 2, (cell - pad * 2) * 0.42, cell * 0.22); c.fill();
-      if (idx === P.sel) { c.strokeStyle = '#ff8a3d'; c.lineWidth = 3; c.stroke(); }
-      c.font = `${Math.round(cell * 0.5)}px serif`; c.textAlign = 'center'; c.textBaseline = 'middle';
-      c.fillText(k.e, x + cell / 2, y + cell / 2 + 1);
+      // 컬러 타일(테두리=색 단서) — 매칭은 색으로
+      c.fillStyle = idx === P.sel ? '#ffd86b' : k.c;
+      roundRect(c, x + pad, y + pad, inner, inner, cell * 0.24); c.fill();
+      if (idx === P.sel) { c.strokeStyle = '#ff7a1f'; c.lineWidth = 3; c.stroke(); }
+      // 흰 원판 — 이모지가 배경색에 묻히지 않고 항상 또렷하게
+      const cxp = x + cell / 2, cyp = y + cell / 2, rr = inner * 0.37;
+      c.fillStyle = '#ffffff'; c.beginPath(); c.arc(cxp, cyp, rr, 0, 6.28); c.fill();
+      c.lineWidth = 1.2; c.strokeStyle = 'rgba(0,0,0,0.12)'; c.stroke();
+      // 재료 이모지
+      c.font = `${Math.round(cell * 0.42)}px serif`; c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.fillText(k.e, cxp, cyp + 1);
     }
     c.globalAlpha = 1; c.textBaseline = 'alphabetic';
     c.restore();

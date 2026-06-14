@@ -140,31 +140,32 @@ function openSheet(html, { lock = false } = {}) {
   if (!lock) attachSheetDrag();
   relocateTimerChip(); // 게임 시트가 열리면 타이머를 컴팩트/전면으로
 }
-// 상단(그립·헤더)을 잡고 아래로 슬라이드하면 닫힘
+// 상단 손잡이(그립)·게임 상단바를 잡고 아래로 슬라이드하면 닫힘 (배경 스크롤과 충돌 안 나게 핸들에 touch-action:none)
 function attachSheetDrag() {
   const sheet = $('#modal-root .sheet'); if (!sheet) return;
   let startY = 0, dy = 0, dragging = false;
-  sheet.addEventListener('pointerdown', (e) => {
-    if (sheet.scrollTop > 2) return; // 내용이 스크롤된 상태면 스크롤 우선
-    const r = sheet.getBoundingClientRect();
-    if (e.clientY - r.top > 72) return; // 상단 영역에서 시작할 때만
-    if (e.target.closest('button, input, textarea, select, a, canvas')) return;
+  const onDown = (e) => {
+    if (!e.target.closest('.grip, .gx-bar')) return; // 손잡이/게임 상단바에서만 시작
+    if (e.target.closest('button, input, textarea, select, a')) return;
     dragging = true; startY = e.clientY; dy = 0;
-    sheet.style.transition = 'none';
+    sheet.style.transition = 'none'; sheet.style.willChange = 'transform';
     try { sheet.setPointerCapture(e.pointerId); } catch { /* noop */ }
-  });
-  sheet.addEventListener('pointermove', (e) => {
+  };
+  const onMove = (e) => {
     if (!dragging) return;
+    e.preventDefault(); // 네이티브 스크롤(흐릿한 배경 움직임) 방지
     dy = Math.max(0, e.clientY - startY);
     sheet.style.transform = `translateY(${dy}px)`;
     sheet.style.opacity = String(Math.max(0.4, 1 - dy / 600));
-  });
+  };
   const end = () => {
     if (!dragging) return;
-    dragging = false; sheet.style.transition = ''; sheet.style.opacity = '';
-    if (dy > 96) { UI.closeSheet(); if (sheet.isConnected) sheet.style.transform = ''; } // 가드로 안 닫혔으면 제자리로
+    dragging = false; sheet.style.transition = ''; sheet.style.opacity = ''; sheet.style.willChange = '';
+    if (dy > 90) { UI.closeSheet(); if (sheet.isConnected) sheet.style.transform = ''; } // 가드로 안 닫혔으면 제자리로
     else sheet.style.transform = '';
   };
+  sheet.addEventListener('pointerdown', onDown);
+  sheet.addEventListener('pointermove', onMove);
   sheet.addEventListener('pointerup', end);
   sheet.addEventListener('pointercancel', end);
 }
@@ -666,13 +667,13 @@ UI.commitAdd = () => {
 
 UI.openQuickAdd = () => {
   openSheet(`
-    <h2>빠른 추가</h2><p class="sub">탭하면 바로 냉장고로 — 수량·기한은 자동, 나중에 수정 가능</p>
-    <div class="search-row"><input id="qa-search" placeholder="재료 검색 (예: 계란, 두부…)" oninput="UI.qaFilter()" /></div>
+    <h2>빠른 추가</h2><p class="sub">아래에서 재료를 탭해 담거나, 검색해서 찾으세요 — 수량·기한은 다음 화면에서</p>
+    <div class="search-row"><input id="qa-search" placeholder="재료 검색 (예: 계란, 두부…)" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" oninput="UI.qaFilter()" /></div>
     <div id="qa-grid" class="ing-pick-grid"></div>
     <div id="qa-custom"></div>
     <div class="btn-row"><button class="btn btn-block" onclick="UI.closeSheet();UI.refresh()">완료</button></div>`);
   renderQuickAddGrid();
-  setTimeout(() => $('#qa-search')?.focus(), 60);
+  // 자동 포커스 제거 — 시트가 뜨자마자 키패드가 올라와 화면이 출렁이는 것을 막음(탭하면 검색)
 };
 
 function renderQuickAddGrid() {
@@ -1276,7 +1277,7 @@ function renderRecipes() {
       <p>${esc(mode.desc || '내 냉장고 기준으로 정렬했어요')}</p></div>
     <div class="mode-chips">${chips}</div>
     <div class="search-row">
-      <input placeholder="요리 이름·태그 검색" value="${esc(recipeQuery)}" oninput="UI.recipeSearch(this.value)" />
+      <input placeholder="요리 이름·태그 검색" value="${esc(recipeQuery)}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" oninput="UI.recipeSearch(this.value)" />
       <button class="btn btn-accent" onclick="UI.openYtSearch()" title="유튜브에서 찾기">🎬</button>
       <button class="btn btn-tint" onclick="UI.openRecipeForm()">＋</button>
     </div>
@@ -2320,7 +2321,7 @@ function renderShopping() {
     <div class="hero"><h1>오늘의 <em>장보기</em></h1>
       <p>태그로 출처가 한눈에 — <b>레시피에 필요·거의 떨어짐·다 떨어짐</b>은 자동, <b>내가 추가</b>는 직접</p></div>
     <div class="search-row">
-      <input id="shop-new" placeholder="내가 필요한 것 직접 추가 (예: 올리브유, 키친타올…)" onkeydown="if(event.key==='Enter')UI.shopAdd()" />
+      <input id="shop-new" placeholder="내가 필요한 것 직접 추가 (예: 올리브유, 키친타올…)" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" onkeydown="if(event.key==='Enter')UI.shopAdd()" />
       <button class="btn btn-tint" onclick="UI.shopAdd()">＋ 내가 추가</button>
     </div>
     <div class="shop-legend">

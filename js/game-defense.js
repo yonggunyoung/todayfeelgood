@@ -143,13 +143,13 @@ export function gameDefense() {
           <div class="gx-start-in def-opening">
             <div class="op-foes">🦠 🧟 ❄️ 🗑️ 🦴</div>
             <div class="op-hero">🧊🛡️</div>
-            <b class="op-title">신선도 방어 작전</b>
+            <b class="op-title">최후의 신선 보루</b>
             <div class="op-story">
-              <p>한밤, 문틈으로 스며든 <b>곰팡이 군단</b>.</p>
-              <p>상온의 부패균·음식물 쓰레기, 정체불명의 <b>뼈다귀</b>까지—</p>
-              <p>바깥의 오염이 마지막 보루, <b>냉장고</b>로 몰려온다.</p>
-              <p>냉장고는 스스로 싸운다. 당신은 그 힘을 <b>강화</b>하라.</p>
-              <p class="op-warn">⚠ 신선도가 0이 되면… 모든 것이 상한다.</p>
+              <p>깊은 밤, 문틈으로 <b>곰팡이 포자</b>가 스며든다.</p>
+              <p>상온의 부패균과 음식물 쓰레기, 정체 모를 <b>뼈다귀</b>까지…</p>
+              <p>바깥의 오염이 마지막 보루 — <b>당신의 냉장고</b>로 몰려온다.</p>
+              <p>다행히 이 냉장고는 스스로 맞서 싸운다. 당신은 그 힘을 <b>키우면</b> 된다.</p>
+              <p class="op-warn">⚠ 신선도가 0이 되는 순간, 모든 것이 상한다.</p>
             </div>
             ${resume}
             <div class="diff-row">
@@ -1110,13 +1110,16 @@ function drawFridge(c, f) {
   // 냉장고 바디 — 시안 픽셀 스프라이트(내장 카와이 얼굴) + 성에 글로우 / 위험 경고 / 강화 펄스
   const ps = 1 + (D.upPulse || 0) * 0.4;
   drawSprite(c, fridgeSprite().base, f.x, f.y + 6, 80, { sx: ps, sy: ps, glow: D.upPulse > 0.05 ? 'rgba(94,240,176,0.9)' : (low ? 'rgba(255,77,106,0.8)' : 'rgba(115,203,255,0.6)'), glowR: low || D.upPulse > 0.05 ? 18 : 14 });
-  // 공격 속성 배지 — 냉장고에 표시(터치하면 전환). 위험 텍스트와 겹치지 않게 위쪽에.
+  // 공격 속성 배지 — 냉장고에 아이콘만 작게(터치하면 전환). 은은한 링으로 탭 가능 암시.
   const ae = ATK[D.atkElem] || ATK.blunt;
-  c.save(); c.textAlign = 'center';
-  c.fillStyle = 'rgba(10,6,18,0.55)'; rr(c, f.x - 26, f.y - 34, 52, 20, 10); c.fill();
-  c.font = '13px serif'; c.fillText(ae.icon, f.x - 9, f.y - 20);
-  c.fillStyle = ae.col; c.font = "9px 'Press Start 2P', Jua, monospace"; c.fillText('전환', f.x + 9, f.y - 21);
-  c.restore();
+  const pulse = 0.5 + Math.sin(performance.now() / 600) * 0.18;
+  c.save(); c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.globalAlpha = 0.85; c.fillStyle = 'rgba(10,6,18,0.5)';
+  c.beginPath(); c.arc(f.x, f.y - 30, 13, 0, 6.28); c.fill();
+  c.globalAlpha = pulse; c.strokeStyle = ae.col; c.lineWidth = 1.6;
+  c.beginPath(); c.arc(f.x, f.y - 30, 13, 0, 6.28); c.stroke();
+  c.globalAlpha = 1; c.font = '14px serif'; c.fillText(ae.icon, f.x, f.y - 29);
+  c.textBaseline = 'alphabetic'; c.restore();
 }
 
 function drawHud(c, W, H) {

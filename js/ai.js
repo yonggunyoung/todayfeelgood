@@ -24,7 +24,7 @@ async function throwApiError(res) {
 
 /* ── 서버 경유 모드 — Cloudflare 게이트웨이(워커)가 Anthropic 키만 보관·주입.
    클라이언트가 프롬프트/스키마/도구를 모두 만들어 보내고, 워커는 키를 끼워 그대로 전달한다. ── */
-import { AI_ENDPOINT } from './config.js';
+import { AI_ENDPOINT, AI_GEMINI } from './config.js';
 const endpointOf = (settings) => settings.aiEndpoint || AI_ENDPOINT;
 const isServer = (settings) => settings.aiMode === 'server' && !!endpointOf(settings);
 
@@ -58,6 +58,43 @@ async function callClaude(body, settings) {
     if ((res.status === 529 || res.status === 503) && attempt < 4) { await backoff(attempt); continue; }
     await throwApiError(res);
   }
+}
+
+// Gemini 호출 — 서버(게이트웨이) 전용. 워커의 /gemini 경로로 보내면 워커가 GEMINI 키를 끼워 Google로 전달한다.
+// 모델 버전은 워커의 GEMINI_MODEL 시크릿이 정한다(클라이언트엔 버전명 안 박음). 커스텀 헤더 없이 text/plain → CORS 프리플라이트 없음.
+async function callGemini(body, settings) {
+  if (!isServer(settings)) throw new Error('Gemini는 서버 연결(게이트웨이)에서만 쓸 수 있어요.');
+  const url = `${endpointOf(settings).replace(/\/+$/, '')}/gemini`;
+  const headers = { 'content-type': 'text/plain;charset=UTF-8' };
+  const payload = JSON.stringify(body);
+  const backoff = (n) => new Promise((r) => setTimeout(r, 800 * (n + 1)));
+  for (let attempt = 0; ; attempt++) {
+    const res = await fetch(url, { method: 'POST', headers, body: payload });
+    if (res.ok) {
+      const data = await res.json().catch(() => null);
+      if (!data) throw new Error('AI 응답을 읽지 못했어요. 잠시 후 다시 시도해 주세요.');
+      if (data.error) { // Gemini 에러 봉투 { error: { code, message, status } }
+        const err = new Error(data.error.message || 'AI 호출에 실패했어요. 잠시 후 다시 시도해 주세요.');
+        err.status = data.error.code || 500;
+        throw err;
+      }
+      return data;
+    }
+    if ((res.status === 429 || res.status === 503 || res.status === 529) && attempt < 4) { await backoff(attempt); continue; }
+    await throwApiError(res);
+  }
+}
+// Gemini 응답에서 텍스트 추출(+ 안전차단 처리)
+function geminiText(resp) {
+  const cand = resp && Array.isArray(resp.candidates) ? resp.candidates[0] : null;
+  if (!cand) {
+    if (resp && resp.promptFeedback && resp.promptFeedback.blockReason) throw new Error('이미지를 분석할 수 없습니다. 다른 자료로 시도해 주세요.');
+    return '';
+  }
+  if (cand.finishReason && cand.finishReason !== 'STOP' && cand.finishReason !== 'MAX_TOKENS') {
+    throw new Error('이 내용은 분석할 수 없어요. 다른 자료로 시도해 주세요.');
+  }
+  return (cand.content && Array.isArray(cand.content.parts) ? cand.content.parts : []).map((p) => p.text || '').join('');
 }
 const extractText = (msg) => (Array.isArray(msg && msg.content) ? msg.content.filter((b) => b.type === 'text').map((b) => b.text).join('\n') : '') || '';
 function parseJsonLoose(text) {
@@ -100,21 +137,34 @@ export async function scanImage(file, settings) {
   if (!isServer(settings) && !settings.aiKey) throw new Error('설정에서 Claude API 키를 등록하거나, 서버 연결을 켜주세요.');
   const b64 = await downscale(file);
 
-  // 구조화 출력(output_config)은 일부 계정에 권한이 없어 403을 유발할 수 있어 쓰지 않는다 — 프롬프트로 JSON을 받고 느슨히 파싱.
-  const msg = await callClaude({
-    model: modelFor(settings),
-    max_tokens: 2048,
-    messages: [{
-      role: 'user',
-      content: [
-        { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: b64 } },
-        { type: 'text', text: PROMPT },
-      ],
-    }],
-  }, settings);
-
-  if (msg.stop_reason === 'refusal') throw new Error('이미지를 분석할 수 없습니다. 다른 사진으로 시도해 주세요.');
-  const parsed = parseJsonLoose(extractText(msg) || '{}');
+  let text;
+  if (AI_GEMINI.scan && isServer(settings)) {
+    // Gemini 경로 — 이미지+프롬프트를 generateContent 형식으로. (워커 /gemini, 모델은 워커 GEMINI_MODEL)
+    const resp = await callGemini({
+      contents: [{ role: 'user', parts: [
+        { inlineData: { mimeType: 'image/jpeg', data: b64 } },
+        { text: PROMPT },
+      ] }],
+      generationConfig: { responseMimeType: 'application/json', temperature: 0 },
+    }, settings);
+    text = geminiText(resp);
+  } else {
+    // Claude 경로(기본) — 구조화 출력(output_config)은 일부 계정 403 유발 가능해 프롬프트로 JSON 받고 느슨히 파싱.
+    const msg = await callClaude({
+      model: modelFor(settings),
+      max_tokens: 2048,
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: b64 } },
+          { type: 'text', text: PROMPT },
+        ],
+      }],
+    }, settings);
+    if (msg.stop_reason === 'refusal') throw new Error('이미지를 분석할 수 없습니다. 다른 사진으로 시도해 주세요.');
+    text = extractText(msg);
+  }
+  const parsed = parseJsonLoose(text || '{}');
   if (!parsed || !Array.isArray(parsed.items) || parsed.items.length === 0) {
     throw new Error('사진에서 식재료를 찾지 못했습니다. 더 선명한 사진으로 시도해 주세요.');
   }
@@ -139,34 +189,56 @@ const YT_PROMPT = (url) => `유튜브 요리 영상에서 레시피를 정리하
 {"ok":true,"title":"요리명","time":15,"kcal":400,"protein":20,"tags":["국물"],"ingredients":[{"name":"두부","amount":0.5,"unit":"모","seasoning":false}],"steps":["1단계 설명"],"tips":["키포인트"]}
 레시피를 찾지 못하면 {"ok":false,"reason":"이유"} 만 출력하세요.`;
 
+// Gemini는 유튜브 링크를 영상으로 직접 읽으므로 웹 도구 단계 없이 영상 내용 기반으로 정리한다.
+const YT_PROMPT_GEMINI = () => `이 유튜브 요리 영상을 보고 레시피를 정리하세요.
+1) 재료명은 한국 마트의 일반 명칭으로 정규화하세요 (예: "서울우유 1L" → 우유, "대패삼겹" → 삼겹살). 간장·소금·설탕·식용유·참기름·고춧가루 같은 기본 양념은 seasoning을 true로 표시하세요.
+2) 분량은 1인분 기준으로 환산하고(예: 4인분이면 ÷4), 환산이 어려우면 영상 기준 그대로 두되 단위를 명확히 쓰세요.
+3) steps는 실제 조리 순서대로 5~9개. 각 단계에 핵심 수치(불 세기, 시간, 계량)를 포함하세요.
+4) tips에는 영상에서 강조한 키포인트·실패 방지 요령을 최대 3개 (없으면 빈 배열).
+5) tags는 다음 중에서만 고르세요: 반찬, 고단백, 운동, 자취, 초간단, 국물, 집밥, 도시락, 다이어트, 순한맛, 매콤, 아침
+설명 없이 아래 형태의 JSON 하나만 출력하세요:
+{"ok":true,"title":"요리명","time":15,"kcal":400,"protein":20,"tags":["국물"],"ingredients":[{"name":"두부","amount":0.5,"unit":"모","seasoning":false}],"steps":["1단계 설명"],"tips":["키포인트"]}
+레시피를 찾지 못하면 {"ok":false,"reason":"이유"} 만 출력하세요.`;
+
 export async function extractRecipeFromYouTube(url, settings) {
   if (!isServer(settings) && !settings.aiKey) throw new Error('설정에서 Claude API 키를 등록하거나, 서버 연결을 켜주세요.');
-  const tools = [
-    { type: 'web_fetch_20260209', name: 'web_fetch' },
-    { type: 'web_search_20260209', name: 'web_search' },
-  ];
-  let messages = [{ role: 'user', content: YT_PROMPT(url) }];
-  let msg = null;
 
-  // 서버측 도구 루프가 길어지면 pause_turn으로 끊겨 돌아온다 → 그대로 이어서 재호출 (최대 3회)
-  for (let i = 0; i < 4; i++) {
-    msg = await callClaude({
-      model: modelFor(settings),
-      max_tokens: 4096,
-      tools,
-      messages,
+  let text;
+  if (AI_GEMINI.recipe && isServer(settings)) {
+    // Gemini 경로 — 유튜브 링크를 영상으로 직접 읽는다(web_fetch 차단 우회). 워커 GEMINI_MODEL은 영상 지원 모델이어야 함.
+    const resp = await callGemini({
+      contents: [{ role: 'user', parts: [
+        { fileData: { fileUri: url } },
+        { text: YT_PROMPT_GEMINI() },
+      ] }],
+      generationConfig: { responseMimeType: 'application/json' },
     }, settings);
-    if (msg.stop_reason === 'pause_turn') {
-      messages = [...messages, { role: 'assistant', content: msg.content }];
-      continue;
+    text = geminiText(resp);
+  } else {
+    // Claude 경로(기본) — 서버측 웹 도구로 제목·설명을 읽어 정리. pause_turn이면 그대로 이어서 재호출(최대 3회).
+    const tools = [
+      { type: 'web_fetch_20260209', name: 'web_fetch' },
+      { type: 'web_search_20260209', name: 'web_search' },
+    ];
+    let messages = [{ role: 'user', content: YT_PROMPT(url) }];
+    let msg = null;
+    for (let i = 0; i < 4; i++) {
+      msg = await callClaude({
+        model: modelFor(settings),
+        max_tokens: 4096,
+        tools,
+        messages,
+      }, settings);
+      if (msg.stop_reason === 'pause_turn') {
+        messages = [...messages, { role: 'assistant', content: msg.content }];
+        continue;
+      }
+      break;
     }
-    break;
+    if (!msg) throw new Error('AI 응답이 없어요. 다시 시도해 주세요.');
+    if (msg.stop_reason === 'refusal') throw new Error('이 영상은 분석할 수 없어요.');
+    text = extractText(msg);
   }
-
-  if (!msg) throw new Error('AI 응답이 없어요. 다시 시도해 주세요.');
-  if (msg.stop_reason === 'refusal') throw new Error('이 영상은 분석할 수 없어요.');
-
-  const text = extractText(msg);
   const start = text.lastIndexOf('{"ok"');
   const end = text.lastIndexOf('}');
   if (start < 0 || end <= start) throw new Error('레시피를 정리하지 못했어요. 다른 영상으로 시도해 주세요.');

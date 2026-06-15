@@ -34,8 +34,10 @@ const modelFor = (settings) => settings.aiModel || (isServer(settings) ? 'claude
 // Anthropic 호출 통합 — 서버 모드면 게이트웨이(워커)로 전체 payload 전달(워커가 키만 끼움), 아니면 본인 키로 직접.
 async function callClaude(body, settings) {
   if (isServer(settings)) {
+    // content-type을 text/plain으로 보내 CORS 프리플라이트(OPTIONS)를 생략한다 — 게이트웨이는 본문(JSON 문자열)을
+    // 그대로 Anthropic에 application/json으로 전달하므로 결과는 동일하고, 워커가 OPTIONS를 처리 못해도 동작한다.
     const res = await fetch(endpointOf(settings).replace(/\/+$/, ''), {
-      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body),
+      method: 'POST', headers: { 'content-type': 'text/plain;charset=UTF-8' }, body: JSON.stringify(body),
     });
     if (!res.ok) await throwApiError(res);
     return res.json();

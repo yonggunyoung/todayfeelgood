@@ -2693,6 +2693,8 @@ window.addEventListener('popstate', () => {
 // 키를 직접 넣은 사용자는 BYOK 그대로 존중. (구버전 테스트로 남은 aiMode='byok'+키없음 상태도 여기서 정상화)
 if (AI_ENDPOINT) {
   let changed = false;
+  // 막혔던 ddukkit.com 커스텀 도메인을 저장해 둔 기기는 새 게이트웨이(config) 주소로 자동 이전
+  if (/ddukkit\.com/.test(S.settings.aiEndpoint || '') && S.settings.aiEndpoint !== AI_ENDPOINT) { S.settings.aiEndpoint = ''; changed = true; }
   if (!S.settings.aiEndpoint) { S.settings.aiEndpoint = AI_ENDPOINT; changed = true; }
   if (!S.settings.aiKey && S.settings.aiMode !== 'server') { S.settings.aiMode = 'server'; changed = true; }
   if (changed) save({ silent: true });

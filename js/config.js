@@ -19,7 +19,8 @@ export const FIREBASE_CONFIG = {
 // ② AI 게이트웨이 URL — Cloudflare Worker가 Anthropic 키를 보관·주입한다.
 //    이 값이 채워지면(그리고 사용자가 본인 키를 안 넣었으면) 서버 AI 모드가 기본 적용된다.
 //    ※ 여기엔 엔드포인트 주소만 둔다. 실제 API 키는 절대 이 파일/저장소에 넣지 말 것 (워커 Secret에만).
-export const AI_ENDPOINT = 'https://ai2.ddukkit.com';
+//    workers.dev 직주소 사용 — 커스텀 도메인(ai2.ddukkit.com)은 존 WAF가 POST를 막아서(403) 우회.
+export const AI_ENDPOINT = 'https://ai-gateway.yonggunyoung.workers.dev';
 
 // ③ 앱인토스 입점 후 채우기 — 콘솔에서 발급받는 값 (비우면 개별 운영 모드로 자동 폴백)
 //    rewardAdId: 보상형 광고 단위 / promotionId: 토스포인트 프로모션 (비즈월렛 예산 선충전 필요)

@@ -39,14 +39,23 @@ async function callClaude(body, settings) {
   const url = server ? endpointOf(settings).replace(/\/+$/, '') : 'https://api.anthropic.com/v1/messages';
   const headers = server ? { 'content-type': 'text/plain;charset=UTF-8' } : aiHeaders(settings);
   const payload = JSON.stringify(body);
+  const RETRYABLE = new Set(['overloaded_error', 'api_error']); // Anthropic 일시 과부하/내부 오류
+  const backoff = (n) => new Promise((r) => setTimeout(r, 800 * (n + 1))); // 0.8→1.6→2.4→3.2s
   for (let attempt = 0; ; attempt++) {
     const res = await fetch(url, { method: 'POST', headers, body: payload });
-    if (res.ok) return res.json();
-    // Anthropic 과부하(529)·일시 장애(503)는 잠깐 쉬었다 자동 재시도 (최대 2회) — "서비스 혼잡"이 대부분 여기서 해소
-    if ((res.status === 529 || res.status === 503) && attempt < 2) {
-      await new Promise((r) => setTimeout(r, 900 * (attempt + 1)));
-      continue;
+    if (res.ok) {
+      const data = await res.json().catch(() => null);
+      if (!data) throw new Error('AI 응답을 읽지 못했어요. 잠시 후 다시 시도해 주세요.');
+      // 게이트웨이(워커)가 Anthropic 과부하 응답을 200 본문에 그대로 담아 보낼 수 있어, HTTP 상태뿐 아니라 본문의 에러 봉투도 확인한다.
+      const errType = data.type === 'error' ? (data.error?.type || '') : '';
+      if (!errType) return data;
+      if (RETRYABLE.has(errType) && attempt < 4) { await backoff(attempt); continue; }
+      const err = new Error(errType === 'overloaded_error' ? STATUS_MSG[529] : (data.error?.message || 'AI 호출에 실패했어요. 잠시 후 다시 시도해 주세요.'));
+      err.status = errType === 'overloaded_error' ? 529 : 500;
+      throw err;
     }
+    // Anthropic 과부하(529)·일시 장애(503)는 잠깐 쉬었다 자동 재시도(최대 4회) — "서비스 혼잡"이 대부분 여기서 해소
+    if ((res.status === 529 || res.status === 503) && attempt < 4) { await backoff(attempt); continue; }
     await throwApiError(res);
   }
 }

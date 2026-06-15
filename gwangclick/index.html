@@ -153,6 +153,21 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .btn-primary{background:var(--me)}
 .btn-ghost{border:1px solid var(--line-2);background:transparent;color:var(--ink);font-weight:700}
 
+/* 보상형 광고 — 결과 2배 자랑 */
+.btn-reward{background:linear-gradient(180deg,#ffe08a,#ff9a3d);color:#1c1206;box-shadow:0 8px 22px -8px rgba(255,154,61,.6)}
+.btn-reward b{font-weight:900}
+.x2b{display:inline-block;font-family:var(--mono);font-weight:900;font-size:11px;color:#1c1206;background:#ffd76a;border-radius:6px;padding:2px 6px;vertical-align:middle;margin-left:4px}
+.x2done{text-align:center;font-weight:800;font-size:12.5px;color:#ffd76a;background:rgba(255,200,70,.12);border:1px solid rgba(255,200,70,.28);border-radius:var(--r-md);padding:13px}
+.ad-ov{position:fixed;inset:0;z-index:90;background:rgba(6,7,10,.93);display:flex;align-items:center;justify-content:center;padding:20px}
+.ad-box{width:100%;max-width:420px;background:var(--bg-2);border:1px solid var(--line);border-radius:18px;padding:16px;display:flex;flex-direction:column;gap:12px}
+.ad-top{display:flex;justify-content:space-between;align-items:center}
+.ad-skip{font-size:11px;color:var(--ink-3)}
+.ad-body{text-align:center;padding:22px 10px;background:var(--bg-3);border-radius:12px}
+.ad-emoji{font-size:2.4rem}
+.ad-body b{display:block;margin-top:6px;font-size:15px}
+.ad-bar{height:5px;background:var(--bg-3);border-radius:99px;overflow:hidden}
+.ad-bar i{display:block;height:100%;width:0;background:#ffd76a}
+
 /* 토스트 */
 #toast{position:fixed;left:50%;bottom:30px;transform:translateX(-50%);background:rgba(255,255,255,.96);color:#0a0b0d;
   padding:11px 18px;border-radius:99px;font-size:13px;font-weight:800;opacity:0;transition:opacity .2s;z-index:70;pointer-events:none;max-width:90vw;text-align:center}
@@ -447,40 +462,96 @@ function tickerBeat(){
   t.textContent=pool[Math.floor(Math.random()*pool.length)];
   t.classList.remove('beat'); void t.offsetWidth; t.classList.add('beat');
 }
+/* ── 광고 수익화: 보상형 '결과 2배 자랑' (둘 다 자동 분기) ──
+   우선순위: ① 토스 안 → 토스 보상형 SDK  ② 웹 보상형 훅(AD.webRewarded)  ③ 하우스(데모) 광고 폴백.
+   ▸ 실광고 전환: 토스 입점 후 콘솔 광고단위 ID를 tossRewardUnitId에, 웹은 webRewarded에 제공자 함수 연결.
+   ▸ 10대 대상 → 비개인화 광고(nonPersonalized)로 강제. 보상형(옵트인)만 사용 — 배너/전면 없음. */
+var AD={ enabled:true, tossRewardUnitId:'', webRewarded:null, houseSeconds:15, nonPersonalized:true };
+function adRewarded(opts){
+  opts=opts||{};
+  if(!AD.enabled){opts.onReward&&opts.onReward();return;}
+  try{ if(window.Toss&&Toss.inToss&&Toss.inToss()&&AD.tossRewardUnitId){
+    Toss.rewardedAd(AD.tossRewardUnitId).then(function(r){
+      if(r===true)opts.onReward&&opts.onReward();
+      else if(r===false)toast('끝까지 봐야 보상을 받아요');
+      else houseAd(opts);
+    }); return;
+  } }catch(e){}
+  if(typeof AD.webRewarded==='function'){
+    try{ Promise.resolve(AD.webRewarded({nonPersonalized:AD.nonPersonalized})).then(function(r){
+      if(r===true)opts.onReward&&opts.onReward();
+      else if(r===false)toast('끝까지 봐야 보상을 받아요');
+      else houseAd(opts);
+    }).catch(function(){houseAd(opts);}); return;
+    }catch(e){}
+  }
+  houseAd(opts);
+}
+function houseAd(opts){
+  var sec=AD.houseSeconds, ov=document.createElement('div'); ov.className='ad-ov';
+  ov.innerHTML='<div class="ad-box"><div class="ad-top"><span class="mono">AD · 광고</span>'+
+    '<button class="ad-skip" id="ad-skip">✕ 건너뛰기(보상 없음)</button></div>'+
+    '<div class="ad-body"><div class="ad-emoji">⚡</div><b>광클대전</b>'+
+    '<p class="hint" style="margin-top:6px">광고 자리 — 토스/애드센스/애드핏 연결 시 실제 광고가 나옵니다</p></div>'+
+    '<div class="ad-bar"><i id="ad-bar"></i></div>'+
+    '<button class="btn btn-ghost" id="ad-btn" disabled>광고 시청 중… '+sec+'초</button></div>';
+  (document.body||document.documentElement).appendChild(ov);
+  var bar=document.getElementById('ad-bar'); if(bar){bar.style.transition='width '+sec+'s linear';requestAnimationFrame(function(){bar.style.width='100%';});}
+  var t=sec, btn=document.getElementById('ad-btn'), iv=setInterval(function(){t--;if(t>0){if(btn)btn.textContent='광고 시청 중… '+t+'초';return;}clearInterval(iv);done();},1000);
+  function shut(){clearInterval(iv);if(ov.parentNode)ov.parentNode.removeChild(ov);}
+  function done(){if(btn)btn.textContent='✅ 보상 적용';setTimeout(function(){shut();opts.onReward&&opts.onReward();},350);}
+  var sk=document.getElementById('ad-skip'); if(sk)sk.onclick=function(){shut();toast('끝까지 봐야 보상을 받아요');};
+}
+
+/* ── 종료 + 결과 ── */
+var R=null;
 function endBattle(){
   if(!B||B.ended)return; B.ended=true;
   cancelAnimationFrame(B.raf); clearInterval(B.tick);
   var bt=B.bt, side=B.side, me=B.me, foe=B.foe;
-  var contrib=Math.floor(B.tapsF), myShare=side==='a'?B.aShare:100-B.aShare, maxStreak=B.maxStreak;
+  var contrib=Math.floor(B.tapsF), myShare=side==='a'?B.aShare:100-B.aShare;
   var newBest=contrib>(F.best||0); if(newBest)F.best=contrib; persist();
-  var title=titleForTaps(contrib), rank=rankEstimate(contrib), streak=F.streak, rs=Math.round(myShare);
   var verdict=myShare>=53?{t:'우리 편이 전국을 먹었다 🎉',c:'win'}:myShare<=47?{t:'오늘은 밀렸다…<br>내일 설욕 🔥',c:'lose'}:{t:'초접전 무승부 ⚔️',c:'tie'};
-  var acc=verdict.c==='win'?'var(--me)':verdict.c==='lose'?'var(--foe)':'linear-gradient(90deg,var(--me) 0 50%,var(--foe) 50% 100%)';
+  R={bt:bt,me:me,foe:foe,side:side,contrib:contrib,myShare:myShare,maxStreak:B.maxStreak,
+     title:titleForTaps(contrib),rank:rankEstimate(contrib),verdict:verdict,newBest:newBest,streak:F.streak,x2:false};
+  LAST=R;
   if(newBest){chord([523,659,784,1047]);buzz([20,40,20]);}
   if(verdict.c==='win'||newBest){skyConfetti([me.emoji,'✨'],[me.color,'#ffffff','#ffd76a']);}
-  LAST={bt:bt,me:me,contrib:contrib,title:title,rank:rank};
   B=null;
+  renderResult();
+}
+function watch2x(){ if(!R||R.x2)return; adRewarded({onReward:applyDouble}); }
+function applyDouble(){
+  if(!R||R.x2)return;
+  R.x2=true; R.contrib*=2; R.rank=rankEstimate(R.contrib); R.title=titleForTaps(R.contrib);
+  renderResult(); chord([659,784,988,1318]); buzz([15,30,15]); toast('⚡ 기여 2배 적용 — 더 크게 자랑하기!');
+}
+function renderResult(){
+  var r=R, me=r.me, foe=r.foe, bt=r.bt, rs=Math.round(r.myShare);
+  var acc=r.verdict.c==='win'?'var(--me)':r.verdict.c==='lose'?'var(--foe)':'linear-gradient(90deg,var(--me) 0 50%,var(--foe) 50% 100%)';
   app.innerHTML=
     '<div class="screen" style="--team-a:'+bt.a.color+';--team-b:'+bt.b.color+';--me:'+me.color+';--foe:'+foe.color+';--tapink:'+ink(me.color)+'">'+
       '<div class="acc" style="background:'+acc+'"></div>'+
       '<div class="hdr"><span class="brand">⚡ 광클대전</span><span class="mono">RESULT · '+mdShort(todayStr())+'</span></div>'+
-      '<h2 class="verdict">'+verdict.t+'</h2>'+
+      '<h2 class="verdict">'+r.verdict.t+'</h2>'+
       '<div class="rcard">'+
         '<div class="frow"><span class="em">'+me.emoji+'</span><span class="nm">'+me.name+'</span><span class="rq">'+bt.q+'</span></div>'+
-        '<div class="rlbl">칭호</div><div class="title">'+title+'</div>'+
+        '<div class="rlbl">칭호</div><div class="title">'+r.title+'</div>'+
         '<div style="margin-top:16px"><div class="brow"><span style="color:var(--me)">최종 '+rs+'%</span><span style="color:var(--foe)">'+(100-rs)+'%</span></div>'+
-          '<div class="gauge tall" style="margin-top:7px"><i style="width:'+myShare.toFixed(1)+'%;background:var(--me)"></i>'+
-            '<i style="width:'+(100-myShare).toFixed(1)+'%;background:var(--foe)"></i></div></div>'+
+          '<div class="gauge tall" style="margin-top:7px"><i style="width:'+r.myShare.toFixed(1)+'%;background:var(--me)"></i>'+
+            '<i style="width:'+(100-r.myShare).toFixed(1)+'%;background:var(--foe)"></i></div></div>'+
       '</div>'+
-      '<div class="stats"><div><div class="k">내 기여</div><div class="v">'+comma(contrib)+'</div></div>'+
-        '<div><div class="k">최고 콤보</div><div class="v">×'+comboMult(maxStreak).toFixed(1)+'</div></div>'+
-        '<div><div class="k">예상 전국</div><div class="v">'+comma(rank)+'<small>위</small></div></div></div>'+
+      '<div class="stats"><div><div class="k">내 기여</div><div class="v">'+comma(r.contrib)+(r.x2?' <span class="x2b">⚡2X</span>':'')+'</div></div>'+
+        '<div><div class="k">최고 콤보</div><div class="v">×'+comboMult(r.maxStreak).toFixed(1)+'</div></div>'+
+        '<div><div class="k">예상 전국</div><div class="v">'+comma(r.rank)+'<small>위</small></div></div></div>'+
       '<div class="tags"><span>#광클대전</span><span>#'+bt.tag+'</span></div>'+
-      (newBest?'<div class="newbest">🏆 내 최고 기여 갱신 · '+comma(contrib)+'</div>':'')+
-      (streak>1?'<div class="streak-chip">🔥 '+streak+'일 연속 참전 중</div>':'')+
+      (r.newBest?'<div class="newbest">🏆 내 최고 기여 갱신 · '+comma(r.contrib)+'</div>':'')+
+      (r.streak>1?'<div class="streak-chip">🔥 '+r.streak+'일 연속 참전 중</div>':'')+
       '<div class="actions">'+
+        (r.x2?'<div class="x2done">✅ 광고 보상 적용 — 자랑 카드가 2배로 커졌어요</div>'
+             :'<button class="btn btn-reward" onclick="watch2x()">📺 광고 보고 기여 <b>2배</b>로 자랑 ⚡2X</button>')+
         '<button class="btn btn-primary" style="color:'+ink(me.color)+'" onclick="SHARE()">📣 결과 자랑 + 친구 소환</button>'+
-        '<button class="btn btn-ghost" onclick="GO(\''+side+'\')">🔁 한 판 더</button>'+
+        '<button class="btn btn-ghost" onclick="GO(\''+r.side+'\')">🔁 한 판 더</button>'+
         '<button class="btn btn-ghost" onclick="intro()">⚡ 오늘의 대전</button>'+
       '</div>'+
     '</div>';
@@ -491,7 +562,7 @@ var LAST=null;
 function SHARE(){
   if(!LAST)return;
   var link=location.href.split('?')[0];
-  var text='⚡광클대전⚡ 나는 '+LAST.me.name+'!\n'+LAST.bt.q+' → '+LAST.title+'\n내 기여 '+comma(LAST.contrib)+' · 예상 전국 '+comma(LAST.rank)+'위\n너는 어느 편? 참전해라 👉';
+  var text='⚡광클대전⚡ 나는 '+LAST.me.name+'!\n'+LAST.bt.q+' → '+LAST.title+'\n내 기여 '+comma(LAST.contrib)+(LAST.x2?' ⚡2X':'')+' · 예상 전국 '+comma(LAST.rank)+'위\n너는 어느 편? 참전해라 👉';
   if(navigator.share){navigator.share({title:'광클대전',text:text,url:link}).catch(function(){});return;}
   if(navigator.clipboard&&navigator.clipboard.writeText){
     navigator.clipboard.writeText(text+' '+link).then(function(){toast('링크 복사 완료 — 단톡방에 뿌리기 📣');},function(){toast('스크린샷 해서 자랑해보세요 📸');});
@@ -501,7 +572,7 @@ function SHARE(){
 function cleanup(){if(B){cancelAnimationFrame(B.raf);clearInterval(B.tick);B=null;}FX.list.length=0;}
 
 /* 전역 노출 (onclick에서 호출) */
-window.GO=GO; window.SHARE=SHARE; window.intro=intro;
+window.GO=GO; window.SHARE=SHARE; window.intro=intro; window.watch2x=watch2x;
 
 /* 시작 */
 intro();

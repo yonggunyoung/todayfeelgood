@@ -30,9 +30,12 @@ Function URL (ai(asia-northeast3)): https://asia-northeast3-<프로젝트ID>.clo
 ```
 이 URL을 **`js/config.js`의 `AI_FN`**에 넣으면 된다(개발자가 처리). 끝.
 
-## 무료(Spark)로 되나?
-- Gemini는 **구글 서비스**라 Spark 요금제에서도 함수→Gemini 호출이 보통 허용된다.
-- 혹시 외부 호출이 막히면 **Blaze(종량제)**로 올리면 된다 — 무료 한도가 커서 소규모는 사실상 무료.
+## 요금제 — 함수 배포엔 Blaze 필요
+- **Authentication·Firestore는 Spark(무료) 그대로** 동작한다.
+- 그러나 **Cloud Functions(2세대)는 배포에 Blaze(종량제)가 필요**하다 — 카드 등록 필요.
+- 다만 Blaze **무료 한도가 매우 커서**(함수 호출 월 200만 건 등) 소규모 사용은 사실상 0원. GCP에서 **예산 알림/상한**을 걸어두면 안전하다.
+- (Gemini 호출 자체 비용은 함수가 아니라 Gemini 키 쪽에 붙는다 — 함수는 거의 0원.)
+- Blaze가 싫으면 대안은 "브라우저에서 Gemini 직접 호출 + 키 제한"(키 노출 감수).
 
 ## 환경변수(선택, 안 넣어도 기본값 동작)
 | 이름 | 기본값 | 용도 |

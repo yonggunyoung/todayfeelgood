@@ -154,6 +154,40 @@ export function HubView({ locale }: { locale: Locale }) {
                 </div>
               </a>
 
+              {/* 등록 미니앱 — apps.json 레지스트리에서 자동. 메인 홈에서 바로 클릭 진입.
+                 새 앱은 apps.json 한 줄이면 여기 홈 카드가 자동으로 생긴다. */}
+              {APPS.filter((a) => !a.featured && a.status === "live").map((a) => (
+                <a className={`${styles.card} ${styles.cardLive}`} href={a.path} key={a.id} data-card>
+                  <div
+                    className={styles.thumb}
+                    style={{
+                      background: a.color ?? "var(--candy-mint)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <span className={styles.badge}>{h.apps.live}</span>
+                    <span style={{ fontSize: "3.4rem" }} aria-hidden>
+                      {a.emoji ?? "🧩"}
+                    </span>
+                  </div>
+                  <div className={styles.foot}>
+                    <span
+                      className={styles.appicon}
+                      style={{ display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.3rem" }}
+                      aria-hidden
+                    >
+                      {a.emoji ?? "🧩"}
+                    </span>
+                    <span className={styles.meta}>
+                      <b>{locale === "ko" ? a.nameKo : a.nameEn}</b>
+                      <span>{locale === "ko" ? a.descKo : a.descEn}</span>
+                    </span>
+                  </div>
+                </a>
+              ))}
+
               {/* 준비중 카드들 */}
               {h.apps.soon.map((s, i) => (
                 <div className={`${styles.card} ${styles.cardSoon}`} key={i} data-card>

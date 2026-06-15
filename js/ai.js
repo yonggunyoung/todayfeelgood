@@ -32,20 +32,23 @@ const isServer = (settings) => settings.aiMode === 'server' && !!endpointOf(sett
 const modelFor = (settings) => settings.aiModel || (isServer(settings) ? 'claude-haiku-4-5-20251001' : 'claude-opus-4-8');
 
 // Anthropic 호출 통합 — 서버 모드면 게이트웨이(워커)로 전체 payload 전달(워커가 키만 끼움), 아니면 본인 키로 직접.
+// 서버 모드는 content-type을 text/plain으로 보내 CORS 프리플라이트(OPTIONS)를 생략한다(워커가 JSON으로 Anthropic에 전달).
 async function callClaude(body, settings) {
-  if (isServer(settings)) {
-    // content-type을 text/plain으로 보내 CORS 프리플라이트(OPTIONS)를 생략한다 — 게이트웨이는 본문(JSON 문자열)을
-    // 그대로 Anthropic에 application/json으로 전달하므로 결과는 동일하고, 워커가 OPTIONS를 처리 못해도 동작한다.
-    const res = await fetch(endpointOf(settings).replace(/\/+$/, ''), {
-      method: 'POST', headers: { 'content-type': 'text/plain;charset=UTF-8' }, body: JSON.stringify(body),
-    });
-    if (!res.ok) await throwApiError(res);
-    return res.json();
+  const server = isServer(settings);
+  if (!server && !settings.aiKey) throw new Error('설정에서 Claude API 키를 등록하거나, 서버 연결(엔드포인트)을 켜주세요.');
+  const url = server ? endpointOf(settings).replace(/\/+$/, '') : 'https://api.anthropic.com/v1/messages';
+  const headers = server ? { 'content-type': 'text/plain;charset=UTF-8' } : aiHeaders(settings);
+  const payload = JSON.stringify(body);
+  for (let attempt = 0; ; attempt++) {
+    const res = await fetch(url, { method: 'POST', headers, body: payload });
+    if (res.ok) return res.json();
+    // Anthropic 과부하(529)·일시 장애(503)는 잠깐 쉬었다 자동 재시도 (최대 2회) — "서비스 혼잡"이 대부분 여기서 해소
+    if ((res.status === 529 || res.status === 503) && attempt < 2) {
+      await new Promise((r) => setTimeout(r, 900 * (attempt + 1)));
+      continue;
+    }
+    await throwApiError(res);
   }
-  if (!settings.aiKey) throw new Error('설정에서 Claude API 키를 등록하거나, 서버 연결(엔드포인트)을 켜주세요.');
-  const res = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', headers: aiHeaders(settings), body: JSON.stringify(body) });
-  if (!res.ok) await throwApiError(res);
-  return res.json();
 }
 const extractText = (msg) => (Array.isArray(msg && msg.content) ? msg.content.filter((b) => b.type === 'text').map((b) => b.text).join('\n') : '') || '';
 function parseJsonLoose(text) {

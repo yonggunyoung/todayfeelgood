@@ -841,9 +841,25 @@ UI.runScan = async () => {
   try {
     const items = await scanImage(scanFile, S.settings);
     aiConsume(); // 성공했을 때만 1회 차감 (실패는 차감 안 함)
+    const fixes = loadScanFixes();
     scanResults = items.map((it) => {
-      const ing = findIng(it.name);
-      return { name: ing ? ing.name : it.name, qty: it.qty || 1, location: defaultLocation(ing), emoji: ing?.emoji || '🍽️' };
+      let raw = it.name;
+      const learned = !!fixes[raw];
+      if (learned) raw = fixes[raw]; // 지난번 사용자가 고친 대로 자동 반영(교정 학습)
+      const ing = findIng(raw);
+      // 신뢰도 = 모델 confidence + 결정론적 보정(사전 매칭·학습된 교정은 강한 신호)
+      let conf = typeof it.confidence === 'number' ? Math.max(0, Math.min(1, it.confidence)) : (ing ? 0.9 : 0.5);
+      if (learned) conf = 0.95;
+      else if (ing) conf = Math.max(conf, 0.85);
+      return {
+        name: ing ? ing.name : raw,
+        orig: it.name,            // 교정 학습용 원본 AI 이름
+        qty: it.qty || 1,
+        location: defaultLocation(ing),
+        emoji: ing?.emoji || '🍽️',
+        conf,
+        confirmed: conf >= 0.85,   // 보수적 임계값 — 나머지는 1탭 확인 필요
+      };
     });
     renderScanRows();
     btn.textContent = '다시 분석';
@@ -855,31 +871,72 @@ UI.runScan = async () => {
     btn.disabled = false;
   }
 };
+/* 스캔 교정 학습 — 사용자가 고친 품목명을 이 기기에 기억해 다음 스캔에 자동 반영 (백엔드 없이 localStorage) */
+const SCANFIX_KEY = 'nb_scan_fixes';
+function loadScanFixes() {
+  try { return JSON.parse(localStorage.getItem(SCANFIX_KEY) || '{}'); } catch { return {}; }
+}
+function saveScanFix(from, to) {
+  if (!from || !to || from === to) return;
+  try {
+    const m = loadScanFixes();
+    m[from] = to;
+    localStorage.setItem(SCANFIX_KEY, JSON.stringify(m));
+  } catch { /* 저장 실패는 조용히 무시 */ }
+}
+
 function renderScanRows() {
   const box = $('#scan-result');
   if (!box || !scanResults) return;
+  const need = scanResults.filter((r) => !r.confirmed).length;
+  const okCount = scanResults.length - need;
+  // 확인 필요한 항목을 위로 — 위험한 것부터 눈에 들어오게
+  const order = scanResults.map((_, i) => i).sort((a, b) => Number(scanResults[a].confirmed) - Number(scanResults[b].confirmed));
   box.innerHTML = `
-    <div class="section-title" style="margin-top:8px"><h2>인식 결과 ${scanResults.length}개</h2><small>틀린 건 고치고 담으세요</small></div>
-    <p class="hint" style="margin:-4px 0 8px">소비기한은 품목별 권장 보관기한으로 자동 입력돼요 — 모르는 품목은 보수적으로 짧게(5일) 잡아요. 입고 후 재료를 탭해 수정할 수 있어요.</p>
-    ${scanResults.map((r, idx) => `
-      <div class="item">
+    <div class="section-title" style="margin-top:8px"><h2>인식 결과 ${scanResults.length}개</h2><small>${need ? `⚠️ 확인 필요 ${need}개` : '모두 확인됨 ✓'}</small></div>
+    <p class="hint" style="margin:-4px 0 8px">⚠️ 표시된 품목은 흐릿하거나 확실치 않아요 — 맞으면 <b>확인</b>, 틀리면 이름을 고치거나 ✕로 빼주세요. <b>확인한 것만 담겨요.</b> 소비기한은 품목별 권장 보관기한으로 자동 입력돼요.</p>
+    ${order.map((idx) => {
+      const r = scanResults[idx];
+      const warn = !r.confirmed;
+      return `
+      <div class="item"${warn ? ' style="border-left:3px solid #f59e0b;background:rgba(245,158,11,.07)"' : ''}>
         <span class="emoji ${catClass(r.name)}">${r.emoji}</span>
         <input style="flex:2" value="${esc(r.name)}" onchange="UI.scanEdit(${idx},'name',this.value)" />
         <input style="flex:1" type="number" min="0" step="0.5" value="${r.qty}" onchange="UI.scanEdit(${idx},'qty',this.value)" />
         <select style="flex:1.2" onchange="UI.scanEdit(${idx},'location',this.value)">
           ${['fridge', 'freezer', 'room'].map((l) => `<option value="${l}" ${r.location === l ? 'selected' : ''}>${LOC_LABEL[l]}</option>`).join('')}
         </select>
+        ${warn
+          ? `<button onclick="UI.scanConfirm(${idx})" style="color:#b45309;font-weight:700">확인</button>`
+          : '<span style="color:var(--green);font-weight:700;padding:0 4px">✓</span>'}
         <button onclick="UI.scanRemove(${idx})">✕</button>
-      </div>`).join('')}
-    <button class="btn btn-primary btn-block" style="margin-top:6px" onclick="UI.scanCommit()">🧊 모두 냉장고에 담기 (${scanResults.length})</button>`;
+      </div>`;
+    }).join('')}
+    <button class="btn btn-primary btn-block" style="margin-top:6px" onclick="UI.scanCommit()">🧊 확인한 ${okCount}개 담기</button>`;
 }
-UI.scanEdit = (idx, k, v) => { if (scanResults?.[idx]) scanResults[idx][k] = k === 'qty' ? Number(v) : v; };
+UI.scanEdit = (idx, k, v) => {
+  const r = scanResults?.[idx];
+  if (!r) return;
+  if (k === 'qty') { r.qty = Number(v); return; }
+  r[k] = v;
+  if (k === 'name') { // 사용자가 직접 손댄 이름은 확인된 것으로 보고 이모지·정렬 갱신
+    const ing = findIng(v);
+    r.emoji = ing?.emoji || '🍽️';
+    r.confirmed = true;
+    renderScanRows();
+  }
+};
+UI.scanConfirm = (idx) => { if (scanResults?.[idx]) { scanResults[idx].confirmed = true; renderScanRows(); } };
 UI.scanRemove = (idx) => { scanResults.splice(idx, 1); renderScanRows(); };
 UI.scanCommit = () => {
-  const n = scanResults?.length || 0;
-  for (const r of scanResults || []) addPantryByName(r.name, { qty: r.qty, location: r.location, silentToast: true });
+  const list = (scanResults || []).filter((r) => r.confirmed);
+  if (!list.length) { toast('확인한 품목이 없어요 — 맞는 품목을 확인하거나 이름을 고쳐 주세요'); return; }
+  for (const r of list) {
+    addPantryByName(r.name, { qty: r.qty, location: r.location, silentToast: true });
+    if (r.orig && r.orig !== r.name) saveScanFix(r.orig, r.name); // 다음 스캔부터 자동 반영(교정 학습)
+  }
   UI.closeSheet(); render();
-  toast(`${n}개 품목을 입고했어요 🧊`);
+  toast(`${list.length}개 품목을 입고했어요 🧊`);
 };
 
 /* ── 상단 배지 설명 — 눌러보면 다 알려준다 ── */
@@ -2728,3 +2785,56 @@ if (shared) {
 } else if (!S.tutorialDone) {
   setTimeout(() => UI.startTutorial(), 700); // 첫 사용자 가이드
 }
+
+/* ── 앱 설치 유도 (PWA) — 완전 자동 설치는 브라우저가 막음(보안). 안드로이드/크롬은 1탭 설치, 아이폰 사파리는 안내. ── */
+(() => {
+  const KEY = 'nb_install_snooze';
+  const installed = () => (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true;
+  const snoozed = () => { try { return Number(localStorage.getItem(KEY) || 0) > Date.now(); } catch { return false; } };
+  const snooze = (days) => { try { localStorage.setItem(KEY, String(Date.now() + days * 864e5)); } catch { /* ignore */ } };
+  const canShow = () => S.tutorialDone && !installed() && !snoozed() && !document.getElementById('nb-install');
+  let deferred = null;
+
+  function banner(inner) {
+    const el = document.createElement('div');
+    el.id = 'nb-install';
+    el.style.cssText = 'position:fixed;left:12px;right:12px;bottom:calc(78px + env(safe-area-inset-bottom));z-index:45;background:#1f2937;color:#fff;border-radius:14px;padding:11px 14px;display:flex;align-items:center;gap:10px;box-shadow:0 8px 24px rgba(0,0,0,.28)';
+    el.innerHTML = inner;
+    el.querySelector('[data-x]').addEventListener('click', () => { el.remove(); snooze(14); });
+    document.body.appendChild(el);
+    return el;
+  }
+
+  // 안드로이드/데스크톱 크롬: 네이티브 설치 프롬프트를 잡아뒀다가 버튼으로 띄움
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferred = e;
+    if (!canShow()) return;
+    const el = banner(
+      '<span style="font-size:1.5rem">📲</span>'
+      + '<div style="flex:1;line-height:1.3"><b>냉비서 앱으로 설치</b><div style="opacity:.8;font-size:.8rem">홈 화면에서 바로 열려요 · 오프라인도 OK</div></div>'
+      + '<button id="nb-i-yes" style="background:#22c55e;color:#04130f;border:0;border-radius:10px;padding:9px 14px;font-weight:800;font-size:.9rem">설치</button>'
+      + '<button data-x style="background:transparent;color:#9ca3af;border:0;font-size:1.25rem;line-height:1">✕</button>');
+    el.querySelector('#nb-i-yes').addEventListener('click', async () => {
+      el.remove();
+      if (!deferred) return;
+      deferred.prompt();
+      try { await deferred.userChoice; } catch { /* ignore */ }
+      deferred = null;
+    });
+  });
+
+  window.addEventListener('appinstalled', () => { document.getElementById('nb-install')?.remove(); snooze(3650); });
+
+  // 아이폰 사파리: beforeinstallprompt 미지원 → "공유 → 홈 화면에 추가" 수동 안내 (인앱 브라우저 제외)
+  window.addEventListener('load', () => setTimeout(() => {
+    const ua = navigator.userAgent || '';
+    const iOS = /iPhone|iPad|iPod/.test(ua);
+    const safari = iOS && /Safari/.test(ua) && !/CriOS|FxiOS|EdgiOS|KAKAOTALK|NAVER|Instagram|FBAN|FBAV|Line/i.test(ua);
+    if (!safari || !canShow()) return;
+    banner(
+      '<span style="font-size:1.5rem">📲</span>'
+      + '<div style="flex:1;line-height:1.3"><b>앱으로 추가하기</b><div style="opacity:.85;font-size:.8rem">공유 <b>⬆︎</b> → <b>"홈 화면에 추가"</b> 누르면 앱처럼 써요</div></div>'
+      + '<button data-x style="background:transparent;color:#9ca3af;border:0;font-size:1.25rem;line-height:1">✕</button>');
+  }, 3500));
+})();

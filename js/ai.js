@@ -24,7 +24,7 @@ async function throwApiError(res) {
 
 /* ── 서버 경유 모드 — Cloudflare 게이트웨이(워커)가 Anthropic 키만 보관·주입.
    클라이언트가 프롬프트/스키마/도구를 모두 만들어 보내고, 워커는 키를 끼워 그대로 전달한다. ── */
-import { AI_ENDPOINT } from './config.js';
+import { AI_ENDPOINT, AI_GEMINI, AI_FN } from './config.js';
 const endpointOf = (settings) => settings.aiEndpoint || AI_ENDPOINT;
 const isServer = (settings) => settings.aiMode === 'server' && !!endpointOf(settings);
 
@@ -39,15 +39,50 @@ async function callClaude(body, settings) {
   const url = server ? endpointOf(settings).replace(/\/+$/, '') : 'https://api.anthropic.com/v1/messages';
   const headers = server ? { 'content-type': 'text/plain;charset=UTF-8' } : aiHeaders(settings);
   const payload = JSON.stringify(body);
+  const RETRYABLE = new Set(['overloaded_error', 'api_error']); // Anthropic 일시 과부하/내부 오류
+  const backoff = (n) => new Promise((r) => setTimeout(r, 800 * (n + 1))); // 0.8→1.6→2.4→3.2s
   for (let attempt = 0; ; attempt++) {
     const res = await fetch(url, { method: 'POST', headers, body: payload });
-    if (res.ok) return res.json();
-    // Anthropic 과부하(529)·일시 장애(503)는 잠깐 쉬었다 자동 재시도 (최대 2회) — "서비스 혼잡"이 대부분 여기서 해소
-    if ((res.status === 529 || res.status === 503) && attempt < 2) {
-      await new Promise((r) => setTimeout(r, 900 * (attempt + 1)));
-      continue;
+    if (res.ok) {
+      const data = await res.json().catch(() => null);
+      if (!data) throw new Error('AI 응답을 읽지 못했어요. 잠시 후 다시 시도해 주세요.');
+      // 게이트웨이(워커)가 Anthropic 과부하 응답을 200 본문에 그대로 담아 보낼 수 있어, HTTP 상태뿐 아니라 본문의 에러 봉투도 확인한다.
+      const errType = data.type === 'error' ? (data.error?.type || '') : '';
+      if (!errType) return data;
+      if (RETRYABLE.has(errType) && attempt < 4) { await backoff(attempt); continue; }
+      const err = new Error(errType === 'overloaded_error' ? STATUS_MSG[529] : (data.error?.message || 'AI 호출에 실패했어요. 잠시 후 다시 시도해 주세요.'));
+      err.status = errType === 'overloaded_error' ? 529 : 500;
+      throw err;
     }
+    // Anthropic 과부하(529)·일시 장애(503)는 잠깐 쉬었다 자동 재시도(최대 4회) — "서비스 혼잡"이 대부분 여기서 해소
+    if ((res.status === 529 || res.status === 503) && attempt < 4) { await backoff(attempt); continue; }
     await throwApiError(res);
+  }
+}
+
+// Gemini 전용 호출 — Cloudflare는 Gemini에 지역 차단되므로, Gemini는 서울 리전 Firebase 함수(AI_FN)로 보낸다.
+// 함수가 이미지/유튜브 URL을 받아 Gemini로 정리한 결과 JSON({items} 또는 레시피)을 돌려준다. (인증 불필요 + 함수 측 전역 일일 상한)
+async function callFn(path, payload) {
+  const base = (AI_FN || '').replace(/\/+$/, '');
+  if (!base) throw new Error('Gemini 백엔드(AI_FN) 주소가 설정에 없어요.');
+  const backoff = (n) => new Promise((r) => setTimeout(r, 800 * (n + 1)));
+  for (let attempt = 0; ; attempt++) {
+    const res = await fetch(base + path, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (res.ok) {
+      const data = await res.json().catch(() => null);
+      if (!data) throw new Error('AI 응답을 읽지 못했어요. 잠시 후 다시 시도해 주세요.');
+      return data;
+    }
+    if ((res.status === 503 || res.status === 429 || res.status === 529) && attempt < 3) { await backoff(attempt); continue; }
+    let detail = '';
+    try { detail = (await res.json()).error || ''; } catch { /* ignore */ }
+    const err = new Error(detail || `AI 호출 실패 (${res.status})`);
+    err.status = res.status;
+    throw err;
   }
 }
 const extractText = (msg) => (Array.isArray(msg && msg.content) ? msg.content.filter((b) => b.type === 'text').map((b) => b.text).join('\n') : '') || '';
@@ -62,8 +97,9 @@ const PROMPT = `이 사진은 한국 마트/온라인몰 영수증이거나 장 
 식품(요리 재료)만 추출하세요. 휴지·세제 등 비식품과 봉투값·할인·합계 줄은 제외합니다.
 상품명은 일반 재료명으로 정규화하세요: "서울우유1L" → "우유", "CJ 햇반 210g×3" → "즉석밥"(qty 3), "1+1" 표기는 수량 2.
 수량을 알 수 없으면 1로 두세요.
+각 품목에 confidence(0~1)를 매기세요: 글자가 또렷하고 일반 재료명으로 확실히 읽히면 0.9 이상, 흐릿하거나 추측이 섞이면 0.6 이하로. 확신이 없으면 낮게 주세요(틀린 추측보다 안전합니다).
 설명 없이 아래 형태의 JSON 하나만 출력하세요:
-{"items":[{"name":"우유","qty":1,"unit":"개"},{"name":"즉석밥","qty":3,"unit":"개"}]}`;
+{"items":[{"name":"우유","qty":1,"unit":"개","confidence":0.96},{"name":"즉석밥","qty":3,"unit":"개","confidence":0.78}]}`;
 
 // 토큰 절약을 위해 긴 변 1280px로 축소 후 JPEG 인코딩
 async function downscale(file, max = 1280) {
@@ -87,10 +123,20 @@ async function downscale(file, max = 1280) {
 }
 
 export async function scanImage(file, settings) {
-  if (!isServer(settings) && !settings.aiKey) throw new Error('설정에서 Claude API 키를 등록하거나, 서버 연결을 켜주세요.');
+  const geminiOn = AI_GEMINI.scan && !!AI_FN;
+  if (!geminiOn && !isServer(settings) && !settings.aiKey) throw new Error('설정에서 Claude API 키를 등록하거나, 서버 연결을 켜주세요.');
   const b64 = await downscale(file);
 
-  // 구조화 출력(output_config)은 일부 계정에 권한이 없어 403을 유발할 수 있어 쓰지 않는다 — 프롬프트로 JSON을 받고 느슨히 파싱.
+  if (geminiOn) {
+    // Gemini 경로 — 서울 Firebase 함수가 이미지를 받아 Gemini로 정리해 {items} 반환
+    const data = await callFn('/gscan', { image: b64 });
+    if (!data || !Array.isArray(data.items) || data.items.length === 0) {
+      throw new Error('사진에서 식재료를 찾지 못했습니다. 더 선명한 사진으로 시도해 주세요.');
+    }
+    return data.items;
+  }
+
+  // Claude 경로(기본) — 구조화 출력(output_config)은 일부 계정 403 유발 가능해 프롬프트로 JSON 받고 느슨히 파싱.
   const msg = await callClaude({
     model: modelFor(settings),
     max_tokens: 2048,
@@ -102,7 +148,6 @@ export async function scanImage(file, settings) {
       ],
     }],
   }, settings);
-
   if (msg.stop_reason === 'refusal') throw new Error('이미지를 분석할 수 없습니다. 다른 사진으로 시도해 주세요.');
   const parsed = parseJsonLoose(extractText(msg) || '{}');
   if (!parsed || !Array.isArray(parsed.items) || parsed.items.length === 0) {
@@ -130,15 +175,23 @@ const YT_PROMPT = (url) => `유튜브 요리 영상에서 레시피를 정리하
 레시피를 찾지 못하면 {"ok":false,"reason":"이유"} 만 출력하세요.`;
 
 export async function extractRecipeFromYouTube(url, settings) {
-  if (!isServer(settings) && !settings.aiKey) throw new Error('설정에서 Claude API 키를 등록하거나, 서버 연결을 켜주세요.');
+  const geminiOn = AI_GEMINI.recipe && !!AI_FN;
+  if (!geminiOn && !isServer(settings) && !settings.aiKey) throw new Error('설정에서 Claude API 키를 등록하거나, 서버 연결을 켜주세요.');
+
+  if (geminiOn) {
+    // Gemini 경로 — 서울 Firebase 함수가 유튜브 영상을 직접 읽어 레시피 JSON 반환(web_fetch 차단 우회)
+    const data = await callFn('/gytrecipe', { url });
+    if (!data || !Array.isArray(data.ingredients) || !data.ingredients.length) throw new Error('재료를 찾지 못했어요.');
+    return data;
+  }
+
+  // Claude 경로(기본) — 서버측 웹 도구로 제목·설명을 읽어 정리. pause_turn이면 그대로 이어서 재호출(최대 3회).
   const tools = [
     { type: 'web_fetch_20260209', name: 'web_fetch' },
     { type: 'web_search_20260209', name: 'web_search' },
   ];
   let messages = [{ role: 'user', content: YT_PROMPT(url) }];
   let msg = null;
-
-  // 서버측 도구 루프가 길어지면 pause_turn으로 끊겨 돌아온다 → 그대로 이어서 재호출 (최대 3회)
   for (let i = 0; i < 4; i++) {
     msg = await callClaude({
       model: modelFor(settings),
@@ -152,10 +205,8 @@ export async function extractRecipeFromYouTube(url, settings) {
     }
     break;
   }
-
   if (!msg) throw new Error('AI 응답이 없어요. 다시 시도해 주세요.');
   if (msg.stop_reason === 'refusal') throw new Error('이 영상은 분석할 수 없어요.');
-
   const text = extractText(msg);
   const start = text.lastIndexOf('{"ok"');
   const end = text.lastIndexOf('}');

@@ -199,6 +199,10 @@ services:
     volumes:
       # 도커용 라우팅 conf(서비스명 upstream)를 마운트.
       - ./infra/nginx/webapp.compose.conf:/etc/nginx/conf.d/default.conf:ro
+      # 정적 미니앱 라우팅(자동 생성) — server 블록에서 include.
+      - ./infra/nginx/apps.generated.conf:/etc/nginx/snippets/apps.generated.conf:ro
+      # 정적 미니앱 파일(레포 self-host) — nginx가 직접 서빙.
+      - ./static-apps:/srv/static-apps:ro
       # certbot 사용 시 인증서 디렉터리 마운트(주석 해제).
       # - /etc/letsencrypt:/etc/letsencrypt:ro
     depends_on:

@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no" />
+<title>⚡ 광클대전 (단일 파일)</title>
+<meta name="theme-color" content="#0a0b0d" />
+<meta name="description" content="민초 vs 반민초? 부먹 vs 찍먹? 오늘의 떡밥에 내 편을 골라 60초 광클! 전국 흐름을 내 편으로 끌어와라." />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<!-- 토스 미니앱 어댑터(선택) — 토스 밖에서는 안전한 폴백, 의존성 없음 -->
+<script>
+/* 토스 미니앱 어댑터(인라인) */
+// ⚡ 광클대전 — 토스 미니앱 어댑터 (선택, 의존성 없음).
+// 토스 WebView SDK가 주입된 환경이면 그 기능을 쓰고, 토스 밖(웹/파일실행)에서는 안전한 폴백.
+// 입점 후 토스 콘솔에서 발급한 광고 단위 ID를 ADS에 채우면 보상형 광고가 활성화된다.
+// SDK 전역명·함수는 입점 시점 공식 문서(developers-apps-in-toss.toss.im)로 최종 확인할 것.
+(function () {
+  function sdk() {
+    return window.AppsInToss || window.appsInToss || window.tossMiniApp || null;
+  }
+  window.Toss = {
+    // 토스 앱 안에서 실행 중인가
+    inToss: function () { return !!sdk(); },
+
+    // 햅틱 — 토스 안: 네이티브 진동 / 밖: navigator.vibrate
+    haptic: function (ms) {
+      var t = sdk();
+      try { if (t && t.haptic) { t.haptic({ type: 'tap' }); return; } } catch (e) {}
+      if (navigator.vibrate) navigator.vibrate(ms);
+    },
+
+    // 보상형 광고 (예: '한 판 더 보상' 같은 수익화에 사용 — v1은 미사용, 입점 후 연결)
+    // 반환: true(완주) | false(중도이탈) | null(토스 아님/광고없음)
+    rewardedAd: function (adUnitId) {
+      return new Promise(function (res) {
+        var t = sdk();
+        if (!t || !adUnitId || !t.showFullScreenAd) { res(null); return; }
+        try {
+          t.showFullScreenAd({
+            adUnitId: adUnitId,
+            onEvent: function (e) {
+              if (e && e.type === 'userEarnedReward') res(true);
+              else if (e && (e.type === 'dismissed' || e.type === 'closed')) res(false);
+            },
+            onError: function () { res(null); },
+          });
+        } catch (e) { res(null); }
+      });
+    },
+  };
+})();
+</script>
+<link rel="stylesheet" as="style" crossorigin
+      href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+<style>
+/* ⚡ 광클대전 — 디자인: 심야 아레나 / 네오 아케이드 스코어보드 (진영색은 --team-a/--team-b/--me로 런타임 리스킨) */
+:root{
+  --bg:#0a0b0d; --bg-2:#111317; --bg-3:#191c22; --bg-card:#0e1014;
+  --ink:#f2f3f6; --ink-2:#9da3ad; --ink-3:#646a74;
+  --line:rgba(255,255,255,.07); --line-2:rgba(255,255,255,.15);
+  --team-a:#12b39a; --team-b:#7b6ef0; --me:#12b39a; --foe:#7b6ef0; --tapink:#04130f; --live:#ff3a3a;
+  --r-sm:9px; --r-md:14px; --r-lg:20px;
+  --ease-snap:cubic-bezier(.2,.9,.25,1.05); --ease-wipe:cubic-bezier(.74,0,.18,1);
+  --mono:ui-monospace,'SF Mono',Menlo,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{font-size:16px}
+body{background:var(--bg);color:var(--ink);min-height:100dvh;
+  font-family:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,system-ui,'Apple SD Gothic Neo',sans-serif;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+body::before{content:'';position:fixed;inset:0;z-index:60;pointer-events:none;opacity:.05;mix-blend-mode:overlay;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+#app{max-width:480px;margin:0 auto;min-height:100dvh;padding:20px 18px 32px;position:relative}
+.screen{display:flex;flex-direction:column;gap:15px}
+
+/* 유틸 */
+.mono{font-family:var(--mono);font-weight:600;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-3);line-height:1}
+.tnum{font-variant-numeric:tabular-nums}
+.rule{height:1px;background:var(--line)}
+.hint{color:var(--ink-3);font-size:12.5px;line-height:1.55;text-align:center;margin-top:2px}
+.dot{color:var(--live);animation:liveBlink 1.4s steps(1) infinite}
+.hdr{display:flex;justify-content:space-between;align-items:center}
+.hdr .brand{font-family:var(--mono);font-weight:800;font-size:12px;letter-spacing:.04em}
+.hdr .live{display:flex;align-items:center;gap:7px;font-family:var(--mono);font-weight:700;font-size:10px;letter-spacing:.14em;color:var(--ink-2)}
+
+@keyframes liveBlink{0%,55%{opacity:1}75%,100%{opacity:.2}}
+@keyframes wipeIn{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@keyframes urgent{0%,100%{opacity:1}50%{opacity:.3}}
+@keyframes comboBob{0%,100%{transform:rotate(-4deg) scale(1)}50%{transform:rotate(-4deg) scale(1.08)}}
+@keyframes auraPulse{0%{box-shadow:0 0 0 0 color-mix(in oklch,var(--me) 55%,transparent),0 18px 38px -16px var(--me)}100%{box-shadow:0 0 0 16px color-mix(in oklch,var(--me) 0%,transparent),0 18px 38px -16px var(--me)}}
+@keyframes tickBeat{0%{opacity:0;transform:translateY(4px)}100%{opacity:1;transform:none}}
+@keyframes fb-rise{0%{opacity:0;transform:translate(-50%,-50%) scale(.6)}25%{opacity:1;transform:translate(-50%,-120%) scale(1.1)}100%{opacity:0;transform:translate(-50%,-240%) scale(1)}}
+@keyframes fb-shk{0%,100%{transform:translate(0,0)}20%{transform:translate(-6px,3px)}40%{transform:translate(5px,-4px)}60%{transform:translate(-4px,-3px)}80%{transform:translate(4px,3px)}}
+
+/* 인트로 */
+.kicker{font-family:var(--mono);font-weight:600;font-size:10.5px;letter-spacing:.16em;color:var(--ink-3);line-height:1.5}
+.q{font-size:clamp(34px,10.5vw,46px);font-weight:900;line-height:.97;letter-spacing:-.04em}
+.qa{color:var(--team-a)}
+.teams{display:flex;flex-direction:column;gap:9px}
+.team{display:flex;gap:13px;align-items:center;padding:13px 14px;background:var(--bg-3);border:1px solid var(--line);border-radius:var(--r-sm)}
+.team .em{font-size:28px;line-height:1}
+.team .nm{display:flex;align-items:baseline;gap:8px}
+.team .nm b{font-weight:800;font-size:16px}
+.team .tg{font-family:var(--mono);font-weight:600;font-size:9px;letter-spacing:.14em;color:var(--ink-3)}
+.team .sl{font-size:12.5px;color:var(--ink-2);margin-top:3px}
+.gauge-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:9px}
+.chip-soft{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:var(--ink-2);border:1px solid var(--line-2);border-radius:99px;padding:4px 9px}
+.gnums{display:flex;justify-content:space-between;align-items:flex-end}
+.gnum{font-size:30px;font-weight:900;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.gauge{display:flex;height:10px;border-radius:99px;overflow:hidden;background:var(--bg-3);border:1px solid var(--line)}
+.gauge.tall{height:8px}
+.gauge i{height:100%;display:block}
+.go{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.go button{border-radius:var(--r-md);font-weight:800;font-size:14px;padding:16px 6px;letter-spacing:-.01em;transition:transform .12s var(--ease-snap)}
+.go button:active{transform:scale(.96)}
+.streak-chip{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:var(--ink-2);border:1px solid var(--line-2);border-radius:99px;padding:5px 10px;align-self:flex-start}
+
+/* 배틀 스테이지 */
+.stage{position:relative;display:flex;flex-direction:column;gap:13px;touch-action:manipulation;user-select:none;-webkit-user-select:none}
+.urgentbar{height:3px;border-radius:99px;background:transparent}
+.stage.urgent .urgentbar{background:var(--live);animation:urgent .7s steps(1) infinite}
+.bhdr{display:flex;justify-content:space-between;align-items:center}
+.bhdr .l{display:flex;align-items:center;gap:7px;font-family:var(--mono);font-weight:800;font-size:10px;letter-spacing:.14em}
+.chip{font-family:var(--mono);font-weight:700;font-size:10px;letter-spacing:.06em;color:var(--ink-3);border:1px solid var(--line-2);border-radius:99px;padding:5px 9px}
+.stage.combo .chip{color:var(--tapink);background:var(--me);border-color:transparent}
+.stage.urgent .chip{color:#fff;background:var(--live);border-color:transparent;animation:urgent .7s steps(1) infinite}
+.ticker{overflow:hidden;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:8px 0;font-size:12.5px;font-weight:600;color:var(--ink-2);text-align:center;min-height:1.2em}
+.ticker.beat{animation:tickBeat .4s ease}
+.stage.urgent .ticker{color:var(--live);font-weight:700}
+.brow{display:flex;justify-content:space-between;font-family:var(--mono);font-weight:700;font-size:11px;font-variant-numeric:tabular-nums}
+.mid{display:flex;justify-content:space-between;align-items:flex-end;gap:14px}
+.lbl{font-family:var(--mono);font-weight:600;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3)}
+.contrib{font-size:46px;font-weight:900;line-height:.9;font-variant-numeric:tabular-nums;letter-spacing:-.04em;margin-top:5px}
+.stage.combo .contrib{color:var(--me);text-shadow:0 0 24px color-mix(in oklch,var(--me) 55%,transparent)}
+.combo-line{font-family:var(--mono);font-weight:700;font-size:12px;color:var(--ink-2);margin-top:8px}
+.combo-line b{color:var(--me)}
+.timer{font-size:42px;font-weight:900;line-height:.9;font-variant-numeric:tabular-nums;letter-spacing:-.03em;margin-top:5px}
+.stage.urgent .timer{color:var(--live);animation:urgent .7s steps(1) infinite}
+.tap{position:relative;width:100%;border-radius:20px;padding:22px 0;display:flex;flex-direction:column;align-items:center;gap:11px;z-index:1;
+  color:var(--tapink);
+  background:var(--me);
+  background:linear-gradient(180deg,color-mix(in oklch,var(--me) 80%,#fff) 0%,var(--me) 46%,color-mix(in oklch,var(--me) 80%,#000) 100%);
+  box-shadow:inset 0 2px 0 color-mix(in oklch,var(--me) 55%,#fff),inset 0 -3px 1px color-mix(in oklch,var(--me) 70%,#000),0 8px 0 color-mix(in oklch,var(--me) 50%,#000),0 22px 30px -14px color-mix(in oklch,var(--me) 62%,transparent);
+  transition:transform .09s var(--ease-snap),box-shadow .09s var(--ease-snap)}
+.tap:active{transform:translateY(6px);box-shadow:inset 0 2px 0 color-mix(in oklch,var(--me) 55%,#fff),inset 0 -3px 1px color-mix(in oklch,var(--me) 70%,#000),0 2px 0 color-mix(in oklch,var(--me) 50%,#000),0 9px 16px -12px color-mix(in oklch,var(--me) 62%,transparent)}
+.tap .orb{display:grid;place-items:center;width:60px;height:60px;border-radius:50%;font-size:30px;line-height:1;
+  background:radial-gradient(circle at 38% 28%,rgba(255,255,255,.6),rgba(255,255,255,0) 58%),color-mix(in oklch,var(--me) 72%,#000);
+  box-shadow:inset 0 2px 5px rgba(255,255,255,.45),inset 0 -6px 10px rgba(0,0,0,.4),0 5px 12px rgba(0,0,0,.35)}
+.tap .lab{font-size:27px;font-weight:900;letter-spacing:.06em;text-shadow:0 2px 0 color-mix(in oklch,var(--me) 68%,#000),0 3px 6px rgba(0,0,0,.22)}
+.stage.combo .tap{transform:translateY(-2px)}
+.stage.combo .tap::after{content:'';position:absolute;inset:-7px;border-radius:27px;pointer-events:none;animation:auraPulse .7s var(--ease-snap) infinite alternate}
+.stage.urgent .tap{box-shadow:inset 0 2px 0 color-mix(in oklch,var(--me) 55%,#fff),inset 0 -3px 1px color-mix(in oklch,var(--me) 70%,#000),0 8px 0 color-mix(in oklch,var(--me) 50%,#000),0 0 0 2px var(--live),0 16px 30px -14px color-mix(in oklch,var(--live) 60%,transparent)}
+.combobadge{position:absolute;top:-15px;right:12px;z-index:2;font-family:var(--mono);font-weight:900;font-size:12px;letter-spacing:.04em;color:#08110d;background:#fff;border-radius:8px;padding:7px 10px;box-shadow:0 8px 18px -6px rgba(0,0,0,.65);display:none}
+.stage.combo .combobadge{display:block;animation:comboBob .55s var(--ease-snap) infinite}
+.third{display:flex;align-items:center;gap:11px}
+.third .bar{width:3px;height:30px;background:var(--me);display:block;flex:none}
+.third .k{font-family:var(--mono);font-weight:600;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3)}
+.third .v{font-weight:800;font-size:13px;margin-top:3px}
+.stage.urgent .third .bar{background:var(--live);animation:urgent .7s steps(1) infinite}
+#fb-fx{position:absolute;inset:0;pointer-events:none;z-index:3}
+#fb-sky{position:fixed;inset:0;pointer-events:none;z-index:62}
+.fb-pops{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:4}
+.fb-pop{position:absolute;transform:translate(-50%,-50%);font-weight:900;font-size:1.1rem;color:#fff;text-shadow:0 2px 6px rgba(0,0,0,.45);animation:fb-rise .56s ease-out forwards}
+.fb-pop.x2{font-size:1.4rem;color:#ffe27a}
+.fb-pop.x3{font-size:1.7rem;color:#ff9a4d}
+.fb-shake{animation:fb-shk .3s ease}
+
+/* 결과 */
+.acc{height:4px}
+.verdict{font-size:30px;font-weight:900;line-height:1.05;letter-spacing:-.035em}
+.rcard{position:relative;background:var(--bg-2);border:1px solid var(--line);border-left:3px solid var(--me);border-radius:var(--r-sm);padding:16px 15px}
+.rcard .frow{display:flex;align-items:center;gap:10px}
+.rcard .frow .em{font-size:24px}
+.rcard .frow .nm{font-weight:800;font-size:15px;white-space:nowrap}
+.rcard .frow .rq{font-family:var(--mono);font-weight:600;font-size:10px;color:var(--ink-3);letter-spacing:.06em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rlbl{font-family:var(--mono);font-weight:600;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-3);margin-top:16px}
+.title{font-size:28px;font-weight:900;letter-spacing:-.03em;margin-top:5px}
+.stats{display:grid;grid-template-columns:1fr 1fr 1fr;border:1px solid var(--line);border-radius:var(--r-sm);overflow:hidden}
+.stats>div{padding:13px 12px}
+.stats>div+div{border-left:1px solid var(--line)}
+.stats .k{font-family:var(--mono);font-weight:600;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+.stats .v{font-size:21px;font-weight:900;font-variant-numeric:tabular-nums;letter-spacing:-.02em;margin-top:6px}
+.stats .v small{font-size:13px;color:var(--ink-2);font-weight:700}
+.tags{display:flex;gap:8px;font-family:var(--mono);font-weight:700;font-size:12px;color:var(--me)}
+.newbest{font-weight:800;font-size:12px;color:#ffd76a}
+.actions{display:flex;flex-direction:column;gap:9px;margin-top:2px}
+.btn{border-radius:var(--r-md);font-weight:800;font-size:14px;padding:15px 0;text-align:center;transition:transform .12s var(--ease-snap)}
+.btn:active{transform:scale(.97)}
+.btn-primary{background:var(--me)}
+.btn-ghost{border:1px solid var(--line-2);background:transparent;color:var(--ink);font-weight:700}
+
+/* 보상형 광고 — 결과 2배 자랑 */
+.btn-reward{background:linear-gradient(180deg,#ffe08a,#ff9a3d);color:#1c1206;box-shadow:0 8px 22px -8px rgba(255,154,61,.6)}
+.btn-reward b{font-weight:900}
+.x2b{display:inline-block;font-family:var(--mono);font-weight:900;font-size:11px;color:#1c1206;background:#ffd76a;border-radius:6px;padding:2px 6px;vertical-align:middle;margin-left:4px}
+.x2done{text-align:center;font-weight:800;font-size:12.5px;color:#ffd76a;background:rgba(255,200,70,.12);border:1px solid rgba(255,200,70,.28);border-radius:var(--r-md);padding:13px}
+.ad-ov{position:fixed;inset:0;z-index:90;background:rgba(6,7,10,.93);display:flex;align-items:center;justify-content:center;padding:20px}
+.ad-box{width:100%;max-width:420px;background:var(--bg-2);border:1px solid var(--line);border-radius:18px;padding:16px;display:flex;flex-direction:column;gap:12px}
+.ad-top{display:flex;justify-content:space-between;align-items:center}
+.ad-skip{font-size:11px;color:var(--ink-3)}
+.ad-body{text-align:center;padding:22px 10px;background:var(--bg-3);border-radius:12px}
+.ad-emoji{font-size:2.4rem}
+.ad-body b{display:block;margin-top:6px;font-size:15px}
+.ad-bar{height:5px;background:var(--bg-3);border-radius:99px;overflow:hidden}
+.ad-bar i{display:block;height:100%;width:0;background:#ffd76a}
+
+/* 토스트 */
+#toast{position:fixed;left:50%;bottom:30px;transform:translateX(-50%);background:rgba(255,255,255,.96);color:#0a0b0d;
+  padding:11px 18px;border-radius:99px;font-size:13px;font-weight:800;opacity:0;transition:opacity .2s;z-index:70;pointer-events:none;max-width:90vw;text-align:center}
+#toast.on{opacity:1}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="toast"></div>
+<script>
+"use strict";
+/* ⚡ 광클대전 — 단독 실행 버전 (서버·빌드·백엔드 없이 파일 하나로 동작) */
+
+/* ── 소재(밈 떡밥) ── */
+var BATTLES = [
+  { id:'mintchoco', tag:'민초대전', q:'민트초코, 너는?',
+    a:{key:'mint',name:'민초단',emoji:'🌿',color:'#12b39a',slogan:'치약? 이건 신이 내린 맛'},
+    b:{key:'anti',name:'반민초파',emoji:'🚫',color:'#7b6ef0',slogan:'디저트에 치약을 왜 넣냐고'},
+    taunts:['치약 자랑 그만 🪥','민초 모르면 인생 손해 ㅋㅋ','반민초는 미각 테러범','결국 다 민초로 온다'] },
+  { id:'tangsuyuk', tag:'부먹찍먹', q:'탕수육은 역시?',
+    a:{key:'bu',name:'부먹파',emoji:'🥣',color:'#e8633a',slogan:'소스에 촉촉하게 적셔야 진리'},
+    b:{key:'jjik',name:'찍먹파',emoji:'🥢',color:'#2f9ec4',slogan:'바삭함을 어떻게 포기해'},
+    taunts:['눅눅이들 잘 있냐 🫠','소스 부으면 그게 탕수육 죽이야','찍먹이 국룰 모르나','부먹은 사랑입니다'] },
+  { id:'chicken', tag:'양념후라이드', q:'치킨 한 마리면?',
+    a:{key:'yn',name:'양념파',emoji:'🍗',color:'#d83838',slogan:'손에 묻은 양념까지 핥아먹는다'},
+    b:{key:'fr',name:'후라이드파',emoji:'🍤',color:'#cf911f',slogan:'치킨 본연의 맛, 후라이드'},
+    taunts:['후라이드는 심심하지 않냐','양념은 소스맛이지 치킨맛이냐 ㅋ','반반? 회색분자 나가라','결국 시키면 양념'] },
+  { id:'pineapple', tag:'파인애플피자', q:'파인애플 피자, 인정?',
+    a:{key:'o',name:'하와이안단',emoji:'🍍',color:'#d9a400',slogan:'달콤짭짤 이게 천국'},
+    b:{key:'x',name:'파인애플아웃',emoji:'🙅',color:'#3f8f4f',slogan:'피자에 과일은 반칙'},
+    taunts:['피자에 과일 올린 사람 누구야','먹어보고 말해라 진짜 맛있음','이탈리아 가면 잡혀간다','단짠 모르면 입맛 초딩'] },
+  { id:'naengmyeon', tag:'물냉비냉', q:'여름엔 어떤 냉면?',
+    a:{key:'mul',name:'물냉파',emoji:'🧊',color:'#2f8fd0',slogan:'시원한 육수 들이켜는 그 맛'},
+    b:{key:'bib',name:'비냉파',emoji:'🌶️',color:'#d8452f',slogan:'매콤새콤 비벼야 제맛'},
+    taunts:['물냉은 밍밍하잖아','비냉은 그냥 매운 국수지','면치기 못하면 물냉 자격 없음','둘 다 시키는 게 정답 아님?'] },
+  { id:'milk', tag:'딸기바나나우유', q:'편의점 우유는?',
+    a:{key:'st',name:'딸기우유단',emoji:'🍓',color:'#e85a92',slogan:'핑크빛 행복 한 모금'},
+    b:{key:'bn',name:'바나나우유단',emoji:'🍌',color:'#e0a800',slogan:'국민 단지우유 영원하라'},
+    taunts:['딸기우유는 색소맛 ㅋ','바나나우유 안 먹어본 사람 있냐','단지 모양 못 이김','딸기우유가 더 고급짐'] },
+  { id:'gimbap', tag:'김밥꼬다리', q:'김밥, 어디부터 먹어?',
+    a:{key:'end',name:'꼬다리파',emoji:'🍙',color:'#8d6e63',slogan:'못생긴 끝이 제일 맛있어'},
+    b:{key:'mid',name:'가운데파',emoji:'🌀',color:'#3a9b4f',slogan:'예쁜 가운데가 정석이지'},
+    taunts:['꼬다리 안 주면 서운함','가운데부터 먹는 건 국룰','꼬다리 버리는 사람 손절','엄마는 늘 꼬다리만 드셨지…'] },
+  { id:'mandu', tag:'군만두물만두', q:'만두는 역시?',
+    a:{key:'gun',name:'군만두파',emoji:'🥟',color:'#c07c2a',slogan:'바삭바삭 겉면이 생명'},
+    b:{key:'mul',name:'물만두파',emoji:'💧',color:'#4d9ec4',slogan:'촉촉하게 터지는 육즙'},
+    taunts:['군만두는 기름맛 아니냐','물만두는 밋밋해','냉동만두는 무조건 군만두','둘 다 맛있는 거 인정하자 사실'] }
+];
+
+/* ── 순수 헬퍼 ── */
+function fnv1a(s){var h=2166136261;for(var i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619);}return h>>>0;}
+function dayNumber(d){var ms=Date.parse(d+'T00:00:00Z');return isNaN(ms)?0:Math.floor(ms/86400000);}
+function battleOfDay(d){var n=dayNumber(d);return BATTLES[((n%BATTLES.length)+BATTLES.length)%BATTLES.length];}
+function dailyBias(d,bt){return (fnv1a(d+'|'+(bt?bt.id:''))%1201)/100-6;}
+function comboMult(streak){return Math.min(3,1+Math.max(0,streak)*0.04);}
+var TITLES=[[0,'구경꾼 👀'],[50,'일반인 🙂'],[150,'광클 입문 🐣'],[300,'손가락 좀 쓰네 ✌️'],[500,'광클러 ⚡'],[800,'광클 고수 🔥'],[1200,'광클의 신 👑'],[1800,'손가락 분신술 🌀']];
+function titleForTaps(t){var l=TITLES[0][1];for(var i=0;i<TITLES.length;i++)if(t>=TITLES[i][0])l=TITLES[i][1];return l;}
+function rankEstimate(t){var pop=87431,f=Math.max(0,Math.min(1,1-t/2000));return Math.max(1,Math.round(pop*(0.0002+0.9998*f*f)));}
+function comma(n){return Math.round(n).toLocaleString('ko-KR');}
+function clamp(v,lo,hi){return Math.max(lo,Math.min(hi,v));}
+function pad2(n){return (n<10?'0':'')+n;}
+function todayStr(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function mdLabel(d){var p=String(d).split('-');return (+p[1])+'월 '+(+p[2])+'일';}
+function mdShort(d){var p=String(d).split('-');return (+p[1])+'.'+(+p[2]);}
+function addDaysStr(n,from){var d=new Date(from+'T00:00:00');d.setDate(d.getDate()+n);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function withEuro(name){var c=name.charCodeAt(name.length-1)-0xac00;var jong=c>=0&&c<=11171&&c%28!==0;return name+(jong?'으로':'로');}
+function introQ(q){return q.replace(/, /,',<br>').replace(/\?$/,'<span class="qa">?</span>');}
+/* 진영색 위 가독 텍스트색 (밝으면 먹색, 어두우면 흰색) */
+function ink(hex){var c=String(hex).replace('#','');if(c.length===3)c=c[0]+c[0]+c[1]+c[1]+c[2]+c[2];
+  var r=parseInt(c.slice(0,2),16)/255,g=parseInt(c.slice(2,4),16)/255,b=parseInt(c.slice(4,6),16)/255;
+  return (0.2126*r+0.7152*g+0.0722*b)>0.58?'#08110d':'#ffffff';}
+
+/* ── 저장 ── */
+var KEY='gwangclick.v1';
+function load(){try{var r=localStorage.getItem(KEY);if(r)return JSON.parse(r);}catch(e){}return{picks:{},streak:0,lastDay:'',best:0};}
+function persist(){try{localStorage.setItem(KEY,JSON.stringify(F));}catch(e){}}
+var F=load();
+
+/* ── 소리/진동 ── */
+var AC=null;
+function beep(freq,dur,type,vol){try{AC=AC||new(window.AudioContext||window.webkitAudioContext)();var o=AC.createOscillator(),g=AC.createGain();o.type=type||'sine';o.frequency.value=freq;g.gain.setValueAtTime(vol||0.18,AC.currentTime);g.gain.exponentialRampToValueAtTime(0.001,AC.currentTime+dur);o.connect(g).connect(AC.destination);o.start();o.stop(AC.currentTime+dur);}catch(e){}}
+function chord(fs,dur){fs.forEach(function(f,i){setTimeout(function(){beep(f,dur||0.12,'triangle',0.14);},i*55);});}
+function buzz(ms){try{if(window.Toss&&Toss.haptic){Toss.haptic(ms);return;}}catch(e){}if(navigator.vibrate)navigator.vibrate(ms);}
+
+/* ── 화려한 액션: 캔버스 파티클 (외부 에셋 0, 캔버스 미지원이면 조용히 비활성) ── */
+var FX={ctx:null,w:0,h:0,dpr:1,list:[]};
+var SKY={ctx:null,canvas:null,list:[],raf:0,w:0,h:0,dpr:1,on:false};
+function fxInit(){
+  var c=el('fb-fx'), stage=el('fb-stage');
+  if(!c||!c.getContext||!stage){FX.ctx=null;return;}
+  var r=stage.getBoundingClientRect();
+  FX.dpr=Math.min(2,window.devicePixelRatio||1); FX.w=r.width; FX.h=r.height;
+  c.width=FX.w*FX.dpr; c.height=FX.h*FX.dpr; c.style.width=FX.w+'px'; c.style.height=FX.h+'px';
+  var ctx=c.getContext('2d'); ctx.setTransform(FX.dpr,0,0,FX.dpr,0,0); FX.ctx=ctx; FX.list=[];
+}
+function fxCap(){if(FX.list.length>260)FX.list.splice(0,FX.list.length-260);}
+function fxSpark(x,y,n,colors){
+  if(!FX.ctx)return;
+  for(var i=0;i<n;i++){var a=Math.random()*6.283,sp=2+Math.random()*5.5;
+    FX.list.push({type:'spark',x:x,y:y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-2,g:0.18,life:1,dec:0.02+Math.random()*0.02,size:1.6+Math.random()*2.6,color:colors[i%colors.length]});}
+  fxCap();
+}
+function fxRing(x,y,color){if(!FX.ctx)return;FX.list.push({type:'ring',x:x,y:y,r:6,vr:5,life:1,dec:0.045,color:color});}
+function fxEmoji(x,y,n,emoji){
+  if(!FX.ctx)return;
+  for(var i=0;i<n;i++){var a=-1.57+(Math.random()-0.5)*2.1,sp=3+Math.random()*5;
+    FX.list.push({type:'emoji',x:x,y:y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-3,g:0.16,life:1,dec:0.013,size:18+Math.random()*16,emoji:emoji,rot:Math.random()*6.28,vrot:(Math.random()-0.5)*0.3});}
+  fxCap();
+}
+function fxStep(){
+  var ctx=FX.ctx; if(!ctx)return;
+  ctx.clearRect(0,0,FX.w,FX.h);
+  for(var i=FX.list.length-1;i>=0;i--){var p=FX.list[i];
+    if(p.type==='ring'){p.r+=p.vr;p.life-=p.dec;ctx.globalAlpha=Math.max(0,p.life);ctx.strokeStyle=p.color;ctx.lineWidth=2.5;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,6.283);ctx.stroke();}
+    else{p.vy+=p.g||0;p.x+=p.vx;p.y+=p.vy;if(p.vrot)p.rot+=p.vrot;p.life-=p.dec;ctx.globalAlpha=Math.max(0,p.life);
+      if(p.emoji){ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.rot||0);ctx.font=p.size+'px serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(p.emoji,0,0);ctx.restore();}
+      else{ctx.fillStyle=p.color;ctx.beginPath();ctx.arc(p.x,p.y,p.size,0,6.283);ctx.fill();}}
+    if(p.life<=0||p.y>FX.h+60)FX.list.splice(i,1);
+  }
+  ctx.globalAlpha=1;
+}
+function shake(){var s=el('fb-stage');if(!s||!s.classList)return;s.classList.remove('fb-shake');void s.offsetWidth;s.classList.add('fb-shake');}
+function skyInit(){
+  if(SKY.canvas||typeof document==='undefined'||!document.body)return;
+  var c=document.createElement('canvas'); if(!c.getContext)return;
+  c.id='fb-sky'; document.body.appendChild(c);
+  function size(){SKY.dpr=Math.min(2,window.devicePixelRatio||1);SKY.w=window.innerWidth;SKY.h=window.innerHeight;c.width=SKY.w*SKY.dpr;c.height=SKY.h*SKY.dpr;var x=c.getContext('2d');x.setTransform(SKY.dpr,0,0,SKY.dpr,0,0);SKY.ctx=x;}
+  size(); if(window.addEventListener)window.addEventListener('resize',size); SKY.canvas=c;
+}
+function skyConfetti(emojis,colors){
+  skyInit(); if(!SKY.ctx)return;
+  for(var i=0;i<110;i++){SKY.list.push({x:Math.random()*SKY.w,y:-20-Math.random()*SKY.h*0.4,vx:(Math.random()-0.5)*2.4,vy:2+Math.random()*4,g:0.05,life:1,dec:0.0035,size:11+Math.random()*15,emoji:Math.random()<0.5?emojis[i%emojis.length]:null,color:colors[i%colors.length],rot:Math.random()*6.28,vrot:(Math.random()-0.5)*0.3});}
+  if(!SKY.on){SKY.on=true;SKY.raf=requestAnimationFrame(skyLoop);}
+}
+function skyLoop(){
+  var ctx=SKY.ctx; if(!ctx){SKY.on=false;return;}
+  ctx.clearRect(0,0,SKY.w,SKY.h);
+  for(var i=SKY.list.length-1;i>=0;i--){var p=SKY.list[i];p.vy+=p.g;p.x+=p.vx;p.y+=p.vy;p.rot+=p.vrot;p.life-=p.dec;ctx.globalAlpha=Math.max(0,Math.min(1,p.life));
+    ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.rot);
+    if(p.emoji){ctx.font=p.size+'px serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(p.emoji,0,0);}else{ctx.fillStyle=p.color;ctx.fillRect(-p.size/2,-p.size/3,p.size,p.size*0.62);}
+    ctx.restore();
+    if(p.life<=0||p.y>SKY.h+40)SKY.list.splice(i,1);}
+  ctx.globalAlpha=1;
+  if(SKY.list.length)SKY.raf=requestAnimationFrame(skyLoop);else{SKY.on=false;ctx.clearRect(0,0,SKY.w,SKY.h);}
+}
+
+/* ── DOM 헬퍼 ── */
+var app=document.getElementById('app');
+function el(id){return document.getElementById(id);}
+function setTxt(id,v){var e=el(id);if(e)e.textContent=v;}
+function toast(msg){var t=el('toast');t.textContent=msg;t.classList.add('on');clearTimeout(toast._t);toast._t=setTimeout(function(){t.classList.remove('on');},2200);}
+
+/* ── 인트로 ── */
+function teamCard(t,letter){
+  return '<div class="team" style="border-left:3px solid '+t.color+'"><div class="em">'+t.emoji+'</div>'+
+    '<div style="flex:1;min-width:0"><div class="nm"><b>'+t.name+'</b><span class="tg">TEAM '+letter+'</span></div>'+
+    '<div class="sl">'+t.slogan+'</div></div></div>';
+}
+function intro(){
+  cleanup();
+  var date=todayStr(), bt=battleOfDay(date), base=clamp(50+dailyBias(date,bt),12,88), ra=Math.round(base);
+  app.innerHTML=
+    '<div class="screen" style="--team-a:'+bt.a.color+';--team-b:'+bt.b.color+';--me:'+bt.a.color+';--foe:'+bt.b.color+'">'+
+      '<div class="hdr"><span class="brand">⚡ 광클대전</span><span class="live"><span class="dot">●</span>LIVE · 전국 동시</span></div>'+
+      '<div class="rule"></div>'+
+      '<div class="kicker">광클대전 · '+mdLabel(date)+' · 전국 동시</div>'+
+      '<h1 class="q">'+introQ(bt.q)+'</h1>'+
+      '<div class="teams">'+teamCard(bt.a,'A')+teamCard(bt.b,'B')+'</div>'+
+      '<div>'+
+        '<div class="gauge-head"><span class="mono">전국 흐름</span>'+
+          (F.streak>1?'<span class="chip-soft">🔥 '+F.streak+'일 연속 참전</span>':'<span class="chip-soft"><span class="dot">●</span> LIVE</span>')+'</div>'+
+        '<div class="gnums"><span class="gnum" style="color:var(--team-a)">'+ra+'</span>'+
+          '<span class="mono" style="align-self:center">VS</span>'+
+          '<span class="gnum" style="color:var(--team-b)">'+(100-ra)+'</span></div>'+
+        '<div class="gauge" style="margin-top:9px"><i style="width:'+base+'%;background:var(--team-a);transform-origin:left;animation:wipeIn .8s var(--ease-wipe) both"></i>'+
+          '<i style="width:'+(100-base)+'%;background:var(--team-b);transform-origin:right;animation:wipeIn .8s var(--ease-wipe) both"></i></div>'+
+      '</div>'+
+      '<div class="go">'+
+        '<button style="background:'+bt.a.color+';color:'+ink(bt.a.color)+'" onclick="GO(\'a\')">'+bt.a.emoji+' '+withEuro(bt.a.name)+' 참전</button>'+
+        '<button style="background:'+bt.b.color+';color:'+ink(bt.b.color)+'" onclick="GO(\'b\')">'+bt.b.emoji+' '+withEuro(bt.b.name)+' 참전</button>'+
+      '</div>'+
+      '<p class="hint">60초 동안 미친듯이 탭 → 내 편 흐름을 끌어와라. 콤보를 이으면 한 탭이 <b style="color:var(--team-a)">×3</b>까지.</p>'+
+    '</div>';
+}
+
+/* ── 배틀 ── */
+var B=null, DURATION=60;
+function GO(side){
+  cleanup();
+  var date=todayStr(), bt=battleOfDay(date), me=bt[side], foe=bt[side==='a'?'b':'a'];
+  var base=clamp(50+dailyBias(date,bt),12,88);
+  F.picks[bt.id]=side;
+  if(F.lastDay!==date){F.streak=(F.lastDay===addDaysStr(-1,date))?(F.streak||0)+1:1;F.lastDay=date;}
+  persist();
+  var now=performance.now();
+  B={date:date,bt:bt,side:side,me:me,foe:foe,base:base,tapsF:0,presses:0,streak:0,maxStreak:0,
+     lastTap:now,aShare:base,mean:base,target:base,push:0,simT:0,lastFrame:now,endsAt:now+DURATION*1000,raf:0,tick:0,ended:false};
+  app.innerHTML=
+    '<div class="stage" id="fb-stage" style="--team-a:'+bt.a.color+';--team-b:'+bt.b.color+';--me:'+me.color+';--foe:'+foe.color+';--tapink:'+ink(me.color)+'">'+
+      '<div class="urgentbar"></div>'+
+      '<div class="bhdr"><span class="l"><span class="dot">●</span>LIVE · BATTLE</span><span class="chip" id="fb-chip">평상</span></div>'+
+      '<div class="ticker" id="fb-ticker">전국에서 광클 시작 — '+me.emoji+' '+me.name+' 가즈아!</div>'+
+      '<div>'+
+        '<div class="brow"><span style="color:var(--team-a)">A <b id="fb-pa" class="tnum">'+base.toFixed(0)+'</b>%</span>'+
+          '<span style="color:var(--team-b)">B <b id="fb-pb" class="tnum">'+(100-base).toFixed(0)+'</b>%</span></div>'+
+        '<div class="gauge tall" style="margin-top:7px"><i id="fb-fill-a" style="width:'+base+'%;background:var(--team-a)"></i>'+
+          '<i id="fb-fill-b" style="width:'+(100-base)+'%;background:var(--team-b)"></i></div>'+
+      '</div>'+
+      '<div class="mid">'+
+        '<div><div class="lbl">내 기여</div><div class="contrib tnum"><b id="fb-taps">0</b></div>'+
+          '<div class="combo-line">콤보 <b id="fb-combo">×1.0</b></div></div>'+
+        '<div style="text-align:right"><div class="lbl">Time</div><div class="timer tnum" id="fb-time">'+DURATION+'</div></div>'+
+      '</div>'+
+      '<button class="tap" id="fb-tap"><span class="combobadge" id="fb-combobadge">COMBO ×1.0</span>'+
+        '<span class="orb">'+me.emoji+'</span><span class="lab">TAP!</span></button>'+
+      '<div class="third"><span class="bar"></span><div><div class="k" id="fb-thirdk">전국 실시간</div>'+
+        '<div class="v" id="fb-thirdv">'+me.name+' · 흐름 잡아라</div></div></div>'+
+      '<div class="fb-pops" id="fb-pops"></div>'+
+      '<canvas id="fb-fx"></canvas>'+
+    '</div>';
+  el('fb-stage').addEventListener('pointerdown',onTap,{passive:true});
+  fxInit();
+  B.tick=setInterval(tickerBeat,2300);
+  B.raf=requestAnimationFrame(frame);
+}
+
+function onTap(e){
+  if(!B||B.ended)return;
+  var now=performance.now(), gap=now-B.lastTap; B.lastTap=now;
+  B.streak=gap<300?B.streak+1:Math.max(0,B.streak-2);
+  if(B.streak>B.maxStreak)B.maxStreak=B.streak;
+  var mult=comboMult(B.streak); B.tapsF+=mult; B.presses+=1;
+  var dir=B.side==='a'?1:-1;
+  B.push+=dir*mult*0.9; B.mean=clamp(B.mean+dir*mult*0.05,12,88);
+  var f=520+Math.min(900,B.streak*16);
+  var milestone=B.streak>0&&B.streak%12===0;
+  if(milestone){chord([f,f*1.25,f*1.5],0.07);buzz(16);}else{beep(f,0.045,'square',0.09);buzz(5);}
+  var stage=el('fb-stage'), r=stage&&stage.getBoundingClientRect?stage.getBoundingClientRect():{left:0,top:0,width:300,height:200};
+  var px=(e.clientX||r.left+r.width/2)-r.left, py=(e.clientY||r.top+r.height/2)-r.top;
+  popNum(px,py,mult);
+  var hot=B.streak>10;
+  fxSpark(px,py,hot?10:6,hot?['#ffffff',B.me.color,'#ffffff']:[B.me.color,'#ffffff']);
+  if(milestone){fxRing(px,py,'#ffffff');fxEmoji(px,py,7,B.me.emoji);shake();}
+  var t=el('fb-taps'); if(t)t.textContent=comma(Math.floor(B.tapsF));
+}
+function popNum(px,py,mult){
+  var box=el('fb-pops'); if(!box)return;
+  if(box.childElementCount>14&&box.firstElementChild)box.firstElementChild.remove();
+  var s=document.createElement('span'), n=Math.max(1,Math.round(mult));
+  s.className='fb-pop'+(n>=3?' x3':n>=2?' x2':'');
+  s.textContent=n>=2?('+'+n+'🔥'):'+1';
+  s.style.left=px+'px'; s.style.top=py+'px';
+  box.appendChild(s); setTimeout(function(){s.remove();},560);
+}
+function frame(now){
+  var fa=el('fb-fill-a'), stage=el('fb-stage');
+  if(!B||B.ended||!fa){cleanup();return;}
+  var dt=Math.min(0.05,(now-B.lastFrame)/1000); B.lastFrame=now; var k=dt*60;
+  B.simT+=dt;
+  if(B.simT>0.9){B.simT=0;B.target=clamp(B.mean+(Math.random()*2-1)*7,8,92);}
+  B.mean+=(B.base-B.mean)*0.0025*k;
+  B.aShare+=(B.target-B.aShare)*0.05*k;
+  B.aShare+=B.push*0.05*k; B.push*=Math.pow(0.86,k);
+  B.aShare=clamp(B.aShare,5,95);
+  if(now-B.lastTap>320&&B.streak>0)B.streak=Math.max(0,B.streak-0.5*k);
+  var bShare=100-B.aShare;
+  fa.style.width=B.aShare.toFixed(2)+'%';
+  var fbEl=el('fb-fill-b'); if(fbEl)fbEl.style.width=bShare.toFixed(2)+'%';
+  setTxt('fb-pa',Math.round(B.aShare)); setTxt('fb-pb',Math.round(bShare));
+  setTxt('fb-time',pad2(Math.max(0,Math.ceil((B.endsAt-now)/1000))));
+  var cm=comboMult(B.streak).toFixed(1);
+  setTxt('fb-combo','×'+cm);
+  var cb=el('fb-combobadge'); if(cb)cb.textContent='COMBO ×'+cm;
+  fxStep();
+  var hot=B.streak>14, urg=(B.endsAt-now)/1000<=10;
+  if(stage&&stage.classList){stage.classList.toggle('combo',hot);stage.classList.toggle('urgent',urg);}
+  setTxt('fb-chip',urg?'막판 10초':(hot?'콤보!':'평상'));
+  var lead=B.aShare>=50?B.bt.a:B.bt.b, diff=Math.abs(B.aShare-50)*2;
+  setTxt('fb-thirdk',urg?'긴급':(hot?'콤보 가속':'전국 실시간'));
+  setTxt('fb-thirdv',urg?'막판 10초 · 총력전':(hot?'버튼 발광 · 기여 강조':(lead.name+' 우세 · 차이 '+diff.toFixed(0)+'%p')));
+  if(now>=B.endsAt){endBattle();return;}
+  B.raf=requestAnimationFrame(frame);
+}
+function tickerBeat(){
+  var t=el('fb-ticker'); if(!B||!t){cleanup();return;}
+  var bt=B.bt, lead=B.aShare>=50?bt.a:bt.b, leadShare=Math.max(B.aShare,100-B.aShare), pool=[];
+  if(Math.abs(B.aShare-50)<2.5)pool.push('⚔️ 초접전! 한 끗 차이다');
+  else pool.push('🔥 '+lead.emoji+' '+lead.name+' 흐름 장악 '+leadShare.toFixed(0)+'%');
+  if(B.maxStreak>14)pool.push('💥 누군가 ×'+comboMult(B.maxStreak).toFixed(1)+' 콤보 폭발!');
+  bt.taunts.forEach(function(x){pool.push('🗣️ '+x);});
+  pool.push('🚀 단톡방에 소문이 퍼지는 중…','👀 옆 반도 참전했다는데?','📣 지금 흐름 끌어올 타이밍!');
+  t.textContent=pool[Math.floor(Math.random()*pool.length)];
+  t.classList.remove('beat'); void t.offsetWidth; t.classList.add('beat');
+}
+/* ── 광고 수익화: 보상형 '결과 2배 자랑' (둘 다 자동 분기) ──
+   우선순위: ① 토스 안 → 토스 보상형 SDK  ② 웹 보상형 훅(AD.webRewarded)  ③ 하우스(데모) 광고 폴백.
+   ▸ 실광고 전환: 토스 입점 후 콘솔 광고단위 ID를 tossRewardUnitId에, 웹은 webRewarded에 제공자 함수 연결.
+   ▸ 10대 대상 → 비개인화 광고(nonPersonalized)로 강제. 보상형(옵트인)만 사용 — 배너/전면 없음. */
+var AD={ enabled:true, tossRewardUnitId:'', webRewarded:null, houseSeconds:15, nonPersonalized:true };
+function adRewarded(opts){
+  opts=opts||{};
+  if(!AD.enabled){opts.onReward&&opts.onReward();return;}
+  try{ if(window.Toss&&Toss.inToss&&Toss.inToss()&&AD.tossRewardUnitId){
+    Toss.rewardedAd(AD.tossRewardUnitId).then(function(r){
+      if(r===true)opts.onReward&&opts.onReward();
+      else if(r===false)toast('끝까지 봐야 보상을 받아요');
+      else houseAd(opts);
+    }); return;
+  } }catch(e){}
+  if(typeof AD.webRewarded==='function'){
+    try{ Promise.resolve(AD.webRewarded({nonPersonalized:AD.nonPersonalized})).then(function(r){
+      if(r===true)opts.onReward&&opts.onReward();
+      else if(r===false)toast('끝까지 봐야 보상을 받아요');
+      else houseAd(opts);
+    }).catch(function(){houseAd(opts);}); return;
+    }catch(e){}
+  }
+  houseAd(opts);
+}
+function houseAd(opts){
+  var sec=AD.houseSeconds, ov=document.createElement('div'); ov.className='ad-ov';
+  ov.innerHTML='<div class="ad-box"><div class="ad-top"><span class="mono">AD · 광고</span>'+
+    '<button class="ad-skip" id="ad-skip">✕ 건너뛰기(보상 없음)</button></div>'+
+    '<div class="ad-body"><div class="ad-emoji">⚡</div><b>광클대전</b>'+
+    '<p class="hint" style="margin-top:6px">광고 자리 — 토스/애드센스/애드핏 연결 시 실제 광고가 나옵니다</p></div>'+
+    '<div class="ad-bar"><i id="ad-bar"></i></div>'+
+    '<button class="btn btn-ghost" id="ad-btn" disabled>광고 시청 중… '+sec+'초</button></div>';
+  (document.body||document.documentElement).appendChild(ov);
+  var bar=document.getElementById('ad-bar'); if(bar){bar.style.transition='width '+sec+'s linear';requestAnimationFrame(function(){bar.style.width='100%';});}
+  var t=sec, btn=document.getElementById('ad-btn'), iv=setInterval(function(){t--;if(t>0){if(btn)btn.textContent='광고 시청 중… '+t+'초';return;}clearInterval(iv);done();},1000);
+  function shut(){clearInterval(iv);if(ov.parentNode)ov.parentNode.removeChild(ov);}
+  function done(){if(btn)btn.textContent='✅ 보상 적용';setTimeout(function(){shut();opts.onReward&&opts.onReward();},350);}
+  var sk=document.getElementById('ad-skip'); if(sk)sk.onclick=function(){shut();toast('끝까지 봐야 보상을 받아요');};
+}
+
+/* ── 종료 + 결과 ── */
+var R=null;
+function endBattle(){
+  if(!B||B.ended)return; B.ended=true;
+  cancelAnimationFrame(B.raf); clearInterval(B.tick);
+  var bt=B.bt, side=B.side, me=B.me, foe=B.foe;
+  var contrib=Math.floor(B.tapsF), myShare=side==='a'?B.aShare:100-B.aShare;
+  var newBest=contrib>(F.best||0); if(newBest)F.best=contrib; persist();
+  var verdict=myShare>=53?{t:'우리 편이 전국을 먹었다 🎉',c:'win'}:myShare<=47?{t:'오늘은 밀렸다…<br>내일 설욕 🔥',c:'lose'}:{t:'초접전 무승부 ⚔️',c:'tie'};
+  R={bt:bt,me:me,foe:foe,side:side,contrib:contrib,myShare:myShare,maxStreak:B.maxStreak,
+     title:titleForTaps(contrib),rank:rankEstimate(contrib),verdict:verdict,newBest:newBest,streak:F.streak,x2:false};
+  LAST=R;
+  if(newBest){chord([523,659,784,1047]);buzz([20,40,20]);}
+  if(verdict.c==='win'||newBest){skyConfetti([me.emoji,'✨'],[me.color,'#ffffff','#ffd76a']);}
+  B=null;
+  renderResult();
+}
+function watch2x(){ if(!R||R.x2)return; adRewarded({onReward:applyDouble}); }
+function applyDouble(){
+  if(!R||R.x2)return;
+  R.x2=true; R.contrib*=2; R.rank=rankEstimate(R.contrib); R.title=titleForTaps(R.contrib);
+  renderResult(); chord([659,784,988,1318]); buzz([15,30,15]); toast('⚡ 기여 2배 적용 — 더 크게 자랑하기!');
+}
+function renderResult(){
+  var r=R, me=r.me, foe=r.foe, bt=r.bt, rs=Math.round(r.myShare);
+  var acc=r.verdict.c==='win'?'var(--me)':r.verdict.c==='lose'?'var(--foe)':'linear-gradient(90deg,var(--me) 0 50%,var(--foe) 50% 100%)';
+  app.innerHTML=
+    '<div class="screen" style="--team-a:'+bt.a.color+';--team-b:'+bt.b.color+';--me:'+me.color+';--foe:'+foe.color+';--tapink:'+ink(me.color)+'">'+
+      '<div class="acc" style="background:'+acc+'"></div>'+
+      '<div class="hdr"><span class="brand">⚡ 광클대전</span><span class="mono">RESULT · '+mdShort(todayStr())+'</span></div>'+
+      '<h2 class="verdict">'+r.verdict.t+'</h2>'+
+      '<div class="rcard">'+
+        '<div class="frow"><span class="em">'+me.emoji+'</span><span class="nm">'+me.name+'</span><span class="rq">'+bt.q+'</span></div>'+
+        '<div class="rlbl">칭호</div><div class="title">'+r.title+'</div>'+
+        '<div style="margin-top:16px"><div class="brow"><span style="color:var(--me)">최종 '+rs+'%</span><span style="color:var(--foe)">'+(100-rs)+'%</span></div>'+
+          '<div class="gauge tall" style="margin-top:7px"><i style="width:'+r.myShare.toFixed(1)+'%;background:var(--me)"></i>'+
+            '<i style="width:'+(100-r.myShare).toFixed(1)+'%;background:var(--foe)"></i></div></div>'+
+      '</div>'+
+      '<div class="stats"><div><div class="k">내 기여</div><div class="v">'+comma(r.contrib)+(r.x2?' <span class="x2b">⚡2X</span>':'')+'</div></div>'+
+        '<div><div class="k">최고 콤보</div><div class="v">×'+comboMult(r.maxStreak).toFixed(1)+'</div></div>'+
+        '<div><div class="k">예상 전국</div><div class="v">'+comma(r.rank)+'<small>위</small></div></div></div>'+
+      '<div class="tags"><span>#광클대전</span><span>#'+bt.tag+'</span></div>'+
+      (r.newBest?'<div class="newbest">🏆 내 최고 기여 갱신 · '+comma(r.contrib)+'</div>':'')+
+      (r.streak>1?'<div class="streak-chip">🔥 '+r.streak+'일 연속 참전 중</div>':'')+
+      '<div class="actions">'+
+        (r.x2?'<div class="x2done">✅ 광고 보상 적용 — 자랑 카드가 2배로 커졌어요</div>'
+             :'<button class="btn btn-reward" onclick="watch2x()">📺 광고 보고 기여 <b>2배</b>로 자랑 ⚡2X</button>')+
+        '<button class="btn btn-primary" style="color:'+ink(me.color)+'" onclick="SHARE()">📣 결과 자랑 + 친구 소환</button>'+
+        '<button class="btn btn-ghost" onclick="GO(\''+r.side+'\')">🔁 한 판 더</button>'+
+        '<button class="btn btn-ghost" onclick="intro()">⚡ 오늘의 대전</button>'+
+      '</div>'+
+    '</div>';
+}
+
+/* ── 자랑/소환 ── */
+var LAST=null;
+function SHARE(){
+  if(!LAST)return;
+  var link=location.href.split('?')[0];
+  var text='⚡광클대전⚡ 나는 '+LAST.me.name+'!\n'+LAST.bt.q+' → '+LAST.title+'\n내 기여 '+comma(LAST.contrib)+(LAST.x2?' ⚡2X':'')+' · 예상 전국 '+comma(LAST.rank)+'위\n너는 어느 편? 참전해라 👉';
+  if(navigator.share){navigator.share({title:'광클대전',text:text,url:link}).catch(function(){});return;}
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text+' '+link).then(function(){toast('링크 복사 완료 — 단톡방에 뿌리기 📣');},function(){toast('스크린샷 해서 자랑해보세요 📸');});
+  }else{toast('스크린샷 해서 자랑해보세요 📸');}
+}
+
+function cleanup(){if(B){cancelAnimationFrame(B.raf);clearInterval(B.tick);B=null;}FX.list.length=0;}
+
+/* 전역 노출 (onclick에서 호출) */
+window.GO=GO; window.SHARE=SHARE; window.intro=intro; window.watch2x=watch2x;
+
+/* 시작 */
+intro();
+
+</script>
+</body>
+</html>

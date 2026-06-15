@@ -2,6 +2,7 @@ import { webApplicationJsonLd, htmlLang } from "@webapp/seo";
 import { AdSlot } from "@webapp/ui";
 import type { Locale } from "../lib/i18n";
 import { getDictionary, homePath, neogulPath, legalPath, guidePath } from "../lib/i18n";
+import { APPS } from "../lib/appsRegistry";
 import { LanguageToggle } from "./LanguageToggle";
 import { ThemeToggle } from "./ThemeToggle";
 import { HubCarousel } from "./HubCarousel";
@@ -37,6 +38,21 @@ export function HubView({ locale }: { locale: Locale }) {
     category: "WebApplication",
     inLanguage: htmlLang(locale),
   });
+
+  // 검색 도구 목록 = 사전(큐레이션) + 레지스트리(apps.json) 병합(href 기준 중복 제거).
+  // 새 앱은 apps.json 에만 추가하면 허브 검색에 자동 노출된다.
+  const toolMap = new Map<string, { name: string; href: string; keywords: string[] }>();
+  for (const x of h.search.tools) toolMap.set(x.href, x);
+  for (const a of APPS) {
+    if (!toolMap.has(a.path)) {
+      toolMap.set(a.path, {
+        name: locale === "ko" ? a.nameKo : a.nameEn,
+        href: a.path,
+        keywords: a.keywords,
+      });
+    }
+  }
+  const searchTools = [...toolMap.values()];
 
   return (
     <>
@@ -76,7 +92,7 @@ export function HubView({ locale }: { locale: Locale }) {
             <p className={styles.lede}>{h.hero.lede}</p>
             <HubSearch
               placeholder={h.hero.searchPlaceholder}
-              tools={h.search.tools}
+              tools={searchTools}
               labels={{ feature: h.search.feature, web: h.search.web, webGo: h.search.webGo }}
             />
 

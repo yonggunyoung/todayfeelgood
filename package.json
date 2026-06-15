@@ -6,7 +6,9 @@
   "scripts": {
     "dev:font": "pnpm --filter @webapp/font-frontend dev",
     "build": "pnpm -r build",
-    "lint": "pnpm -r lint"
+    "lint": "pnpm -r lint",
+    "apps:sync": "node infra/scripts/sync-apps.mjs",
+    "apps:new": "node infra/scripts/new-app.mjs"
   },
   "engines": {
     "node": ">=20"

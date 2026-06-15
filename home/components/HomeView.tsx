@@ -2,6 +2,7 @@ import { BrushDivider, Card, Mascot, Sticker, ExitToHub } from "@webapp/ui";
 import { webApplicationJsonLd, htmlLang } from "@webapp/seo";
 import type { Locale } from "../lib/i18n";
 import { getDictionary, neogulPath, legalPath, guidePath } from "../lib/i18n";
+import { APPS } from "../lib/appsRegistry";
 import { LanguageToggle } from "./LanguageToggle";
 import styles from "../app/home.module.css";
 
@@ -194,6 +195,40 @@ export function HomeView({ locale }: { locale: Locale }) {
               {t.tools.textmoji.cta}
             </a>
           </Card>
+
+          {/* 추가 미니앱 — apps.json 레지스트리에서 자동 노출(featured 아닌 live 앱).
+             새 앱은 apps.json 한 줄 + sync 스크립트면 여기 카드가 자동으로 생긴다. */}
+          {APPS.filter((a) => !a.featured && a.status === "live").map((a) => (
+            <Card
+              key={a.id}
+              tag={locale === "ko" ? "미니앱" : "Mini app"}
+              interactive
+              className={styles.secondaryCard}
+            >
+              <div
+                className={styles.toolThumb}
+                style={{
+                  background: a.color ?? "var(--candy-mint)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "2.6rem",
+                }}
+                aria-hidden
+              >
+                {a.emoji ?? "🧩"}
+              </div>
+              <h3 className={`display ${styles.appName}`}>
+                {locale === "ko" ? a.nameKo : a.nameEn}
+              </h3>
+              <p className={styles.appDesc}>
+                {locale === "ko" ? a.descKo : a.descEn}
+              </p>
+              <a className={styles.appCta} href={a.path}>
+                {locale === "ko" ? "하러 가기" : "Play"}
+              </a>
+            </Card>
+          ))}
 
           {/* 스티커·키트·싸인 공방은 보류 — 폰트·이모티콘에 집중하기 위해 화면에서 감춤.
              (코드/라우트/사전은 보존: 직접 URL로는 여전히 접근 가능, 추후 복귀 쉬움) */}

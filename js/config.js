@@ -31,11 +31,11 @@ export const AI_ENDPOINT = 'https://ai-gateway.yonggunyoung.workers.dev';
 
 // ②-b AI 역할별 Gemini 사용 스위치 — 아래 AI_FN(서울 Firebase 함수)이 채워지고 검증된 뒤 true로 켠다.
 //     false면 전부 Claude로 동작하므로 동작 변화가 없다. 모델 버전은 함수의 GEMINI_MODEL 환경변수가 정한다(여기엔 버전명 안 박음).
-export const AI_GEMINI = { scan: false, recipe: false };
+export const AI_GEMINI = { scan: true, recipe: true };
 
 // ②-c Gemini 전용 백엔드 — Firebase 함수(서울 리전) URL. Gemini는 Cloudflare에서 지역 차단되므로 구글 리전에서 호출한다.
 //     `firebase deploy` 후 출력되는 함수 URL을 붙여넣는다 (예: https://asia-northeast3-PROJECT.cloudfunctions.net/ai). 비우면 Gemini OFF.
-export const AI_FN = '';
+export const AI_FN = 'https://asia-northeast3-icebi-308e0.cloudfunctions.net/ai';
 
 // ③ 앱인토스 입점 후 채우기 — 콘솔에서 발급받는 값 (비우면 개별 운영 모드로 자동 폴백)
 //    rewardAdId: 보상형 광고 단위 / promotionId: 토스포인트 프로모션 (비즈월렛 예산 선충전 필요)

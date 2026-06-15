@@ -2785,3 +2785,56 @@ if (shared) {
 } else if (!S.tutorialDone) {
   setTimeout(() => UI.startTutorial(), 700); // 첫 사용자 가이드
 }
+
+/* ── 앱 설치 유도 (PWA) — 완전 자동 설치는 브라우저가 막음(보안). 안드로이드/크롬은 1탭 설치, 아이폰 사파리는 안내. ── */
+(() => {
+  const KEY = 'nb_install_snooze';
+  const installed = () => (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true;
+  const snoozed = () => { try { return Number(localStorage.getItem(KEY) || 0) > Date.now(); } catch { return false; } };
+  const snooze = (days) => { try { localStorage.setItem(KEY, String(Date.now() + days * 864e5)); } catch { /* ignore */ } };
+  const canShow = () => S.tutorialDone && !installed() && !snoozed() && !document.getElementById('nb-install');
+  let deferred = null;
+
+  function banner(inner) {
+    const el = document.createElement('div');
+    el.id = 'nb-install';
+    el.style.cssText = 'position:fixed;left:12px;right:12px;bottom:calc(78px + env(safe-area-inset-bottom));z-index:45;background:#1f2937;color:#fff;border-radius:14px;padding:11px 14px;display:flex;align-items:center;gap:10px;box-shadow:0 8px 24px rgba(0,0,0,.28)';
+    el.innerHTML = inner;
+    el.querySelector('[data-x]').addEventListener('click', () => { el.remove(); snooze(14); });
+    document.body.appendChild(el);
+    return el;
+  }
+
+  // 안드로이드/데스크톱 크롬: 네이티브 설치 프롬프트를 잡아뒀다가 버튼으로 띄움
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferred = e;
+    if (!canShow()) return;
+    const el = banner(
+      '<span style="font-size:1.5rem">📲</span>'
+      + '<div style="flex:1;line-height:1.3"><b>냉비서 앱으로 설치</b><div style="opacity:.8;font-size:.8rem">홈 화면에서 바로 열려요 · 오프라인도 OK</div></div>'
+      + '<button id="nb-i-yes" style="background:#22c55e;color:#04130f;border:0;border-radius:10px;padding:9px 14px;font-weight:800;font-size:.9rem">설치</button>'
+      + '<button data-x style="background:transparent;color:#9ca3af;border:0;font-size:1.25rem;line-height:1">✕</button>');
+    el.querySelector('#nb-i-yes').addEventListener('click', async () => {
+      el.remove();
+      if (!deferred) return;
+      deferred.prompt();
+      try { await deferred.userChoice; } catch { /* ignore */ }
+      deferred = null;
+    });
+  });
+
+  window.addEventListener('appinstalled', () => { document.getElementById('nb-install')?.remove(); snooze(3650); });
+
+  // 아이폰 사파리: beforeinstallprompt 미지원 → "공유 → 홈 화면에 추가" 수동 안내 (인앱 브라우저 제외)
+  window.addEventListener('load', () => setTimeout(() => {
+    const ua = navigator.userAgent || '';
+    const iOS = /iPhone|iPad|iPod/.test(ua);
+    const safari = iOS && /Safari/.test(ua) && !/CriOS|FxiOS|EdgiOS|KAKAOTALK|NAVER|Instagram|FBAN|FBAV|Line/i.test(ua);
+    if (!safari || !canShow()) return;
+    banner(
+      '<span style="font-size:1.5rem">📲</span>'
+      + '<div style="flex:1;line-height:1.3"><b>앱으로 추가하기</b><div style="opacity:.85;font-size:.8rem">공유 <b>⬆︎</b> → <b>"홈 화면에 추가"</b> 누르면 앱처럼 써요</div></div>'
+      + '<button data-x style="background:transparent;color:#9ca3af;border:0;font-size:1.25rem;line-height:1">✕</button>');
+  }, 3500));
+})();

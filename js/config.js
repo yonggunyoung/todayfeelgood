@@ -4,7 +4,14 @@
 // ① Firebase 콘솔 → 프로젝트 설정 → 웹 앱 구성 객체를 붙여넣기
 //    + Authentication에서 Google 로그인 사용 설정
 //    + Authentication → 승인된 도메인에 yonggunyoung.github.io (및 커스텀 도메인) 추가
-export const FIREBASE_CONFIG = null;
+export const FIREBASE_CONFIG = {
+  apiKey: 'AIzaSyB-y7AXH7xBScwycGywRztpRohxZ87-qDI',
+  authDomain: 'icebi-308e0.firebaseapp.com',
+  projectId: 'icebi-308e0',
+  storageBucket: 'icebi-308e0.firebasestorage.app',
+  messagingSenderId: '63517169912',
+  appId: '1:63517169912:web:c1ac9ec44c27c34f58c30d',
+};
 /* 예시:
 export const FIREBASE_CONFIG = {
   apiKey: 'AIza…',

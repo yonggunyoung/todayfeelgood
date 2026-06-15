@@ -8,7 +8,7 @@ const admin = require('firebase-admin');
 admin.initializeApp();
 const db = admin.firestore();
 
-const ANTHROPIC_API_KEY = defineSecret('ANTHROPIC_API_KEY');
+// Claude 경로(/scan 등)는 현재 CF 워커가 담당하므로 이 함수에선 미사용 → ANTHROPIC 시크릿 불필요(배포 시 GEMINI 키만 요구).
 const GEMINI_API_KEY = defineSecret('GEMINI_API_KEY');
 
 // 모델·한도는 환경변수로 교체 가능 (비용 최적화 실험용)
@@ -339,7 +339,7 @@ exports.ai = onRequest(
       catch { res.status(401).json({ error: '로그인이 만료됐어요. 앱을 새로고침해 주세요.' }); return; }
 
       const path = req.path.replace(/\/+$/, '');
-      const apiKey = ANTHROPIC_API_KEY.value();
+      const apiKey = process.env.ANTHROPIC_API_KEY || ''; // 미사용 경로 — 시크릿 대신 환경변수(없으면 빈값)
 
       if (path.endsWith('/scan')) {
         const { image } = req.body || {};

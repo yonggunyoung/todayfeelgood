@@ -11,6 +11,8 @@
 - [x] **보상형 광고 코드** — 결과 화면 '2배 자랑'이 토스 보상형 SDK로 자동 분기 (`AD.tossRewardUnitId`만 채우면 실광고)
 - [x] **비개인화/청소년 안전** — 배틀 화면 광고 0, `AD.nonPersonalized=true`
 - [x] **safe-area/풀스크린** — `viewport-fit=cover`, 세로 고정, PWA 매니페스트/아이콘
+- [x] **실제 전국 대전 백엔드 코드** — `net.js`로 진영·광클 실시간 집계 + 진짜 순위·전국 랭킹·지역 점령 (`fb-config.js`만 채우면 ON · 없으면 데모 폴백 → **FIREBASE.md** 참고)
+- [x] **개인정보처리방침** `privacy.html` — 서버/광고 식별자 고지 포함
 
 ## ⬜ 당신만 할 수 있는 것 (계정·콘솔·자산)
 계정 로그인·심사 제출·정산은 소유자만 가능합니다. 아래가 실제 "할 일".
@@ -21,8 +23,13 @@
 - [ ] 광고/정산 받을 거면 **정산 계좌·세금 정보** 등록 *(개인 개발자도 가능 · 정산·세금 기준은 콘솔 확인)*
 
 ### 1. 호스팅 URL 확정 *(제출에 필요)*
-- [ ] 게임이 열리는 **공개 URL**: `https://dduckkit.com` (권장) 또는 `https://yonggunyoung.github.io/todayfeelgood/gwangclick/`
-- [ ] https 필수 · 외부요청 최소(우리는 폰트 CDN 1개 외 0)
+- [x] 게임이 열리는 **공개 URL**: `https://dduckkit.com` (뚝딱웹 연결 완료)
+- [ ] https 필수 · `https://dduckkit.com/privacy.html` 도 함께 열리는지 확인
+- [ ] 외부요청: 폰트 CDN 1 + Firebase(전국 집계). 둘 다 정상 통신 — 심사 시 "광고/네트워크 사용" 고지에 반영
+
+### 1-B. 실제 대전 백엔드 켜기 *(net.js 활성화)*
+- [ ] `fb-config.js`에 **냉비서와 같은 Firebase config** 붙여넣기 → **FIREBASE.md** 5단계(익명인증·승인도메인·규칙·색인)
+- [ ] 비워두면 데모(폰 단독)로 동작 — 출시 자체는 가능하나 "진짜 전국전"은 OFF
 
 ### 2. 미니앱 등록 (콘솔)
 - [ ] 앱 이름: **광클대전**

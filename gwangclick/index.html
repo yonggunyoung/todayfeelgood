@@ -13,6 +13,9 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <!-- 토스 미니앱 어댑터(선택) — 토스 밖에서는 안전한 폴백, 의존성 없음 -->
 <script src="./toss.js"></script>
+<!-- 실제 전국 대전 백엔드(선택) — fb-config.js 비우면 자동으로 폰 단독 시뮬레이션 폴백 -->
+<script src="./fb-config.js"></script>
+<script src="./net.js"></script>
 <link rel="stylesheet" as="style" crossorigin
       href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
 <style>
@@ -245,6 +248,45 @@ var KEY='gwangclick.v1';
 function load(){try{var r=localStorage.getItem(KEY);if(r)return JSON.parse(r);}catch(e){}return{picks:{},streak:0,lastDay:'',best:0};}
 function persist(){try{localStorage.setItem(KEY,JSON.stringify(F));}catch(e){}}
 var F=load();
+F.region=F.region||''; F.nick=F.nick||'';
+
+/* ── 실제 전국 대전(백엔드) 연동 ── */
+var REGIONS=[{k:'',n:'전국'},{k:'seoul',n:'서울'},{k:'gyeonggi',n:'경기'},{k:'incheon',n:'인천'},
+  {k:'gangwon',n:'강원'},{k:'daejeon',n:'대전'},{k:'sejong',n:'세종'},{k:'chungbuk',n:'충북'},
+  {k:'chungnam',n:'충남'},{k:'daegu',n:'대구'},{k:'gyeongbuk',n:'경북'},{k:'busan',n:'부산'},
+  {k:'ulsan',n:'울산'},{k:'gyeongnam',n:'경남'},{k:'gwangju',n:'광주'},{k:'jeonbuk',n:'전북'},
+  {k:'jeonnam',n:'전남'},{k:'jeju',n:'제주'}];
+function regionName(k){for(var i=0;i<REGIONS.length;i++)if(REGIONS[i].k===k)return REGIONS[i].n;return '전국';}
+function nickOf(){return (F.nick||'').trim()||'익명광클러';}
+function netOn(){try{return !!(window.GCNet&&GCNet.available());}catch(e){return false;}}
+var LIVE={date:'',tot:null,unwatch:null};
+function shareFromTot(tot,seed){return (tot&&(tot.a+tot.b)>0)?clamp(tot.a/(tot.a+tot.b)*100,5,95):seed;}
+function startWatch(date){
+  if(!netOn())return;
+  if(LIVE.unwatch&&LIVE.date===date)return;
+  if(LIVE.unwatch){try{LIVE.unwatch();}catch(e){}LIVE.unwatch=null;}
+  LIVE.date=date; LIVE.tot=null;
+  GCNet.peek(date).then(function(t){if(t&&LIVE.date===date){LIVE.tot=t;onLive();}});
+  LIVE.unwatch=GCNet.watch(date,function(t){if(LIVE.date===date){LIVE.tot=t;onLive();}});
+}
+function stopWatch(){if(LIVE.unwatch){try{LIVE.unwatch();}catch(e){}}LIVE.unwatch=null;LIVE.tot=null;LIVE.date='';}
+/* 라이브 집계 도착 시: 인트로면 게이지 즉시 갱신(배틀은 frame 루프가 직접 읽음) */
+function onLive(){
+  var iga=el('ig-a');
+  if(iga){paintIntroGauge(shareFromTot(LIVE.tot,iga._seed||50));
+    var pop=el('ig-pop');
+    if(pop&&LIVE.tot){var n=LIVE.tot.na+LIVE.tot.nb;
+      pop.textContent=n>0?('🔴 지금까지 '+comma(n)+'명 참전 — 실제 전국 집계 반영 중'):'🔴 오늘의 첫 참전자가 되어보세요';}
+  }
+}
+/* 배틀 중 실제 게이지 목표 = (서버 집계 + 내 실시간 기여) 기준 A 비율. 라이브 아니면 null → 시뮬 폴백 */
+function liveBattleTarget(){
+  if(!netOn()||!B||!LIVE.tot)return null;
+  var t=LIVE.tot, my=B.tapsF;
+  var a=t.a+(B.side==='a'?my:0), b=t.b+(B.side==='b'?my:0), tot=a+b;
+  if(tot<=0)return null;
+  return clamp(a/tot*100,5,95);
+}
 
 /* ── 소리/진동 ── */
 var AC=null;
@@ -326,31 +368,47 @@ function teamCard(t,letter){
     '<div style="flex:1;min-width:0"><div class="nm"><b>'+t.name+'</b><span class="tg">TEAM '+letter+'</span></div>'+
     '<div class="sl">'+t.slogan+'</div></div></div>';
 }
+function paintIntroGauge(aShare){
+  var a=Math.round(aShare);
+  setTxt('ig-a',a); setTxt('ig-b',100-a);
+  var fa=el('ig-fill-a'),fb=el('ig-fill-b');
+  if(fa)fa.style.width=aShare.toFixed(2)+'%';
+  if(fb)fb.style.width=(100-aShare).toFixed(2)+'%';
+}
 function intro(){
   cleanup();
   var date=todayStr(), bt=battleOfDay(date), base=clamp(50+dailyBias(date,bt),12,88), ra=Math.round(base);
+  var liveBadge=netOn()?'LIVE · 전국 동시':'데모 · 흐름 시뮬';
   app.innerHTML=
     '<div class="screen" style="--team-a:'+bt.a.color+';--team-b:'+bt.b.color+';--me:'+bt.a.color+';--foe:'+bt.b.color+'">'+
-      '<div class="hdr"><span class="brand">⚡ 광클대전</span><span class="live"><span class="dot">●</span>LIVE · 전국 동시</span></div>'+
+      '<div class="hdr"><span class="brand">⚡ 광클대전</span><span class="live"><span class="dot">●</span>'+liveBadge+'</span></div>'+
       '<div class="rule"></div>'+
-      '<div class="kicker">광클대전 · '+mdLabel(date)+' · 전국 동시</div>'+
+      '<div class="kicker">광클대전 · '+mdLabel(date)+' · '+regionName(F.region)+'</div>'+
       '<h1 class="q">'+introQ(bt.q)+'</h1>'+
       '<div class="teams">'+teamCard(bt.a,'A')+teamCard(bt.b,'B')+'</div>'+
       '<div>'+
         '<div class="gauge-head"><span class="mono">전국 흐름</span>'+
           (F.streak>1?'<span class="chip-soft">🔥 '+F.streak+'일 연속 참전</span>':'<span class="chip-soft"><span class="dot">●</span> LIVE</span>')+'</div>'+
-        '<div class="gnums"><span class="gnum" style="color:var(--team-a)">'+ra+'</span>'+
+        '<div class="gnums"><span class="gnum" id="ig-a" style="color:var(--team-a)">'+ra+'</span>'+
           '<span class="mono" style="align-self:center">VS</span>'+
-          '<span class="gnum" style="color:var(--team-b)">'+(100-ra)+'</span></div>'+
-        '<div class="gauge" style="margin-top:9px"><i style="width:'+base+'%;background:var(--team-a);transform-origin:left;animation:wipeIn .8s var(--ease-wipe) both"></i>'+
-          '<i style="width:'+(100-base)+'%;background:var(--team-b);transform-origin:right;animation:wipeIn .8s var(--ease-wipe) both"></i></div>'+
+          '<span class="gnum" id="ig-b" style="color:var(--team-b)">'+(100-ra)+'</span></div>'+
+        '<div class="gauge" style="margin-top:9px"><i id="ig-fill-a" style="width:'+base+'%;background:var(--team-a);transform-origin:left;animation:wipeIn .8s var(--ease-wipe) both"></i>'+
+          '<i id="ig-fill-b" style="width:'+(100-base)+'%;background:var(--team-b);transform-origin:right;animation:wipeIn .8s var(--ease-wipe) both"></i></div>'+
+        '<div class="hint" id="ig-pop" style="margin-top:6px">'+(netOn()?'🔴 전국 실시간 집계 연결 중…':'')+'</div>'+
       '</div>'+
       '<div class="go">'+
         '<button style="background:'+bt.a.color+';color:'+ink(bt.a.color)+'" onclick="GO(\'a\')">'+bt.a.emoji+' '+withEuro(bt.a.name)+' 참전</button>'+
         '<button style="background:'+bt.b.color+';color:'+ink(bt.b.color)+'" onclick="GO(\'b\')">'+bt.b.emoji+' '+withEuro(bt.b.name)+' 참전</button>'+
       '</div>'+
+      '<div style="display:flex;gap:8px;margin-top:10px">'+
+        '<button class="btn btn-ghost" style="flex:1" onclick="openSettings()">📍 '+regionName(F.region)+(F.nick?' · '+F.nick:'')+'</button>'+
+        '<button class="btn btn-ghost" style="flex:1" onclick="rankBoard()">🏆 전국 랭킹</button>'+
+      '</div>'+
       '<p class="hint">60초 동안 미친듯이 탭 → 내 편 흐름을 끌어와라. 콤보를 이으면 한 탭이 <b style="color:var(--team-a)">×3</b>까지.</p>'+
     '</div>';
+  var iga=el('ig-a'); if(iga)iga._seed=base;
+  startWatch(date);
+  if(netOn()&&LIVE.date===date&&LIVE.tot)onLive();
 }
 
 /* ── 배틀 ── */
@@ -358,7 +416,9 @@ var B=null, DURATION=60;
 function GO(side){
   cleanup();
   var date=todayStr(), bt=battleOfDay(date), me=bt[side], foe=bt[side==='a'?'b':'a'];
+  startWatch(date);
   var base=clamp(50+dailyBias(date,bt),12,88);
+  if(netOn()&&LIVE.tot)base=shareFromTot(LIVE.tot,base);
   F.picks[bt.id]=side;
   if(F.lastDay!==date){F.streak=(F.lastDay===addDaysStr(-1,date))?(F.streak||0)+1:1;F.lastDay=date;}
   persist();
@@ -427,8 +487,12 @@ function frame(now){
   if(!B||B.ended||!fa){cleanup();return;}
   var dt=Math.min(0.05,(now-B.lastFrame)/1000); B.lastFrame=now; var k=dt*60;
   B.simT+=dt;
-  if(B.simT>0.9){B.simT=0;B.target=clamp(B.mean+(Math.random()*2-1)*7,8,92);}
-  B.mean+=(B.base-B.mean)*0.0025*k;
+  var lt=liveBattleTarget();
+  if(lt!=null){ B.target=lt; }                                  // 실제 전국 집계 + 내 실시간 기여 = 진짜 게이지
+  else {                                                        // 폴백: 폰 단독 시뮬레이션
+    if(B.simT>0.9){B.simT=0;B.target=clamp(B.mean+(Math.random()*2-1)*7,8,92);}
+    B.mean+=(B.base-B.mean)*0.0025*k;
+  }
   B.aShare+=(B.target-B.aShare)*0.05*k;
   B.aShare+=B.push*0.05*k; B.push*=Math.pow(0.86,k);
   B.aShare=clamp(B.aShare,5,95);
@@ -508,23 +572,42 @@ var R=null;
 function endBattle(){
   if(!B||B.ended)return; B.ended=true;
   cancelAnimationFrame(B.raf); clearInterval(B.tick);
-  var bt=B.bt, side=B.side, me=B.me, foe=B.foe;
+  var bt=B.bt, side=B.side, me=B.me, foe=B.foe, date=B.date;
   var contrib=Math.floor(B.tapsF), myShare=side==='a'?B.aShare:100-B.aShare;
   var newBest=contrib>(F.best||0); if(newBest)F.best=contrib; persist();
   var verdict=myShare>=53?{t:'우리 편이 전국을 먹었다 🎉',c:'win'}:myShare<=47?{t:'오늘은 밀렸다…<br>내일 설욕 🔥',c:'lose'}:{t:'초접전 무승부 ⚔️',c:'tie'};
-  R={bt:bt,me:me,foe:foe,side:side,contrib:contrib,myShare:myShare,maxStreak:B.maxStreak,
-     title:titleForTaps(contrib),rank:rankEstimate(contrib),verdict:verdict,newBest:newBest,streak:F.streak,x2:false};
+  R={bt:bt,me:me,foe:foe,side:side,date:date,contrib:contrib,myShare:myShare,maxStreak:B.maxStreak,
+     title:titleForTaps(contrib),rank:(netOn()?null:rankEstimate(contrib)),rankState:(netOn()?'pending':'estimate'),total:0,
+     verdict:verdict,newBest:newBest,streak:F.streak,x2:false};
   LAST=R;
   if(newBest){chord([523,659,784,1047]);buzz([20,40,20]);}
   if(verdict.c==='win'||newBest){skyConfetti([me.emoji,'✨'],[me.color,'#ffffff','#ffd76a']);}
   B=null;
   renderResult();
+  if(netOn()){
+    var rr=R;
+    GCNet.submit(date,side,contrib,F.region,nickOf()).then(function(res){
+      if(rr!==R)return;
+      if(res){R.rank=res.rank;R.total=res.total;R.rankState='real';}
+      else{R.rank=rankEstimate(R.contrib);R.rankState='estimate';}
+      updateRankDOM();
+    });
+  }
 }
 function watch2x(){ if(!R||R.x2)return; adRewarded({onReward:applyDouble}); }
 function applyDouble(){
   if(!R||R.x2)return;
-  R.x2=true; R.contrib*=2; R.rank=rankEstimate(R.contrib); R.title=titleForTaps(R.contrib);
-  renderResult(); chord([659,784,988,1318]); buzz([15,30,15]); toast('⚡ 기여 2배 적용 — 더 크게 자랑하기!');
+  R.x2=true; R.contrib*=2; R.title=titleForTaps(R.contrib);
+  if(netOn()&&R.rankState==='real'){
+    R.rank=null; R.rankState='pending'; renderResult();
+    var rr=R;
+    GCNet.rankOf(R.date,R.contrib).then(function(res){
+      if(rr!==R)return;
+      if(res){R.rank=res.rank;R.total=res.total;R.rankState='real';}else{R.rank=rankEstimate(R.contrib);R.rankState='estimate';}
+      updateRankDOM();
+    });
+  }else{ R.rank=rankEstimate(R.contrib); R.rankState='estimate'; renderResult(); }
+  chord([659,784,988,1318]); buzz([15,30,15]); toast('⚡ 기여 2배 적용 — 더 크게 자랑하기!');
 }
 function renderResult(){
   var r=R, me=r.me, foe=r.foe, bt=r.bt, rs=Math.round(r.myShare);
@@ -543,7 +626,7 @@ function renderResult(){
       '</div>'+
       '<div class="stats"><div><div class="k">내 기여</div><div class="v">'+comma(r.contrib)+(r.x2?' <span class="x2b">⚡2X</span>':'')+'</div></div>'+
         '<div><div class="k">최고 콤보</div><div class="v">×'+comboMult(r.maxStreak).toFixed(1)+'</div></div>'+
-        '<div><div class="k">예상 전국</div><div class="v">'+comma(r.rank)+'<small>위</small></div></div></div>'+
+        '<div><div class="k" id="r-ranklbl">'+rankLabel(r)+'</div><div class="v" id="r-rankval">'+rankValue(r)+'</div></div></div>'+
       '<div class="tags"><span>#광클대전</span><span>#'+bt.tag+'</span></div>'+
       (r.newBest?'<div class="newbest">🏆 내 최고 기여 갱신 · '+comma(r.contrib)+'</div>':'')+
       (r.streak>1?'<div class="streak-chip">🔥 '+r.streak+'일 연속 참전 중</div>':'')+
@@ -552,17 +635,27 @@ function renderResult(){
              :'<button class="btn btn-reward" onclick="watch2x()">📺 광고 보고 기여 <b>2배</b>로 자랑 ⚡2X</button>')+
         '<button class="btn btn-primary" style="color:'+ink(me.color)+'" onclick="SHARE()">📣 결과 자랑 + 친구 소환</button>'+
         '<button class="btn btn-ghost" onclick="GO(\''+r.side+'\')">🔁 한 판 더</button>'+
-        '<button class="btn btn-ghost" onclick="intro()">⚡ 오늘의 대전</button>'+
+        '<div style="display:flex;gap:8px">'+
+          '<button class="btn btn-ghost" style="flex:1" onclick="rankBoard()">🏆 전국 랭킹</button>'+
+          '<button class="btn btn-ghost" style="flex:1" onclick="intro()">⚡ 오늘의 대전</button>'+
+        '</div>'+
       '</div>'+
     '</div>';
 }
+function rankLabel(r){return r.rankState==='real'?'전국 순위':'예상 전국';}
+function rankValue(r){
+  if(r.rank==null||r.rankState==='pending')return '<small>집계 중…</small>';
+  return comma(r.rank)+'<small>위</small>'+(r.rankState==='real'&&r.total?' <small style="opacity:.55">/'+comma(r.total)+'명</small>':'');
+}
+function updateRankDOM(){var lb=el('r-ranklbl'),v=el('r-rankval');if(lb)lb.textContent=rankLabel(R);if(v)v.innerHTML=rankValue(R);}
 
 /* ── 자랑/소환 ── */
 var LAST=null;
 function SHARE(){
   if(!LAST)return;
   var link=location.href.split('?')[0];
-  var text='⚡광클대전⚡ 나는 '+LAST.me.name+'!\n'+LAST.bt.q+' → '+LAST.title+'\n내 기여 '+comma(LAST.contrib)+(LAST.x2?' ⚡2X':'')+' · 예상 전국 '+comma(LAST.rank)+'위\n너는 어느 편? 참전해라 👉';
+  var rankPart=(LAST.rank!=null)?(' · '+(LAST.rankState==='real'?'전국':'예상')+' '+comma(LAST.rank)+'위'):'';
+  var text='⚡광클대전⚡ 나는 '+LAST.me.name+'!\n'+LAST.bt.q+' → '+LAST.title+'\n내 기여 '+comma(LAST.contrib)+(LAST.x2?' ⚡2X':'')+rankPart+'\n너는 어느 편? 참전해라 👉';
   if(navigator.share){navigator.share({title:'광클대전',text:text,url:link}).catch(function(){});return;}
   if(navigator.clipboard&&navigator.clipboard.writeText){
     navigator.clipboard.writeText(text+' '+link).then(function(){toast('링크 복사 완료 — 단톡방에 뿌리기 📣');},function(){toast('스크린샷 해서 자랑해보세요 📸');});
@@ -571,8 +664,83 @@ function SHARE(){
 
 function cleanup(){if(B){cancelAnimationFrame(B.raf);clearInterval(B.tick);B=null;}FX.list.length=0;}
 
+/* ── 전국 랭킹 + 지역 점령 화면 ── */
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return c==='&'?'&amp;':c==='<'?'&lt;':c==='>'?'&gt;':'&quot;';});}
+function rankBoard(){
+  cleanup();
+  var date=todayStr(), bt=battleOfDay(date);
+  app.innerHTML=
+    '<div class="screen" style="--team-a:'+bt.a.color+';--team-b:'+bt.b.color+';--me:'+bt.a.color+';--foe:'+bt.b.color+'">'+
+      '<div class="hdr"><span class="brand">🏆 전국 랭킹</span><span class="mono">'+mdShort(date)+'</span></div>'+
+      '<div class="rule"></div>'+
+      '<div class="kicker">'+bt.q+'</div>'+
+      '<div id="rb-region"></div>'+
+      '<div class="gauge-head" style="margin-top:8px"><span class="mono">오늘의 광클 TOP</span>'+
+        (netOn()?'<span class="chip-soft"><span class="dot">●</span> 실시간</span>':'<span class="chip-soft">데모</span>')+'</div>'+
+      '<div id="rb-list" class="hint" style="text-align:left">불러오는 중…</div>'+
+      '<div class="actions" style="margin-top:14px">'+
+        '<button class="btn btn-ghost" onclick="rankBoard()">🔄 새로고침</button>'+
+        '<button class="btn btn-ghost" onclick="intro()">⚡ 오늘의 대전</button>'+
+      '</div>'+
+    '</div>';
+  if(!netOn()){el('rb-list').textContent='데모 모드예요 — fb-config.js에 Firebase 설정을 넣으면 실제 전국 랭킹·지역 점령전이 켜집니다.';return;}
+  GCNet.leaderboard(date,20).then(function(rows){renderBoard(bt,rows);});
+  GCNet.peek(date).then(function(t){renderRegion(bt,t);});
+}
+function renderBoard(bt,rows){
+  var box=el('rb-list'); if(!box)return;
+  if(!rows){box.textContent='랭킹을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.';return;}
+  if(!rows.length){box.textContent='아직 오늘 참전자가 없어요 — 첫 광클의 주인공이 되어보세요!';return;}
+  var h='';
+  for(var i=0;i<rows.length;i++){var r=rows[i],t=bt[r.side]||bt.a,medal=i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1)+'';
+    h+='<div style="display:flex;align-items:center;gap:10px;padding:9px 2px;border-bottom:1px solid var(--line)'+(r.me?';background:rgba(255,255,255,.05);border-radius:8px':'')+'">'+
+      '<span class="mono" style="width:24px;text-align:center">'+medal+'</span>'+
+      '<span style="font-size:18px">'+t.emoji+'</span>'+
+      '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px">'+
+        (r.me?'<b>':'')+esc(r.nick)+(r.me?' (나)</b>':'')+
+        (r.region?'<span class="mono" style="margin-left:7px;color:var(--ink-3)">'+regionName(r.region)+'</span>':'')+'</span>'+
+      '<b class="tnum" style="color:'+t.color+'">'+comma(r.taps)+'</b></div>';
+  }
+  box.className=''; box.innerHTML=h;
+}
+function renderRegion(bt,t){
+  var box=el('rb-region'); if(!box)return; if(!t){box.innerHTML='';return;}
+  var rs=t.regions||{}, arr=[],k;
+  for(k in rs){if(!Object.prototype.hasOwnProperty.call(rs,k))continue;
+    var a=(rs[k].a)||0,b=(rs[k].b)||0,tot=a+b; if(tot<=0)continue;
+    arr.push({k:k,lead:a>=b?'a':'b',share:Math.round((a>=b?a:b)/tot*100),tot:tot});}
+  if(!arr.length){box.innerHTML='';return;}
+  arr.sort(function(x,y){return y.tot-x.tot;}); arr=arr.slice(0,8);
+  var h='<div class="gauge-head" style="margin-top:4px"><span class="mono">지역 점령 현황</span></div>'+
+    '<div style="display:flex;flex-wrap:wrap;gap:6px;margin:7px 0 2px">';
+  for(var i=0;i<arr.length;i++){var r=arr[i],lt=bt[r.lead]||bt.a;
+    h+='<span class="chip-soft" style="border-color:'+lt.color+'55">'+lt.emoji+' '+regionName(r.k)+' '+r.share+'%</span>';}
+  box.innerHTML=h+'</div>';
+}
+/* ── 설정: 내 지역 + 랭킹 닉네임 ── */
+function openSettings(){
+  var ov=document.createElement('div'); ov.className='ad-ov';
+  var opts=''; for(var i=0;i<REGIONS.length;i++)opts+='<option value="'+REGIONS[i].k+'"'+(REGIONS[i].k===F.region?' selected':'')+'>'+REGIONS[i].n+'</option>';
+  var fld='width:100%;padding:11px;border-radius:11px;background:var(--bg-3);color:var(--ink);border:1px solid var(--line-2);font-family:inherit;font-size:15px';
+  ov.innerHTML='<div class="ad-box"><div class="ad-top"><span class="mono">설정</span><button class="ad-skip" id="set-x">✕ 닫기</button></div>'+
+    '<div class="ad-body" style="display:block;text-align:left">'+
+      '<label class="mono" style="display:block;margin:2px 0 6px">내 지역 · 지역 점령전</label>'+
+      '<select id="set-region" style="'+fld+'">'+opts+'</select>'+
+      '<label class="mono" style="display:block;margin:15px 0 6px">랭킹 닉네임</label>'+
+      '<input id="set-nick" maxlength="16" placeholder="익명광클러" value="'+esc(F.nick)+'" style="'+fld+'"/>'+
+      '<p class="hint" style="text-align:left;margin-top:11px">'+(netOn()?'실제 전국 집계에 참여 중 — 닉네임은 랭킹에만 표시돼요.':'백엔드 미연결(데모). fb-config.js 연결 시 실제 대전이 켜집니다.')+'</p>'+
+    '</div>'+
+    '<button class="btn btn-primary" id="set-save" style="color:#04130f">저장</button></div>';
+  (document.body||document.documentElement).appendChild(ov);
+  function shut(){if(ov.parentNode)ov.parentNode.removeChild(ov);}
+  el('set-x').onclick=shut;
+  el('set-save').onclick=function(){var rg=el('set-region'),nk=el('set-nick');
+    F.region=rg?rg.value:''; F.nick=nk?nk.value.trim().slice(0,16):''; persist(); shut(); intro();};
+}
+
 /* 전역 노출 (onclick에서 호출) */
 window.GO=GO; window.SHARE=SHARE; window.intro=intro; window.watch2x=watch2x;
+window.rankBoard=rankBoard; window.openSettings=openSettings;
 
 /* 시작 */
 intro();

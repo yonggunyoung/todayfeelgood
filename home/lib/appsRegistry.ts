@@ -2,7 +2,7 @@
 export interface AppEntry {
   id: string;
   path: string;
-  type: "next" | "static";
+  type: "next" | "static" | "external";
   status: "live" | "soon";
   featured: boolean;
   emoji?: string;
@@ -86,6 +86,29 @@ export const APPS: AppEntry[] = [
       "click",
       "speed",
       "tap"
+    ]
+  },
+  {
+    "id": "naengbiseo",
+    "path": "https://yonggunyoung.github.io/todayfeelgood/",
+    "type": "external",
+    "status": "live",
+    "featured": false,
+    "emoji": "🧊",
+    "color": "#2f9e6e",
+    "nameKo": "냉비서",
+    "nameEn": "Fridge Butler",
+    "descKo": "영수증으로 냉장고 등록 · 오늘의 레시피 추천",
+    "descEn": "Snap a receipt to stock your fridge · daily recipes",
+    "keywords": [
+      "냉장고",
+      "레시피",
+      "영수증",
+      "요리",
+      "장보기",
+      "fridge",
+      "recipe",
+      "receipt"
     ]
   }
 ];

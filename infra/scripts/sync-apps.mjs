@@ -44,7 +44,7 @@ const ts =
   `export interface AppEntry {
   id: string;
   path: string;
-  type: "next" | "static";
+  type: "next" | "static" | "external";
   status: "live" | "soon";
   featured: boolean;
   emoji?: string;

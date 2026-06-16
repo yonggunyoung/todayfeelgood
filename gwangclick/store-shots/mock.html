@@ -1,0 +1,27 @@
+<script>
+/* 스크린샷 전용 목업 — 실제 전국 집계처럼 보이게 GCNet 응답을 채움 (네트워크 없이) */
+(function(){
+  if(!window.GCNet) return;
+  var T={a:5234,b:4810,na:318,nb:294,regions:{
+    seoul:{a:1420,b:1180}, gyeonggi:{a:980,b:1240}, busan:{a:760,b:540},
+    incheon:{a:540,b:500}, daegu:{a:320,b:410}, gangwon:{a:240,b:180},
+    jeonbuk:{a:170,b:250}, gyeongnam:{a:300,b:300}, jeju:{a:120,b:90} }};
+  GCNet.available=function(){return true;};
+  GCNet.on=function(){return true;};
+  GCNet.init=function(){return Promise.resolve(true);};
+  GCNet.peek=function(){return Promise.resolve(T);};
+  GCNet.watch=function(d,cb){cb(T);return function(){};};
+  GCNet.submit=function(){return Promise.resolve({rank:47,total:612});};
+  GCNet.rankOf=function(){return Promise.resolve({rank:21,total:612});};
+  GCNet.leaderboard=function(){return Promise.resolve([
+    {nick:'민초사령관',side:'a',taps:2140,region:'seoul',me:false},
+    {nick:'반민초최강',side:'b',taps:1980,region:'busan',me:false},
+    {nick:'광클의신',side:'a',taps:1760,region:'gyeonggi',me:false},
+    {nick:'광클대장',side:'a',taps:1240,region:'seoul',me:true},
+    {nick:'엄지척척사',side:'b',taps:1120,region:'incheon',me:false},
+    {nick:'단톡방소환사',side:'a',taps:990,region:'daegu',me:false},
+    {nick:'새벽광클러',side:'b',taps:870,region:'gangwon',me:false},
+    {nick:'한끗차이',side:'a',taps:760,region:'jeju',me:false}
+  ]);};
+})();
+</script>

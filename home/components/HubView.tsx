@@ -7,6 +7,7 @@ import { LanguageToggle } from "./LanguageToggle";
 import { ThemeToggle } from "./ThemeToggle";
 import { HubCarousel } from "./HubCarousel";
 import { HubSearch } from "./HubSearch";
+import { AppMark, AppThumb, hasAppMark } from "./AppMarks";
 import styles from "../app/hub.module.css";
 
 /** 도구공방(너굴이) 대표 캐릭터 아이콘 — 코랄 타일 안 흰 라쿤. 각 웹앱 고유 아이콘 자리. */
@@ -158,27 +159,18 @@ export function HubView({ locale }: { locale: Locale }) {
                  새 앱은 apps.json 한 줄이면 여기 홈 카드가 자동으로 생긴다. */}
               {APPS.filter((a) => !a.featured && a.status === "live").map((a) => (
                 <a className={`${styles.card} ${styles.cardLive}`} href={a.path} key={a.id} data-card>
-                  <div
-                    className={styles.thumb}
-                    style={{
-                      background: a.color ?? "var(--candy-mint)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <span className={styles.badge}>{h.apps.live}</span>
-                    <span style={{ fontSize: "3.4rem" }} aria-hidden>
-                      {a.emoji ?? "🧩"}
-                    </span>
-                  </div>
+                  <AppThumb app={a} locale={locale} liveLabel={h.apps.live} />
                   <div className={styles.foot}>
                     <span
                       className={styles.appicon}
-                      style={{ display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.3rem" }}
+                      style={
+                        hasAppMark(a.id)
+                          ? { background: a.color, color: a.color }
+                          : { display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.3rem" }
+                      }
                       aria-hidden
                     >
-                      {a.emoji ?? "🧩"}
+                      {hasAppMark(a.id) ? <AppMark id={a.id} /> : a.emoji ?? "🧩"}
                     </span>
                     <span className={styles.meta}>
                       <b>{locale === "ko" ? a.nameKo : a.nameEn}</b>

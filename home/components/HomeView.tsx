@@ -4,6 +4,7 @@ import type { Locale } from "../lib/i18n";
 import { getDictionary, neogulPath, legalPath, guidePath } from "../lib/i18n";
 import { APPS } from "../lib/appsRegistry";
 import { LanguageToggle } from "./LanguageToggle";
+import { AppMark, hasAppMark } from "./AppMarks";
 import styles from "../app/home.module.css";
 
 // 폰트앱은 basePath=/font라 일반 <a href="/font...">로 가리켜야 한다(Link는 못 씀).
@@ -209,6 +210,7 @@ export function HomeView({ locale }: { locale: Locale }) {
                 className={styles.toolThumb}
                 style={{
                   background: a.color ?? "var(--candy-mint)",
+                  color: a.color,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
@@ -216,7 +218,7 @@ export function HomeView({ locale }: { locale: Locale }) {
                 }}
                 aria-hidden
               >
-                {a.emoji ?? "🧩"}
+                {hasAppMark(a.id) ? <AppMark id={a.id} size={48} /> : a.emoji ?? "🧩"}
               </div>
               <h3 className={`display ${styles.appName}`}>
                 {locale === "ko" ? a.nameKo : a.nameEn}

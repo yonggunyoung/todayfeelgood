@@ -11,14 +11,11 @@
  *
  * 비워두면(null) 자동으로 기존 시뮬레이션(폰 단독)으로 폴백 — 앱은 절대 깨지지 않습니다.
  */
-window.GC_FB = null;
-/* 예시:
 window.GC_FB = {
-  apiKey: 'AIza…',
-  authDomain: 'naengbiseo.firebaseapp.com',
-  projectId: 'naengbiseo',
-  storageBucket: 'naengbiseo.appspot.com',
-  messagingSenderId: '1234567890',
-  appId: '1:1234567890:web:abcdef',
+  apiKey: 'AIzaSyB36iphQjRN8md8bfM8ZYXvy4csA1fN54w',
+  authDomain: 'gwangclick-6b70c.firebaseapp.com',
+  projectId: 'gwangclick-6b70c',
+  storageBucket: 'gwangclick-6b70c.firebasestorage.app',
+  messagingSenderId: '229627757726',
+  appId: '1:229627757726:web:63ea7d5fcad85eb637678f',
 };
-*/

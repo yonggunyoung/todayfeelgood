@@ -1,57 +1,72 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>냉비서 — 내 냉장고 비서</title>
-  <meta name="description" content="영수증 한 장으로 냉장고를 등록하고, 내 목표에 맞는 오늘의 요리를 추천받으세요. 요리 완료 한 번이면 재고가 알아서 줄어듭니다." />
-  <meta name="theme-color" content="#f7f2e7" />
-  <link rel="manifest" href="./manifest.webmanifest" />
-  <link rel="icon" href="./icon.svg" type="image/svg+xml" />
-  <link rel="apple-touch-icon" href="./icon.svg" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Jua&family=Press+Start+2P&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" as="style" crossorigin
-        href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
-  <link rel="stylesheet" href="./css/styles.css" />
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>뚝딱 — 생활 도구 모음</title>
+<meta name="description" content="영수증으로 냉장고 관리부터 60초 진영 대결까지 — 설치 없이 바로 쓰는 작은 도구들." />
+<meta name="theme-color" content="#f7f2e7" />
+<link rel="icon" href="./icon.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="./icon.svg" />
+<meta property="og:title" content="뚝딱 — 생활 도구 모음" />
+<meta property="og:description" content="설치 없이 바로 쓰는 작은 도구들" />
+<meta property="og:type" content="website" />
+<link rel="stylesheet" as="style" crossorigin
+      href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{--bg:#f7f2e7;--card:#fff;--ink:#2b2b2b;--ink2:#7a7468;--line:#e7e0d2;--accent:#2f9e6e}
+  body{font-family:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo',system-ui,sans-serif;
+       background:var(--bg);color:var(--ink);min-height:100dvh;-webkit-tap-highlight-color:transparent}
+  .wrap{max-width:480px;margin:0 auto;padding:34px 18px 48px}
+  header{text-align:center;margin:14px 0 26px}
+  .logo{font-size:2.1rem;font-weight:800;letter-spacing:-.02em}
+  .logo b{color:var(--accent)}
+  .sub{color:var(--ink2);font-size:.92rem;margin-top:7px}
+  .apps{display:flex;flex-direction:column;gap:12px}
+  a.app{display:flex;align-items:center;gap:14px;background:var(--card);border:1px solid var(--line);
+        border-radius:18px;padding:15px 16px;text-decoration:none;color:inherit;
+        box-shadow:0 2px 10px rgba(0,0,0,.04);transition:transform .12s ease,box-shadow .12s ease}
+  a.app:active{transform:scale(.985)}
+  a.app:hover{box-shadow:0 6px 18px rgba(0,0,0,.08)}
+  .emoji{font-size:1.9rem;width:54px;height:54px;display:grid;place-items:center;background:#f3efe3;border-radius:14px;flex:none}
+  .meta{flex:1;min-width:0}
+  .meta b{display:block;font-size:1.06rem;font-weight:700}
+  .meta span{display:block;color:var(--ink2);font-size:.84rem;margin-top:3px;line-height:1.35}
+  .go{color:var(--ink2);font-size:1.3rem;flex:none}
+  footer{text-align:center;color:var(--ink2);font-size:.78rem;margin-top:30px;line-height:1.7}
+  footer a{color:var(--ink2)}
+</style>
 </head>
 <body>
-  <div id="shell">
-    <header id="topbar">
-      <div class="brand">
-        <span class="brand-mark">냉</span>
-        <div class="brand-text">
-          <strong>냉비서</strong>
-          <small id="top-date"></small>
-        </div>
-      </div>
-      <div class="top-right">
-        <span id="points-badge" class="pill pill-point" style="cursor:pointer" title="포인트 · 게임" onclick="UI.openPoints()">🅿 0</span>
-        <span id="saved-badge" class="pill pill-save" style="cursor:pointer" title="탭하면 계산법이 나와요" onclick="UI.explainLedger()">₩0</span>
-        <span id="sync-badge" class="pill pill-muted" style="cursor:pointer" title="탭하면 설명이 나와요" onclick="UI.explainSync()">로컬</span>
-      </div>
+  <div class="wrap">
+    <header>
+      <div class="logo"><b>뚝딱</b></div>
+      <div class="sub">설치 없이 바로 쓰는 작은 도구 모음</div>
     </header>
-
-    <main id="view" aria-live="polite"></main>
-
-    <nav id="tabbar">
-      <button data-tab="home"><span>🏠</span>홈</button>
-      <button data-tab="pantry"><span>🧊</span>냉장고</button>
-      <button data-tab="recipes"><span>🍳</span>레시피</button>
-      <button data-tab="shopping"><span>🧺</span>장보기</button>
-      <button data-tab="settings"><span>⚙️</span>설정</button>
+    <nav class="apps">
+      <a class="app" href="./fridge/">
+        <span class="emoji">🧊</span>
+        <span class="meta"><b>냉비서</b><span>영수증으로 냉장고 등록 · 오늘의 레시피 추천</span></span>
+        <span class="go">→</span>
+      </a>
+      <a class="app" href="./gwangclick/">
+        <span class="emoji">⚡</span>
+        <span class="meta"><b>광클대전</b><span>60초 진영 대결 — 오늘 내 편은?</span></span>
+        <span class="go">→</span>
+      </a>
+      <!-- 앱 추가는 아래 카드를 복사해 href만 바꾸세요 (예: 너굴 폰트생성기)
+      <a class="app" href="https://여기에-주소">
+        <span class="emoji">🦝</span>
+        <span class="meta"><b>너굴 폰트생성기</b><span>한 줄 설명</span></span>
+        <span class="go">→</span>
+      </a>
+      -->
     </nav>
+    <footer>
+      뚝딱 · 문의 <a href="mailto:yonggunyoung@gmail.com">yonggunyoung@gmail.com</a><br/>
+      <a href="./blog/">블로그</a>
+    </footer>
   </div>
-
-  <div id="modal-root"></div>
-  <div id="toast-root"></div>
-
-  <script type="module" src="./js/main.js"></script>
-  <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
-    }
-  </script>
 </body>
 </html>

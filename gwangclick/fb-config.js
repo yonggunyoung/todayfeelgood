@@ -6,7 +6,7 @@
  *
  * 콘솔에서 추가로 1회 설정:
  *   1) Authentication → 로그인 방법 → '익명(Anonymous)' 사용 설정 (로그인 없이 전국 집계 참여)
- *   2) Authentication → 설정 → 승인된 도메인에 dduckkit.com 추가
+ *   2) Authentication → 설정 → 승인된 도메인에 ddukkit.com 추가
  *   3) Firestore 규칙·색인은 FIREBASE.md 참고 (복사해서 붙여넣기)
  *
  * 비워두면(null) 자동으로 기존 시뮬레이션(폰 단독)으로 폴백 — 앱은 절대 깨지지 않습니다.

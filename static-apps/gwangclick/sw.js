@@ -1,6 +1,6 @@
 // ⚡ 광클대전 — 앱 셸 오프라인 캐시 (단독 앱, 의존성 없음)
-const C = 'gwangclick-v1';
-const ASSETS = ['./', './index.html', './toss.js', './manifest.webmanifest', './icon.svg'];
+const C = 'gwangclick-v2';
+const ASSETS = ['./', './index.html', './toss.js', './fb-config.js', './net.js', './manifest.webmanifest', './icon.svg'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(C).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting()));

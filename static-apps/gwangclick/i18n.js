@@ -70,7 +70,7 @@
       regionTitle: "지역 점령 현황", me: "(나)",
       // 나라대전(Phase 2)
       countryTitle: "🌍 나라 순위", myCountry: "내 나라", world: "세계",
-      myCountryVsWorld: "내 나라 vs 세계", worldGlobal: "전 세계",
+      myCountryVsWorld: "내 나라 vs 세계",
       contribRankLine: "내 기여 {contrib} · {scope} {rank}위",
       contribRankLineEst: "내 기여 {contrib} · 예상 {scope} {rank}위",
       scopeNation: "전국", scopeWorld: "세계",
@@ -142,7 +142,7 @@
       regionTitle: "Regional control", me: "(you)",
       // country battle (Phase 2)
       countryTitle: "🌍 Country standings", myCountry: "My country", world: "World",
-      myCountryVsWorld: "My country vs World", worldGlobal: "Global",
+      myCountryVsWorld: "My country vs World",
       contribRankLine: "My taps {contrib} · {scope} #{rank}",
       contribRankLineEst: "My taps {contrib} · est. {scope} #{rank}",
       scopeNation: "national", scopeWorld: "global",

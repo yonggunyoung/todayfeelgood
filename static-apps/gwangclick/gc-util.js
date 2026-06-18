@@ -38,13 +38,13 @@
     return s.replace(/[\x00-\x1f\x7f-\x9f]/g, " ").replace(/\s+/g, " ").trim();
   }
 
-  // 배지 정제: 문자열화 → 제어문자 제거 → 코드포인트 BADGE_MAX 캡 → 양끝 공백 정리. 비문자/빈값 → ''.
-  // (캡이 공백 경계에 걸려 " " 같은 잔여가 남지 않도록 마지막에 trim — 배지는 시각 토큰이라 공백 무의미.)
+  // 배지 정제: 문자열화 → 제어문자 제거 → 코드포인트 BADGE_MAX 캡 → 끝 ZWJ(합자 조각) 제거 → 양끝 공백 정리.
+  // (캡이 ZWJ 합자 이모지를 쪼개 끝에 U+200D 조각이 남을 수 있어 제거. VS16(U+FE0F)은 표시에 필요하므로 보존.)
   function sanitizeBadge(v) {
     if (v == null || typeof v !== "string") return "";
     var s = stripCtrl(v);
     if (!s) return "";
-    return sliceCP(s, BADGE_MAX).trim();
+    return sliceCP(s, BADGE_MAX).replace(/‍+$/, "").trim();
   }
 
   // 멘트 정제: 문자열화 → 제어문자 제거 → 코드포인트 COMMENT_MAX 캡. 비문자/빈값 → ''.

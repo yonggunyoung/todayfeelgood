@@ -25,7 +25,7 @@ Authentication → 로그인 방법 → **익명(Anonymous)** → 사용 설정.
 (로그인 없이도 모든 기기가 전국 집계에 참여하게 해줍니다)
 
 ## 3) 승인된 도메인 추가
-Authentication → 설정 → 승인된 도메인 → **`dduckkit.com`** 추가.
+Authentication → 설정 → 승인된 도메인 → **`ddukkit.com`** 추가.
 (GitHub Pages로도 열려면 `yonggunyoung.github.io` 도 추가)
 
 ## 4) Firestore 보안 규칙 (복붙)
@@ -56,7 +56,7 @@ service cloud.firestore {
         && (!('country' in request.resource.data)
             || (request.resource.data.country is string && request.resource.data.country.size() <= 2))
         && (!('badge' in request.resource.data)
-            || (request.resource.data.badge is string && request.resource.data.badge.size() <= 8))
+            || (request.resource.data.badge is string && request.resource.data.badge.size() <= 16))
         && (!('comment' in request.resource.data)
             || (request.resource.data.comment is string && request.resource.data.comment.size() <= 24));
     }
@@ -66,7 +66,7 @@ service cloud.firestore {
 
 > **콘솔에서 1회 적용**: Phase 2 배포 전 위 `gc_scores` 규칙을 **다시 게시**하세요(badge/comment 길이를 서버에서도 강제 — 클라 정제 우회 방지).
 > `gc_battles` 규칙은 **변경 불필요** — `countries` 맵은 기존 `regions`와 동일하게 `write: if request.auth != null` 범위에 이미 포함됩니다.
-> `badge` 상한 8: `.size()`는 **UTF-8 바이트** 기준이라 이모지 2개(각 최대 4바이트)까지 여유 있게 허용(클라 캡은 2 코드포인트).
+> `badge` 상한 16: 클라 정제(`sanitizeBadge`)가 **2 코드포인트**로 1차 캡하되, 합자(ZWJ)·이형선택(VS16)·국기 이모지의 길이 변동을 규칙이 흡수하도록 여유값으로 둠 — 정상 배지가 규칙에서 거부돼 점수쓰기가 실패하는 일을 방지.
 
 ## 5) 복합 색인 2개
 첫 랭킹 조회 시 콘솔이 "색인 만들기" 링크를 줍니다(클릭 한 번). 미리 만들려면 Firestore → 색인 → 복합:

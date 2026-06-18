@@ -12,6 +12,7 @@ test("sanitizeBadge — 정상/매핑/None/변조 + 길이 캡", () => {
   // 매핑: 코드포인트 캡(이모지 서로게이트 페어를 쪼개지 않음) — 2개까지만
   assert.equal(sanitizeBadge("🔥👑⚡💪"), "🔥👑");
   assert.equal([...sanitizeBadge("🔥👑⚡")].length, BADGE_MAX); // 정확히 BADGE_MAX 코드포인트
+  assert.equal(sanitizeBadge("👨‍👩‍👧"), "👨"); // 변조(ZWJ 합자: 캡 후 끝 joiner 제거 → 단독 이모지)
   assert.equal(sanitizeBadge(""), ""); // None
   assert.equal(sanitizeBadge("   "), ""); // None(공백만 → 빈값)
   assert.equal(sanitizeBadge(null), ""); // 변조

@@ -32,20 +32,37 @@
 <style>
 /* ⚡ 광클대전 — 디자인: 심야 아레나 / 네오 아케이드 스코어보드 (진영색은 --team-a/--team-b/--me로 런타임 리스킨) */
 :root{
-  --bg:#0a0b0d; --bg-2:#111317; --bg-3:#191c22; --bg-card:#0e1014;
-  --ink:#f2f3f6; --ink-2:#9da3ad; --ink-3:#646a74;
+  --bg:#08090c; --bg-2:#121419; --bg-3:#1b1f27; --bg-card:#0e1014;
+  --ink:#f4f5f8; --ink-2:#9da3ad; --ink-3:#646a74;
   --line:rgba(255,255,255,.07); --line-2:rgba(255,255,255,.15);
   --team-a:#12b39a; --team-b:#7b6ef0; --me:#12b39a; --foe:#7b6ef0; --tapink:#04130f; --live:#ff3a3a;
-  --r-sm:9px; --r-md:14px; --r-lg:20px;
+  /* Y2K/아케이드 네온 액센트 — 진영색(데이터)과 별개의 '브랜드 크롬' 컬러. */
+  --neon:#ff2d9b; --neon-2:#36e3ff; --neon-3:#ffe14d;
+  /* 의도된 깊이: 라디우스를 더 다양하게(작은=날카로움, 큰=스티커감). */
+  --r-xs:6px; --r-sm:10px; --r-md:15px; --r-lg:22px; --r-pill:99px;
   --ease-snap:cubic-bezier(.2,.9,.25,1.05); --ease-wipe:cubic-bezier(.74,0,.18,1);
   --mono:ui-monospace,'SF Mono',Menlo,monospace;
+  --display:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,'Apple SD Gothic Neo',sans-serif;
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html{font-size:16px}
-body{background:var(--bg);color:var(--ink);min-height:100dvh;
-  font-family:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,system-ui,'Apple SD Gothic Neo',sans-serif;
-  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
-body::before{content:'';position:fixed;inset:0;z-index:60;pointer-events:none;opacity:.05;mix-blend-mode:overlay;
+body{color:var(--ink);min-height:100dvh;
+  font-family:var(--display);
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+  /* 평평한 풀페이지 그라데이션 대신: 코너 네온 글로우 2점 + 베이스 색. 단색 그라데이션 티 줄임. */
+  background:
+    radial-gradient(120% 80% at 12% -8%, color-mix(in oklch,var(--neon) 22%,transparent) 0%, transparent 42%),
+    radial-gradient(120% 80% at 90% 6%, color-mix(in oklch,var(--neon-2) 18%,transparent) 0%, transparent 46%),
+    var(--bg);
+  background-attachment:fixed}
+/* 아케이드 그리드 — 아주 옅은 격자(스코어보드/Y2K 무드). 콘텐츠 뒤(z-index<0), 모션 없음. */
+body::after{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.5;
+  background:
+    linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px) 0 0/100% 38px,
+    linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px) 0 0/38px 100%;
+  mask:linear-gradient(180deg, #000 0%, transparent 70%)}
+/* 필름 노이즈(질감) — 'AI 매끈함' 줄이는 손맛 레이어. */
+body::before{content:'';position:fixed;inset:0;z-index:60;pointer-events:none;opacity:.055;mix-blend-mode:overlay;
   background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
 button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
 #app{max-width:480px;margin:0 auto;min-height:100dvh;padding:20px 18px 32px;position:relative}
@@ -58,7 +75,11 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .hint{color:var(--ink-3);font-size:12.5px;line-height:1.55;text-align:center;margin-top:2px}
 .dot{color:var(--live);animation:liveBlink 1.4s steps(1) infinite}
 .hdr{display:flex;justify-content:space-between;align-items:center}
-.hdr .brand{font-family:var(--mono);font-weight:800;font-size:12px;letter-spacing:.04em}
+/* 브랜드 워드마크 — 스티커 락업: 살짝 기울인 굵은 글씨 + 네온 언더라인. 아케이드 간판 무드. */
+.hdr .brand{position:relative;display:inline-block;font-family:var(--display);font-weight:900;font-size:16px;
+  letter-spacing:-.03em;transform:skewX(-5deg);text-shadow:0 1px 0 rgba(0,0,0,.4)}
+.hdr .brand::after{content:'';position:absolute;left:1px;right:1px;bottom:-3px;height:3px;border-radius:2px;
+  background:linear-gradient(90deg,var(--neon),var(--neon-2));box-shadow:0 0 8px color-mix(in oklch,var(--neon) 60%,transparent)}
 .hdr .live{display:flex;align-items:center;gap:7px;font-family:var(--mono);font-weight:700;font-size:10px;letter-spacing:.14em;color:var(--ink-2)}
 
 @keyframes liveBlink{0%,55%{opacity:1}75%,100%{opacity:.2}}
@@ -71,11 +92,19 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 @keyframes fb-shk{0%,100%{transform:translate(0,0)}20%{transform:translate(-6px,3px)}40%{transform:translate(5px,-4px)}60%{transform:translate(-4px,-3px)}80%{transform:translate(4px,3px)}}
 
 /* 인트로 */
-.kicker{font-family:var(--mono);font-weight:600;font-size:10.5px;letter-spacing:.16em;color:var(--ink-3);line-height:1.5}
-.q{font-size:clamp(34px,10.5vw,46px);font-weight:900;line-height:.97;letter-spacing:-.04em}
-.qa{color:var(--team-a)}
+.kicker{display:inline-flex;align-self:flex-start;align-items:center;gap:6px;font-family:var(--mono);font-weight:700;font-size:10px;
+  letter-spacing:.12em;color:var(--ink-2);line-height:1;padding:6px 10px;border-radius:var(--r-pill);
+  background:rgba(255,255,255,.04);border:1px solid var(--line-2)}
+/* 디스플레이 타이포 위계 강화: 큰 질문은 더 크게/꽉 차게 + 미세 그림자(평면 탈피). */
+.q{font-size:clamp(36px,11.5vw,52px);font-weight:900;line-height:.94;letter-spacing:-.045em;text-shadow:0 2px 14px rgba(0,0,0,.35)}
+/* 떡밥의 '?'는 네온 액센트 — 한 글자만 튀게(브랜드 일관성, 진영색 데이터는 불변). */
+.qa{color:var(--neon);text-shadow:0 0 18px color-mix(in oklch,var(--neon) 55%,transparent)}
 .teams{display:flex;flex-direction:column;gap:9px}
-.team{display:flex;gap:13px;align-items:center;padding:13px 14px;background:var(--bg-3);border:1px solid var(--line);border-radius:var(--r-sm)}
+.team{display:flex;gap:13px;align-items:center;padding:14px 15px;border-radius:var(--r-md);
+  background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,0)),var(--bg-3);
+  border:1px solid var(--line);box-shadow:0 10px 24px -18px rgba(0,0,0,.9),inset 0 1px 0 rgba(255,255,255,.04);
+  transition:transform .14s var(--ease-snap)}
+.team:active{transform:scale(.99)}
 .team .em{font-size:28px;line-height:1}
 .team .nm{display:flex;align-items:baseline;gap:8px}
 .team .nm b{font-weight:800;font-size:16px}
@@ -89,8 +118,11 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .gauge.tall{height:8px}
 .gauge i{height:100%;display:block}
 .go{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.go button{border-radius:var(--r-md);font-weight:800;font-size:14px;padding:16px 6px;letter-spacing:-.01em;transition:transform .12s var(--ease-snap)}
-.go button:active{transform:scale(.96)}
+/* 참전 버튼 — 진영색 위에 입체 솔리드(3D 눌림감). 색은 인라인 데이터(진영색) 유지, 깊이만 추가. */
+.go button{position:relative;border-radius:var(--r-md);font-weight:900;font-size:14.5px;padding:17px 6px;letter-spacing:-.01em;
+  box-shadow:0 5px 0 rgba(0,0,0,.32),0 12px 20px -10px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.3);
+  transition:transform .1s var(--ease-snap),box-shadow .1s var(--ease-snap)}
+.go button:active{transform:translateY(4px);box-shadow:0 1px 0 rgba(0,0,0,.32),0 5px 10px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.3)}
 .streak-chip{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:var(--ink-2);border:1px solid var(--line-2);border-radius:99px;padding:5px 10px;align-self:flex-start}
 
 /* 배틀 스테이지 */
@@ -123,7 +155,10 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .tap:active{transform:translateY(6px);box-shadow:inset 0 2px 0 color-mix(in oklch,var(--me) 55%,#fff),inset 0 -3px 1px color-mix(in oklch,var(--me) 70%,#000),0 2px 0 color-mix(in oklch,var(--me) 50%,#000),0 9px 16px -12px color-mix(in oklch,var(--me) 62%,transparent)}
 .tap .orb{display:grid;place-items:center;width:60px;height:60px;border-radius:50%;font-size:30px;line-height:1;
   background:radial-gradient(circle at 38% 28%,rgba(255,255,255,.6),rgba(255,255,255,0) 58%),color-mix(in oklch,var(--me) 72%,#000);
-  box-shadow:inset 0 2px 5px rgba(255,255,255,.45),inset 0 -6px 10px rgba(0,0,0,.4),0 5px 12px rgba(0,0,0,.35)}
+  box-shadow:inset 0 2px 5px rgba(255,255,255,.45),inset 0 -6px 10px rgba(0,0,0,.4),0 5px 12px rgba(0,0,0,.35);
+  transition:transform .08s var(--ease-snap)}
+/* 누름 순간 오브가 살짝 수축 → 손가락이 '먹은' 느낌(연출만, onTap 수치/타이밍 불변). */
+.tap:active .orb{transform:scale(.9)}
 .tap .lab{font-size:27px;font-weight:900;letter-spacing:.06em;text-shadow:0 2px 0 color-mix(in oklch,var(--me) 68%,#000),0 3px 6px rgba(0,0,0,.22)}
 .stage.combo .tap{transform:translateY(-2px)}
 .stage.combo .tap::after{content:'';position:absolute;inset:-7px;border-radius:27px;pointer-events:none;animation:auraPulse .7s var(--ease-snap) infinite alternate}
@@ -144,9 +179,11 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .fb-shake{animation:fb-shk .3s ease}
 
 /* 결과 */
-.acc{height:4px}
-.verdict{font-size:30px;font-weight:900;line-height:1.05;letter-spacing:-.035em}
-.rcard{position:relative;background:var(--bg-2);border:1px solid var(--line);border-left:3px solid var(--me);border-radius:var(--r-sm);padding:16px 15px}
+.acc{height:4px;border-radius:var(--r-pill);box-shadow:0 0 14px -2px var(--me)}
+.verdict{font-size:clamp(30px,8.5vw,38px);font-weight:900;line-height:1.02;letter-spacing:-.04em;text-shadow:0 2px 14px rgba(0,0,0,.35)}
+.rcard{position:relative;border:1px solid var(--line);border-left:3px solid var(--me);border-radius:var(--r-md);padding:16px 15px;
+  background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,0)),var(--bg-2);
+  box-shadow:0 14px 30px -22px rgba(0,0,0,.9)}
 .rcard .frow{display:flex;align-items:center;gap:10px}
 .rcard .frow .em{font-size:24px}
 .rcard .frow .nm{font-weight:800;font-size:15px;white-space:nowrap}
@@ -162,10 +199,15 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .tags{display:flex;gap:8px;font-family:var(--mono);font-weight:700;font-size:12px;color:var(--me)}
 .newbest{font-weight:800;font-size:12px;color:#ffd76a}
 .actions{display:flex;flex-direction:column;gap:9px;margin-top:2px}
-.btn{border-radius:var(--r-md);font-weight:800;font-size:14px;padding:15px 0;text-align:center;transition:transform .12s var(--ease-snap)}
-.btn:active{transform:scale(.97)}
-.btn-primary{background:var(--me)}
-.btn-ghost{border:1px solid var(--line-2);background:transparent;color:var(--ink);font-weight:700}
+.btn{border-radius:var(--r-md);font-weight:800;font-size:14px;padding:15px 0;text-align:center;
+  transition:transform .1s var(--ease-snap),box-shadow .1s var(--ease-snap),background .15s ease}
+.btn:active{transform:translateY(3px)}
+/* 주요 CTA — 진영색 솔리드 + 입체 눌림(참전 버튼과 일관된 택타일감). */
+.btn-primary{background:var(--me);font-weight:900;
+  box-shadow:0 5px 0 rgba(0,0,0,.3),0 12px 20px -10px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.28)}
+.btn-primary:active{box-shadow:0 1px 0 rgba(0,0,0,.3),0 5px 10px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.28)}
+.btn-ghost{border:1px solid var(--line-2);background:rgba(255,255,255,.02);color:var(--ink);font-weight:700}
+.btn-ghost:active{background:rgba(255,255,255,.06)}
 
 /* 보상형 광고 — 결과 2배 자랑 */
 .btn-reward{background:linear-gradient(180deg,#ffe08a,#ff9a3d);color:#1c1206;box-shadow:0 8px 22px -8px rgba(255,154,61,.6)}
@@ -303,14 +345,65 @@ function beep(freq,dur,type,vol){try{AC=AC||new(window.AudioContext||window.webk
 function chord(fs,dur){fs.forEach(function(f,i){setTimeout(function(){beep(f,dur||0.12,'triangle',0.14);},i*55);});}
 function buzz(ms){try{if(window.Toss&&Toss.haptic){Toss.haptic(ms);return;}}catch(e){}if(navigator.vibrate)navigator.vibrate(ms);}
 
-/* ── 화려한 액션: 캔버스 파티클 (외부 에셋 0, 캔버스 미지원이면 조용히 비활성) ── */
+/* ── 화려한 액션: 캔버스 파티클 (외부 에셋 0, 캔버스 미지원이면 조용히 비활성) ──
+ * 성능(D-perf): 이모지 파티클은 매 프레임 fillText 대신 *한 번 래스터화한 스프라이트*를 drawImage.
+ *   - 이모지 글리프 래스터화는 비싸다(특히 DPR 2). 글리프×크기버킷별로 오프스크린 캔버스 1장에 굽고 재사용.
+ *   - 파티클 수는 기기에 맞춰 스케일(모바일/저사양은 ↓), DPR은 sky 캔버스에서 ~1.5로 캡.
+ *   - prefers-reduced-motion이면 축포 최소화/생략(접근성). 게임 수치엔 전혀 무관(연출만). */
+function prefersReducedMotion(){try{return !!(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches);}catch(e){return false;}}
+/* 기기 등급(0~1): 코어 수·메모리·터치(모바일 추정)·화면폭으로 가벼운 휴리스틱. 1=데스크탑급, 0=저사양 모바일. */
+function deviceTier(){
+  var cores=navigator.hardwareConcurrency||4, mem=navigator.deviceMemory||4;
+  var coarse=false; try{coarse=!!(window.matchMedia&&window.matchMedia('(pointer:coarse)').matches);}catch(e){}
+  var narrow=(window.innerWidth||480)<700;
+  var mobile=coarse||narrow;
+  var s=0;
+  s+=cores>=8?0.4:cores>=4?0.25:0.1;
+  s+=mem>=8?0.35:mem>=4?0.22:0.1;
+  s+=mobile?0.0:0.25;
+  return clamp(s,0,1);
+}
+/* 기기 등급으로 입자 수를 lo(저사양 모바일)~hi(데스크탑) 사이로 보간. reduced-motion이면 0. */
+function scaledCount(lo,hi){ if(prefersReducedMotion())return 0; return Math.round(lo+(hi-lo)*deviceTier()); }
+/* ── 이모지 스프라이트 캐시 ──
+ * key = emoji + '@' + sizeBucket(@dpr). 오프스크린 캔버스에 글리프 1회 렌더 → 이후 drawImage.
+ * sizeBucket로 묶어 캐시 폭증 방지(파티클마다 size가 미세하게 달라도 한 버킷 공유). */
+var EMOJI_SPRITES={};
+function emojiSprite(emoji,size,dpr){
+  var bucket=Math.max(8,Math.round(size/4)*4);           // 4px 단위 버킷
+  var key=emoji+'@'+bucket+'x'+dpr;
+  var hit=EMOJI_SPRITES[key];
+  if(hit!==undefined)return hit;                          // null도 캐시(미지원/실패 재시도 방지)
+  var sprite=null;
+  try{
+    var pad=Math.ceil(bucket*0.3), side=bucket+pad*2;     // 회전/오버플로 여유 패딩
+    var oc=document.createElement('canvas');
+    if(oc.getContext){
+      oc.width=Math.round(side*dpr); oc.height=Math.round(side*dpr);
+      var octx=oc.getContext('2d');
+      octx.setTransform(dpr,0,0,dpr,0,0);
+      octx.font=bucket+'px serif'; octx.textAlign='center'; octx.textBaseline='middle';
+      octx.fillText(emoji,side/2,side/2);
+      sprite={canvas:oc,side:side};                       // side=CSS px(드로잉 시 절반만큼 오프셋)
+    }
+  }catch(e){sprite=null;}
+  EMOJI_SPRITES[key]=sprite;
+  return sprite;
+}
+/* 캐시된 스프라이트를 (x,y) 중심·rot 회전으로 그린다. 스프라이트 없으면 false(호출부가 fillText 폴백). */
+function drawEmojiSprite(ctx,emoji,x,y,size,rot,dpr){
+  var sp=emojiSprite(emoji,size,dpr); if(!sp)return false;
+  ctx.save(); ctx.translate(x,y); if(rot)ctx.rotate(rot);
+  ctx.drawImage(sp.canvas,-sp.side/2,-sp.side/2,sp.side,sp.side);
+  ctx.restore(); return true;
+}
 var FX={ctx:null,w:0,h:0,dpr:1,list:[]};
 var SKY={ctx:null,canvas:null,list:[],raf:0,w:0,h:0,dpr:1,on:false};
 function fxInit(){
   var c=el('fb-fx'), stage=el('fb-stage');
   if(!c||!c.getContext||!stage){FX.ctx=null;return;}
   var r=stage.getBoundingClientRect();
-  FX.dpr=Math.min(2,window.devicePixelRatio||1); FX.w=r.width; FX.h=r.height;
+  FX.dpr=Math.min(1.5,window.devicePixelRatio||1); FX.w=r.width; FX.h=r.height;
   c.width=FX.w*FX.dpr; c.height=FX.h*FX.dpr; c.style.width=FX.w+'px'; c.style.height=FX.h+'px';
   var ctx=c.getContext('2d'); ctx.setTransform(FX.dpr,0,0,FX.dpr,0,0); FX.ctx=ctx; FX.list=[];
 }
@@ -334,7 +427,9 @@ function fxStep(){
   for(var i=FX.list.length-1;i>=0;i--){var p=FX.list[i];
     if(p.type==='ring'){p.r+=p.vr;p.life-=p.dec;ctx.globalAlpha=Math.max(0,p.life);ctx.strokeStyle=p.color;ctx.lineWidth=2.5;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,6.283);ctx.stroke();}
     else{p.vy+=p.g||0;p.x+=p.vx;p.y+=p.vy;if(p.vrot)p.rot+=p.vrot;p.life-=p.dec;ctx.globalAlpha=Math.max(0,p.life);
-      if(p.emoji){ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.rot||0);ctx.font=p.size+'px serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(p.emoji,0,0);ctx.restore();}
+      if(p.emoji){
+        if(!drawEmojiSprite(ctx,p.emoji,p.x,p.y,p.size,p.rot||0,FX.dpr)){ // 스프라이트 캐시 우선, 실패 시 폴백
+          ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.rot||0);ctx.font=p.size+'px serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(p.emoji,0,0);ctx.restore();}}
       else{ctx.fillStyle=p.color;ctx.beginPath();ctx.arc(p.x,p.y,p.size,0,6.283);ctx.fill();}}
     if(p.life<=0||p.y>FX.h+60)FX.list.splice(i,1);
   }
@@ -345,21 +440,25 @@ function skyInit(){
   if(SKY.canvas||typeof document==='undefined'||!document.body)return;
   var c=document.createElement('canvas'); if(!c.getContext)return;
   c.id='fb-sky'; document.body.appendChild(c);
-  function size(){SKY.dpr=Math.min(2,window.devicePixelRatio||1);SKY.w=window.innerWidth;SKY.h=window.innerHeight;c.width=SKY.w*SKY.dpr;c.height=SKY.h*SKY.dpr;var x=c.getContext('2d');x.setTransform(SKY.dpr,0,0,SKY.dpr,0,0);SKY.ctx=x;}
+  function size(){SKY.dpr=Math.min(1.5,window.devicePixelRatio||1);SKY.w=window.innerWidth;SKY.h=window.innerHeight;c.width=SKY.w*SKY.dpr;c.height=SKY.h*SKY.dpr;var x=c.getContext('2d');x.setTransform(SKY.dpr,0,0,SKY.dpr,0,0);SKY.ctx=x;}
   size(); if(window.addEventListener)window.addEventListener('resize',size); SKY.canvas=c;
 }
 function skyConfetti(emojis,colors){
+  // 입자 수를 기기에 맞춰 스케일: 데스크탑 ~110, 모바일 ~45, reduced-motion 0(축포 생략).
+  var n=scaledCount(45,110); if(n<=0)return;
   skyInit(); if(!SKY.ctx)return;
-  for(var i=0;i<110;i++){SKY.list.push({x:Math.random()*SKY.w,y:-20-Math.random()*SKY.h*0.4,vx:(Math.random()-0.5)*2.4,vy:2+Math.random()*4,g:0.05,life:1,dec:0.0035,size:11+Math.random()*15,emoji:Math.random()<0.5?emojis[i%emojis.length]:null,color:colors[i%colors.length],rot:Math.random()*6.28,vrot:(Math.random()-0.5)*0.3});}
+  for(var i=0;i<n;i++){SKY.list.push({x:Math.random()*SKY.w,y:-20-Math.random()*SKY.h*0.4,vx:(Math.random()-0.5)*2.4,vy:2+Math.random()*4,g:0.05,life:1,dec:0.0035,size:11+Math.random()*15,emoji:Math.random()<0.5?emojis[i%emojis.length]:null,color:colors[i%colors.length],rot:Math.random()*6.28,vrot:(Math.random()-0.5)*0.3});}
   if(!SKY.on){SKY.on=true;SKY.raf=requestAnimationFrame(skyLoop);}
 }
 function skyLoop(){
   var ctx=SKY.ctx; if(!ctx){SKY.on=false;return;}
   ctx.clearRect(0,0,SKY.w,SKY.h);
   for(var i=SKY.list.length-1;i>=0;i--){var p=SKY.list[i];p.vy+=p.g;p.x+=p.vx;p.y+=p.vy;p.rot+=p.vrot;p.life-=p.dec;ctx.globalAlpha=Math.max(0,Math.min(1,p.life));
-    ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.rot);
-    if(p.emoji){ctx.font=p.size+'px serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(p.emoji,0,0);}else{ctx.fillStyle=p.color;ctx.fillRect(-p.size/2,-p.size/3,p.size,p.size*0.62);}
-    ctx.restore();
+    if(p.emoji){
+      // 매 프레임 fillText 대신 캐시된 스프라이트를 drawImage(이모지 래스터화 비용 제거). 실패 시 폴백.
+      if(!drawEmojiSprite(ctx,p.emoji,p.x,p.y,p.size,p.rot,SKY.dpr)){
+        ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.rot);ctx.font=p.size+'px serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(p.emoji,0,0);ctx.restore();}
+    }else{ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.rot);ctx.fillStyle=p.color;ctx.fillRect(-p.size/2,-p.size/3,p.size,p.size*0.62);ctx.restore();}
     if(p.life<=0||p.y>SKY.h+40)SKY.list.splice(i,1);}
   ctx.globalAlpha=1;
   if(SKY.list.length)SKY.raf=requestAnimationFrame(skyLoop);else{SKY.on=false;ctx.clearRect(0,0,SKY.w,SKY.h);}

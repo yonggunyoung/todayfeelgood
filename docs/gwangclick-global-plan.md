@@ -41,9 +41,13 @@
 
 ## 5. 진행 상태
 - [x] 설계서 + 결정 로그 (이 문서)
-- [~] Phase 1 구현 (영어판 + 무료 국가감지) — **기반 완료, 검증 통과**
+- [x] Phase 1 구현 (영어판 + 무료 국가감지) — **완료·감사 PASS·배포대기**
   - `topics.js`(양어 12종: 기존 8 + 해외 4 / `localize` ko폴백) · `i18n.js` STR 전면 확장(ko+en) · `geo.js` 활용.
-  - index.html 배선: `LANG`/`MY`/`MYINFO`/`t()` 도입, 모든 크롬 문자열 `t()`化, KR/EN 토글 + 국기(MYINFO.flag) 헤더 추가, `<html lang>` 동적, `comma`/`mdLabel` 언어인식, ko 조사(withEuro) 유지.
-  - sw.js v3(신규 3파일 캐시). 테스트: `node --test` 14/14 통과(geo·i18n·topics 경계 4종). ko/en 양 경로 런타임 스모크 PASS(undefined/미치환 없음, KR 폴백 보존).
-  - 남김(후속): 한국 지역명 18종·`<title>`/메타 다국어, 국가 집계(`countries`)는 Phase 2.
-- [ ] Phase 2 / 3 / 4
+  - index.html 배선: `LANG`/`MY`/`MYINFO`/`t()`, 모든 크롬 `t()`化, KR/EN 토글 + 국기(감지시만) 헤더, `<html lang>` 동적, `comma`/`mdLabel` 언어인식, ko 조사(withEuro) 유지.
+  - sw.js v3. 테스트 `node --test` 14/14. **검수·감사 3종 PASS(Blocker 0)** — 보고서 `.agents/reports/phase1-*.md`.
+  - 검수 반영: 미감지 시 국기 생략(KR 폴백 동등), `t()` 보안계약 주석.
+  - 후속(Phase 2): 한국 지역명 18종·`<title>`/메타 다국어 영어화.
+- [ ] Phase 2 — 나라대전 + 기여도 순위/배지·멘트
+  - **경계 갱신**: Phase 2부터 `net.js`(데이터층)·Firestore 스키마 **확장 허용**(하위호환·가산만, D4/D5). `gc_battles.countries` 맵 추가, 점수문서에 배지·멘트.
+  - ⚠ 사용자 콘솔 작업 동반 가능: Firestore 규칙·색인(FIREBASE.md). main(github.io) 동기화는 별도.
+- [ ] Phase 3 / 4

@@ -15,6 +15,8 @@
 <script src="./toss.js"></script>
 <!-- Phase 2 순수 헬퍼(나라대전 집계·배지/멘트 정제) — net.js가 참조하므로 먼저 로드 -->
 <script src="./gc-util.js"></script>
+<!-- Phase 3 순수 헬퍼(꾸미기 카탈로그·해금/장착 리듀서·레퍼럴) — 표현만, 게임 수치 불변 -->
+<script src="./gc-cosmetics.js"></script>
 <!-- 실제 전국 대전 백엔드(선택) — fb-config.js 비우면 자동으로 폰 단독 시뮬레이션 폴백 -->
 <script src="./fb-config.js"></script>
 <script src="./net.js"></script>
@@ -225,6 +227,13 @@ var F=load();
 F.region=F.region||''; F.nick=F.nick||'';
 /* Phase 2: 순위권에 노출될 미리 써둔 배지(이모지/짧은 태그)·멘트(한 줄). 저장 즉시 GCUtil로 정제(보안 #1). */
 F.badge=GCUtil.sanitizeBadge(F.badge||''); F.comment=GCUtil.sanitizeComment(F.comment||'');
+/* Phase 3(D6): 꾸미기 해금/장착 상태. localStorage → 항상 GCCos.normState로 재조립(불신 #1: 변조·미상 id 방어).
+ * F.unlocked=[해금 id]  ·  F.cosmetics={tapFx,nameColor}  ·  F.badgeId=장착한 프리미엄 배지 id(없으면 '').
+ * 꾸미기는 표현만 — 게임 밸런스 수치엔 절대 영향 없음(경계 #3). */
+(function(){ var st=GCCos.normState(F); F.unlocked=st.unlocked; F.cosmetics=st.equipped; F.badgeId=GCCos.isUnlocked(F,F.badgeId)?F.badgeId:''; })();
+/* 레퍼럴 코드: 들어온 ?ref= 는 '저장/표시'만(불신 #1 — 해금 판정엔 절대 미사용). 내 코드는 uid/시드로 결정적 생성. */
+try{ var _ref=GCCos.parseRef(location.search||''); if(_ref){F.refFrom=F.refFrom||_ref;persist();} }catch(e){}
+function myRefCode(){return GCCos.refCode((netOn()&&GCNet.uid&&GCNet.uid())||F.nick||'anon');}
 
 /* ── 글로벌 기반(Phase 1): 언어 + 국가 감지 ──
  * LANG: 저장값(F.lang) 우선 → 없으면 브라우저 언어에서 추정(ko/en). 미상은 ko 폴백(불신 #1).
@@ -248,6 +257,13 @@ var REGIONS=[{k:'',n:'전국'},{k:'seoul',n:'서울'},{k:'gyeonggi',n:'경기'},
 function regionDefault(){return LANG==='ko'?'전국':(MYINFO&&MYINFO.nameEn||'Global');}
 function regionName(k){if(!k)return regionDefault();for(var i=0;i<REGIONS.length;i++)if(REGIONS[i].k===k)return REGIONS[i].n;return regionDefault();}
 function nickOf(){return (F.nick||'').trim()||t('anon');}
+/* 꾸미기(Phase 3): 장착된 '이름 색'을 내 닉에만 적용하는 인라인 스타일 조각. 잠김/기본은 '' (테마 기본색).
+ * 로컬 전용 코스메틱 — 타 사용자에겐 미노출(Firestore 미제출)이라 내 화면의 '(나)/(you)' 행에만 쓴다. */
+function myNameColorStyle(){var c=GCCos.equippedNameColor(F);return c?' style="color:'+c+'"':'';}
+/* 꾸미기(Phase 3): 제출/표시에 쓸 '실효 배지'. 프리미엄 배지(F.badgeId)가 해금·장착됐으면 그걸 우선,
+ * 아니면 무료 설정 배지(F.badge). 기존 배지 제출 경로(net.js)를 그대로 재사용 → 신규 Firestore 필드·규칙 없음.
+ * 프리미엄 이모지는 카탈로그 화이트리스트(GCCos.badgeOf)만 통과 → 자유입력 위변조 불가(보안 #1). */
+function effectiveBadge(){var pb=GCCos.badgeOf(F,F.badgeId);return pb||F.badge||'';}
 function netOn(){try{return !!(window.GCNet&&GCNet.available());}catch(e){return false;}}
 var LIVE={date:'',tot:null,unwatch:null};
 function shareFromTot(tot,seed){return (tot&&(tot.a+tot.b)>0)?clamp(tot.a/(tot.a+tot.b)*100,5,95):seed;}
@@ -399,6 +415,7 @@ function intro(){
         '<button class="btn btn-ghost" style="flex:1" onclick="openSettings()">📍 '+regionName(F.region)+(F.nick?' · '+esc(F.nick):'')+'</button>'+
         '<button class="btn btn-ghost" style="flex:1" onclick="rankBoard()">'+t('rankBtn')+'</button>'+
       '</div>'+
+      '<button class="btn btn-ghost" onclick="openLocker()">'+t('lockerBtn')+'</button>'+
       '<p class="hint">'+t('tapHint')+'</p>'+
     '</div>';
   var iga=el('ig-a'); if(iga)iga._seed=base;
@@ -465,8 +482,12 @@ function onTap(e){
   var px=(e.clientX||r.left+r.width/2)-r.left, py=(e.clientY||r.top+r.height/2)-r.top;
   popNum(px,py,mult);
   var hot=B.streak>10;
-  fxSpark(px,py,hot?10:6,hot?['#ffffff',B.me.color,'#ffffff']:[B.me.color,'#ffffff']);
-  if(milestone){fxRing(px,py,'#ffffff');fxEmoji(px,py,7,B.me.emoji);shake();}
+  // 꾸미기(Phase 3): 장착된 탭 이펙트 색/스타일로 파티클만 변경 — 탭 수·콤보·점수엔 영향 없음(경계 #3).
+  // 잠긴 항목은 GCCos.normState가 기본으로 폴백 → 진영색(B.me.color) 사용. fallback 팔레트는 기존과 동일.
+  var fxCols=GCCos.equippedFxColors(F,hot?['#ffffff',B.me.color,'#ffffff']:[B.me.color,'#ffffff']);
+  if(GCCos.equippedFxStyle(F)==='star'){fxEmoji(px,py,hot?6:4,'✨');}
+  fxSpark(px,py,hot?10:6,fxCols);
+  if(milestone){fxRing(px,py,fxCols[0]||'#ffffff');fxEmoji(px,py,7,B.me.emoji);shake();}
   var t=el('fb-taps'); if(t)t.textContent=comma(Math.floor(B.tapsF));
 }
 function popNum(px,py,mult){
@@ -583,7 +604,8 @@ function endBattle(){
   if(netOn()){
     var rr=R;
     // Phase 2: 내 국가(MY)로 나라대전 집계 + 미리 써둔 배지·멘트 동봉(net.js가 정제·하위호환).
-    GCNet.submit(date,side,contrib,F.region,nickOf(),MY,{badge:F.badge,comment:F.comment}).then(function(res){
+    // Phase 3: 배지는 effectiveBadge()(프리미엄 장착 시 우선) — 기존 제출 경로 재사용, 신규 필드 없음.
+    GCNet.submit(date,side,contrib,F.region,nickOf(),MY,{badge:effectiveBadge(),comment:F.comment}).then(function(res){
       if(rr!==R)return;
       if(res){R.rank=res.rank;R.total=res.total;R.rankState='real';}
       else{R.rank=rankEstimate(R.contrib);R.rankState='estimate';}
@@ -635,8 +657,9 @@ function renderResult(){
         '<button class="btn btn-ghost" onclick="GO(\''+r.side+'\')">'+t('againBtn')+'</button>'+
         '<div style="display:flex;gap:8px">'+
           '<button class="btn btn-ghost" style="flex:1" onclick="rankBoard()">'+t('rankBtn')+'</button>'+
-          '<button class="btn btn-ghost" style="flex:1" onclick="intro()">'+t('todayBattle')+'</button>'+
+          '<button class="btn btn-ghost" style="flex:1" onclick="openLocker()">'+t('lockerBtn')+'</button>'+
         '</div>'+
+        '<button class="btn btn-ghost" onclick="intro()">'+t('todayBattle')+'</button>'+
       '</div>'+
     '</div>';
 }
@@ -658,11 +681,11 @@ function contribRankHTML(r){
   // 순위권(real & top N) 진입 — 내 배지·멘트가 리더보드에 이렇게 노출된다고 미리보기(사용자입력 → esc).
   if(r.rankState==='real'&&r.rank<=RANK_BADGE_TOP){
     h+='<div class="newbest" style="margin-top:8px">'+t('youRanked',{scope:scope,rank:comma(r.rank)})+'</div>';
-    var badge=esc(F.badge||''), comment=esc(F.comment||'');
+    var badge=esc(effectiveBadge()), comment=esc(F.comment||'');
     if(badge||comment){
       h+='<div class="rcard" style="margin-top:8px;padding:11px 13px">'+
         '<div style="display:flex;align-items:center;gap:8px;font-size:14px">'+(MYINFO.code?MYINFO.flag+' ':'')+
-          '<b>'+esc(nickOf())+'</b>'+(badge?' '+badge:'')+'</div>'+
+          '<b'+myNameColorStyle()+'>'+esc(nickOf())+'</b>'+(badge?' '+badge:'')+'</div>'+
         (comment?'<div style="margin-top:4px;font-size:12px;color:var(--ink-2)">“'+comment+'”</div>':'')+'</div>';
     }
   }
@@ -724,7 +747,7 @@ function renderBoard(bt,rows){
         '<span class="mono" style="width:24px;text-align:center">'+medal+'</span>'+
         '<span style="font-size:18px">'+tm.emoji+'</span>'+
         '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px">'+
-          flag+(r.me?'<b>':'')+esc(r.nick)+(badge?' '+badge:'')+(r.me?' '+t('me')+'</b>':'')+
+          flag+(r.me?'<b'+myNameColorStyle()+'>':'')+esc(r.nick)+(badge?' '+badge:'')+(r.me?' '+t('me')+'</b>':'')+
           (r.region?'<span class="mono" style="margin-left:7px;color:var(--ink-3)">'+regionName(r.region)+'</span>':'')+'</span>'+
         '<b class="tnum" style="color:'+tm.color+'">'+comma(r.taps)+'</b></div>'+
       (comment?'<div style="margin:3px 0 0 58px;font-size:12px;color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">“'+comment+'”</div>':'')+
@@ -824,7 +847,107 @@ function openSettings(){
     persist(); shut(); intro();};
 }
 
+/* ── 꾸미기 보관함(Phase 3) ──
+ * 카탈로그를 kind별로 묶어 표시. 잠김/해금 + 장착 토글 + 해금 버튼(📺광고 / 📣초대).
+ * 기존 .ad-ov 모달 패턴·.btn/.chip-soft 스타일 재사용. 모든 사용자영향 값은 esc()(보안 #1).
+ * 해금=로컬(F.unlocked), 광고는 기존 adRewarded 재사용, 초대는 공유→로컬 해금(비용 0). */
+var LOCKER_KINDS=[{kind:'tapFx',label:'catTapFx'},{kind:'nameColor',label:'catNameColor'},{kind:'badge',label:'catBadge'}];
+function cosLabel(it){return it&&it.label?(it.label[LANG]||it.label.ko||it.id):'';}
+function lockerItemHTML(it){
+  var unlocked=GCCos.isUnlocked(F,it.id), isFree=it.unlock==='free';
+  // 장착 상태: tapFx/nameColor는 F.cosmetics, badge는 F.badgeId.
+  var equipped=(it.kind==='badge')?(F.badgeId===it.id):(F.cosmetics&&F.cosmetics[it.kind]===it.id);
+  // 미리보기 칩: tapFx=색 점, nameColor=색 글자, badge=이모지.
+  var prev='';
+  if(it.kind==='tapFx'){var cols=Array.isArray(it.colors)?it.colors:['var(--ink-2)'];
+    prev='<span style="display:inline-flex;gap:3px;vertical-align:middle">'+cols.slice(0,3).map(function(c){return '<i style="width:9px;height:9px;border-radius:50%;display:inline-block;background:'+esc(c)+'"></i>';}).join('')+'</span>';}
+  else if(it.kind==='nameColor'){prev='<b style="font-size:14px'+(it.color?';color:'+esc(it.color):'')+'">Aa</b>';}
+  else if(it.kind==='badge'){prev='<span style="font-size:18px">'+esc(it.badge||'')+'</span>';}
+  var tag=isFree?'<span class="mono">'+t('freeTag')+'</span>':(unlocked?'':'<span class="mono" style="color:var(--ink-3)">'+t('lockedTag')+'</span>');
+  var right;
+  if(!unlocked){
+    // 해금 버튼 — unlock 종류에 따라 광고/초대 하나만.
+    var ub=it.unlock==='ad'?t('unlockAd'):t('unlockInvite');
+    right='<button class="chip-soft cos-unlock" data-id="'+esc(it.id)+'" style="border-color:var(--me);color:var(--me)">'+ub+'</button>';
+  }else if(equipped){
+    right='<button class="chip-soft cos-equip" data-id="'+esc(it.id)+'" data-on="1" style="border-color:var(--me);color:var(--me)">'+t('equipped')+'</button>';
+  }else{
+    right='<button class="chip-soft cos-equip" data-id="'+esc(it.id)+'" data-on="0">'+t('equip')+'</button>';
+  }
+  return '<div class="cos-row" style="display:flex;align-items:center;gap:10px;padding:9px 2px;border-bottom:1px solid var(--line)">'+
+    '<span style="width:30px;text-align:center">'+prev+'</span>'+
+    '<span style="flex:1;min-width:0;font-size:13.5px"><b>'+esc(cosLabel(it))+'</b> '+tag+'</span>'+
+    right+'</div>';
+}
+function lockerBodyHTML(){
+  var h='';
+  for(var g=0;g<LOCKER_KINDS.length;g++){var grp=LOCKER_KINDS[g];
+    h+='<div class="mono" style="margin:'+(g?'14px':'2px')+' 0 4px">'+t(grp.label)+'</div>';
+    for(var i=0;i<GCCos.CATALOG.length;i++){var it=GCCos.CATALOG[i];if(it.kind!==grp.kind)continue;h+=lockerItemHTML(it);}
+    if(grp.kind==='badge')h+='<p class="hint" style="text-align:left;margin-top:7px">'+t('badgeEquipHint')+'</p>';
+  }
+  return h;
+}
+function openLocker(){
+  var ov=document.createElement('div'); ov.className='ad-ov';
+  ov.innerHTML='<div class="ad-box"><div class="ad-top"><span class="mono">'+t('lockerTitle')+'</span><button class="ad-skip" id="lk-x">'+t('closeBtn')+'</button></div>'+
+    '<div class="ad-body" style="display:block;text-align:left;max-height:62vh;overflow:auto">'+
+      '<p class="hint" style="text-align:left;margin-bottom:6px">'+t('lockerIntro')+'</p>'+
+      '<div id="lk-list">'+lockerBodyHTML()+'</div>'+
+    '</div>'+
+    '<button class="btn btn-ghost" id="lk-done">'+t('closeBtn')+'</button></div>';
+  (document.body||document.documentElement).appendChild(ov);
+  function shut(){if(ov.parentNode)ov.parentNode.removeChild(ov);}
+  function repaint(){var l=el('lk-list');if(l)l.innerHTML=lockerBodyHTML();}
+  el('lk-x').onclick=shut; el('lk-done').onclick=shut;
+  // 클릭 위임: 해금/장착 버튼. (잠긴 항목 장착 시도는 GCCos.equip/normState가 차단 → 안전.)
+  el('lk-list').onclick=function(e){
+    var unb=e.target&&e.target.closest?e.target.closest('.cos-unlock'):null;
+    var eqb=e.target&&e.target.closest?e.target.closest('.cos-equip'):null;
+    if(unb){cosTryUnlock(unb.getAttribute('data-id'),repaint);return;}
+    if(eqb){cosToggleEquip(eqb.getAttribute('data-id'),eqb.getAttribute('data-on')==='1');repaint();return;}
+  };
+}
+/* 해금: 광고 항목은 기존 adRewarded(수익 경로) 완주 시 해금 / 초대 항목은 공유 후 로컬 해금(성장 경로·비용 0). */
+function cosTryUnlock(id,after){
+  var it=GCCos.itemById(id); if(!it||GCCos.isUnlocked(F,id))return;
+  if(it.unlock==='ad'){
+    adRewarded({onReward:function(){cosDoUnlock(id);toast(t('unlocked',{name:cosLabel(it)}));after&&after();}});
+  }else{ // invite: 초대 링크 공유 → 공유 액션 자체로 해금(백엔드 없음·MVP).
+    cosInviteShare(function(){cosDoUnlock(id);toast(t('inviteUnlocked',{name:cosLabel(it)}));after&&after();});
+  }
+}
+function cosDoUnlock(id){F.unlocked=GCCos.unlock(F.unlocked,id);persist();}
+/* 초대 공유: 내 ?ref= 링크를 네이티브 공유/클립보드로. 성공·취소 무관하게 onShared(해금은 사용자의 초대 행동에 대한 보상). */
+function cosInviteShare(onShared){
+  var code=myRefCode(), link=location.href.split('?')[0]+'?ref='+encodeURIComponent(code);
+  var text=t('inviteShareText',{code:code});
+  if(navigator.share){navigator.share({title:t('appName'),text:text,url:link}).then(function(){onShared&&onShared();},function(){onShared&&onShared();});return;}
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text+' '+link).then(function(){toast(t('inviteCopied'));onShared&&onShared();},function(){onShared&&onShared();});
+  }else{toast(t('inviteCopied'));onShared&&onShared();}
+}
+/* 장착 토글: tapFx/nameColor는 GCCos.equip(미해금/미상/kind불일치 자동 차단), badge는 화이트리스트 경로. */
+function cosToggleEquip(id,isOn){
+  var it=GCCos.itemById(id); if(!it)return;
+  if(it.kind==='badge'){
+    if(isOn){F.badgeId='';toast(t('badgeCleared'));}                       // 해제 → 무료 배지로 복귀
+    else if(GCCos.isUnlocked(F,id)){F.badgeId=id;toast(t('premiumBadgeOn',{b:it.badge}));} // 장착(해금된 것만)
+    persist();return;
+  }
+  if(isOn){ // 해제 → free 기본으로
+    F.cosmetics=GCCos.equip(F.cosmetics,it.kind,GCCos.defaultIdFor(it.kind),F.unlocked);
+    toast(t('unequippedToast'));
+  }else{
+    var before=(F.cosmetics&&F.cosmetics[it.kind]);
+    F.cosmetics=GCCos.equip(F.cosmetics,it.kind,id,F.unlocked); // 미해금이면 변경 없음(안전)
+    if(F.cosmetics[it.kind]===id&&before!==id)toast(t('equippedToast',{name:cosLabel(it)}));
+  }
+  persist();
+}
+
 /* 전역 노출 (onclick에서 호출) */
+window.openLocker=openLocker;
 window.GO=GO; window.SHARE=SHARE; window.intro=intro; window.watch2x=watch2x;
 window.rankBoard=rankBoard; window.openSettings=openSettings; window.toggleLang=toggleLang;
 

@@ -59,4 +59,11 @@
   - **검수·감사 PASS** — 보고서 `.agents/reports/phase2-*.md`. 반영: badge 규칙캡 8→16(합자/국기 점수쓰기 실패 방지), `sanitizeBadge` 끝 ZWJ 제거, 죽은 키 `worldGlobal` 제거, FIREBASE.md 승인도메인 오타(dduckkit→ddukkit) 수정.
   - 수용(후속): `gc_battles` 맵키 검증 없음(regions와 동일 모델·~14KB 바운드 → App Check가 완화책).
   - 후속(Phase 1 잔여): 한국 지역명 18종·`<title>`/메타 다국어 영어화.
-- [ ] Phase 3 / 4
+- [x] Phase 3 — 꾸미기 수익화(코스메틱 + 광고/초대 해금) — **구현 완료·테스트 통과·문서 현행화**
+  - 신규 `gc-cosmetics.js`(순수 UMD, D2): 카탈로그(탭이펙트·이름색·프리미엄배지 10종) + 해금/장착 리듀서(`normState`/`isUnlocked`/`unlock`/`equip`) + 레퍼럴(`refCode`/`parseRef`). 표현만 — **게임 수치 불변(경계 #3)**.
+  - 해금 모델(D6): **로컬** `F.unlocked=[ids]`·`F.cosmetics={tapFx,nameColor}`·`F.badgeId`. 📺=기존 `adRewarded` 재사용(수익) / 📣=초대링크(`?ref=`) 공유→로컬 해금(성장, 백엔드 0). 잠긴 항목은 normState가 기본으로 폴백 → 절대 적용/장착 안 됨.
+  - **Firestore 신규 제출 없음**: 이름색은 로컬 전용(본인만 — 결과/리더보드 '(나)' 행 틴트). 프리미엄 배지는 **기존 배지 제출 경로 그대로 재사용**(화이트리스트 `GCCos.badgeOf` 통과 → `sanitizeBadge`로 2 코드포인트 ≤ 규칙 16). **규칙·색인 변경 불필요**(FIREBASE.md 주석만 보강).
+  - index.html 배선: 인트로·결과에 `🎨 꾸미기` 진입, `.ad-ov` 모달 Locker(잠김/해금·장착 토글·해금 버튼), `onTap` fxSpark 색/스타일 교체(파티클만), `effectiveBadge()`(프리미엄 우선), `myNameColorStyle()`(내 닉만). i18n ko+en 23키 추가. sw.js v5(+gc-cosmetics.js).
+  - 토스 §6 준수: 외부 광고망/배너/전면 직삽 ❌(옵트인 보상형 `adRewarded`만). 코스메틱은 광고/초대로만 해금(실결제 ❌). 결제 경로 도입 시 토스 SDK로 추상화 유지.
+  - 테스트 `node --test 'tests/*.test.mjs'` 39/39(기존 26 + cosmetics 13, 경계 4종: 미상 id·이중해금·변조 F·잠긴 장착 차단).
+- [ ] Phase 4

@@ -89,6 +89,19 @@
       adNote: "광고 자리 — 토스/애드센스/애드핏 연결 시 실제 광고가 나옵니다",
       adWatching: "광고 시청 중… {n}초", adRewarded: "✅ 보상 적용",
       adNeedFull: "끝까지 봐야 보상을 받아요", adApplied: "⚡ 기여 2배 적용 — 더 크게 자랑하기!",
+      // 꾸미기/보관함(Phase 3) — 코스메틱은 100% 표현(게임 밸런스 불변)
+      lockerBtn: "🎨 꾸미기", lockerTitle: "🎨 꾸미기 보관함",
+      lockerIntro: "탭 이펙트·이름색·배지를 꾸며보세요. 게임 실력엔 영향 없는 순수 장식이에요.",
+      catTapFx: "✨ 탭 이펙트", catNameColor: "🏷️ 이름 색", catBadge: "🏅 프리미엄 배지",
+      equip: "장착", equipped: "✅ 장착됨", equipOff: "해제",
+      unlockAd: "📺 광고 보고 해금", unlockInvite: "📣 초대하고 해금",
+      lockedTag: "🔒 잠김", freeTag: "기본",
+      unlocked: "🎉 해금 완료 — {name}", equippedToast: "✅ 장착: {name}", unequippedToast: "장착 해제됨",
+      inviteShareText: "⚡광클대전⚡ 같이 광클하자! 내 초대코드 {code}\n오늘의 떡밥에 참전 👉",
+      inviteUnlocked: "🎉 초대 링크 공유 — {name} 해금!",
+      inviteCopied: "초대 링크 복사 완료 — 친구에게 보내면 끝! 📣",
+      badgeEquipHint: "프리미엄 배지는 순위권에서 닉네임 옆에 표시돼요.",
+      premiumBadgeOn: "🏅 프리미엄 배지 장착: {b}", badgeCleared: "배지를 비웠어요",
       // 토글
       langToggle: "EN", // ko 화면에서 누르면 영어로 → 다른 언어를 표시
     },
@@ -161,6 +174,19 @@
       adNote: "Ad slot — real ads appear when Toss/AdSense/AdFit is connected",
       adWatching: "Watching ad… {n}s", adRewarded: "✅ Reward applied",
       adNeedFull: "Watch to the end to get the reward", adApplied: "⚡ Taps doubled — brag even bigger!",
+      // cosmetics / locker (Phase 3) — purely visual, never affects balance
+      lockerBtn: "🎨 Customize", lockerTitle: "🎨 Customize",
+      lockerIntro: "Style your tap effect, name color and badges. Pure decoration — never changes gameplay.",
+      catTapFx: "✨ Tap effect", catNameColor: "🏷️ Name color", catBadge: "🏅 Premium badge",
+      equip: "Equip", equipped: "✅ Equipped", equipOff: "Unequip",
+      unlockAd: "📺 Watch ad to unlock", unlockInvite: "📣 Invite to unlock",
+      lockedTag: "🔒 Locked", freeTag: "Free",
+      unlocked: "🎉 Unlocked — {name}", equippedToast: "✅ Equipped: {name}", unequippedToast: "Unequipped",
+      inviteShareText: "⚡Click Battle⚡ Come click with me! My invite code {code}\nJoin today's battle 👉",
+      inviteUnlocked: "🎉 Invite link shared — {name} unlocked!",
+      inviteCopied: "Invite link copied — send it to a friend! 📣",
+      badgeEquipHint: "Premium badges show next to your name when you rank.",
+      premiumBadgeOn: "🏅 Premium badge equipped: {b}", badgeCleared: "Badge cleared",
       // toggle
       langToggle: "한국어", // on en screen, tapping switches to Korean
     },

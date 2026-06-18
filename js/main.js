@@ -7,7 +7,7 @@ import { scanImage, extractRecipeFromYouTube } from './ai.js';
 import { initSync, sync, makeSpaceCode, setSpaceCode, loginGoogle, logoutGoogle, syncAvailable, submitScore, topScores } from './sync.js';
 import { AI_ENDPOINT, COUPANG_TAG } from './config.js';
 import { canListen, speak, stopSpeak, startListen, stopListen, isListening, parseCommand } from './voice.js';
-import { earn, spend, refund, EARN, earnedToday, SHOP, adFreeNow, gameBest, aiLeft, aiConsume, aiGrant, aiUnlimited, FREE_AI } from './points.js';
+import { earn, bonus, spend, refund, EARN, earnedToday, SHOP, adFreeNow, gameBest, aiLeft, aiConsume, aiGrant, aiUnlimited, FREE_AI } from './points.js';
 import { initGames, openGames, GAMES, gameFresh, gameVoice, gameVoicePass, gameDouble, setGameDiff } from './games.js';
 import { gameDefense, defBuy, defStart, defSpeed, defPick, defRevive, defGiveUp, defAdSkip, defAdSkill, defResume, defDraftAd, defWallMode, defElem, defMidSkill, defMidSkip, defActive } from './game-defense.js';
 import { gamePuzzle } from './game-puzzle.js';
@@ -533,7 +533,8 @@ function fridgeHtml(all) {
       : `<div class="fd-actions">
           <button class="fd-decorate" onclick="UI.toggleDecorEdit()">✏️ 꾸미기</button>
           <button class="fd-open" onclick="UI.openFridge()">🚪 냉장고 열기</button>
-        </div>`}
+        </div>
+        <button class="fd-brag" onclick="UI.openInvite()">🎉 친구에게 냉장고 자랑하고 초대하기 — 둘 다 포인트</button>`}
     </div>
     ${basket}`;
   }
@@ -679,6 +680,103 @@ UI.placeRecipe = (rid) => {
   decorEditing = true; UI.closeSheet(); render();
   toast('📌 레시피를 냉장고 문에 붙였어요');
 };
+
+/* ── 친구 초대 · 자랑하기 (Phase 3) — 신규 유입 + 성공 시 양쪽 포인트 ── */
+const REF_INVITEE = 30;  // 초대로 시작한 신규 유저 환영 보너스
+const REF_INVITER = 100; // 친구가 시작하면 초대한 사람 보상(가입 완료 링크 확인 시)
+const REF_WEEK_CAP = 10; // 주당 초대 성공 보상 한도(어뷰징 완화)
+function refDefaults() { if (!S.referral) S.referral = { rid: '', invitedBy: '', claimed: [], ok: 0 }; if (!S.referral.claimed) S.referral.claimed = []; return S.referral; }
+function ensureRid() { refDefaults(); if (!S.referral.rid) { S.referral.rid = 'r' + uid(); save({ silent: true }); } return S.referral.rid; }
+function ensureNid() { refDefaults(); if (!S.referral.nid) { S.referral.nid = 'n' + uid(); save({ silent: true }); } return S.referral.nid; }
+function refWeekKey() { const d = new Date(); const day = (d.getDay() + 6) % 7; d.setDate(d.getDate() - day); return d.toISOString().slice(0, 10); }
+const looksNew = () => !S.onboarded && (S.pantry?.length || 0) === 0 && (S.meta?.createdAt || 0) > Date.now() - 3 * 86400e3;
+
+UI.openInvite = () => {
+  ensureRid();
+  const ok = S.referral.ok || 0;
+  openSheet(`
+    <h2>🎉 친구 초대 · 냉장고 자랑</h2>
+    <p class="sub">내 냉장고를 자랑하고 친구를 초대하세요. 친구가 냉비서를 시작하면 <b>둘 다 포인트</b>를 받아요.</p>
+    <div class="card flat" style="text-align:center;padding:16px">
+      <div style="font-size:1.5rem">🧊🎁🧊</div>
+      <p style="margin:6px 0 0;font-weight:700">친구 가입 성공 <b style="color:var(--blue,#3b82f6)">${ok}</b>명 · 받은 보상 ${(ok * REF_INVITER).toLocaleString()}P</p>
+      <small class="hint">초대한 친구가 보내준 ‘가입 완료’ 링크를 누르면 +${REF_INVITER}P가 적립돼요</small>
+    </div>
+    <div class="btn-row" style="margin-top:12px"><button class="btn btn-primary btn-block" onclick="UI.shareInvite()">🔗 초대 링크 보내기 (친구 가입 시 +${REF_INVITER}P)</button></div>
+    ${S.referral.invitedBy ? `<button class="btn btn-soft btn-block" style="margin-top:8px" onclick="UI.notifyJoined()">📨 나를 초대한 친구에게 가입 완료 알리기 (친구 +${REF_INVITER}P)</button>` : ''}
+    <button class="btn btn-soft btn-block" style="margin-top:8px" onclick="UI.sendRecipePicker()">📒 레시피 보내기</button>
+    <p class="hint" style="margin-top:10px">받은 ‘가입 완료’ 링크가 자동으로 안 눌리면 설정의 ‘공유받은 것 추가’에 붙여넣어도 돼요.</p>
+    <div class="btn-row"><button class="btn btn-block" onclick="UI.closeSheet()">닫기</button></div>`);
+};
+UI.shareInvite = () => {
+  const rid = ensureRid();
+  const url = shareUrl(shareEncode('invite', { rid }));
+  const text = '🧊 내 냉장고 구경할래? 냉비서로 냉장고 관리하고 레시피 추천받아요. 이 링크로 시작하면 우리 둘 다 선물 포인트 받아요 🎁';
+  if (navigator.share) navigator.share({ title: '냉비서 초대', text, url }).catch(() => copyText(`${text}\n${url}`));
+  else copyText(`${text}\n${url}`);
+};
+UI.sendRecipePicker = () => {
+  const favs = (S.favs || []).map((id) => allRecipes(S).find((r) => r.id === id)).filter(Boolean);
+  const seen = new Set(); const list = [];
+  for (const r of [...favs, ...(S.myRecipes || [])]) { if (!seen.has(r.id)) { seen.add(r.id); list.push(r); } }
+  openSheet(`
+    <h2>📒 레시피 보내기</h2>
+    <p class="sub">친구에게 레시피를 보내요. 친구가 링크를 누르면 냉비서에 바로 담겨요.</p>
+    ${list.length ? `<div class="pin-list">${list.map((r) => `
+      <button class="pin-row" onclick="UI.sendRecipe('${r.id}')"><span class="pin-em">${r.emoji || '🍳'}</span><span class="grow">${esc(r.title)}</span><span class="pin-add">보내기</span></button>`).join('')}</div>`
+    : `<div class="empty"><span class="e-emoji">📒</span><b>보낼 레시피가 없어요</b><small>레시피 탭에서 ❤️ 하거나 저장하면 여기에 떠요</small></div>`}
+    <div class="btn-row"><button class="btn btn-block" onclick="UI.openInvite()">← 뒤로</button></div>`);
+};
+UI.sendRecipe = (rid) => {
+  const r = allRecipes(S).find((x) => x.id === rid);
+  if (!r) return;
+  const d = { ...r, id: undefined, mine: undefined, fav: undefined, photo: null }; // 사진 제외(용량) · 유튜브는 yt id 유지
+  const url = shareUrl(shareEncode('recipe', d));
+  const text = `🍳 [${r.title}] 레시피 보내요! 링크 누르면 냉비서에 바로 추가돼요 👇`;
+  if (navigator.share) navigator.share({ title: '냉비서 레시피', text, url }).catch(() => copyText(`${text}\n${url}`));
+  else copyText(`${text}\n${url}`);
+};
+UI.notifyJoined = () => {
+  refDefaults();
+  const nid = ensureNid();
+  const url = shareUrl(shareEncode('joined', { rid: S.referral.invitedBy, nid }));
+  const text = `🎉 친구 초대로 냉비서 시작했어! 이 링크 누르면 너도 초대 보상 +${REF_INVITER}P 받아 👇`;
+  if (navigator.share) navigator.share({ title: '냉비서 가입 완료', text, url }).catch(() => copyText(`${text}\n${url}`));
+  else copyText(`${text}\n${url}`);
+};
+function openInviteWelcome(first) {
+  ensureNid();
+  openSheet(`
+    <h2>🎁 환영해요!</h2>
+    <p class="sub">${first ? `친구 초대로 시작해서 <b>+${REF_INVITEE}P</b>를 받았어요.` : '이미 친구 초대로 시작한 계정이에요.'} 초대한 친구도 보상을 받게 ‘가입 완료’를 보내주세요.</p>
+    <div class="btn-row"><button class="btn btn-primary btn-block" onclick="UI.notifyJoined()">📨 친구에게 가입 완료 알리기 (친구 +${REF_INVITER}P)</button></div>
+    <div class="btn-row"><button class="btn btn-block" onclick="UI.closeSheet()">나중에</button></div>`);
+}
+function handleInvite(d) {
+  ensureRid();
+  const rid = d && d.rid;
+  if (!rid || rid === S.referral.rid) { toast('내 초대 링크예요 🙂'); return; }
+  if (S.referral.invitedBy) { openInviteWelcome(false); return; } // 이미 초대받음 — 보너스 중복 없이 안내만
+  if (!looksNew()) { toast('이미 냉비서를 쓰고 계시네요 🙂 친구를 초대해보세요!'); return; }
+  S.referral.invitedBy = rid;
+  bonus(REF_INVITEE, '친구 초대로 시작 🎁');
+  save(); renderTop();
+  openInviteWelcome(true);
+}
+function handleJoined(d) {
+  ensureRid();
+  if (!d || d.rid !== S.referral.rid) { toast('이 링크는 다른 분의 초대 보상이에요'); return; }
+  if (!d.nid) { toast('가입 완료 코드를 읽지 못했어요'); return; }
+  if (S.referral.claimed.includes(d.nid)) { toast('이미 보상을 받은 친구예요 🙂'); return; }
+  if (S.referral.week !== refWeekKey()) { S.referral.week = refWeekKey(); S.referral.weekOk = 0; }
+  if ((S.referral.weekOk || 0) >= REF_WEEK_CAP) { toast(`이번 주 초대 보상 한도(${REF_WEEK_CAP}명)에 도달했어요`); return; }
+  S.referral.claimed.push(d.nid);
+  S.referral.ok = (S.referral.ok || 0) + 1;
+  S.referral.weekOk = (S.referral.weekOk || 0) + 1;
+  bonus(REF_INVITER, '친구 초대 성공 🎉');
+  save(); renderTop();
+  toast(`🎉 초대 성공! +${REF_INVITER}P — 친구가 냉비서를 시작했어요`);
+}
 
 let qaLoc = null; // 냉장고 ＋타일로 들어온 경우 그 칸으로 바로 담기
 UI.quickAddAt = (loc) => { qaLoc = loc; UI.openQuickAdd(); };
@@ -1282,6 +1380,11 @@ UI.openPoints = () => {
     <div class="card flat" style="text-align:center;padding:18px">
       <div style="font-size:2rem;font-weight:900">${(S.points?.bal || 0).toLocaleString()}<small style="font-size:1rem">P</small></div>
       <p class="hint" style="margin:4px 0 0">누적 ${(S.points?.total || 0).toLocaleString()}P · 버리지 않을수록 쌓여요</p>
+    </div>
+    <div class="invite-cta" onclick="UI.openInvite()">
+      <span class="ic-ico">🎉</span>
+      <div class="grow"><b>친구 초대하고 +${REF_INVITER}P</b><small>친구가 냉비서를 시작하면 둘 다 포인트를 받아요</small></div>
+      <span class="ic-go">초대 ›</span>
     </div>
     <div class="section-title" style="margin-top:14px"><h2>오늘 적립</h2><small>매일 자정 리셋</small></div>
     <div class="card flat">${rows}</div>
@@ -2292,6 +2395,10 @@ function handleShareCode(code) {
     S.settings.mode = m.key;
     save(); UI.closeSheet(); tab = 'recipes'; render();
     toast(`${m.emoji} "${m.label}" 모드를 가져와 적용했어요`);
+  } else if (parsed.t === 'invite') {
+    handleInvite(parsed.d);
+  } else if (parsed.t === 'joined') {
+    handleJoined(parsed.d);
   }
 }
 

@@ -1231,6 +1231,23 @@ input:focus, select:focus, textarea:focus { outline: none; box-shadow: 0 0 0 3px
   background: linear-gradient(180deg, #bdf0c9, #6fd99a); box-shadow: 0 8px 18px rgba(70,200,130,.4), inset 0 1px 0 rgba(255,255,255,.7);
 }
 .fd-done:active { transform: translateY(1px); }
+/* 자랑·초대 — 신규 유입 유도(둘 다 포인트) */
+.fd-brag {
+  display: block; width: 100%; margin-top: 9px; border: none; border-radius: 14px; padding: 13px; cursor: pointer;
+  font-family: 'Jua', sans-serif; font-size: .96rem; color: #6a3a00;
+  background: linear-gradient(180deg, #ffe6a8, #ffcf6b); box-shadow: 0 7px 16px rgba(230,170,40,.38), inset 0 1px 0 rgba(255,255,255,.7);
+}
+.fd-brag:active { transform: translateY(1px); }
+/* 포인트 모달 — 초대 CTA */
+.invite-cta {
+  display: flex; align-items: center; gap: 11px; margin-top: 12px; padding: 13px 14px; border-radius: 15px; cursor: pointer;
+  background: linear-gradient(135deg, #fff1cf, #ffe09e); box-shadow: 0 6px 14px rgba(230,175,55,.32), inset 0 1px 0 rgba(255,255,255,.7);
+}
+.invite-cta .ic-ico { font-size: 1.7rem; }
+.invite-cta b { color: #6a3a00; display: block; }
+.invite-cta small { color: #8a6326; font-size: .76rem; }
+.invite-cta .ic-go { font-family: 'Jua', sans-serif; color: #6a3a00; font-size: .9rem; white-space: nowrap; }
+.invite-cta:active { transform: scale(.99); }
 /* 꾸미기 시트 — 이모지 그리드 · 메모지색 · 핀 레시피 목록 */
 .emoji-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin-top: 6px; }
 .emoji-grid button { aspect-ratio: 1; border: 1px solid var(--line, #e7e0d2); border-radius: 13px; background: var(--card-2, #fff); font-size: 1.6rem; cursor: pointer; }

@@ -13,6 +13,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <!-- 토스 미니앱 어댑터(선택) — 토스 밖에서는 안전한 폴백, 의존성 없음 -->
 <script src="./toss.js"></script>
+<!-- Phase 2 순수 헬퍼(나라대전 집계·배지/멘트 정제) — net.js가 참조하므로 먼저 로드 -->
+<script src="./gc-util.js"></script>
 <!-- 실제 전국 대전 백엔드(선택) — fb-config.js 비우면 자동으로 폰 단독 시뮬레이션 폴백 -->
 <script src="./fb-config.js"></script>
 <script src="./net.js"></script>
@@ -221,6 +223,8 @@ function load(){try{var r=localStorage.getItem(KEY);if(r)return JSON.parse(r);}c
 function persist(){try{localStorage.setItem(KEY,JSON.stringify(F));}catch(e){}}
 var F=load();
 F.region=F.region||''; F.nick=F.nick||'';
+/* Phase 2: 순위권에 노출될 미리 써둔 배지(이모지/짧은 태그)·멘트(한 줄). 저장 즉시 GCUtil로 정제(보안 #1). */
+F.badge=GCUtil.sanitizeBadge(F.badge||''); F.comment=GCUtil.sanitizeComment(F.comment||'');
 
 /* ── 글로벌 기반(Phase 1): 언어 + 국가 감지 ──
  * LANG: 저장값(F.lang) 우선 → 없으면 브라우저 언어에서 추정(ko/en). 미상은 ko 폴백(불신 #1).
@@ -578,7 +582,8 @@ function endBattle(){
   renderResult();
   if(netOn()){
     var rr=R;
-    GCNet.submit(date,side,contrib,F.region,nickOf()).then(function(res){
+    // Phase 2: 내 국가(MY)로 나라대전 집계 + 미리 써둔 배지·멘트 동봉(net.js가 정제·하위호환).
+    GCNet.submit(date,side,contrib,F.region,nickOf(),MY,{badge:F.badge,comment:F.comment}).then(function(res){
       if(rr!==R)return;
       if(res){R.rank=res.rank;R.total=res.total;R.rankState='real';}
       else{R.rank=rankEstimate(R.contrib);R.rankState='estimate';}
@@ -619,6 +624,7 @@ function renderResult(){
       '<div class="stats"><div><div class="k">'+t('myContribution')+'</div><div class="v">'+comma(r.contrib)+(r.x2?' <span class="x2b">⚡2X</span>':'')+'</div></div>'+
         '<div><div class="k">'+t('maxCombo')+'</div><div class="v">×'+comboMult(r.maxStreak).toFixed(1)+'</div></div>'+
         '<div><div class="k" id="r-ranklbl">'+rankLabel(r)+'</div><div class="v" id="r-rankval">'+rankValue(r)+'</div></div></div>'+
+      '<div id="r-contribrank">'+contribRankHTML(r)+'</div>'+
       '<div class="tags"><span>'+t('hashApp')+'</span><span>#'+bt.tag+'</span></div>'+
       (r.newBest?'<div class="newbest">'+t('newBest',{n:comma(r.contrib)})+'</div>':'')+
       (r.streak>1?'<div class="streak-chip">🔥 '+t('streakDaysOn',{n:r.streak})+'</div>':'')+
@@ -640,7 +646,30 @@ function rankValue(r){
   var unit=t('rankUnit'); // ko:"위" / en:"" (숫자만)
   return comma(r.rank)+(unit?'<small>'+unit+'</small>':'')+(r.rankState==='real'&&r.total?' <small style="opacity:.55">/'+t('rankOf',{n:comma(r.total)})+'</small>':'');
 }
-function updateRankDOM(){var lb=el('r-ranklbl'),v=el('r-rankval');if(lb)lb.textContent=rankLabel(R);if(v)v.innerHTML=rankValue(R);}
+/* 기여도 순위 강조(Phase 2): "내 기여 N · 전국/세계 M위" + 순위권 진입 시 배지·멘트 프리뷰.
+ * scope 라벨은 기존 랭킹 타일 언어와 일치(ko:전국 / en:global). pending이면 빈 문자열(깜빡임 방지). */
+var RANK_BADGE_TOP=20; // 리더보드 표시 크기와 동일 — 이 안에 들면 '순위권'.
+function contribRankHTML(r){
+  if(r.rank==null||r.rankState==='pending')return '';
+  var scope=LANG==='ko'?t('scopeNation'):t('scopeWorld');
+  var key=r.rankState==='real'?'contribRankLine':'contribRankLineEst';
+  var line=t(key,{contrib:comma(r.contrib),scope:scope,rank:comma(r.rank)});
+  var h='<div class="streak-chip" style="margin-top:10px">📊 '+line+'</div>';
+  // 순위권(real & top N) 진입 — 내 배지·멘트가 리더보드에 이렇게 노출된다고 미리보기(사용자입력 → esc).
+  if(r.rankState==='real'&&r.rank<=RANK_BADGE_TOP){
+    h+='<div class="newbest" style="margin-top:8px">'+t('youRanked',{scope:scope,rank:comma(r.rank)})+'</div>';
+    var badge=esc(F.badge||''), comment=esc(F.comment||'');
+    if(badge||comment){
+      h+='<div class="rcard" style="margin-top:8px;padding:11px 13px">'+
+        '<div style="display:flex;align-items:center;gap:8px;font-size:14px">'+(MYINFO.code?MYINFO.flag+' ':'')+
+          '<b>'+esc(nickOf())+'</b>'+(badge?' '+badge:'')+'</div>'+
+        (comment?'<div style="margin-top:4px;font-size:12px;color:var(--ink-2)">“'+comment+'”</div>':'')+'</div>';
+    }
+  }
+  return h;
+}
+function updateRankDOM(){var lb=el('r-ranklbl'),v=el('r-rankval'),cr=el('r-contribrank');
+  if(lb)lb.textContent=rankLabel(R);if(v)v.innerHTML=rankValue(R);if(cr)cr.innerHTML=contribRankHTML(R);}
 
 /* ── 자랑/소환 ── */
 var LAST=null;
@@ -667,6 +696,7 @@ function rankBoard(){
       '<div class="hdr"><span class="brand">'+t('rankTitle')+'</span><span class="mono">'+mdShort(date)+'</span></div>'+
       '<div class="rule"></div>'+
       '<div class="kicker">'+bt.q+'</div>'+
+      '<div id="rb-country"></div>'+
       '<div id="rb-region"></div>'+
       '<div class="gauge-head" style="margin-top:8px"><span class="mono">'+t('topToday')+'</span>'+
         (netOn()?'<span class="chip-soft"><span class="dot">●</span> '+t('realtime')+'</span>':'<span class="chip-soft">'+t('demo')+'</span>')+'</div>'+
@@ -678,7 +708,8 @@ function rankBoard(){
     '</div>';
   if(!netOn()){el('rb-list').textContent=t('boardDemo');return;}
   GCNet.leaderboard(date,20).then(function(rows){renderBoard(bt,rows);});
-  GCNet.peek(date).then(function(tot){renderRegion(bt,tot);});
+  // 단일 peek 1회로 나라대전(countries)·지역 점령(regions) 둘 다 렌더 — 추가 읽기 없음(D5).
+  GCNet.peek(date).then(function(tot){renderCountries(bt,tot);renderRegion(bt,tot);});
 }
 function renderBoard(bt,rows){
   var box=el('rb-list'); if(!box)return;
@@ -686,15 +717,53 @@ function renderBoard(bt,rows){
   if(!rows.length){box.textContent=t('boardEmpty');return;}
   var h='';
   for(var i=0;i<rows.length;i++){var r=rows[i],tm=bt[r.side]||bt.a,medal=i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1)+'';
-    h+='<div style="display:flex;align-items:center;gap:10px;padding:9px 2px;border-bottom:1px solid var(--line)'+(r.me?';background:rgba(255,255,255,.05);border-radius:8px':'')+'">'+
-      '<span class="mono" style="width:24px;text-align:center">'+medal+'</span>'+
-      '<span style="font-size:18px">'+tm.emoji+'</span>'+
-      '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px">'+
-        (r.me?'<b>':'')+esc(r.nick)+(r.me?' '+t('me')+'</b>':'')+
-        (r.region?'<span class="mono" style="margin-left:7px;color:var(--ink-3)">'+regionName(r.region)+'</span>':'')+'</span>'+
-      '<b class="tnum" style="color:'+tm.color+'">'+comma(r.taps)+'</b></div>';
+    // 배지·멘트는 사용자입력 → 항상 esc(보안 #1). 빈값이면 아무것도 안 나옴(graceful). 국기는 감지 국가만.
+    var badge=esc(r.badge||''), comment=esc(r.comment||''), flag=r.country?GCGeo.flagOf(r.country)+' ':'';
+    h+='<div style="padding:9px 2px;border-bottom:1px solid var(--line)'+(r.me?';background:rgba(255,255,255,.05);border-radius:8px':'')+'">'+
+      '<div style="display:flex;align-items:center;gap:10px">'+
+        '<span class="mono" style="width:24px;text-align:center">'+medal+'</span>'+
+        '<span style="font-size:18px">'+tm.emoji+'</span>'+
+        '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px">'+
+          flag+(r.me?'<b>':'')+esc(r.nick)+(badge?' '+badge:'')+(r.me?' '+t('me')+'</b>':'')+
+          (r.region?'<span class="mono" style="margin-left:7px;color:var(--ink-3)">'+regionName(r.region)+'</span>':'')+'</span>'+
+        '<b class="tnum" style="color:'+tm.color+'">'+comma(r.taps)+'</b></div>'+
+      (comment?'<div style="margin:3px 0 0 58px;font-size:12px;color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">“'+comment+'”</div>':'')+
+    '</div>';
   }
   box.className=''; box.innerHTML=h;
+}
+/* ── 나라대전: 내 나라 vs 세계 + 국가 순위 (Phase 2) ──
+ * 데이터는 rankBoard의 단일 peek(tot.countries)에서 옴 — 추가 구독·읽기 0(D5).
+ * 국기·국가명은 GCGeo.countryInfo(무료 감지), 진영 식별 이모지는 bt[lead]. */
+function countryNameLocal(code){var info=GCGeo.countryInfo(code);return LANG==='ko'?info.nameKo:info.nameEn;}
+function renderCountries(bt,tot){
+  var box=el('rb-country'); if(!box)return; if(!tot){box.innerHTML='';return;}
+  var cs=GCUtil.countryStandings(tot.countries,8);
+  if(!cs.length){box.innerHTML='';return;}
+  var h='';
+  // (1) 내 나라 vs 세계 — 내 국가가 감지됐고 참여 데이터가 있을 때만.
+  var mvw=GCUtil.myCountryVsWorld(tot.countries,MY);
+  if(mvw){
+    var info=MYINFO, mineA=Math.round(mvw.mine.aShare), worldA=Math.round(mvw.world.aShare);
+    h+='<div class="gauge-head" style="margin-top:4px"><span class="mono">'+t('myCountryVsWorld')+'</span></div>'+
+      '<div style="display:flex;flex-direction:column;gap:7px;margin:7px 0 4px">'+
+        vsRow((info.code?info.flag+' ':'')+esc(t('myCountry')),mineA)+
+        vsRow('🌐 '+esc(t('world')),worldA)+
+      '</div>';
+  }
+  // (2) 국가 순위 칩 — 우세 진영 이모지 + 국기/국가명 + 우세 %.
+  h+='<div class="gauge-head" style="margin-top:8px"><span class="mono">'+t('countryTitle')+'</span></div>'+
+    '<div style="display:flex;flex-wrap:wrap;gap:6px;margin:7px 0 2px">';
+  for(var i=0;i<cs.length;i++){var c=cs[i],lt=bt[c.lead]||bt.a,nm=countryNameLocal(c.code),fl=GCGeo.flagOf(c.code);
+    h+='<span class="chip-soft" style="border-color:'+lt.color+'55">'+fl+' '+esc(nm)+' '+lt.emoji+' '+c.share+'%</span>';}
+  box.innerHTML=h+'</div>';
+}
+/* 한 진영(A) 비율 게이지 한 줄 — 라벨 + A%/B% 막대. label은 호출부에서 esc 완료. */
+function vsRow(label,aShare){
+  return '<div><div class="brow" style="font-size:10px"><span style="color:var(--team-a)">'+label+' '+aShare+'%</span>'+
+    '<span style="color:var(--team-b)">'+(100-aShare)+'%</span></div>'+
+    '<div class="gauge" style="margin-top:4px"><i style="width:'+aShare+'%;background:var(--team-a)"></i>'+
+      '<i style="width:'+(100-aShare)+'%;background:var(--team-b)"></i></div></div>';
 }
 function renderRegion(bt,tot){
   var box=el('rb-region'); if(!box)return; if(!tot){box.innerHTML='';return;}
@@ -710,9 +779,19 @@ function renderRegion(bt,tot){
     h+='<span class="chip-soft" style="border-color:'+lt.color+'55">'+lt.emoji+' '+regionName(r.k)+' '+r.share+'%</span>';}
   box.innerHTML=h+'</div>';
 }
-/* ── 설정: 내 지역 + 랭킹 닉네임 ── */
+/* ── 설정: 내 지역 + 랭킹 닉네임 + 순위권 배지·멘트(Phase 2) ── */
+var SET_BADGE=''; // 설정창 임시 선택 배지(저장 전까지 보관)
+function badgeChips(sel){
+  var arr=(GCUtil&&GCUtil.BADGE_PRESET)||['','🔥','👑','⚡'], h='';
+  for(var i=0;i<arr.length;i++){var b=arr[i],on=b===sel,
+    lbl=b===''?(LANG==='ko'?'없음':'None'):b; // 빈 배지는 '없음/None' 칩
+    h+='<button type="button" class="chip-soft set-badge-chip" data-badge="'+esc(b)+'" '+
+      'style="font-size:'+(b?'16px':'12px')+';padding:6px 10px;'+(on?'border-color:var(--me);color:var(--me)':'')+'">'+esc(lbl)+'</button>';}
+  return h;
+}
 function openSettings(){
   var ov=document.createElement('div'); ov.className='ad-ov';
+  SET_BADGE=F.badge||'';
   // 지역 옵션: 빈 키('')는 언어 인식 라벨(전국/Global·국가명), 한국 지역명은 Phase 2까지 한글 유지.
   var opts=''; for(var i=0;i<REGIONS.length;i++){var rn=REGIONS[i].k?REGIONS[i].n:regionDefault();
     opts+='<option value="'+REGIONS[i].k+'"'+(REGIONS[i].k===F.region?' selected':'')+'>'+esc(rn)+'</option>';}
@@ -723,14 +802,26 @@ function openSettings(){
       '<select id="set-region" style="'+fld+'">'+opts+'</select>'+
       '<label class="mono" style="display:block;margin:15px 0 6px">'+t('setNickLbl')+'</label>'+
       '<input id="set-nick" maxlength="16" placeholder="'+t('anon')+'" value="'+esc(F.nick)+'" style="'+fld+'"/>'+
-      '<p class="hint" style="text-align:left;margin-top:11px">'+(netOn()?t('setHintOn'):t('setHintOff'))+'</p>'+
+      '<label class="mono" style="display:block;margin:15px 0 6px">'+t('setBadgeLbl')+'</label>'+
+      '<div id="set-badges" style="display:flex;flex-wrap:wrap;gap:6px">'+badgeChips(SET_BADGE)+'</div>'+
+      '<label class="mono" style="display:block;margin:15px 0 6px">'+t('setCommentLbl')+'</label>'+
+      '<input id="set-comment" maxlength="'+(GCUtil?GCUtil.COMMENT_MAX:24)+'" placeholder="'+esc(t('setCommentPh'))+'" value="'+esc(F.comment)+'" style="'+fld+'"/>'+
+      '<p class="hint" style="text-align:left;margin-top:9px">'+t('setBadgeHint')+'</p>'+
+      '<p class="hint" style="text-align:left;margin-top:6px">'+(netOn()?t('setHintOn'):t('setHintOff'))+'</p>'+
     '</div>'+
     '<button class="btn btn-primary" id="set-save" style="color:#04130f">'+t('saveBtn')+'</button></div>';
   (document.body||document.documentElement).appendChild(ov);
   function shut(){if(ov.parentNode)ov.parentNode.removeChild(ov);}
   el('set-x').onclick=shut;
-  el('set-save').onclick=function(){var rg=el('set-region'),nk=el('set-nick');
-    F.region=rg?rg.value:''; F.nick=nk?nk.value.trim().slice(0,16):''; persist(); shut(); intro();};
+  // 배지 칩 선택(위임): 클릭 시 SET_BADGE 갱신 + 활성 표시 다시 그림.
+  var badges=el('set-badges');
+  if(badges)badges.onclick=function(e){var b=e.target&&e.target.closest?e.target.closest('.set-badge-chip'):null;
+    if(!b)return; SET_BADGE=GCUtil.sanitizeBadge(b.getAttribute('data-badge')||''); badges.innerHTML=badgeChips(SET_BADGE);};
+  el('set-save').onclick=function(){var rg=el('set-region'),nk=el('set-nick'),cm=el('set-comment');
+    F.region=rg?rg.value:''; F.nick=nk?nk.value.trim().slice(0,16):'';
+    // 배지·멘트는 저장 시점에 정제(보안 #1: 어떤 입력경로든 캡·제어문자 제거).
+    F.badge=GCUtil.sanitizeBadge(SET_BADGE); F.comment=cm?GCUtil.sanitizeComment(cm.value):'';
+    persist(); shut(); intro();};
 }
 
 /* 전역 노출 (onclick에서 호출) */

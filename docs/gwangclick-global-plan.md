@@ -47,7 +47,14 @@
   - sw.js v3. 테스트 `node --test` 14/14. **검수·감사 3종 PASS(Blocker 0)** — 보고서 `.agents/reports/phase1-*.md`.
   - 검수 반영: 미감지 시 국기 생략(KR 폴백 동등), `t()` 보안계약 주석.
   - 후속(Phase 2): 한국 지역명 18종·`<title>`/메타 다국어 영어화.
-- [ ] Phase 2 — 나라대전 + 기여도 순위/배지·멘트
+- [x] Phase 2 — 나라대전 + 기여도 순위/배지·멘트 — **구현 완료·테스트 PASS·리뷰대기(미커밋)**
   - **경계 갱신**: Phase 2부터 `net.js`(데이터층)·Firestore 스키마 **확장 허용**(하위호환·가산만, D4/D5). `gc_battles.countries` 맵 추가, 점수문서에 배지·멘트.
   - ⚠ 사용자 콘솔 작업 동반 가능: Firestore 규칙·색인(FIREBASE.md). main(github.io) 동기화는 별도.
+  - 신규 `gc-util.js`(순수 헬퍼: `countryStandings`/`myCountryVsWorld`/`sanitizeBadge`/`sanitizeComment`) — net.js·index.html 공유, D2 모듈분리 연장.
+  - `net.js`(가산·하위호환): `submit(…,country,opts{badge,comment})` → `countries.<ISO2>` increment(=regions 동일 패턴) + 점수문서에 country/badge/comment(정제). `peek`/`watch`에 `countries`(옛 문서 → {}), `leaderboard` 행에 country/badge/comment(옛 문서 → '').
+  - index.html: 설정에 배지 칩+멘트 입력, 결과 제출 시 `MY`+배지/멘트 동봉, 랭킹보드에 **🌍 나라 순위 + 내 나라 vs 세계**(단일 peek 재사용), 리더보드 배지/멘트(esc), 결과 화면 **기여도 순위 강조 + 순위권 진입 멘트**.
+  - i18n: 나라대전/설정 배지·멘트 ko+en 키 추가. sw.js v4(+gc-util.js).
+  - **FIREBASE.md**: `gc_scores` 규칙에 country/badge/comment 길이검증(있을 때만·하위호환) 추가 → **콘솔 재게시 1회**. `gc_battles` 규칙·색인은 **변경 불필요**.
+  - 테스트 `node --test 'tests/*.test.mjs'` 26/26(기존 14 + util 12, 경계 4종).
+  - 후속(Phase 1 잔여): 한국 지역명 18종·`<title>`/메타 다국어 영어화.
 - [ ] Phase 3 / 4

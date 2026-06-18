@@ -8,7 +8,7 @@ import { enemySprite, fridgeSprite, itemSprite, drawSprite } from './pixel.js';
 // ── 밸런스: 100+ 웨이브용 완만한 곡선. 초반은 아주 너그럽게(잘 안 죽음), 후반은 업그레이드로 따라잡기. ──
 const BALANCE = {
   enemy: {
-    baseHP: 7, hpGrow: 1.12, speedBase: 16, speedGrow: 1.015, speedCap: 48,
+    baseHP: 10, hpGrow: 1.135, speedBase: 16, speedGrow: 1.015, speedCap: 48,
     countBase: 4, countGrow: 1.28, countCap: 40,
     // dmg=냉장고에 닿을 때 깎는 신선도 (작게 — 누적 실수만 위험). from=등장 시작 웨이브.
     // elem=속성(상극 시스템): mold곰팡이 / bug벌레 / frozen냉동 / waste음식물 / bone뼈
@@ -25,13 +25,13 @@ const BALANCE = {
       brute:  { hpx: 13,   spx: 0.36, dmg: 11, r: 30, from: 30, w: 0.3, elem: 'waste',  name: '거대 폐기물' },
     },
   },
-  economy: { scorePerHP: 0.22 },
-  weapon: { dmg: 4, fireRate: 1.5, fireRateMax: 7, projSpeed: 500, projR: 8 },
+  economy: { scorePerHP: 0.17 },
+  weapon: { dmg: 4, fireRate: 1.5, fireRateMax: 7, projSpeed: 600, projR: 8 },
   // boss=10웨이브 대형보스, mid=5웨이브 중간보스(스킬은 짧은 광고로 획득)
   boss: { every: 10, hpMult: 19, dmg: 18, reward: 70, midEvery: 5, midHpMult: 6.5, midDmg: 10, midReward: 35 },
   up: {
-    damage: { base: 18, ratio: 1.18, add: 3, name: '데미지', icon: '⚔️', unit: '발당' }, // max 없음(무한)
-    fireRate: { base: 24, ratio: 1.2, add: 0.18, name: '연사속도', icon: '🔥', unit: '/초' }, // 상한 fireRateMax
+    damage: { base: 24, ratio: 1.20, add: 3, name: '데미지', icon: '⚔️', unit: '발당' }, // max 없음(무한)
+    fireRate: { base: 32, ratio: 1.22, add: 0.18, name: '연사속도', icon: '🔥', unit: '/초' }, // 상한 fireRateMax
     multiShot: { base: 90, ratio: 1.9, add: 1, max: 6, name: '다중샷', icon: '✳️', unit: '타겟' },
     pierce: { base: 70, ratio: 1.75, add: 1, max: 6, name: '관통', icon: '➶', unit: '관통' },
     crit: { base: 60, ratio: 1.4, add: 0.06, max: 0.7, name: '치명타', icon: '💥', unit: '확률' },
@@ -99,10 +99,10 @@ const RARITY = {
 };
 const SPECIALS = [
   // C급 (일반)
-  { id: 'power', r: 'common', icon: '⚡', name: '고출력 회로', max: 99, roll: () => Math.round(rnd(12, 22)), desc: (v) => `데미지 +${v}%` },
-  { id: 'overload', r: 'common', icon: '🔥', name: '과부하', max: 99, roll: () => Math.round(rnd(12, 22)), desc: (v) => `연사속도 +${v}%` },
-  { id: 'gold', r: 'common', icon: '🪙', name: '황금 회로', max: 99, roll: () => Math.round(rnd(18, 35)), desc: (v) => `코인 +${v}%` },
-  { id: 'bigshot', r: 'common', icon: '🔵', name: '대구경탄', max: 99, roll: () => Math.round(rnd(14, 26)), desc: (v) => `발사체 크기·피해 +${v}%` },
+  { id: 'power', r: 'common', icon: '⚡', name: '고출력 회로', max: 99, roll: () => Math.round(rnd(8, 14)), desc: (v) => `데미지 +${v}%` },
+  { id: 'overload', r: 'common', icon: '🔥', name: '과부하', max: 99, roll: () => Math.round(rnd(8, 14)), desc: (v) => `연사속도 +${v}%` },
+  { id: 'gold', r: 'common', icon: '🪙', name: '황금 회로', max: 99, roll: () => Math.round(rnd(12, 24)), desc: (v) => `코인 +${v}%` },
+  { id: 'bigshot', r: 'common', icon: '🔵', name: '대구경탄', max: 99, roll: () => Math.round(rnd(10, 17)), desc: (v) => `발사체 크기·피해 +${v}%` },
   { id: 'thorn', r: 'common', icon: '🌵', name: '서리 가시', max: 99, roll: () => Math.round(rnd(6, 14)), desc: (v) => `근처 적 초당 ${v} 피해` },
   // B급 (희귀)
   { id: 'critdmg', r: 'rare', icon: '💥', name: '치명 강화', max: 99, roll: () => Math.round(rnd(40, 75)), desc: (v) => `치명타 피해 +${v}%` },
@@ -121,7 +121,7 @@ const SPECIALS = [
   { id: 'rush', r: 'junk', icon: '🌀', name: '폭주 회로', max: 1, roll: () => 40, desc: () => '연사 +40%, 단 코인 획득 −25%', trap: true },
   { id: 'gamble', r: 'junk', icon: '🎲', name: '도박수', max: 1, roll: () => 1, desc: () => '50%: 데미지 +80% / 50%: 꽝(+5%)', trap: true },
   // S급 (전설) — 강력하지만 너프됨. 보스 구간부터, A급 보장과 별개로 30% 확률 등장
-  { id: 'overdrive', r: 'mythic', icon: '🌟', name: '광폭 코어', max: 99, roll: () => Math.round(rnd(16, 26)), desc: (v) => `데미지 +${v}% · 연사 +${Math.round(v * 0.5)}%` },
+  { id: 'overdrive', r: 'mythic', icon: '🌟', name: '광폭 코어', max: 99, roll: () => Math.round(rnd(11, 18)), desc: (v) => `데미지 +${v}% · 연사 +${Math.round(v * 0.5)}%` },
   { id: 'fortress', r: 'mythic', icon: '🏰', name: '철벽 단열', max: 99, roll: () => Math.round(rnd(45, 75)), desc: (v) => `최대 신선도 +${v} · 초당 회복↑` },
   { id: 'annihilate', r: 'mythic', icon: '💀', name: '말살 칼날', max: 45, roll: () => Math.round(rnd(14, 22)), desc: (v) => `체력 ${v}% 이하 즉사(보스 제외)` },
 ];
@@ -475,7 +475,10 @@ function fireFrom(x, y, targets, atk) {
   const elem = atk || D.atkElem;
   const extra = SP('double'), pr = stat.projR(), spd = stat.projSpeed(), kind = projKind();
   for (const tg of targets) {
-    const base = Math.atan2(tg.y - y, tg.x - x);
+    // 리드 조준: 발사체 도착 시점의 적 위치(주로 아래로 내려옴)를 예측 → 넓은 PC 화면 끝쪽·빠른 적도 명중
+    let aimX = tg.x, aimY = tg.y;
+    if (spd > 0 && tg.spd) { const tHat = Math.hypot(tg.x - x, tg.y - y) / spd; aimY = tg.y + tg.spd * tHat; }
+    const base = Math.atan2(aimY - y, aimX - x);
     D.aimAng = base;
     const shots = 1 + extra;
     for (let s = 0; s < shots; s++) {

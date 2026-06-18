@@ -1067,6 +1067,7 @@ function refreshGlobeData(tot){
  * 지구본은 rankBoard와 다른 화면이라 자체 watch 1개를 연다(탭마다 ❌·집계 문서 1개 구독 — D5/D7 범위 내).
  * peek로 즉시 첫 그림 → watch로 라이브 갱신. closeGlobe에서 반드시 해지(누수 방지). */
 function watchGlobe(token){
+  GLB.lastFocus=null; // 새 뷰 진입 → 첫 데이터에 반드시 포커스(이후엔 핫스팟 바뀔 때만)
   var date=todayStr();
   GCNet.peek(date).then(function(tot){ if(token===GLB.did)refreshGlobeData(tot); });
   GLB.unwatch=GCNet.watch(date,function(tot){ if(token===GLB.did)refreshGlobeData(tot); });
@@ -1125,10 +1126,12 @@ function pushPoints3D(){
     GLB.globe.ringsData(GLB.pts.slice(0,6));
   }catch(e){}
 }
-function focusGlobe(){
+function focusGlobe(force){
   if(!GLB.pts.length)return;
   var target=GCGlobe.pickFocus(GLB.pts,MY);
   if(!target)return;
+  if(!force&&GLB.lastFocus===target.code)return; // 같은 핫스팟이면 카메라 미이동(N2: watch 틱마다 흔들림 방지)
+  GLB.lastFocus=target.code;
   var alt=GCGlobe.focusAltitude(GLB.pts);
   if(GLB.mode==='3d'&&GLB.globe){
     try{ GLB.globe.pointOfView({lat:target.lat,lng:target.lng,altitude:alt},1200); }catch(e){}
@@ -1142,7 +1145,7 @@ function globePointLabel(d){
   var bt=GLB.bt||{a:{},b:{}}, lt=bt[d.lead]||bt.a||{};
   var mine=(MY&&d.code===MY)?' · '+esc(t('globeMine')):'';
   return '<div style="font:600 12px system-ui;color:#fff;background:rgba(8,12,20,.82);padding:5px 8px;border-radius:8px">'+
-    (info.code?esc(info.flag)+' ':'')+esc(nm)+' '+(lt.emoji||'')+' '+d.share+'%'+
+    (info.code?esc(info.flag)+' ':'')+esc(nm)+' '+esc(lt.emoji||'')+' '+d.share+'%'+
     '<br><span style="opacity:.75;font-weight:400">'+t('globeTaps',{n:comma(d.tot)})+mine+'</span></div>';
 }
 /* 생명주기: 탭 숨김 시 3D 렌더 일시정지(전력/GPU 절약), 다시 보이면 재개. 리사이즈 시 캔버스 재측정. */

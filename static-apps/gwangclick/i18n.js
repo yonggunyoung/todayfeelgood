@@ -108,7 +108,7 @@
       globeLoading: "지구본 불러오는 중…", globeRotate: "⏸ 회전 멈춤", globeRotateOn: "▶ 회전 시작",
       globeEmpty: "아직 오늘 참전한 나라가 없어요 — 첫 광클로 지구본을 켜보세요!",
       globeDemo: "데모 모드예요 — fb-config.js에 Firebase를 연결하면 실제 세계 타격이 지구본에 떠요.",
-      globe2d: "2D 모드", globe2dNote: "이 기기는 가벼운 2D 지구본으로 표시했어요(3D 미지원/절전).",
+      globe2dNote: "이 기기는 가벼운 2D 지구본으로 표시했어요(3D 미지원/절전).",
       globeMine: "내 나라", globeTaps: "참여 {n}",
       // 토글
       langToggle: "EN", // ko 화면에서 누르면 영어로 → 다른 언어를 표시
@@ -201,7 +201,7 @@
       globeLoading: "Loading globe…", globeRotate: "⏸ Stop spin", globeRotateOn: "▶ Spin",
       globeEmpty: "No country has joined today yet — be the first to light up the globe!",
       globeDemo: "Demo mode — connect Firebase in fb-config.js to see real worldwide strikes on the globe.",
-      globe2d: "2D mode", globe2dNote: "Shown as a lightweight 2D globe on this device (no 3D / power-saving).",
+      globe2dNote: "Shown as a lightweight 2D globe on this device (no 3D / power-saving).",
       globeMine: "My country", globeTaps: "{n} taps",
       // toggle
       langToggle: "한국어", // on en screen, tapping switches to Korean

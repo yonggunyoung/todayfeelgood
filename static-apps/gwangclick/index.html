@@ -259,7 +259,7 @@ function regionName(k){if(!k)return regionDefault();for(var i=0;i<REGIONS.length
 function nickOf(){return (F.nick||'').trim()||t('anon');}
 /* 꾸미기(Phase 3): 장착된 '이름 색'을 내 닉에만 적용하는 인라인 스타일 조각. 잠김/기본은 '' (테마 기본색).
  * 로컬 전용 코스메틱 — 타 사용자에겐 미노출(Firestore 미제출)이라 내 화면의 '(나)/(you)' 행에만 쓴다. */
-function myNameColorStyle(){var c=GCCos.equippedNameColor(F);return c?' style="color:'+c+'"':'';}
+function myNameColorStyle(){var c=GCCos.equippedNameColor(F);return (c&&/^#[0-9a-fA-F]{3,8}$/.test(c))?' style="color:'+c+'"':'';}
 /* 꾸미기(Phase 3): 제출/표시에 쓸 '실효 배지'. 프리미엄 배지(F.badgeId)가 해금·장착됐으면 그걸 우선,
  * 아니면 무료 설정 배지(F.badge). 기존 배지 제출 경로(net.js)를 그대로 재사용 → 신규 Firestore 필드·규칙 없음.
  * 프리미엄 이모지는 카탈로그 화이트리스트(GCCos.badgeOf)만 통과 → 자유입력 위변조 불가(보안 #1). */

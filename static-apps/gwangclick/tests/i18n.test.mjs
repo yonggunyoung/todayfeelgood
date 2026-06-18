@@ -27,3 +27,14 @@ test("t — {placeholder} 치환", () => {
   assert.equal(i18n.t("ko", "streakDays", {}), "{n}일 연속 참전"); // None(값없음→토큰유지)
   assert.equal(i18n.t("ko", "streakDays"), "{n}일 연속 참전"); // 변조(vars 없음→throw 금지)
 });
+
+// 키/플레이스홀더 패리티 — 카피 리워딩 시 ko/en 드리프트 방지(Polish Review W1).
+test("STR — ko/en 키집합 + 플레이스홀더 패리티", () => {
+  const ko = i18n.STR.ko, en = i18n.STR.en;
+  const ks = Object.keys(ko).sort(), es = Object.keys(en).sort();
+  assert.deepEqual(ks, es, "ko/en 키집합 불일치"); // 키 누락/추가 0
+  const toks = (s) => (typeof s === "string" ? (s.match(/\{(\w+)\}/g) || []).sort() : []);
+  for (const k of ks) {
+    assert.deepEqual(toks(ko[k]), toks(en[k]), "플레이스홀더 불일치: " + k); // {n}/{name} 등 토큰 동등
+  }
+});

@@ -67,7 +67,7 @@
   - 토스 §6 준수: 외부 광고망/배너/전면 직삽 ❌(옵트인 보상형 `adRewarded`만). 코스메틱은 광고/초대로만 해금(실결제 ❌). 결제 경로 도입 시 토스 SDK로 추상화 유지.
   - 테스트 `node --test 'tests/*.test.mjs'` 39/39(기존 26 + cosmetics 13, 경계 4종: 미상 id·이중해금·변조 F·잠긴 장착 차단).
   - **검수·감사 PASS** — 보고서 `.agents/reports/phase3-*.md`. 반영: `myNameColorStyle` hex 가드(미래 회귀 방어), 죽은 키 `equipOff` 제거.
-  - 사용자 확인 대기(설계 선택): 초대 공유 **취소/실패 시에도 해금**(저마찰 성장 전략) — 유지 vs 성공시만 해금.
+  - 결정 확정: 초대 = **저마찰 유지**(공유 취소/실패시에도 해금) — 사용자 결정(폴리시 라운드).
 - [x] Phase 4 — 실시간 타격 3D 지구본 — **완료·감사 3종 PASS(Blocker 0)·푸시**
   - 신규 `gc-globe.js`(순수 UMD, D2): 국가 집계 → 지구본 점 매핑·강도/색·핫스팟 포커스·고도·폴백판단. 신규 `tests/globe.test.mjs`.
   - `vendor/globe.gl.min.js`(≈1.8MB, MIT) **로컬 동봉** — 런타임 CDN 0(npm으로 받아 vendor화, 오프라인 유지). `vendor/LICENSE` 포함.
@@ -81,13 +81,18 @@
 - [x] 국가 커버리지 보강 — **국가 소외 제거(어떤 국가도 코드 노출/지구본 누락 0)**
   - `geo.js NAMES` 23→197국(ISO 3166-1 전수: UN 회원국+흔한 영토, ko+en, 기존 23국 표기 보존), `gc-globe.js CENTROIDS` 52→197(NAMES와 1:1 동기·정밀도 2~3자리), `geo.js TZ` 보조 매핑 확장. 순수 데이터(deps·네트워크 0). `countryInfo` 미상 폴백·`centroidOf` graceful skip 불변(경계 #1).
   - 테스트 `node --test 'tests/*.test.mjs'` 52→56(대표 45국 spread가 ko+en 실명+centroid 해석 확인 + NAMES↔CENTROIDS 동기 + TZ 확장, 경계 4종 유지).
-- [x] 축하 이펙트 perf(폰 60fps) — **완료·테스트 56/56·미커밋(검수대기)**
+- [x] 축하 이펙트 perf(폰 60fps) — **완료·감사 3종 PASS(0B)·푸시**
   - 근본 원인: `skyConfetti`가 110입자 + `skyLoop`/`fxStep`이 매 프레임 이모지마다 `fillText`(글리프 래스터화, DPR2에서 과부하).
   - 해결(연출만·게임 수치 불변): ① 이모지 글리프를 (글리프×크기버킷×dpr) 오프스크린 캔버스에 **1회 래스터화 후 `drawImage`**(`emojiSprite`/`drawEmojiSprite`, 실패 시 fillText 폴백). ② 입자 수 **기기 스케일**(`deviceTier`/`scaledCount` — 데스크탑 ~110, 모바일 ~45). ③ sky/fx 캔버스 **DPR ~1.5 캡**. ④ `prefers-reduced-motion`이면 축포 0(접근성). 루프는 리스트 비면 기존대로 정지(누수 없음).
   - 경계(#3): `onTap`/`frame`/`comboMult`/`DURATION`/`tapsF`/`dailyBias` 등 게임 로직 0줄 변경. index.html FX층만.
-- [x] 10대/AI티 디자인 리프레시 — **완료·미커밋(검수대기)**
+- [x] 10대/AI티 디자인 리프레시 — **완료·감사 3종 PASS(0B)·푸시**
   - "AI 생성티"(풀페이지 단색 그라데이션·균일 라운드·여백만 넉넉) → **손맛/아케이드/Y2K 네온** 무드로. 진영색(데이터)·레이아웃·게임플레이 불변.
   - 정체성: `⚡ 광클대전` 워드마크 = skew + 굵게 + 네온 언더라인 스티커 락업. 떡밥 질문의 `?`만 네온 액센트.
   - 배경: 단색 그라데이션 → 코너 네온 글로우 2점 + 옅은 아케이드 그리드(z<0, 모션 0) + 필름 노이즈. 타이포: 질문/판정 디스플레이 더 크게·미세 그림자(위계 강화).
   - 깊이/택타일: 라디우스 다양화(`--r-xs`~`--r-lg`), 팀카드/결과카드 레이어 섀도, 참전·CTA 버튼 3D 눌림(translateY+섀도 변화), TAP 오브 누름 수축(연출만).
   - 카피(i18n VALUES만, 키/플레이스홀더 불변·ko/en 패리티 136/136): ko 자연스러운 10대/밈 톤(졸잘싸·뻥튀기·1빠 등 과하지 않게), en 미러링. 단, `streakDays`는 테스트 고정값이라 원문 유지(톤은 `streakDaysOn`에).
+- [x] 폴리시 검수·감사 반영 — **Review 합격·Security/Audit PASS(0B), 대비 회귀 0**
+  - 보고서 `.agents/reports/polish-*.md`. 반영: i18n 키/플레이스홀더 **패리티 자동 테스트** 추가(57/57), `--ink-3` 대비 상향(#646a74→#828a96·소형텍스트 AA), 전역 `@media (prefers-reduced-motion)` 블록(모션 최소화).
+  - 결정 확정: **초대 = 저마찰 유지**(공유 취소/실패시에도 해금) — 사용자 결정.
+  - ⚠ 잔여(사용자 결정 필요): **Pretendard 폰트가 jsdelivr CDN 로드**(기존부터·비용0/오프라인 철칙과 상충). 옵션 ① 로컬 `vendor/` 동봉 ② 시스템 폰트 스택만 ③ 현행 유지 → 결정 후 반영.
+  - 다음: **토스(main/github.io) 동기화** — great-darwin의 최종 광클을 main에 반영(라이브·제출본, 신중).

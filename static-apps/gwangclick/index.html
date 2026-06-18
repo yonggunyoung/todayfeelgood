@@ -33,7 +33,7 @@
 /* ⚡ 광클대전 — 디자인: 심야 아레나 / 네오 아케이드 스코어보드 (진영색은 --team-a/--team-b/--me로 런타임 리스킨) */
 :root{
   --bg:#08090c; --bg-2:#121419; --bg-3:#1b1f27; --bg-card:#0e1014;
-  --ink:#f4f5f8; --ink-2:#9da3ad; --ink-3:#646a74;
+  --ink:#f4f5f8; --ink-2:#9da3ad; --ink-3:#828a96;
   --line:rgba(255,255,255,.07); --line-2:rgba(255,255,255,.15);
   --team-a:#12b39a; --team-b:#7b6ef0; --me:#12b39a; --foe:#7b6ef0; --tapink:#04130f; --live:#ff3a3a;
   /* Y2K/아케이드 네온 액센트 — 진영색(데이터)과 별개의 '브랜드 크롬' 컬러. */
@@ -228,6 +228,10 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 #toast{position:fixed;left:50%;bottom:30px;transform:translateX(-50%);background:rgba(255,255,255,.96);color:#0a0b0d;
   padding:11px 18px;border-radius:99px;font-size:13px;font-weight:800;opacity:0;transition:opacity .2s;z-index:70;pointer-events:none;max-width:90vw;text-align:center}
 #toast.on{opacity:1}
+/* 접근성: 모션 최소화 선호 시 애니메이션/트랜지션 사실상 정지(축포는 JS에서 0, 여기선 CSS단까지 차단). */
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;scroll-behavior:auto!important}
+}
 </style>
 </head>
 <body>

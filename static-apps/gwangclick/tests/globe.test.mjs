@@ -5,6 +5,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import globe from "../gc-globe.js";
+import geo from "../geo.js";
 
 const {
   CENTROIDS, MIN_ALT, MAX_ALT,
@@ -41,6 +42,35 @@ test("centroid 표 — 위/경도 유효범위(자기일관성)", () => {
     assert.ok(v[0] >= -90 && v[0] <= 90, "lat 범위: " + c);
     assert.ok(v[1] >= -180 && v[1] <= 180, "lng 범위: " + c);
   }
+});
+
+// 국가 커버리지 보강: 대표 스프레드가 모두 지구본 좌표를 가져야(소외=지구본 누락 0).
+test("centroidOf — 전 대륙 대표국이 모두 지구본에 배치", () => {
+  const spread = [
+    "KR", "US", "JP", "BR", "NG", "IN", "DE", "AU", "ZA", "MX",
+    "ID", "EG", "SA", "TR", "VN", "FR", "GB", "CA", "RU", "TH",
+    "PH", "AR", "NZ", "KE", "NO", "PL", "UA", "CO", "PE", "CL",
+    "PK", "BD", "ET", "TZ", "DZ", "MA", "IR", "IQ", "MN", "KZ",
+    "PG", "FJ", "CU", "IS", "LU",
+  ];
+  for (const c of spread) {
+    const cen = centroidOf(c);
+    assert.ok(cen && typeof cen.lat === "number" && typeof cen.lng === "number", "centroid 누락: " + c);
+    assert.ok(cen.lat >= -90 && cen.lat <= 90 && cen.lng >= -180 && cen.lng <= 180, "범위 밖: " + c);
+  }
+  assert.equal(centroidOf("ZZ"), null); // 변조/미상 — 여전히 graceful skip
+});
+
+// geo.NAMES ↔ CENTROIDS 1:1 동기 — 이름은 있는데 지구본엔 없는 '소외국'이 없어야.
+test("NAMES와 CENTROIDS는 완전 동기(소외국 0)", () => {
+  // geo.js NAMES의 모든 코드가 centroid를 가짐 → 평면 리스트에 뜨는 국가는 전부 지구본에도 뜸.
+  const cenKeys = Object.keys(CENTROIDS);
+  // 대표 표본으로 양방향 확인(전수는 위 spread + 자기일관성 테스트가 커버).
+  for (const c of cenKeys) {
+    const info = geo.countryInfo(c);
+    assert.notEqual(info.nameKo, c, "centroid 있으나 이름 누락(역소외): " + c);
+  }
+  assert.ok(cenKeys.length >= 190, "확장된 커버리지(>=190): " + cenKeys.length);
 });
 
 test("safeHex / intensityColor — 우세 진영색 + 변조 폴백", () => {

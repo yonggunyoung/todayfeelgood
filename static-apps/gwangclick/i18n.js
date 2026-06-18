@@ -147,6 +147,8 @@
   };
 
   // (lang, key, vars?) → 문자열. 폴백: lang→ko→key. {placeholder} 치환.
+  // ⚠ 보안 계약(#1): 반환값은 innerHTML로 쓰일 수 있고 STR에 의도적 HTML(<b>·<br>)이 있다.
+  //   따라서 vars 는 신뢰값(숫자·앱상수)만 전달할 것. 사용자입력(닉네임 등)은 호출부에서 esc() 후 넣는다.
   function t(lang, key, vars) {
     var L = SUPPORTED.indexOf(lang) >= 0 ? lang : "ko";
     var dict = STR[L] || STR.ko;

@@ -1141,48 +1141,111 @@ input:focus, select:focus, textarea:focus { outline: none; box-shadow: 0 0 0 3px
 }
 @media (prefers-reduced-motion: reduce) { .f-steam { display: none; } }
 
-/* ══════════════ 냉장고 문(닫힘) — 꾸미기 표면 + 크게 열기 ══════════════ */
+/* ══════════════ 냉장고 문(닫힘) — 꾸미기 캔버스 + 크게 열기 ══════════════ */
 .fridge-closed { padding-bottom: 14px; }
-/* 도어 표면 — 브러시드 스틸. 탭하면 열림(꾸미기 캔버스 역할도 겸함) */
+/* 도어 표면 — 브러시드 스틸. 표면이 곧 꾸미기 캔버스 */
 .fd-door {
-  position: relative; border-radius: 19px; cursor: pointer; overflow: hidden;
-  min-height: 348px; padding: 18px 16px 86px;
+  position: relative; border-radius: 19px; overflow: hidden; min-height: 344px;
   background:
     repeating-linear-gradient(96deg, rgba(255,255,255,.022) 0 2px, rgba(0,0,0,.022) 2px 4px),
     linear-gradient(160deg, #5b626c 0%, #393e46 53%, #464c55 100%);
   box-shadow: inset 0 2px 0 rgba(255,255,255,.18), inset 0 -3px 16px rgba(0,0,0,.42), inset 0 0 46px rgba(0,0,0,.2);
-  transition: transform .12s;
 }
-.fd-door:active { transform: scale(.993); }
 /* 도어 사선 광택 */
 .fd-door::after {
-  content: ''; position: absolute; top: -10%; left: -22%; width: 46%; height: 130%; pointer-events: none;
+  content: ''; position: absolute; top: -10%; left: -22%; width: 46%; height: 130%; pointer-events: none; z-index: 0;
   background: linear-gradient(105deg, rgba(255,255,255,0) 30%, rgba(255,255,255,.12) 50%, rgba(255,255,255,0) 62%);
   transform: rotate(7deg);
 }
-/* 꾸미기 영역 — 메모·스티커·마그넷·핀 레시피가 붙는 캔버스(다음 단계에서 편집 가능) */
-.fd-deco { position: relative; z-index: 1; min-height: 196px; }
-.fd-note {
-  display: inline-block; transform: rotate(-2.4deg); position: relative; margin: 8px 0 0 6px;
-  background: linear-gradient(180deg, #fffdf5, #fff6df); color: #5a4a2a;
-  font-family: 'Gowun Batang', serif; font-weight: 700; font-size: .98rem;
-  padding: 13px 17px 15px; border-radius: 4px;
-  box-shadow: 0 10px 18px rgba(0,0,0,.32), inset 0 1px 0 rgba(255,255,255,.8);
+/* 꾸미기 캔버스 — 메모·스티커·마그넷·핀 레시피가 %좌표(중심)로 붙는다 */
+.fd-deco { position: absolute; inset: 8px; z-index: 1; }
+/* 붙은 항목 공통 — 중심 기준 배치 + 살짝 기울임 */
+.fd-mag {
+  position: absolute; z-index: 2; transform: translate(-50%, -50%) rotate(var(--rot, 0deg));
+  touch-action: none; -webkit-user-select: none; user-select: none;
 }
-.fd-note::before { /* 빨간 자석 */
-  content: ''; position: absolute; top: -7px; left: 50%; transform: translateX(-50%);
-  width: 16px; height: 16px; border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #ff8f8f, #d8362f 64%, #9c1b16);
-  box-shadow: 0 3px 6px rgba(0,0,0,.42);
+.deco-edit .fd-mag { cursor: grab; }
+.fd-dragging { z-index: 9 !important; cursor: grabbing; filter: drop-shadow(0 10px 14px rgba(0,0,0,.45)); }
+/* 메모(포스트잇) */
+.fd-note-i {
+  max-width: 144px; padding: 12px 13px 13px; border-radius: 3px; white-space: pre-wrap; word-break: break-word;
+  font-family: 'Gowun Batang', serif; font-weight: 700; font-size: .9rem; line-height: 1.35; color: #4a3f22;
+  background: linear-gradient(180deg, hsl(var(--paper, 48) 90% 92%), hsl(var(--paper, 48) 84% 83%));
+  box-shadow: 0 9px 16px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.7);
 }
-.fd-hint {
-  color: #c6d0db; font-size: .79rem; line-height: 1.55; font-weight: 600;
-  margin: 17px 8px 0; text-shadow: 0 1px 2px rgba(0,0,0,.3);
+.fd-pin {
+  position: absolute; top: -8px; left: 50%; transform: translateX(-50%); width: 15px; height: 15px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #ff9a9a, #d8362f 62%, #931611); box-shadow: 0 3px 5px rgba(0,0,0,.4);
 }
+/* 스티커(평면 이모지) */
+.fd-sticker { font-size: 2.5rem; line-height: 1; filter: drop-shadow(0 5px 5px rgba(0,0,0,.4)); }
+/* 마그넷(둥근 자석 디스크) */
+.fd-magnet {
+  width: 50px; height: 50px; border-radius: 50%; display: grid; place-items: center; font-size: 1.5rem;
+  background: radial-gradient(circle at 38% 30%, #fff, #d7dee6 60%, #aab4c0);
+  box-shadow: 0 6px 12px rgba(0,0,0,.4), inset 0 2px 3px rgba(255,255,255,.9), inset 0 -3px 5px rgba(0,0,0,.15);
+}
+/* 핀 레시피 칩 */
+.fd-recipe {
+  max-width: 168px; padding: 9px 13px; border-radius: 11px; cursor: pointer;
+  font-family: 'Jua', sans-serif; font-size: .86rem; color: #2a3744; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  background: linear-gradient(180deg, #fff, #eef3f8); box-shadow: 0 8px 15px rgba(0,0,0,.3), inset 0 1px 0 #fff;
+}
+.fd-rclip { position: absolute; top: -7px; left: 14px; width: 22px; height: 12px; border: 3px solid #b9c2cd; border-bottom: none; border-radius: 7px 7px 0 0; }
+/* 떼기 배지(편집 모드) */
+.fd-x {
+  position: absolute; top: -9px; right: -9px; z-index: 5; width: 22px; height: 22px; border-radius: 50%;
+  display: grid; place-items: center; font-size: .72rem; color: #fff; cursor: pointer;
+  background: #e2483d; border: 2px solid #fff; box-shadow: 0 2px 5px rgba(0,0,0,.4);
+}
+/* 빈 상태 안내 */
+.fd-empty { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; text-align: center; padding: 0 22px; pointer-events: none; }
+.fd-note-demo {
+  position: relative; transform: rotate(-3deg); padding: 12px 18px 14px; border-radius: 4px; color: #5a4a2a;
+  font-family: 'Gowun Batang', serif; font-weight: 700; font-size: 1rem;
+  background: linear-gradient(180deg, #fffdf5, #fff3d6); box-shadow: 0 10px 18px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.8);
+}
+.fd-note-demo::before { content: ''; position: absolute; top: -7px; left: 50%; transform: translateX(-50%); width: 16px; height: 16px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #ff9a9a, #d8362f 62%, #931611); box-shadow: 0 3px 5px rgba(0,0,0,.4); }
+.fd-empty p { margin: 0; color: #c6d0db; font-size: .8rem; line-height: 1.55; font-weight: 600; text-shadow: 0 1px 2px rgba(0,0,0,.3); }
+.fd-edithint { position: absolute; left: 0; right: 0; bottom: 4px; text-align: center; color: #b3bdc9; font-size: .72rem; font-weight: 600; pointer-events: none; }
+/* 닫힘 화면 하단 액션 — 꾸미기 + 크게 열기 */
+.fd-actions { display: flex; gap: 9px; margin-top: 12px; }
+.fd-decorate {
+  flex: 0 0 auto; border: none; border-radius: 15px; padding: 16px; cursor: pointer;
+  font-family: 'Jua', sans-serif; font-size: 1.02rem; color: #eaf0f7;
+  background: linear-gradient(180deg, #515963, #3a4049); box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 6px 14px rgba(0,0,0,.3);
+}
+.fd-decorate:active { transform: translateY(1px); }
+/* 꾸미기 팔레트 + 완료 */
+.fd-palette { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 12px; }
+.fd-palette button {
+  display: flex; flex-direction: column; align-items: center; gap: 3px; border: none; border-radius: 13px; padding: 11px 4px; cursor: pointer;
+  font-size: 1.45rem; color: #eaf0f7; background: linear-gradient(180deg, #515963, #3a4049);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.16), 0 4px 10px rgba(0,0,0,.28);
+}
+.fd-palette button small { font-family: 'Jua', sans-serif; font-size: .72rem; color: #c7d0db; }
+.fd-palette button:active { transform: translateY(1px); }
+.fd-done {
+  display: block; width: 100%; margin-top: 9px; border: none; border-radius: 14px; padding: 14px; cursor: pointer;
+  font-family: 'Jua', sans-serif; font-size: 1.05rem; color: #06243a;
+  background: linear-gradient(180deg, #bdf0c9, #6fd99a); box-shadow: 0 8px 18px rgba(70,200,130,.4), inset 0 1px 0 rgba(255,255,255,.7);
+}
+.fd-done:active { transform: translateY(1px); }
+/* 꾸미기 시트 — 이모지 그리드 · 메모지색 · 핀 레시피 목록 */
+.emoji-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin-top: 6px; }
+.emoji-grid button { aspect-ratio: 1; border: 1px solid var(--line, #e7e0d2); border-radius: 13px; background: var(--card-2, #fff); font-size: 1.6rem; cursor: pointer; }
+.emoji-grid button:active { transform: scale(.92); }
+.hue-row { display: flex; gap: 10px; }
+.hue-dot { width: 34px; height: 34px; border-radius: 50%; border: 2px solid rgba(0,0,0,.1); cursor: pointer; }
+.hue-dot.on { outline: 3px solid var(--blue, #3b82f6); outline-offset: 2px; }
+.pin-list { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; max-height: 52vh; overflow: auto; }
+.pin-row { display: flex; align-items: center; gap: 11px; border: 1px solid var(--line, #e7e0d2); border-radius: 13px; padding: 11px 13px; background: var(--card-2, #fff); cursor: pointer; text-align: left; }
+.pin-row .pin-em { font-size: 1.5rem; }
+.pin-row .grow { font-weight: 700; color: var(--label-1, #2a2a2a); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pin-add { font-family: 'Jua', sans-serif; font-size: .82rem; color: #fff; background: var(--blue, #3b82f6); border-radius: 9px; padding: 5px 11px; }
 /* 냉장고 열기 — 크고 눈에 띄게(냉광 글로우 펄스) */
 .fd-open {
-  position: absolute; left: 16px; right: 16px; bottom: 16px; z-index: 2;
-  border: none; border-radius: 15px; padding: 16px; cursor: pointer;
+  flex: 1; border: none; border-radius: 15px; padding: 16px; cursor: pointer;
   font-family: 'Jua', sans-serif; font-size: 1.14rem; color: #06243a; letter-spacing: .02em;
   background: linear-gradient(180deg, #c4f1ff 0%, #7fd6ff 55%, #54c0f4 100%);
   box-shadow: 0 10px 22px rgba(64,170,235,.5), inset 0 1px 0 rgba(255,255,255,.85), 0 0 0 1px rgba(255,255,255,.25);

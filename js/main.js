@@ -442,11 +442,40 @@ const foodRows = (foods) =>
   chunk(foods, 4).map((row) => `<div class="f-row">${row.map(foodTile).join('')}</div><div class="f-shelf"></div>`).join('');
 
 let fridgeOpen = false, fridgeJustOpened = false; // 냉장고 문 — 기본 닫힘(꾸미기 표면), 열면 안쪽+냉기 연출(1회)
+let decorEditing = false; // 냉장고 문 꾸미기 편집 모드 (붙이기·끌어 옮기기·떼기)
 
-// 냉장고 문 꾸미기 표면 — Phase 1은 기본 안내. (메모·스티커·마그넷·핀 레시피 편집은 다음 단계)
-function fridgeDecoHtml() {
-  return `<div class="fd-note">🧲 우리집 냉장고</div>
-    <div class="fd-hint">곧 여기에 메모·스티커·자주 쓰는 레시피를 붙여 꾸밀 수 있어요 ✨</div>`;
+const DECO_STICKERS = ['🍓', '🥑', '🌶️', '🧀', '🥦', '🍅', '🥕', '🌽', '🍋', '🫐', '🍞', '🥚', '🐟', '🍗', '🍳', '✨', '⭐', '❤️', '🌈', '🌸', '🐰', '🐱', '☁️', '🔥'];
+const DECO_MAGNETS = ['🧲', '🔴', '🟠', '🟡', '🟢', '🔵', '🟣', '🟤', '📌', '📎', '🏠', '🍀', '🌟', '🎀', '🧊', '🥦'];
+const NOTE_HUES = [48, 200, 132, 350, 280, 22]; // 메모지 색(hue)
+
+// 새 꾸미기 항목 기본 위치(가운데 근처 살짝 흩뿌림) + 살짝 기울임 — 중심 기준 %
+const placeNew = () => ({ x: 50 + (Math.random() * 26 - 13), y: 36 + (Math.random() * 20 - 10), rot: Math.round(Math.random() * 16 - 8) });
+function pushDecor(it) {
+  if (!S.decor) S.decor = { items: [] };
+  if (!S.decor.items) S.decor.items = [];
+  S.decor.items.push(it);
+  save();
+}
+
+// 문에 붙은 항목 1개 렌더 — 위치 %(중심), 회전 --rot. 편집 모드면 ✕ 배지 + 메모는 탭 편집.
+function decorItemHtml(it) {
+  const pos = `left:${it.x}%;top:${it.y}%;--rot:${it.rot || 0}deg`;
+  const ed = decorEditing;
+  let tap = '';
+  if (ed) { if (it.kind === 'note') tap = `onclick="UI.editDecor('${it.id}')"`; }
+  else if (it.kind === 'recipe') tap = `onclick="UI.openRecipe('${it.recipeId}')"`;
+  const x = ed ? `<span class="fd-x" onclick="event.stopPropagation();UI.removeDecor('${it.id}')">✕</span>` : '';
+  if (it.kind === 'note') {
+    return `<div class="fd-mag fd-note-i" data-deco="${it.id}" style="${pos};--paper:${it.hue ?? 48}" ${tap}>${x}<span class="fd-pin"></span><span class="fd-note-tx">${esc(it.text || '')}</span></div>`;
+  }
+  if (it.kind === 'magnet') {
+    return `<div class="fd-mag fd-magnet" data-deco="${it.id}" style="${pos}">${x}<span>${it.emoji || '🧲'}</span></div>`;
+  }
+  if (it.kind === 'recipe') {
+    const r = allRecipes(S).find((q) => q.id === it.recipeId);
+    return `<div class="fd-mag fd-recipe" data-deco="${it.id}" style="${pos}" ${tap}>${x}<span class="fd-rclip"></span>${r ? `${r.emoji || '🍳'} ${esc(r.title)}` : '레시피'}</div>`;
+  }
+  return `<div class="fd-mag fd-sticker" data-deco="${it.id}" style="${pos}">${x}${it.emoji || '✨'}</div>`;
 }
 
 function fridgeHtml(all) {
@@ -477,16 +506,34 @@ function fridgeHtml(all) {
       ${shelfRows(rm, 'room')}
     </div>`;
 
-  // 닫힌 문 — 기본 상태(꾸미기 표면 노출). 탭하면 열림.
+  // 닫힌 문 — 기본 상태. 문 표면이 곧 꾸미기 캔버스(메모·스티커·마그넷·핀 레시피).
   if (!fridgeOpen) {
+    const items = (S.decor && S.decor.items) || [];
     return `
-    <div class="fridge fridge-closed">
+    <div class="fridge fridge-closed${decorEditing ? ' deco-edit' : ''}">
       ${display}
       <span class="f-handle"></span>
-      <div class="fd-door" onclick="UI.openFridge()">
-        <div class="fd-deco">${fridgeDecoHtml()}</div>
-        <button class="fd-open" onclick="event.stopPropagation();UI.openFridge()">🚪 냉장고 열기</button>
+      <div class="fd-door">
+        <div class="fd-deco">
+          ${items.map(decorItemHtml).join('')}
+          ${!items.length && !decorEditing ? `<div class="fd-empty">
+            <div class="fd-note-demo">🧲 우리집 냉장고</div>
+            <p>‘✏️ 꾸미기’를 눌러 메모·스티커·마그넷·자주 쓰는 레시피를 붙여보세요 ✨</p></div>` : ''}
+          ${decorEditing ? `<div class="fd-edithint">붙인 걸 끌어 옮기고 · 메모는 탭해서 고치고 · ✕로 떼요</div>` : ''}
+        </div>
       </div>
+      ${decorEditing ? `
+        <div class="fd-palette">
+          <button onclick="UI.addDecor('note')">📝<small>메모</small></button>
+          <button onclick="UI.addDecor('sticker')">✨<small>스티커</small></button>
+          <button onclick="UI.addDecor('magnet')">🧲<small>마그넷</small></button>
+          <button onclick="UI.pinRecipePicker()">📌<small>레시피</small></button>
+        </div>
+        <button class="fd-done" onclick="UI.toggleDecorEdit()">✓ 꾸미기 완료</button>`
+      : `<div class="fd-actions">
+          <button class="fd-decorate" onclick="UI.toggleDecorEdit()">✏️ 꾸미기</button>
+          <button class="fd-open" onclick="UI.openFridge()">🚪 냉장고 열기</button>
+        </div>`}
     </div>
     ${basket}`;
   }
@@ -568,6 +615,70 @@ UI.openLocList = (loc) => { pantryView = 'list'; pantryLoc = loc; render(); };
 // 냉장고 열기/닫기 — 열 때만 냉기 빌로우 1회(렌더 직후 플래그 내려서 다음 렌더엔 안 뜸)
 UI.openFridge = () => { pantryView = 'shelf'; fridgeOpen = true; fridgeJustOpened = true; render(); fridgeJustOpened = false; };
 UI.closeFridge = () => { fridgeOpen = false; render(); };
+
+/* ── 냉장고 문 꾸미기 (Phase 2) — 메모·스티커·마그넷·핀 레시피 ── */
+UI.toggleDecorEdit = () => { decorEditing = !decorEditing; render(); };
+UI.addDecor = (kind) => {
+  if (kind === 'note') return UI.editDecor(null);
+  const pool = kind === 'magnet' ? DECO_MAGNETS : DECO_STICKERS;
+  openSheet(`
+    <h2>${kind === 'magnet' ? '🧲 마그넷' : '✨ 스티커'} 고르기</h2>
+    <p class="sub">탭하면 냉장고 문에 붙어요. 붙인 뒤 끌어서 옮길 수 있어요.</p>
+    <div class="emoji-grid">${pool.map((em) => `<button onclick="UI.placeDecor('${kind}','${em}')">${em}</button>`).join('')}</div>`);
+};
+UI.placeDecor = (kind, emoji) => {
+  pushDecor({ id: uid(), kind, emoji, ...placeNew() });
+  decorEditing = true; UI.closeSheet(); render();
+  toast(kind === 'magnet' ? '🧲 마그넷을 붙였어요 — 끌어서 옮겨보세요' : '✨ 스티커를 붙였어요 — 끌어서 옮겨보세요');
+};
+let noteDraft = null;
+UI.editDecor = (id) => {
+  const it = id ? ((S.decor && S.decor.items) || []).find((q) => q.id === id) : null;
+  noteDraft = { id: it ? it.id : null, hue: it ? (it.hue ?? 48) : 48 };
+  openSheet(`
+    <h2>📝 ${it ? '메모 고치기' : '메모 붙이기'}</h2>
+    <div class="field"><textarea id="nd-text" rows="3" maxlength="120" placeholder="예: 우유 이번 주까지! · 주말 장보기 · 김치 새로 담금">${it ? esc(it.text || '') : ''}</textarea></div>
+    <div class="field"><label>메모지 색</label>
+      <div class="hue-row">${NOTE_HUES.map((h) => `<button class="hue-dot${noteDraft.hue === h ? ' on' : ''}" style="background:hsl(${h} 88% 86%)" onclick="UI.ndHue(${h},this)"></button>`).join('')}</div></div>
+    <div class="btn-row">
+      ${it ? `<button class="btn btn-soft" onclick="UI.removeDecor('${it.id}')">🗑️ 떼기</button>` : ''}
+      <button class="btn btn-primary grow" onclick="UI.saveDecorNote()">${it ? '저장' : '붙이기'}</button></div>`);
+};
+UI.ndHue = (h, el) => { noteDraft.hue = h; el.parentElement.querySelectorAll('.hue-dot').forEach((d) => d.classList.remove('on')); el.classList.add('on'); };
+UI.saveDecorNote = () => {
+  const text = $('#nd-text').value.trim();
+  if (!text) { toast('메모 내용을 적어주세요'); return; }
+  if (noteDraft.id) {
+    const it = ((S.decor && S.decor.items) || []).find((q) => q.id === noteDraft.id);
+    if (it) { it.text = text; it.hue = noteDraft.hue; }
+    save();
+  } else {
+    pushDecor({ id: uid(), kind: 'note', text, hue: noteDraft.hue, ...placeNew() });
+  }
+  decorEditing = true; UI.closeSheet(); render();
+};
+UI.removeDecor = (id) => {
+  if (S.decor && S.decor.items) S.decor.items = S.decor.items.filter((q) => q.id !== id);
+  save();
+  if ($('#modal-root').innerHTML.trim()) UI.closeSheet();
+  render();
+};
+UI.pinRecipePicker = () => {
+  const favs = (S.favs || []).map((id) => allRecipes(S).find((r) => r.id === id)).filter(Boolean);
+  const seen = new Set(); const list = [];
+  for (const r of [...favs, ...(S.myRecipes || [])]) { if (!seen.has(r.id)) { seen.add(r.id); list.push(r); } }
+  openSheet(`
+    <h2>📌 자주 쓰는 레시피 붙이기</h2>
+    <p class="sub">즐겨찾기 ❤️ 했거나 내가 저장한 레시피를 문에 붙여둘 수 있어요.</p>
+    ${list.length ? `<div class="pin-list">${list.map((r) => `
+      <button class="pin-row" onclick="UI.placeRecipe('${r.id}')"><span class="pin-em">${r.emoji || '🍳'}</span><span class="grow">${esc(r.title)}</span><span class="pin-add">붙이기</span></button>`).join('')}</div>`
+    : `<div class="empty"><span class="e-emoji">📌</span><b>아직 붙일 레시피가 없어요</b><small>레시피 탭에서 ❤️를 누르거나 레시피를 저장하면 여기에 떠요</small></div>`}`);
+};
+UI.placeRecipe = (rid) => {
+  pushDecor({ id: uid(), kind: 'recipe', recipeId: rid, ...placeNew() });
+  decorEditing = true; UI.closeSheet(); render();
+  toast('📌 레시피를 냉장고 문에 붙였어요');
+};
 
 let qaLoc = null; // 냉장고 ＋타일로 들어온 경우 그 칸으로 바로 담기
 UI.quickAddAt = (loc) => { qaLoc = loc; UI.openQuickAdd(); };
@@ -2739,6 +2850,40 @@ view.addEventListener('pointermove', (e) => {
 });
 ['pointerup', 'pointercancel'].forEach((ev) =>
   view.addEventListener(ev, () => { if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; } }));
+
+/* 냉장고 문 꾸미기 — 붙인 항목 끌어 옮기기(편집 모드 한정, 중심 기준 %로 저장) */
+view.addEventListener('pointerdown', (e) => {
+  if (!decorEditing) return;
+  const el = e.target.closest('[data-deco]');
+  if (!el || e.target.closest('.fd-x')) return;
+  const layer = el.closest('.fd-deco'); if (!layer) return;
+  const rect = layer.getBoundingClientRect();
+  const id = el.dataset.deco;
+  const sx = e.clientX, sy = e.clientY; let moved = false, nx = 0, ny = 0;
+  try { el.setPointerCapture(e.pointerId); } catch { /* noop */ }
+  el.classList.add('fd-dragging');
+  const onMove = (ev) => {
+    if (!moved && Math.hypot(ev.clientX - sx, ev.clientY - sy) > 5) moved = true;
+    if (!moved) return;
+    nx = Math.max(6, Math.min(94, ((ev.clientX - rect.left) / rect.width) * 100));
+    ny = Math.max(5, Math.min(95, ((ev.clientY - rect.top) / rect.height) * 100));
+    el.style.left = nx + '%'; el.style.top = ny + '%';
+  };
+  const onUp = () => {
+    el.classList.remove('fd-dragging');
+    el.removeEventListener('pointermove', onMove);
+    el.removeEventListener('pointerup', onUp);
+    el.removeEventListener('pointercancel', onUp);
+    if (moved) {
+      suppressClick = true; // 드래그 직후의 click(편집·열기) 억제
+      const it = ((S.decor && S.decor.items) || []).find((q) => q.id === id);
+      if (it) { it.x = +nx.toFixed(1); it.y = +ny.toFixed(1); save(); }
+    }
+  };
+  el.addEventListener('pointermove', onMove);
+  el.addEventListener('pointerup', onUp);
+  el.addEventListener('pointercancel', onUp);
+});
 
 document.addEventListener('click', (e) => {
   if (suppressClick) { suppressClick = false; e.preventDefault(); e.stopPropagation(); return; }

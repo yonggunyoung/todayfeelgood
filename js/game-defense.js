@@ -51,6 +51,10 @@ const BALANCE = {
 };
 const UP_ORDER = ['damage', 'fireRate', 'projspd', 'multiShot', 'pierce', 'crit', 'chain', 'wall', 'homing', 'orbital', 'laser', 'bomb', 'frostAura', 'sideTurret', 'regen', 'maxHp', 'boost'];
 
+// 플레이 영역 고정 — 화면이 커져도(특히 PC 넓은 창) 이 크기로 제한해 난이도가 기기별로 달라지지 않게 한다.
+// 모바일 기준 세로 칼럼. 큰 화면에선 .gx-stage(flex, justify/align center)가 자동으로 가운데 정렬한다.
+const PLAY = { W: 440, H: 820 };
+
 // 난이도 (하/중/상) — 적 HP·속도·물량·침투피해·코인·어픽스 확률 배수
 const DIFF = {
   easy:   { key: 'easy', name: '하', sub: '느긋하게', hp: 0.8, spd: 0.9, count: 0.85, dmg: 0.7, coin: 1.2, affix: 0.5, color: '#5ef0b0' },
@@ -177,9 +181,9 @@ export function gameDefense() {
   const canvas = document.getElementById('def-c');
   const wrap = canvas.parentElement;
   const cw = wrap.clientWidth, ch = wrap.clientHeight;
-  const cssW = clamp(Number.isFinite(cw) && cw > 0 ? cw : 340, 280, 1200);
-  let cssH = (Number.isFinite(ch) && ch > 240) ? ch : clamp(Math.round((window.innerHeight || 720) - 200), 340, 1200); // 화면을 꽉 채움
-  cssH = clamp(cssH, 320, 1200);
+  const cssW = clamp(Number.isFinite(cw) && cw > 0 ? cw : 340, 280, PLAY.W);
+  let cssH = (Number.isFinite(ch) && ch > 240) ? ch : clamp(Math.round((window.innerHeight || 720) - 200), 340, PLAY.H);
+  cssH = clamp(cssH, 320, PLAY.H); // 모바일 기준 고정(난이도 일관) — 큰 화면은 가운데 정렬
   const { ctx } = setupCanvas(canvas, cssW, cssH);
 
   D = {
@@ -233,7 +237,7 @@ function resizeDefCanvas() {
   const wrap = D.canvas.parentElement; if (!wrap) return;
   const cw = wrap.clientWidth, ch = wrap.clientHeight;
   if (!Number.isFinite(cw) || !Number.isFinite(ch) || cw < 200 || ch < 200) return; // 스텁/미측정 시 건너뜀
-  const w = clamp(cw, 280, 1400), h = clamp(ch, 320, 1400);
+  const w = clamp(cw, 280, PLAY.W), h = clamp(ch, 320, PLAY.H); // 모바일 기준 고정(난이도 일관) — 큰 화면은 가운데 정렬
   if (Math.abs(w - D.W) < 2 && Math.abs(h - D.H) < 2) return;
   setupCanvas(D.canvas, w, h); D.W = w; D.H = h;
   if (D.horror && D.moldSpots) seedMold();

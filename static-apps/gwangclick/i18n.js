@@ -21,20 +21,128 @@
 
   var STR = {
     ko: {
-      live: "LIVE", liveWorld: "전 세계 동시", demo: "데모 · 흐름 시뮬",
-      worldTitle: "세계 광클대전", todayFlow: "전국 흐름", worldFlow: "세계 흐름",
-      joinA: "{a}로 참전", joinB: "{b}로 참전",
+      // 브랜드/공통
+      brand: "⚡ 광클대전", live: "LIVE", liveWorld: "전 세계 동시",
+      liveBadge: "LIVE · 전국 동시", demoBadge: "데모 · 흐름 시뮬", demo: "데모",
+      worldTitle: "세계 광클대전", appName: "광클대전", vs: "VS",
+      // 인트로
+      todayFlow: "전국 흐름", worldFlow: "세계 흐름",
+      join: "{name}로 참전", // ko: 조사는 호출부에서 withEuro로 보정
       tapHint: "60초 동안 미친듯이 탭 → 내 편 흐름을 끌어와라. 콤보를 이으면 한 탭이 ×3까지.",
-      firstJoin: "오늘의 첫 참전자가 되어보세요", streakDays: "{n}일 연속 참전",
-      myContribution: "내 기여도", rankNation: "우리나라 순위", connecting: "🔴 전 세계 실시간 집계 연결 중…",
+      firstJoin: "🔴 오늘의 첫 참전자가 되어보세요", streakDays: "{n}일 연속 참전",
+      streakDaysOn: "{n}일 연속 참전 중",
+      connecting: "🔴 전국 실시간 집계 연결 중…",
+      liveCount: "🔴 지금까지 {n}명 참전 — 실제 전국 집계 반영 중",
+      rankBtn: "🏆 전국 랭킹", todayBattle: "⚡ 오늘의 대전",
+      // 배틀
+      battleHead: "LIVE · BATTLE", startCry: "전국에서 광클 시작 — {team} 가즈아!",
+      myContribution: "내 기여", comboLbl: "콤보", timeLbl: "Time", tapLab: "TAP!",
+      chipNormal: "평상", chipCombo: "콤보!", chipUrgent: "막판 10초",
+      thirdLive: "전국 실시간", thirdUrgent: "긴급", thirdComboAcc: "콤보 가속",
+      thirdGrab: "{name} · 흐름 잡아라",
+      thirdUrgentMsg: "막판 10초 · 총력전", thirdComboMsg: "버튼 발광 · 기여 강조",
+      thirdLeadMsg: "{name} 우세 · 차이 {diff}%p",
+      // 티커 일반 라인(떡밥별 도발은 topics.js)
+      tkClose: "⚔️ 초접전! 한 끗 차이다", tkLead: "🔥 {team} 흐름 장악 {share}%",
+      tkCombo: "💥 누군가 ×{mult} 콤보 폭발!",
+      tkGen1: "🚀 단톡방에 소문이 퍼지는 중…", tkGen2: "👀 옆 반도 참전했다는데?", tkGen3: "📣 지금 흐름 끌어올 타이밍!",
+      // 결과
+      resultTag: "RESULT", verdictWin: "우리 편이 전국을 먹었다 🎉",
+      verdictLose: "오늘은 밀렸다…<br>내일 설욕 🔥", verdictTie: "초접전 무승부 ⚔️",
+      titleLbl: "칭호", finalShare: "최종 {n}%", maxCombo: "최고 콤보",
+      rankNation: "전국 순위", rankEst: "예상 전국", counting: "집계 중…",
+      rankUnit: "위", rankOf: "{n}명", hashApp: "#광클대전",
+      newBest: "🏆 내 최고 기여 갱신 · {n}",
+      x2done: "✅ 광고 보상 적용 — 자랑 카드가 2배로 커졌어요",
+      rewardBtn: "📺 광고 보고 기여 <b>2배</b>로 자랑 ⚡2X",
+      shareBtn: "📣 결과 자랑 + 친구 소환", againBtn: "🔁 한 판 더",
+      // 공유
+      shareText: "⚡광클대전⚡ 나는 {name}!\n{q} → {title}\n내 기여 {contrib}{x2}{rank}\n너는 어느 편? 참전해라 👉",
+      shareRankReal: " · 전국 {n}위", shareRankEst: " · 예상 {n}위",
+      shareCopied: "링크 복사 완료 — 단톡방에 뿌리기 📣",
+      shareScreenshot: "스크린샷 해서 자랑해보세요 📸",
+      // 랭킹 보드
+      rankTitle: "🏆 전국 랭킹", topToday: "오늘의 광클 TOP", realtime: "실시간",
+      loading: "불러오는 중…", refreshBtn: "🔄 새로고침",
+      boardDemo: "데모 모드예요 — fb-config.js에 Firebase 설정을 넣으면 실제 전국 랭킹·지역 점령전이 켜집니다.",
+      boardErr: "랭킹을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.",
+      boardEmpty: "아직 오늘 참전자가 없어요 — 첫 광클의 주인공이 되어보세요!",
+      regionTitle: "지역 점령 현황", me: "(나)",
+      // 설정
+      setTitle: "설정", closeBtn: "✕ 닫기", setRegionLbl: "내 지역 · 지역 점령전",
+      setNickLbl: "랭킹 닉네임", anon: "익명광클러",
+      setHintOn: "실제 전국 집계에 참여 중 — 닉네임은 랭킹에만 표시돼요.",
+      setHintOff: "백엔드 미연결(데모). fb-config.js 연결 시 실제 대전이 켜집니다.",
+      saveBtn: "저장",
+      // 광고 오버레이
+      adTag: "AD · 광고", adSkip: "✕ 건너뛰기(보상 없음)",
+      adNote: "광고 자리 — 토스/애드센스/애드핏 연결 시 실제 광고가 나옵니다",
+      adWatching: "광고 시청 중… {n}초", adRewarded: "✅ 보상 적용",
+      adNeedFull: "끝까지 봐야 보상을 받아요", adApplied: "⚡ 기여 2배 적용 — 더 크게 자랑하기!",
+      // 토글
+      langToggle: "EN", // ko 화면에서 누르면 영어로 → 다른 언어를 표시
     },
     en: {
-      live: "LIVE", liveWorld: "Worldwide live", demo: "Demo · simulated",
-      worldTitle: "World Click Battle", todayFlow: "National flow", worldFlow: "World flow",
-      joinA: "Join {a}", joinB: "Join {b}",
+      // brand/common
+      brand: "⚡ Click Battle", live: "LIVE", liveWorld: "Worldwide live",
+      liveBadge: "LIVE · Worldwide", demoBadge: "Demo · simulated", demo: "Demo",
+      worldTitle: "World Click Battle", appName: "Click Battle", vs: "VS",
+      // intro
+      todayFlow: "Global flow", worldFlow: "World flow",
+      join: "Join {name}",
       tapHint: "Tap like crazy for 60s → pull the flow to your side. Combos boost a tap up to ×3.",
-      firstJoin: "Be today's first to join", streakDays: "{n}-day streak",
-      myContribution: "My contribution", rankNation: "Your country's rank", connecting: "🔴 Connecting to worldwide live count…",
+      firstJoin: "🔴 Be today's first to join", streakDays: "{n}-day streak",
+      streakDaysOn: "{n}-day streak going",
+      connecting: "🔴 Connecting to live count…",
+      liveCount: "🔴 {n} have joined so far — live count is on",
+      rankBtn: "🏆 Rankings", todayBattle: "⚡ Today's battle",
+      // battle
+      battleHead: "LIVE · BATTLE", startCry: "Battle is on — let's go {team}!",
+      myContribution: "My taps", comboLbl: "Combo", timeLbl: "Time", tapLab: "TAP!",
+      chipNormal: "Steady", chipCombo: "Combo!", chipUrgent: "Final 10s",
+      thirdLive: "Live", thirdUrgent: "Urgent", thirdComboAcc: "Combo rush",
+      thirdGrab: "{name} · grab the flow",
+      thirdUrgentMsg: "Final 10s · all in", thirdComboMsg: "Button on fire · push taps",
+      thirdLeadMsg: "{name} leading · by {diff}%p",
+      // ticker generic lines
+      tkClose: "⚔️ Neck and neck! Razor thin", tkLead: "🔥 {team} owns the flow {share}%",
+      tkCombo: "💥 Someone just hit a ×{mult} combo!",
+      tkGen1: "🚀 Word is spreading in the chat…", tkGen2: "👀 The other side just joined too?", tkGen3: "📣 Now's the time to swing it!",
+      // result
+      resultTag: "RESULT", verdictWin: "Our side took it all 🎉",
+      verdictLose: "We got pushed back today…<br>Revenge tomorrow 🔥", verdictTie: "Dead heat — a draw ⚔️",
+      titleLbl: "Title", finalShare: "Final {n}%", maxCombo: "Max combo",
+      rankNation: "Global rank", rankEst: "Est. rank", counting: "Counting…",
+      rankUnit: "", rankOf: "of {n}", hashApp: "#ClickBattle",
+      newBest: "🏆 New personal best · {n}",
+      x2done: "✅ Reward applied — your brag card is 2× bigger",
+      rewardBtn: "📺 Watch an ad to brag <b>2×</b> ⚡2X",
+      shareBtn: "📣 Brag + summon friends", againBtn: "🔁 One more",
+      // share
+      shareText: "⚡Click Battle⚡ I'm {name}!\n{q} → {title}\nMy taps {contrib}{x2}{rank}\nWhich side are you? Join 👉",
+      shareRankReal: " · global #{n}", shareRankEst: " · est. #{n}",
+      shareCopied: "Link copied — share it around 📣",
+      shareScreenshot: "Take a screenshot to brag 📸",
+      // rank board
+      rankTitle: "🏆 Rankings", topToday: "Today's top clickers", realtime: "Live",
+      loading: "Loading…", refreshBtn: "🔄 Refresh",
+      boardDemo: "Demo mode — add your Firebase config to fb-config.js to turn on live rankings and regional battles.",
+      boardErr: "Couldn't load rankings. Please try again shortly.",
+      boardEmpty: "No one has joined today yet — be the first clicker!",
+      regionTitle: "Regional control", me: "(you)",
+      // settings
+      setTitle: "Settings", closeBtn: "✕ Close", setRegionLbl: "My region · regional battle",
+      setNickLbl: "Ranking nickname", anon: "Anonymous",
+      setHintOn: "You're in the live count — nickname shows only on the ranking.",
+      setHintOff: "Backend not connected (demo). Connect fb-config.js to turn on the real battle.",
+      saveBtn: "Save",
+      // ad overlay
+      adTag: "AD", adSkip: "✕ Skip (no reward)",
+      adNote: "Ad slot — real ads appear when Toss/AdSense/AdFit is connected",
+      adWatching: "Watching ad… {n}s", adRewarded: "✅ Reward applied",
+      adNeedFull: "Watch to the end to get the reward", adApplied: "⚡ Taps doubled — brag even bigger!",
+      // toggle
+      langToggle: "한국어", // on en screen, tapping switches to Korean
     },
   };
 

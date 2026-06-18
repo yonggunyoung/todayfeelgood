@@ -23,7 +23,7 @@ test("t — 폴백 lang→ko→key", () => {
 
 test("t — {placeholder} 치환", () => {
   assert.equal(i18n.t("ko", "streakDays", { n: 3 }), "3일 연속 참전"); // 정상
-  assert.equal(i18n.t("en", "joinA", { a: "Team Mint" }), "Join Team Mint"); // 매핑
+  assert.equal(i18n.t("en", "join", { name: "Team Mint" }), "Join Team Mint"); // 매핑
   assert.equal(i18n.t("ko", "streakDays", {}), "{n}일 연속 참전"); // None(값없음→토큰유지)
   assert.equal(i18n.t("ko", "streakDays"), "{n}일 연속 참전"); // 변조(vars 없음→throw 금지)
 });

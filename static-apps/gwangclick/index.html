@@ -16,6 +16,10 @@
 <!-- 실제 전국 대전 백엔드(선택) — fb-config.js 비우면 자동으로 폰 단독 시뮬레이션 폴백 -->
 <script src="./fb-config.js"></script>
 <script src="./net.js"></script>
+<!-- 글로벌 기반(Phase 1): 언어/국가감지/양어 떡밥 — 메인 스크립트보다 먼저 로드 -->
+<script src="./i18n.js"></script>
+<script src="./geo.js"></script>
+<script src="./topics.js"></script>
 <link rel="stylesheet" as="style" crossorigin
       href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
 <style>
@@ -184,41 +188,8 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 "use strict";
 /* ⚡ 광클대전 — 단독 실행 버전 (서버·빌드·백엔드 없이 파일 하나로 동작) */
 
-/* ── 소재(밈 떡밥) ── */
-var BATTLES = [
-  { id:'mintchoco', tag:'민초대전', q:'민트초코, 너는?',
-    a:{key:'mint',name:'민초단',emoji:'🌿',color:'#12b39a',slogan:'치약? 이건 신이 내린 맛'},
-    b:{key:'anti',name:'반민초파',emoji:'🚫',color:'#7b6ef0',slogan:'디저트에 치약을 왜 넣냐고'},
-    taunts:['치약 자랑 그만 🪥','민초 모르면 인생 손해 ㅋㅋ','반민초는 미각 테러범','결국 다 민초로 온다'] },
-  { id:'tangsuyuk', tag:'부먹찍먹', q:'탕수육은 역시?',
-    a:{key:'bu',name:'부먹파',emoji:'🥣',color:'#e8633a',slogan:'소스에 촉촉하게 적셔야 진리'},
-    b:{key:'jjik',name:'찍먹파',emoji:'🥢',color:'#2f9ec4',slogan:'바삭함을 어떻게 포기해'},
-    taunts:['눅눅이들 잘 있냐 🫠','소스 부으면 그게 탕수육 죽이야','찍먹이 국룰 모르나','부먹은 사랑입니다'] },
-  { id:'chicken', tag:'양념후라이드', q:'치킨 한 마리면?',
-    a:{key:'yn',name:'양념파',emoji:'🍗',color:'#d83838',slogan:'손에 묻은 양념까지 핥아먹는다'},
-    b:{key:'fr',name:'후라이드파',emoji:'🍤',color:'#cf911f',slogan:'치킨 본연의 맛, 후라이드'},
-    taunts:['후라이드는 심심하지 않냐','양념은 소스맛이지 치킨맛이냐 ㅋ','반반? 회색분자 나가라','결국 시키면 양념'] },
-  { id:'pineapple', tag:'파인애플피자', q:'파인애플 피자, 인정?',
-    a:{key:'o',name:'하와이안단',emoji:'🍍',color:'#d9a400',slogan:'달콤짭짤 이게 천국'},
-    b:{key:'x',name:'파인애플아웃',emoji:'🙅',color:'#3f8f4f',slogan:'피자에 과일은 반칙'},
-    taunts:['피자에 과일 올린 사람 누구야','먹어보고 말해라 진짜 맛있음','이탈리아 가면 잡혀간다','단짠 모르면 입맛 초딩'] },
-  { id:'naengmyeon', tag:'물냉비냉', q:'여름엔 어떤 냉면?',
-    a:{key:'mul',name:'물냉파',emoji:'🧊',color:'#2f8fd0',slogan:'시원한 육수 들이켜는 그 맛'},
-    b:{key:'bib',name:'비냉파',emoji:'🌶️',color:'#d8452f',slogan:'매콤새콤 비벼야 제맛'},
-    taunts:['물냉은 밍밍하잖아','비냉은 그냥 매운 국수지','면치기 못하면 물냉 자격 없음','둘 다 시키는 게 정답 아님?'] },
-  { id:'milk', tag:'딸기바나나우유', q:'편의점 우유는?',
-    a:{key:'st',name:'딸기우유단',emoji:'🍓',color:'#e85a92',slogan:'핑크빛 행복 한 모금'},
-    b:{key:'bn',name:'바나나우유단',emoji:'🍌',color:'#e0a800',slogan:'국민 단지우유 영원하라'},
-    taunts:['딸기우유는 색소맛 ㅋ','바나나우유 안 먹어본 사람 있냐','단지 모양 못 이김','딸기우유가 더 고급짐'] },
-  { id:'gimbap', tag:'김밥꼬다리', q:'김밥, 어디부터 먹어?',
-    a:{key:'end',name:'꼬다리파',emoji:'🍙',color:'#8d6e63',slogan:'못생긴 끝이 제일 맛있어'},
-    b:{key:'mid',name:'가운데파',emoji:'🌀',color:'#3a9b4f',slogan:'예쁜 가운데가 정석이지'},
-    taunts:['꼬다리 안 주면 서운함','가운데부터 먹는 건 국룰','꼬다리 버리는 사람 손절','엄마는 늘 꼬다리만 드셨지…'] },
-  { id:'mandu', tag:'군만두물만두', q:'만두는 역시?',
-    a:{key:'gun',name:'군만두파',emoji:'🥟',color:'#c07c2a',slogan:'바삭바삭 겉면이 생명'},
-    b:{key:'mul',name:'물만두파',emoji:'💧',color:'#4d9ec4',slogan:'촉촉하게 터지는 육즙'},
-    taunts:['군만두는 기름맛 아니냐','물만두는 밋밋해','냉동만두는 무조건 군만두','둘 다 맛있는 거 인정하자 사실'] }
-];
+/* ── 소재(밈 떡밥) — 양어 원본은 topics.js(GCTopics.BATTLES). 표시 직전 localize(LANG)로 평탄화 ── */
+var BATTLES = GCTopics.BATTLES;
 
 /* ── 순수 헬퍼 ── */
 function fnv1a(s){var h=2166136261;for(var i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619);}return h>>>0;}
@@ -229,12 +200,13 @@ function comboMult(streak){return Math.min(3,1+Math.max(0,streak)*0.04);}
 var TITLES=[[0,'구경꾼 👀'],[50,'일반인 🙂'],[150,'광클 입문 🐣'],[300,'손가락 좀 쓰네 ✌️'],[500,'광클러 ⚡'],[800,'광클 고수 🔥'],[1200,'광클의 신 👑'],[1800,'손가락 분신술 🌀']];
 function titleForTaps(t){var l=TITLES[0][1];for(var i=0;i<TITLES.length;i++)if(t>=TITLES[i][0])l=TITLES[i][1];return l;}
 function rankEstimate(t){var pop=87431,f=Math.max(0,Math.min(1,1-t/2000));return Math.max(1,Math.round(pop*(0.0002+0.9998*f*f)));}
-function comma(n){return Math.round(n).toLocaleString('ko-KR');}
+function comma(n){return Math.round(n).toLocaleString(LANG==='ko'?'ko-KR':'en-US');}
 function clamp(v,lo,hi){return Math.max(lo,Math.min(hi,v));}
 function pad2(n){return (n<10?'0':'')+n;}
 function todayStr(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
-function mdLabel(d){var p=String(d).split('-');return (+p[1])+'월 '+(+p[2])+'일';}
-function mdShort(d){var p=String(d).split('-');return (+p[1])+'.'+(+p[2]);}
+var MON_EN=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function mdLabel(d){var p=String(d).split('-');return LANG==='ko'?((+p[1])+'월 '+(+p[2])+'일'):(MON_EN[(+p[1]-1)]||'?')+' '+(+p[2]);}
+function mdShort(d){var p=String(d).split('-');return LANG==='ko'?((+p[1])+'.'+(+p[2])):(MON_EN[(+p[1]-1)]||'?')+' '+(+p[2]);}
 function addDaysStr(n,from){var d=new Date(from+'T00:00:00');d.setDate(d.getDate()+n);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function withEuro(name){var c=name.charCodeAt(name.length-1)-0xac00;var jong=c>=0&&c<=11171&&c%28!==0;return name+(jong?'으로':'로');}
 function introQ(q){return q.replace(/, /,',<br>').replace(/\?$/,'<span class="qa">?</span>');}
@@ -250,14 +222,28 @@ function persist(){try{localStorage.setItem(KEY,JSON.stringify(F));}catch(e){}}
 var F=load();
 F.region=F.region||''; F.nick=F.nick||'';
 
+/* ── 글로벌 기반(Phase 1): 언어 + 국가 감지 ──
+ * LANG: 저장값(F.lang) 우선 → 없으면 브라우저 언어에서 추정(ko/en). 미상은 ko 폴백(불신 #1).
+ * MY/MYINFO: 무료 국가감지(geo.js, 외부 API 0). 미상이면 '전 세계/Global'로 폴백. */
+var LANG=F.lang||GCI18n.pickLang((navigator.languages&&navigator.languages[0])||navigator.language||'');
+var MY=GCGeo.detectFromBrowser();
+var MYINFO=GCGeo.countryInfo(MY);
+function t(k,v){return GCI18n.t(LANG,k,v);} // 크롬(UI) 문자열 단축 헬퍼
+try{document.documentElement.lang=LANG;}catch(e){} // <html lang> 동적 반영
+/* 언어 토글: F.lang 저장 → 현재 화면 재렌더(intro). 반대 언어로 즉시 전환. */
+function toggleLang(){LANG=(LANG==='ko')?'en':'ko';F.lang=LANG;persist();try{document.documentElement.lang=LANG;}catch(e){}intro();}
+
 /* ── 실제 전국 대전(백엔드) 연동 ── */
 var REGIONS=[{k:'',n:'전국'},{k:'seoul',n:'서울'},{k:'gyeonggi',n:'경기'},{k:'incheon',n:'인천'},
   {k:'gangwon',n:'강원'},{k:'daejeon',n:'대전'},{k:'sejong',n:'세종'},{k:'chungbuk',n:'충북'},
   {k:'chungnam',n:'충남'},{k:'daegu',n:'대구'},{k:'gyeongbuk',n:'경북'},{k:'busan',n:'부산'},
   {k:'ulsan',n:'울산'},{k:'gyeongnam',n:'경남'},{k:'gwangju',n:'광주'},{k:'jeonbuk',n:'전북'},
   {k:'jeonnam',n:'전남'},{k:'jeju',n:'제주'}];
-function regionName(k){for(var i=0;i<REGIONS.length;i++)if(REGIONS[i].k===k)return REGIONS[i].n;return '전국';}
-function nickOf(){return (F.nick||'').trim()||'익명광클러';}
+/* 지역명: 한국 지역 데이터는 Phase 2(countries)까지 한글 유지.
+ * 단 '전국'(빈 키) 기본 라벨만 언어 인식 — en은 감지 국가명(없으면 Global). */
+function regionDefault(){return LANG==='ko'?'전국':(MYINFO&&MYINFO.nameEn||'Global');}
+function regionName(k){if(!k)return regionDefault();for(var i=0;i<REGIONS.length;i++)if(REGIONS[i].k===k)return REGIONS[i].n;return regionDefault();}
+function nickOf(){return (F.nick||'').trim()||t('anon');}
 function netOn(){try{return !!(window.GCNet&&GCNet.available());}catch(e){return false;}}
 var LIVE={date:'',tot:null,unwatch:null};
 function shareFromTot(tot,seed){return (tot&&(tot.a+tot.b)>0)?clamp(tot.a/(tot.a+tot.b)*100,5,95):seed;}
@@ -276,7 +262,7 @@ function onLive(){
   if(iga){paintIntroGauge(shareFromTot(LIVE.tot,iga._seed||50));
     var pop=el('ig-pop');
     if(pop&&LIVE.tot){var n=LIVE.tot.na+LIVE.tot.nb;
-      pop.textContent=n>0?('🔴 지금까지 '+comma(n)+'명 참전 — 실제 전국 집계 반영 중'):'🔴 오늘의 첫 참전자가 되어보세요';}
+      pop.textContent=n>0?t('liveCount',{n:comma(n)}):t('firstJoin');}
   }
 }
 /* 배틀 중 실제 게이지 목표 = (서버 집계 + 내 실시간 기여) 기준 A 비율. 라이브 아니면 null → 시뮬 폴백 */
@@ -375,36 +361,41 @@ function paintIntroGauge(aShare){
   if(fa)fa.style.width=aShare.toFixed(2)+'%';
   if(fb)fb.style.width=(100-aShare).toFixed(2)+'%';
 }
+/* 진영 참전 버튼 라벨: ko는 조사(withEuro), en은 "Join {name}" — LANG 분기. */
+function joinLabel(team){return LANG==='ko'?(withEuro(team.name)+' 참전'):t('join',{name:team.name});}
 function intro(){
   cleanup();
-  var date=todayStr(), bt=battleOfDay(date), base=clamp(50+dailyBias(date,bt),12,88), ra=Math.round(base);
-  var liveBadge=netOn()?'LIVE · 전국 동시':'데모 · 흐름 시뮬';
+  var date=todayStr(), bt=GCTopics.localize(battleOfDay(date),LANG), base=clamp(50+dailyBias(date,bt),12,88), ra=Math.round(base);
+  var liveBadge=netOn()?t('liveBadge'):t('demoBadge');
   app.innerHTML=
     '<div class="screen" style="--team-a:'+bt.a.color+';--team-b:'+bt.b.color+';--me:'+bt.a.color+';--foe:'+bt.b.color+'">'+
-      '<div class="hdr"><span class="brand">⚡ 광클대전</span><span class="live"><span class="dot">●</span>'+liveBadge+'</span></div>'+
+      '<div class="hdr"><span class="brand">'+t('brand')+'</span>'+
+        '<span style="display:flex;align-items:center;gap:8px">'+
+          '<button class="chip-soft" onclick="toggleLang()" aria-label="language">'+t('langToggle')+'</button>'+
+          '<span class="live"><span class="dot">●</span>'+liveBadge+'</span></span></div>'+
       '<div class="rule"></div>'+
-      '<div class="kicker">광클대전 · '+mdLabel(date)+' · '+regionName(F.region)+'</div>'+
+      '<div class="kicker">'+t('appName')+' · '+mdLabel(date)+' · '+MYINFO.flag+' '+regionName(F.region)+'</div>'+
       '<h1 class="q">'+introQ(bt.q)+'</h1>'+
       '<div class="teams">'+teamCard(bt.a,'A')+teamCard(bt.b,'B')+'</div>'+
       '<div>'+
-        '<div class="gauge-head"><span class="mono">전국 흐름</span>'+
-          (F.streak>1?'<span class="chip-soft">🔥 '+F.streak+'일 연속 참전</span>':'<span class="chip-soft"><span class="dot">●</span> LIVE</span>')+'</div>'+
+        '<div class="gauge-head"><span class="mono">'+t('todayFlow')+'</span>'+
+          (F.streak>1?'<span class="chip-soft">🔥 '+t('streakDays',{n:F.streak})+'</span>':'<span class="chip-soft"><span class="dot">●</span> '+t('live')+'</span>')+'</div>'+
         '<div class="gnums"><span class="gnum" id="ig-a" style="color:var(--team-a)">'+ra+'</span>'+
-          '<span class="mono" style="align-self:center">VS</span>'+
+          '<span class="mono" style="align-self:center">'+t('vs')+'</span>'+
           '<span class="gnum" id="ig-b" style="color:var(--team-b)">'+(100-ra)+'</span></div>'+
         '<div class="gauge" style="margin-top:9px"><i id="ig-fill-a" style="width:'+base+'%;background:var(--team-a);transform-origin:left;animation:wipeIn .8s var(--ease-wipe) both"></i>'+
           '<i id="ig-fill-b" style="width:'+(100-base)+'%;background:var(--team-b);transform-origin:right;animation:wipeIn .8s var(--ease-wipe) both"></i></div>'+
-        '<div class="hint" id="ig-pop" style="margin-top:6px">'+(netOn()?'🔴 전국 실시간 집계 연결 중…':'')+'</div>'+
+        '<div class="hint" id="ig-pop" style="margin-top:6px">'+(netOn()?t('connecting'):'')+'</div>'+
       '</div>'+
       '<div class="go">'+
-        '<button style="background:'+bt.a.color+';color:'+ink(bt.a.color)+'" onclick="GO(\'a\')">'+bt.a.emoji+' '+withEuro(bt.a.name)+' 참전</button>'+
-        '<button style="background:'+bt.b.color+';color:'+ink(bt.b.color)+'" onclick="GO(\'b\')">'+bt.b.emoji+' '+withEuro(bt.b.name)+' 참전</button>'+
+        '<button style="background:'+bt.a.color+';color:'+ink(bt.a.color)+'" onclick="GO(\'a\')">'+bt.a.emoji+' '+joinLabel(bt.a)+'</button>'+
+        '<button style="background:'+bt.b.color+';color:'+ink(bt.b.color)+'" onclick="GO(\'b\')">'+bt.b.emoji+' '+joinLabel(bt.b)+'</button>'+
       '</div>'+
       '<div style="display:flex;gap:8px;margin-top:10px">'+
-        '<button class="btn btn-ghost" style="flex:1" onclick="openSettings()">📍 '+regionName(F.region)+(F.nick?' · '+F.nick:'')+'</button>'+
-        '<button class="btn btn-ghost" style="flex:1" onclick="rankBoard()">🏆 전국 랭킹</button>'+
+        '<button class="btn btn-ghost" style="flex:1" onclick="openSettings()">📍 '+regionName(F.region)+(F.nick?' · '+esc(F.nick):'')+'</button>'+
+        '<button class="btn btn-ghost" style="flex:1" onclick="rankBoard()">'+t('rankBtn')+'</button>'+
       '</div>'+
-      '<p class="hint">60초 동안 미친듯이 탭 → 내 편 흐름을 끌어와라. 콤보를 이으면 한 탭이 <b style="color:var(--team-a)">×3</b>까지.</p>'+
+      '<p class="hint">'+t('tapHint')+'</p>'+
     '</div>';
   var iga=el('ig-a'); if(iga)iga._seed=base;
   startWatch(date);
@@ -415,7 +406,8 @@ function intro(){
 var B=null, DURATION=60;
 function GO(side){
   cleanup();
-  var date=todayStr(), bt=battleOfDay(date), me=bt[side], foe=bt[side==='a'?'b':'a'];
+  // 배틀 시작 시 1회 localize → B.bt에 평탄 저장. 이후 frame/ticker/result는 B.bt를 그대로 사용.
+  var date=todayStr(), bt=GCTopics.localize(battleOfDay(date),LANG), me=bt[side], foe=bt[side==='a'?'b':'a'];
   startWatch(date);
   var base=clamp(50+dailyBias(date,bt),12,88);
   if(netOn()&&LIVE.tot)base=shareFromTot(LIVE.tot,base);
@@ -428,8 +420,8 @@ function GO(side){
   app.innerHTML=
     '<div class="stage" id="fb-stage" style="--team-a:'+bt.a.color+';--team-b:'+bt.b.color+';--me:'+me.color+';--foe:'+foe.color+';--tapink:'+ink(me.color)+'">'+
       '<div class="urgentbar"></div>'+
-      '<div class="bhdr"><span class="l"><span class="dot">●</span>LIVE · BATTLE</span><span class="chip" id="fb-chip">평상</span></div>'+
-      '<div class="ticker" id="fb-ticker">전국에서 광클 시작 — '+me.emoji+' '+me.name+' 가즈아!</div>'+
+      '<div class="bhdr"><span class="l"><span class="dot">●</span>'+t('battleHead')+'</span><span class="chip" id="fb-chip">'+t('chipNormal')+'</span></div>'+
+      '<div class="ticker" id="fb-ticker">'+t('startCry',{team:me.emoji+' '+me.name})+'</div>'+
       '<div>'+
         '<div class="brow"><span style="color:var(--team-a)">A <b id="fb-pa" class="tnum">'+base.toFixed(0)+'</b>%</span>'+
           '<span style="color:var(--team-b)">B <b id="fb-pb" class="tnum">'+(100-base).toFixed(0)+'</b>%</span></div>'+
@@ -437,14 +429,14 @@ function GO(side){
           '<i id="fb-fill-b" style="width:'+(100-base)+'%;background:var(--team-b)"></i></div>'+
       '</div>'+
       '<div class="mid">'+
-        '<div><div class="lbl">내 기여</div><div class="contrib tnum"><b id="fb-taps">0</b></div>'+
-          '<div class="combo-line">콤보 <b id="fb-combo">×1.0</b></div></div>'+
-        '<div style="text-align:right"><div class="lbl">Time</div><div class="timer tnum" id="fb-time">'+DURATION+'</div></div>'+
+        '<div><div class="lbl">'+t('myContribution')+'</div><div class="contrib tnum"><b id="fb-taps">0</b></div>'+
+          '<div class="combo-line">'+t('comboLbl')+' <b id="fb-combo">×1.0</b></div></div>'+
+        '<div style="text-align:right"><div class="lbl">'+t('timeLbl')+'</div><div class="timer tnum" id="fb-time">'+DURATION+'</div></div>'+
       '</div>'+
       '<button class="tap" id="fb-tap"><span class="combobadge" id="fb-combobadge">COMBO ×1.0</span>'+
-        '<span class="orb">'+me.emoji+'</span><span class="lab">TAP!</span></button>'+
-      '<div class="third"><span class="bar"></span><div><div class="k" id="fb-thirdk">전국 실시간</div>'+
-        '<div class="v" id="fb-thirdv">'+me.name+' · 흐름 잡아라</div></div></div>'+
+        '<span class="orb">'+me.emoji+'</span><span class="lab">'+t('tapLab')+'</span></button>'+
+      '<div class="third"><span class="bar"></span><div><div class="k" id="fb-thirdk">'+t('thirdLive')+'</div>'+
+        '<div class="v" id="fb-thirdv">'+t('thirdGrab',{name:me.name})+'</div></div></div>'+
       '<div class="fb-pops" id="fb-pops"></div>'+
       '<canvas id="fb-fx"></canvas>'+
     '</div>';
@@ -508,23 +500,23 @@ function frame(now){
   fxStep();
   var hot=B.streak>14, urg=(B.endsAt-now)/1000<=10;
   if(stage&&stage.classList){stage.classList.toggle('combo',hot);stage.classList.toggle('urgent',urg);}
-  setTxt('fb-chip',urg?'막판 10초':(hot?'콤보!':'평상'));
+  setTxt('fb-chip',urg?t('chipUrgent'):(hot?t('chipCombo'):t('chipNormal')));
   var lead=B.aShare>=50?B.bt.a:B.bt.b, diff=Math.abs(B.aShare-50)*2;
-  setTxt('fb-thirdk',urg?'긴급':(hot?'콤보 가속':'전국 실시간'));
-  setTxt('fb-thirdv',urg?'막판 10초 · 총력전':(hot?'버튼 발광 · 기여 강조':(lead.name+' 우세 · 차이 '+diff.toFixed(0)+'%p')));
+  setTxt('fb-thirdk',urg?t('thirdUrgent'):(hot?t('thirdComboAcc'):t('thirdLive')));
+  setTxt('fb-thirdv',urg?t('thirdUrgentMsg'):(hot?t('thirdComboMsg'):t('thirdLeadMsg',{name:lead.name,diff:diff.toFixed(0)})));
   if(now>=B.endsAt){endBattle();return;}
   B.raf=requestAnimationFrame(frame);
 }
 function tickerBeat(){
-  var t=el('fb-ticker'); if(!B||!t){cleanup();return;}
+  var tk=el('fb-ticker'); if(!B||!tk){cleanup();return;}
   var bt=B.bt, lead=B.aShare>=50?bt.a:bt.b, leadShare=Math.max(B.aShare,100-B.aShare), pool=[];
-  if(Math.abs(B.aShare-50)<2.5)pool.push('⚔️ 초접전! 한 끗 차이다');
-  else pool.push('🔥 '+lead.emoji+' '+lead.name+' 흐름 장악 '+leadShare.toFixed(0)+'%');
-  if(B.maxStreak>14)pool.push('💥 누군가 ×'+comboMult(B.maxStreak).toFixed(1)+' 콤보 폭발!');
-  bt.taunts.forEach(function(x){pool.push('🗣️ '+x);});
-  pool.push('🚀 단톡방에 소문이 퍼지는 중…','👀 옆 반도 참전했다는데?','📣 지금 흐름 끌어올 타이밍!');
-  t.textContent=pool[Math.floor(Math.random()*pool.length)];
-  t.classList.remove('beat'); void t.offsetWidth; t.classList.add('beat');
+  if(Math.abs(B.aShare-50)<2.5)pool.push(t('tkClose'));
+  else pool.push(t('tkLead',{team:lead.emoji+' '+lead.name,share:leadShare.toFixed(0)}));
+  if(B.maxStreak>14)pool.push(t('tkCombo',{mult:comboMult(B.maxStreak).toFixed(1)}));
+  bt.taunts.forEach(function(x){pool.push('🗣️ '+x);}); // 떡밥별 도발은 이미 localize됨(B.bt.taunts)
+  pool.push(t('tkGen1'),t('tkGen2'),t('tkGen3'));
+  tk.textContent=pool[Math.floor(Math.random()*pool.length)];
+  tk.classList.remove('beat'); void tk.offsetWidth; tk.classList.add('beat');
 }
 /* ── 광고 수익화: 보상형 '결과 2배 자랑' (둘 다 자동 분기) ──
    우선순위: ① 토스 안 → 토스 보상형 SDK  ② 웹 보상형 훅(AD.webRewarded)  ③ 하우스(데모) 광고 폴백.
@@ -537,14 +529,14 @@ function adRewarded(opts){
   try{ if(window.Toss&&Toss.inToss&&Toss.inToss()&&AD.tossRewardUnitId){
     Toss.rewardedAd(AD.tossRewardUnitId).then(function(r){
       if(r===true)opts.onReward&&opts.onReward();
-      else if(r===false)toast('끝까지 봐야 보상을 받아요');
+      else if(r===false)toast(t('adNeedFull'));
       else houseAd(opts);
     }); return;
   } }catch(e){}
   if(typeof AD.webRewarded==='function'){
     try{ Promise.resolve(AD.webRewarded({nonPersonalized:AD.nonPersonalized})).then(function(r){
       if(r===true)opts.onReward&&opts.onReward();
-      else if(r===false)toast('끝까지 봐야 보상을 받아요');
+      else if(r===false)toast(t('adNeedFull'));
       else houseAd(opts);
     }).catch(function(){houseAd(opts);}); return;
     }catch(e){}
@@ -553,18 +545,18 @@ function adRewarded(opts){
 }
 function houseAd(opts){
   var sec=AD.houseSeconds, ov=document.createElement('div'); ov.className='ad-ov';
-  ov.innerHTML='<div class="ad-box"><div class="ad-top"><span class="mono">AD · 광고</span>'+
-    '<button class="ad-skip" id="ad-skip">✕ 건너뛰기(보상 없음)</button></div>'+
-    '<div class="ad-body"><div class="ad-emoji">⚡</div><b>광클대전</b>'+
-    '<p class="hint" style="margin-top:6px">광고 자리 — 토스/애드센스/애드핏 연결 시 실제 광고가 나옵니다</p></div>'+
+  ov.innerHTML='<div class="ad-box"><div class="ad-top"><span class="mono">'+t('adTag')+'</span>'+
+    '<button class="ad-skip" id="ad-skip">'+t('adSkip')+'</button></div>'+
+    '<div class="ad-body"><div class="ad-emoji">⚡</div><b>'+t('appName')+'</b>'+
+    '<p class="hint" style="margin-top:6px">'+t('adNote')+'</p></div>'+
     '<div class="ad-bar"><i id="ad-bar"></i></div>'+
-    '<button class="btn btn-ghost" id="ad-btn" disabled>광고 시청 중… '+sec+'초</button></div>';
+    '<button class="btn btn-ghost" id="ad-btn" disabled>'+t('adWatching',{n:sec})+'</button></div>';
   (document.body||document.documentElement).appendChild(ov);
   var bar=document.getElementById('ad-bar'); if(bar){bar.style.transition='width '+sec+'s linear';requestAnimationFrame(function(){bar.style.width='100%';});}
-  var t=sec, btn=document.getElementById('ad-btn'), iv=setInterval(function(){t--;if(t>0){if(btn)btn.textContent='광고 시청 중… '+t+'초';return;}clearInterval(iv);done();},1000);
+  var rem=sec, btn=document.getElementById('ad-btn'), iv=setInterval(function(){rem--;if(rem>0){if(btn)btn.textContent=t('adWatching',{n:rem});return;}clearInterval(iv);done();},1000);
   function shut(){clearInterval(iv);if(ov.parentNode)ov.parentNode.removeChild(ov);}
-  function done(){if(btn)btn.textContent='✅ 보상 적용';setTimeout(function(){shut();opts.onReward&&opts.onReward();},350);}
-  var sk=document.getElementById('ad-skip'); if(sk)sk.onclick=function(){shut();toast('끝까지 봐야 보상을 받아요');};
+  function done(){if(btn)btn.textContent=t('adRewarded');setTimeout(function(){shut();opts.onReward&&opts.onReward();},350);}
+  var sk=document.getElementById('ad-skip'); if(sk)sk.onclick=function(){shut();toast(t('adNeedFull'));};
 }
 
 /* ── 종료 + 결과 ── */
@@ -575,7 +567,7 @@ function endBattle(){
   var bt=B.bt, side=B.side, me=B.me, foe=B.foe, date=B.date;
   var contrib=Math.floor(B.tapsF), myShare=side==='a'?B.aShare:100-B.aShare;
   var newBest=contrib>(F.best||0); if(newBest)F.best=contrib; persist();
-  var verdict=myShare>=53?{t:'우리 편이 전국을 먹었다 🎉',c:'win'}:myShare<=47?{t:'오늘은 밀렸다…<br>내일 설욕 🔥',c:'lose'}:{t:'초접전 무승부 ⚔️',c:'tie'};
+  var verdict=myShare>=53?{t:t('verdictWin'),c:'win'}:myShare<=47?{t:t('verdictLose'),c:'lose'}:{t:t('verdictTie'),c:'tie'};
   R={bt:bt,me:me,foe:foe,side:side,date:date,contrib:contrib,myShare:myShare,maxStreak:B.maxStreak,
      title:titleForTaps(contrib),rank:(netOn()?null:rankEstimate(contrib)),rankState:(netOn()?'pending':'estimate'),total:0,
      verdict:verdict,newBest:newBest,streak:F.streak,x2:false};
@@ -607,7 +599,7 @@ function applyDouble(){
       updateRankDOM();
     });
   }else{ R.rank=rankEstimate(R.contrib); R.rankState='estimate'; renderResult(); }
-  chord([659,784,988,1318]); buzz([15,30,15]); toast('⚡ 기여 2배 적용 — 더 크게 자랑하기!');
+  chord([659,784,988,1318]); buzz([15,30,15]); toast(t('adApplied'));
 }
 function renderResult(){
   var r=R, me=r.me, foe=r.foe, bt=r.bt, rs=Math.round(r.myShare);
@@ -615,37 +607,38 @@ function renderResult(){
   app.innerHTML=
     '<div class="screen" style="--team-a:'+bt.a.color+';--team-b:'+bt.b.color+';--me:'+me.color+';--foe:'+foe.color+';--tapink:'+ink(me.color)+'">'+
       '<div class="acc" style="background:'+acc+'"></div>'+
-      '<div class="hdr"><span class="brand">⚡ 광클대전</span><span class="mono">RESULT · '+mdShort(todayStr())+'</span></div>'+
+      '<div class="hdr"><span class="brand">'+t('brand')+'</span><span class="mono">'+t('resultTag')+' · '+mdShort(todayStr())+'</span></div>'+
       '<h2 class="verdict">'+r.verdict.t+'</h2>'+
       '<div class="rcard">'+
         '<div class="frow"><span class="em">'+me.emoji+'</span><span class="nm">'+me.name+'</span><span class="rq">'+bt.q+'</span></div>'+
-        '<div class="rlbl">칭호</div><div class="title">'+r.title+'</div>'+
-        '<div style="margin-top:16px"><div class="brow"><span style="color:var(--me)">최종 '+rs+'%</span><span style="color:var(--foe)">'+(100-rs)+'%</span></div>'+
+        '<div class="rlbl">'+t('titleLbl')+'</div><div class="title">'+r.title+'</div>'+
+        '<div style="margin-top:16px"><div class="brow"><span style="color:var(--me)">'+t('finalShare',{n:rs})+'</span><span style="color:var(--foe)">'+(100-rs)+'%</span></div>'+
           '<div class="gauge tall" style="margin-top:7px"><i style="width:'+r.myShare.toFixed(1)+'%;background:var(--me)"></i>'+
             '<i style="width:'+(100-r.myShare).toFixed(1)+'%;background:var(--foe)"></i></div></div>'+
       '</div>'+
-      '<div class="stats"><div><div class="k">내 기여</div><div class="v">'+comma(r.contrib)+(r.x2?' <span class="x2b">⚡2X</span>':'')+'</div></div>'+
-        '<div><div class="k">최고 콤보</div><div class="v">×'+comboMult(r.maxStreak).toFixed(1)+'</div></div>'+
+      '<div class="stats"><div><div class="k">'+t('myContribution')+'</div><div class="v">'+comma(r.contrib)+(r.x2?' <span class="x2b">⚡2X</span>':'')+'</div></div>'+
+        '<div><div class="k">'+t('maxCombo')+'</div><div class="v">×'+comboMult(r.maxStreak).toFixed(1)+'</div></div>'+
         '<div><div class="k" id="r-ranklbl">'+rankLabel(r)+'</div><div class="v" id="r-rankval">'+rankValue(r)+'</div></div></div>'+
-      '<div class="tags"><span>#광클대전</span><span>#'+bt.tag+'</span></div>'+
-      (r.newBest?'<div class="newbest">🏆 내 최고 기여 갱신 · '+comma(r.contrib)+'</div>':'')+
-      (r.streak>1?'<div class="streak-chip">🔥 '+r.streak+'일 연속 참전 중</div>':'')+
+      '<div class="tags"><span>'+t('hashApp')+'</span><span>#'+bt.tag+'</span></div>'+
+      (r.newBest?'<div class="newbest">'+t('newBest',{n:comma(r.contrib)})+'</div>':'')+
+      (r.streak>1?'<div class="streak-chip">🔥 '+t('streakDaysOn',{n:r.streak})+'</div>':'')+
       '<div class="actions">'+
-        (r.x2?'<div class="x2done">✅ 광고 보상 적용 — 자랑 카드가 2배로 커졌어요</div>'
-             :'<button class="btn btn-reward" onclick="watch2x()">📺 광고 보고 기여 <b>2배</b>로 자랑 ⚡2X</button>')+
-        '<button class="btn btn-primary" style="color:'+ink(me.color)+'" onclick="SHARE()">📣 결과 자랑 + 친구 소환</button>'+
-        '<button class="btn btn-ghost" onclick="GO(\''+r.side+'\')">🔁 한 판 더</button>'+
+        (r.x2?'<div class="x2done">'+t('x2done')+'</div>'
+             :'<button class="btn btn-reward" onclick="watch2x()">'+t('rewardBtn')+'</button>')+
+        '<button class="btn btn-primary" style="color:'+ink(me.color)+'" onclick="SHARE()">'+t('shareBtn')+'</button>'+
+        '<button class="btn btn-ghost" onclick="GO(\''+r.side+'\')">'+t('againBtn')+'</button>'+
         '<div style="display:flex;gap:8px">'+
-          '<button class="btn btn-ghost" style="flex:1" onclick="rankBoard()">🏆 전국 랭킹</button>'+
-          '<button class="btn btn-ghost" style="flex:1" onclick="intro()">⚡ 오늘의 대전</button>'+
+          '<button class="btn btn-ghost" style="flex:1" onclick="rankBoard()">'+t('rankBtn')+'</button>'+
+          '<button class="btn btn-ghost" style="flex:1" onclick="intro()">'+t('todayBattle')+'</button>'+
         '</div>'+
       '</div>'+
     '</div>';
 }
-function rankLabel(r){return r.rankState==='real'?'전국 순위':'예상 전국';}
+function rankLabel(r){return r.rankState==='real'?t('rankNation'):t('rankEst');}
 function rankValue(r){
-  if(r.rank==null||r.rankState==='pending')return '<small>집계 중…</small>';
-  return comma(r.rank)+'<small>위</small>'+(r.rankState==='real'&&r.total?' <small style="opacity:.55">/'+comma(r.total)+'명</small>':'');
+  if(r.rank==null||r.rankState==='pending')return '<small>'+t('counting')+'</small>';
+  var unit=t('rankUnit'); // ko:"위" / en:"" (숫자만)
+  return comma(r.rank)+(unit?'<small>'+unit+'</small>':'')+(r.rankState==='real'&&r.total?' <small style="opacity:.55">/'+t('rankOf',{n:comma(r.total)})+'</small>':'');
 }
 function updateRankDOM(){var lb=el('r-ranklbl'),v=el('r-rankval');if(lb)lb.textContent=rankLabel(R);if(v)v.innerHTML=rankValue(R);}
 
@@ -654,12 +647,12 @@ var LAST=null;
 function SHARE(){
   if(!LAST)return;
   var link=location.href.split('?')[0];
-  var rankPart=(LAST.rank!=null)?(' · '+(LAST.rankState==='real'?'전국':'예상')+' '+comma(LAST.rank)+'위'):'';
-  var text='⚡광클대전⚡ 나는 '+LAST.me.name+'!\n'+LAST.bt.q+' → '+LAST.title+'\n내 기여 '+comma(LAST.contrib)+(LAST.x2?' ⚡2X':'')+rankPart+'\n너는 어느 편? 참전해라 👉';
-  if(navigator.share){navigator.share({title:'광클대전',text:text,url:link}).catch(function(){});return;}
+  var rankPart=(LAST.rank!=null)?t(LAST.rankState==='real'?'shareRankReal':'shareRankEst',{n:comma(LAST.rank)}):'';
+  var text=t('shareText',{name:LAST.me.name,q:LAST.bt.q,title:LAST.title,contrib:comma(LAST.contrib),x2:(LAST.x2?' ⚡2X':''),rank:rankPart});
+  if(navigator.share){navigator.share({title:t('appName'),text:text,url:link}).catch(function(){});return;}
   if(navigator.clipboard&&navigator.clipboard.writeText){
-    navigator.clipboard.writeText(text+' '+link).then(function(){toast('링크 복사 완료 — 단톡방에 뿌리기 📣');},function(){toast('스크린샷 해서 자랑해보세요 📸');});
-  }else{toast('스크린샷 해서 자랑해보세요 📸');}
+    navigator.clipboard.writeText(text+' '+link).then(function(){toast(t('shareCopied'));},function(){toast(t('shareScreenshot'));});
+  }else{toast(t('shareScreenshot'));}
 }
 
 function cleanup(){if(B){cancelAnimationFrame(B.raf);clearInterval(B.tick);B=null;}FX.list.length=0;}
@@ -668,50 +661,50 @@ function cleanup(){if(B){cancelAnimationFrame(B.raf);clearInterval(B.tick);B=nul
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return c==='&'?'&amp;':c==='<'?'&lt;':c==='>'?'&gt;':'&quot;';});}
 function rankBoard(){
   cleanup();
-  var date=todayStr(), bt=battleOfDay(date);
+  var date=todayStr(), bt=GCTopics.localize(battleOfDay(date),LANG);
   app.innerHTML=
     '<div class="screen" style="--team-a:'+bt.a.color+';--team-b:'+bt.b.color+';--me:'+bt.a.color+';--foe:'+bt.b.color+'">'+
-      '<div class="hdr"><span class="brand">🏆 전국 랭킹</span><span class="mono">'+mdShort(date)+'</span></div>'+
+      '<div class="hdr"><span class="brand">'+t('rankTitle')+'</span><span class="mono">'+mdShort(date)+'</span></div>'+
       '<div class="rule"></div>'+
       '<div class="kicker">'+bt.q+'</div>'+
       '<div id="rb-region"></div>'+
-      '<div class="gauge-head" style="margin-top:8px"><span class="mono">오늘의 광클 TOP</span>'+
-        (netOn()?'<span class="chip-soft"><span class="dot">●</span> 실시간</span>':'<span class="chip-soft">데모</span>')+'</div>'+
-      '<div id="rb-list" class="hint" style="text-align:left">불러오는 중…</div>'+
+      '<div class="gauge-head" style="margin-top:8px"><span class="mono">'+t('topToday')+'</span>'+
+        (netOn()?'<span class="chip-soft"><span class="dot">●</span> '+t('realtime')+'</span>':'<span class="chip-soft">'+t('demo')+'</span>')+'</div>'+
+      '<div id="rb-list" class="hint" style="text-align:left">'+t('loading')+'</div>'+
       '<div class="actions" style="margin-top:14px">'+
-        '<button class="btn btn-ghost" onclick="rankBoard()">🔄 새로고침</button>'+
-        '<button class="btn btn-ghost" onclick="intro()">⚡ 오늘의 대전</button>'+
+        '<button class="btn btn-ghost" onclick="rankBoard()">'+t('refreshBtn')+'</button>'+
+        '<button class="btn btn-ghost" onclick="intro()">'+t('todayBattle')+'</button>'+
       '</div>'+
     '</div>';
-  if(!netOn()){el('rb-list').textContent='데모 모드예요 — fb-config.js에 Firebase 설정을 넣으면 실제 전국 랭킹·지역 점령전이 켜집니다.';return;}
+  if(!netOn()){el('rb-list').textContent=t('boardDemo');return;}
   GCNet.leaderboard(date,20).then(function(rows){renderBoard(bt,rows);});
-  GCNet.peek(date).then(function(t){renderRegion(bt,t);});
+  GCNet.peek(date).then(function(tot){renderRegion(bt,tot);});
 }
 function renderBoard(bt,rows){
   var box=el('rb-list'); if(!box)return;
-  if(!rows){box.textContent='랭킹을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.';return;}
-  if(!rows.length){box.textContent='아직 오늘 참전자가 없어요 — 첫 광클의 주인공이 되어보세요!';return;}
+  if(!rows){box.textContent=t('boardErr');return;}
+  if(!rows.length){box.textContent=t('boardEmpty');return;}
   var h='';
-  for(var i=0;i<rows.length;i++){var r=rows[i],t=bt[r.side]||bt.a,medal=i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1)+'';
+  for(var i=0;i<rows.length;i++){var r=rows[i],tm=bt[r.side]||bt.a,medal=i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1)+'';
     h+='<div style="display:flex;align-items:center;gap:10px;padding:9px 2px;border-bottom:1px solid var(--line)'+(r.me?';background:rgba(255,255,255,.05);border-radius:8px':'')+'">'+
       '<span class="mono" style="width:24px;text-align:center">'+medal+'</span>'+
-      '<span style="font-size:18px">'+t.emoji+'</span>'+
+      '<span style="font-size:18px">'+tm.emoji+'</span>'+
       '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px">'+
-        (r.me?'<b>':'')+esc(r.nick)+(r.me?' (나)</b>':'')+
+        (r.me?'<b>':'')+esc(r.nick)+(r.me?' '+t('me')+'</b>':'')+
         (r.region?'<span class="mono" style="margin-left:7px;color:var(--ink-3)">'+regionName(r.region)+'</span>':'')+'</span>'+
-      '<b class="tnum" style="color:'+t.color+'">'+comma(r.taps)+'</b></div>';
+      '<b class="tnum" style="color:'+tm.color+'">'+comma(r.taps)+'</b></div>';
   }
   box.className=''; box.innerHTML=h;
 }
-function renderRegion(bt,t){
-  var box=el('rb-region'); if(!box)return; if(!t){box.innerHTML='';return;}
-  var rs=t.regions||{}, arr=[],k;
+function renderRegion(bt,tot){
+  var box=el('rb-region'); if(!box)return; if(!tot){box.innerHTML='';return;}
+  var rs=tot.regions||{}, arr=[],k;
   for(k in rs){if(!Object.prototype.hasOwnProperty.call(rs,k))continue;
-    var a=(rs[k].a)||0,b=(rs[k].b)||0,tot=a+b; if(tot<=0)continue;
-    arr.push({k:k,lead:a>=b?'a':'b',share:Math.round((a>=b?a:b)/tot*100),tot:tot});}
+    var a=(rs[k].a)||0,b=(rs[k].b)||0,sum=a+b; if(sum<=0)continue;
+    arr.push({k:k,lead:a>=b?'a':'b',share:Math.round((a>=b?a:b)/sum*100),tot:sum});}
   if(!arr.length){box.innerHTML='';return;}
   arr.sort(function(x,y){return y.tot-x.tot;}); arr=arr.slice(0,8);
-  var h='<div class="gauge-head" style="margin-top:4px"><span class="mono">지역 점령 현황</span></div>'+
+  var h='<div class="gauge-head" style="margin-top:4px"><span class="mono">'+t('regionTitle')+'</span></div>'+
     '<div style="display:flex;flex-wrap:wrap;gap:6px;margin:7px 0 2px">';
   for(var i=0;i<arr.length;i++){var r=arr[i],lt=bt[r.lead]||bt.a;
     h+='<span class="chip-soft" style="border-color:'+lt.color+'55">'+lt.emoji+' '+regionName(r.k)+' '+r.share+'%</span>';}
@@ -720,17 +713,19 @@ function renderRegion(bt,t){
 /* ── 설정: 내 지역 + 랭킹 닉네임 ── */
 function openSettings(){
   var ov=document.createElement('div'); ov.className='ad-ov';
-  var opts=''; for(var i=0;i<REGIONS.length;i++)opts+='<option value="'+REGIONS[i].k+'"'+(REGIONS[i].k===F.region?' selected':'')+'>'+REGIONS[i].n+'</option>';
+  // 지역 옵션: 빈 키('')는 언어 인식 라벨(전국/Global·국가명), 한국 지역명은 Phase 2까지 한글 유지.
+  var opts=''; for(var i=0;i<REGIONS.length;i++){var rn=REGIONS[i].k?REGIONS[i].n:regionDefault();
+    opts+='<option value="'+REGIONS[i].k+'"'+(REGIONS[i].k===F.region?' selected':'')+'>'+esc(rn)+'</option>';}
   var fld='width:100%;padding:11px;border-radius:11px;background:var(--bg-3);color:var(--ink);border:1px solid var(--line-2);font-family:inherit;font-size:15px';
-  ov.innerHTML='<div class="ad-box"><div class="ad-top"><span class="mono">설정</span><button class="ad-skip" id="set-x">✕ 닫기</button></div>'+
+  ov.innerHTML='<div class="ad-box"><div class="ad-top"><span class="mono">'+t('setTitle')+'</span><button class="ad-skip" id="set-x">'+t('closeBtn')+'</button></div>'+
     '<div class="ad-body" style="display:block;text-align:left">'+
-      '<label class="mono" style="display:block;margin:2px 0 6px">내 지역 · 지역 점령전</label>'+
+      '<label class="mono" style="display:block;margin:2px 0 6px">'+t('setRegionLbl')+'</label>'+
       '<select id="set-region" style="'+fld+'">'+opts+'</select>'+
-      '<label class="mono" style="display:block;margin:15px 0 6px">랭킹 닉네임</label>'+
-      '<input id="set-nick" maxlength="16" placeholder="익명광클러" value="'+esc(F.nick)+'" style="'+fld+'"/>'+
-      '<p class="hint" style="text-align:left;margin-top:11px">'+(netOn()?'실제 전국 집계에 참여 중 — 닉네임은 랭킹에만 표시돼요.':'백엔드 미연결(데모). fb-config.js 연결 시 실제 대전이 켜집니다.')+'</p>'+
+      '<label class="mono" style="display:block;margin:15px 0 6px">'+t('setNickLbl')+'</label>'+
+      '<input id="set-nick" maxlength="16" placeholder="'+t('anon')+'" value="'+esc(F.nick)+'" style="'+fld+'"/>'+
+      '<p class="hint" style="text-align:left;margin-top:11px">'+(netOn()?t('setHintOn'):t('setHintOff'))+'</p>'+
     '</div>'+
-    '<button class="btn btn-primary" id="set-save" style="color:#04130f">저장</button></div>';
+    '<button class="btn btn-primary" id="set-save" style="color:#04130f">'+t('saveBtn')+'</button></div>';
   (document.body||document.documentElement).appendChild(ov);
   function shut(){if(ov.parentNode)ov.parentNode.removeChild(ov);}
   el('set-x').onclick=shut;
@@ -740,7 +735,7 @@ function openSettings(){
 
 /* 전역 노출 (onclick에서 호출) */
 window.GO=GO; window.SHARE=SHARE; window.intro=intro; window.watch2x=watch2x;
-window.rankBoard=rankBoard; window.openSettings=openSettings;
+window.rankBoard=rankBoard; window.openSettings=openSettings; window.toggleLang=toggleLang;
 
 /* 시작 */
 intro();

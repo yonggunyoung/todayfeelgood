@@ -441,6 +441,14 @@ function foodTile(l) {
 const foodRows = (foods) =>
   chunk(foods, 4).map((row) => `<div class="f-row">${row.map(foodTile).join('')}</div><div class="f-shelf"></div>`).join('');
 
+let fridgeOpen = false, fridgeJustOpened = false; // 냉장고 문 — 기본 닫힘(꾸미기 표면), 열면 안쪽+냉기 연출(1회)
+
+// 냉장고 문 꾸미기 표면 — Phase 1은 기본 안내. (메모·스티커·마그넷·핀 레시피 편집은 다음 단계)
+function fridgeDecoHtml() {
+  return `<div class="fd-note">🧲 우리집 냉장고</div>
+    <div class="fd-hint">곧 여기에 메모·스티커·자주 쓰는 레시피를 붙여 꾸밀 수 있어요 ✨</div>`;
+}
+
 function fridgeHtml(all) {
   const fr = all.filter((p) => p.location === 'fridge');
   const frMain = fr.filter((p) => p.qtyType !== 'level');
@@ -457,13 +465,37 @@ function fridgeHtml(all) {
   for (const p of all) { const d = daysLeft(p.expiresAt); if (d <= 3 && d < best) { best = d; bubbleKey = 'p:' + p.id; } }
   for (const l of foods) { const d = daysLeft(l.expiresAt); if (d <= 3 && d < best) { best = d; bubbleKey = 'f:' + l.id; } }
   const expN = all.filter((p) => daysLeft(p.expiresAt) <= 3).length;
-  return `
-    <div class="fridge">
-      <div class="f-display">
+
+  const display = `<div class="f-display">
         <span class="fd-temp">❄ 3°C</span>
         <span class="fd-stat"><b>${all.length}</b>개 보관${expN ? ` · <em>임박 ${expN}</em>` : ' · 신선'}</span>
         <span class="fd-on">●&#xfe0e; ON</span>
+      </div>`;
+  const basket = `
+    <div class="basket" data-loc="room">
+      <div class="f-sec-label" onclick="UI.openLocList('room')" style="cursor:pointer"><span>실온 선반</span><span>${rm.length ? rm.length + '개 ' : ''}›</span></div>
+      ${shelfRows(rm, 'room')}
+    </div>`;
+
+  // 닫힌 문 — 기본 상태(꾸미기 표면 노출). 탭하면 열림.
+  if (!fridgeOpen) {
+    return `
+    <div class="fridge fridge-closed">
+      ${display}
+      <span class="f-handle"></span>
+      <div class="fd-door" onclick="UI.openFridge()">
+        <div class="fd-deco">${fridgeDecoHtml()}</div>
+        <button class="fd-open" onclick="event.stopPropagation();UI.openFridge()">🚪 냉장고 열기</button>
       </div>
+    </div>
+    ${basket}`;
+  }
+
+  // 열린 문 — 안쪽 + 냉기 빌로우(열 때 1회만)
+  return `
+    <div class="fridge fridge-open">
+      ${fridgeJustOpened ? '<span class="fridge-coldair"></span>' : ''}
+      ${display}
       <span class="f-handle"></span>
       <div class="f-glass"></div>
       <div class="fridge-inner" data-loc="fridge">
@@ -486,11 +518,9 @@ function fridgeHtml(all) {
         ${shelfRows(fz, 'freezer')}
         ${fzFoods.length ? `<div class="f-sec-label" style="padding-top:2px"><span>🍱 얼려둔 음식</span><span>${fzFoods.length}개</span></div>${foodRows(fzFoods)}` : ''}
       </div>
+      <button class="fd-close" onclick="UI.closeFridge()">🚪 문 닫기</button>
     </div>
-    <div class="basket" data-loc="room">
-      <div class="f-sec-label" onclick="UI.openLocList('room')" style="cursor:pointer"><span>실온 선반</span><span>${rm.length ? rm.length + '개 ' : ''}›</span></div>
-      ${shelfRows(rm, 'room')}
-    </div>
+    ${basket}
     <p class="hint" style="text-align:center;margin-top:2px">길게 누르면 칸 이동 · ＋를 누르면 그 칸에 추가돼요</p>`;
 }
 
@@ -535,6 +565,9 @@ function renderPantry() {
 UI.setLoc = (l) => { pantryLoc = l; render(); };
 UI.setPantryView = (v) => { pantryView = v; render(); };
 UI.openLocList = (loc) => { pantryView = 'list'; pantryLoc = loc; render(); };
+// 냉장고 열기/닫기 — 열 때만 냉기 빌로우 1회(렌더 직후 플래그 내려서 다음 렌더엔 안 뜸)
+UI.openFridge = () => { pantryView = 'shelf'; fridgeOpen = true; fridgeJustOpened = true; render(); fridgeJustOpened = false; };
+UI.closeFridge = () => { fridgeOpen = false; render(); };
 
 let qaLoc = null; // 냉장고 ＋타일로 들어온 경우 그 칸으로 바로 담기
 UI.quickAddAt = (loc) => { qaLoc = loc; UI.openQuickAdd(); };

@@ -1141,6 +1141,94 @@ input:focus, select:focus, textarea:focus { outline: none; box-shadow: 0 0 0 3px
 }
 @media (prefers-reduced-motion: reduce) { .f-steam { display: none; } }
 
+/* ══════════════ 냉장고 문(닫힘) — 꾸미기 표면 + 크게 열기 ══════════════ */
+.fridge-closed { padding-bottom: 14px; }
+/* 도어 표면 — 브러시드 스틸. 탭하면 열림(꾸미기 캔버스 역할도 겸함) */
+.fd-door {
+  position: relative; border-radius: 19px; cursor: pointer; overflow: hidden;
+  min-height: 348px; padding: 18px 16px 86px;
+  background:
+    repeating-linear-gradient(96deg, rgba(255,255,255,.022) 0 2px, rgba(0,0,0,.022) 2px 4px),
+    linear-gradient(160deg, #5b626c 0%, #393e46 53%, #464c55 100%);
+  box-shadow: inset 0 2px 0 rgba(255,255,255,.18), inset 0 -3px 16px rgba(0,0,0,.42), inset 0 0 46px rgba(0,0,0,.2);
+  transition: transform .12s;
+}
+.fd-door:active { transform: scale(.993); }
+/* 도어 사선 광택 */
+.fd-door::after {
+  content: ''; position: absolute; top: -10%; left: -22%; width: 46%; height: 130%; pointer-events: none;
+  background: linear-gradient(105deg, rgba(255,255,255,0) 30%, rgba(255,255,255,.12) 50%, rgba(255,255,255,0) 62%);
+  transform: rotate(7deg);
+}
+/* 꾸미기 영역 — 메모·스티커·마그넷·핀 레시피가 붙는 캔버스(다음 단계에서 편집 가능) */
+.fd-deco { position: relative; z-index: 1; min-height: 196px; }
+.fd-note {
+  display: inline-block; transform: rotate(-2.4deg); position: relative; margin: 8px 0 0 6px;
+  background: linear-gradient(180deg, #fffdf5, #fff6df); color: #5a4a2a;
+  font-family: 'Gowun Batang', serif; font-weight: 700; font-size: .98rem;
+  padding: 13px 17px 15px; border-radius: 4px;
+  box-shadow: 0 10px 18px rgba(0,0,0,.32), inset 0 1px 0 rgba(255,255,255,.8);
+}
+.fd-note::before { /* 빨간 자석 */
+  content: ''; position: absolute; top: -7px; left: 50%; transform: translateX(-50%);
+  width: 16px; height: 16px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #ff8f8f, #d8362f 64%, #9c1b16);
+  box-shadow: 0 3px 6px rgba(0,0,0,.42);
+}
+.fd-hint {
+  color: #c6d0db; font-size: .79rem; line-height: 1.55; font-weight: 600;
+  margin: 17px 8px 0; text-shadow: 0 1px 2px rgba(0,0,0,.3);
+}
+/* 냉장고 열기 — 크고 눈에 띄게(냉광 글로우 펄스) */
+.fd-open {
+  position: absolute; left: 16px; right: 16px; bottom: 16px; z-index: 2;
+  border: none; border-radius: 15px; padding: 16px; cursor: pointer;
+  font-family: 'Jua', sans-serif; font-size: 1.14rem; color: #06243a; letter-spacing: .02em;
+  background: linear-gradient(180deg, #c4f1ff 0%, #7fd6ff 55%, #54c0f4 100%);
+  box-shadow: 0 10px 22px rgba(64,170,235,.5), inset 0 1px 0 rgba(255,255,255,.85), 0 0 0 1px rgba(255,255,255,.25);
+  animation: fdOpenPulse 2.6s ease-in-out infinite;
+}
+.fd-open:active { transform: translateY(1px); }
+@keyframes fdOpenPulse {
+  0%,100% { box-shadow: 0 10px 22px rgba(64,170,235,.45), inset 0 1px 0 rgba(255,255,255,.85); }
+  50% { box-shadow: 0 13px 32px rgba(96,200,255,.78), inset 0 1px 0 rgba(255,255,255,.9); }
+}
+/* 문 닫기 */
+.fd-close {
+  display: block; width: calc(100% - 6px); margin: 12px auto 2px;
+  border: none; border-radius: 13px; padding: 12px; cursor: pointer;
+  font-family: 'Jua', sans-serif; font-size: 1rem; color: #e7eef6;
+  background: linear-gradient(180deg, #4a515b, #343a42);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.16), 0 4px 10px rgba(0,0,0,.3);
+}
+.fd-close:active { transform: translateY(1px); }
+/* 냉기 빌로우 — 문 열 때 딱 1회(흰 냉기가 아래로 쏟아짐) */
+.fridge-open { position: relative; }
+.fridge-coldair {
+  position: absolute; left: 6px; right: 6px; top: 44px; height: 66%; z-index: 4;
+  pointer-events: none; border-radius: 19px; overflow: hidden;
+}
+.fridge-coldair::before, .fridge-coldair::after {
+  content: ''; position: absolute; left: 50%; top: 0; width: 132%; height: 58%;
+  transform: translateX(-50%); border-radius: 50%; opacity: 0; filter: blur(8px);
+  background: radial-gradient(ellipse at 50% 0%, rgba(255,255,255,.92), rgba(216,243,255,.5) 46%, rgba(190,230,255,0) 73%);
+  animation: coldBillow 1.5s ease-out forwards;
+}
+.fridge-coldair::after { animation-delay: .2s; width: 152%; }
+@keyframes coldBillow {
+  0% { transform: translateX(-50%) translateY(-14%) scaleY(.5); opacity: 0; }
+  26% { opacity: .9; }
+  100% { transform: translateX(-50%) translateY(92%) scaleY(1.75); opacity: 0; }
+}
+/* 문 열림 — 안쪽 칸이 부드럽게 등장 */
+.fridge-open .fridge-inner { animation: frInnerReveal .5s ease both; }
+@keyframes frInnerReveal { from { opacity: .25; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .fd-open { animation: none; }
+  .fridge-coldair { display: none; }
+  .fridge-open .fridge-inner { animation: none; }
+}
+
 /* ══════════ 냉장고 지키기 — 난이도·배속·스킬 드래프트 ══════════ */
 .diff-row { display: flex; gap: 8px; margin-top: 14px; }
 .diff-btn {

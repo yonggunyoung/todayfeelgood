@@ -24,6 +24,9 @@
 <script src="./i18n.js"></script>
 <script src="./geo.js"></script>
 <script src="./topics.js"></script>
+<!-- Phase 4 순수 헬퍼(지구본 데이터 매핑·포커스·색/강도). 가벼움(좌표표+계산만).
+     ⚠ 무거운 globe.gl(≈1.8MB)은 여기 없음 — 지구본 뷰 진입 시 ./vendor/globe.gl.min.js 만 지연주입(D7). -->
+<script src="./gc-globe.js"></script>
 <link rel="stylesheet" as="style" crossorigin
       href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
 <style>
@@ -659,7 +662,10 @@ function renderResult(){
           '<button class="btn btn-ghost" style="flex:1" onclick="rankBoard()">'+t('rankBtn')+'</button>'+
           '<button class="btn btn-ghost" style="flex:1" onclick="openLocker()">'+t('lockerBtn')+'</button>'+
         '</div>'+
-        '<button class="btn btn-ghost" onclick="intro()">'+t('todayBattle')+'</button>'+
+        '<div style="display:flex;gap:8px">'+
+          '<button class="btn btn-ghost" style="flex:1" onclick="openGlobe()">'+t('globeBtn')+'</button>'+
+          '<button class="btn btn-ghost" style="flex:1" onclick="intro()">'+t('todayBattle')+'</button>'+
+        '</div>'+
       '</div>'+
     '</div>';
 }
@@ -725,8 +731,11 @@ function rankBoard(){
         (netOn()?'<span class="chip-soft"><span class="dot">●</span> '+t('realtime')+'</span>':'<span class="chip-soft">'+t('demo')+'</span>')+'</div>'+
       '<div id="rb-list" class="hint" style="text-align:left">'+t('loading')+'</div>'+
       '<div class="actions" style="margin-top:14px">'+
-        '<button class="btn btn-ghost" onclick="rankBoard()">'+t('refreshBtn')+'</button>'+
-        '<button class="btn btn-ghost" onclick="intro()">'+t('todayBattle')+'</button>'+
+        '<button class="btn btn-ghost" onclick="openGlobe()">'+t('globeBtn')+'</button>'+
+        '<div style="display:flex;gap:8px">'+
+          '<button class="btn btn-ghost" style="flex:1" onclick="rankBoard()">'+t('refreshBtn')+'</button>'+
+          '<button class="btn btn-ghost" style="flex:1" onclick="intro()">'+t('todayBattle')+'</button>'+
+        '</div>'+
       '</div>'+
     '</div>';
   if(!netOn()){el('rb-list').textContent=t('boardDemo');return;}
@@ -946,8 +955,321 @@ function cosToggleEquip(id,isOn){
   persist();
 }
 
+/* ── 실시간 타격 3D 지구본(Phase 4 · D7) ──────────────────────────────────────────────
+ * "풀 3D지만 모바일에 안 버겁게"(사용자 결정). globe.gl 를 *지연로딩*(첫 페인트 비차단),
+ * WebGL 미지원/라이브러리 로드 실패/감속모션/저사양이면 *2D 캔버스 폴백*(절대 안 깨짐, 평면 floor).
+ * 데이터: 기존 countries 집계(GCNet.peek/watch)만 재사용 — 신규 Firestore I/O 0(D5·비용 0).
+ * 순수 로직(점 매핑·색/강도·포커스·고도·폴백판단)은 gc-globe.js(GCGlobe, 테스트됨). 여기는 렌더/생명주기만.
+ * 경계(#3): 게임 수치 불변 · 지구본 실패해도 앱 나머지 무영향(옵트인 추가 뷰). */
+var GLB = {
+  ov: null,        // 오버레이 DOM
+  globe: null,     // globe.gl 인스턴스(3D일 때만)
+  unwatch: null,   // countries 실시간 구독 해지
+  rotate: true,    // 자동회전 on/off(사용자 토글)
+  mode: '',        // '3d' | '2d'
+  raf: 0,          // 2D 폴백 애니메이션 핸들
+  fps2d: 0,        // 2D 폴백 마지막 프레임 시각(FPS 제한)
+  pts: [],         // 현재 점 배열(GCGlobe.countryPoints 결과)
+  bt: null,        // 현재 배틀(팀색/이모지)
+  did: 0,          // 인스턴스 토큰(비동기 경쟁 방어 #1)
+  hidden: null,    // visibilitychange 핸들러(정리용)
+  resize: null,    // resize 핸들러(2D 폴백용)
+};
+var GLOBE_SRC = './vendor/globe.gl.min.js'; // 로컬 동봉(런타임 CDN 0). sw.js ASSETS 프리캐시엔 없음(최초 사용시 캐시).
+var GLOBE_MAX_PTS = 60;   // 점/링 개수 상한(모바일 경량)
+var GLOBE_DPR_CAP = 1.5;  // 렌더러 DPR 캡(고해상도 폰 과부하 방지)
+var GLOBE_FPS_2D = 24;    // 2D 폴백 프레임 상한(전력/발열)
+var _globeLoad = null;    // 라이브러리 로드 1회 캐시(idempotent)
+
+/* WebGL 사용 가능 여부(지연 검사 — 컨텍스트 1개만 만들어 즉시 폐기). 실패/예외는 false(폴백). */
+function webglOK(){
+  try{
+    var c=document.createElement('canvas');
+    var gl=c.getContext('webgl')||c.getContext('experimental-webgl');
+    var ok=!!(gl&&gl.getParameter);
+    try{var lose=gl&&gl.getExtension&&gl.getExtension('WEBGL_lose_context');if(lose&&lose.loseContext)lose.loseContext();}catch(e){}
+    return ok;
+  }catch(e){return false;}
+}
+function reducedMotion(){try{return window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;}catch(e){return false;}}
+/* globe.gl 지연주입 — 진입 시 1회만 <script> 삽입. 성공 시 window.Globe. 실패해도 reject로 폴백.
+ * 첫 페인트 비차단(여기서 처음 로드) + sw.js 프리캐시 제외(설치 경량) → 최초 사용 후 SW가 캐시(오프라인 동작). */
+function loadGlobeLib(){
+  if(typeof window.Globe==='function')return Promise.resolve(true);
+  if(_globeLoad)return _globeLoad;
+  _globeLoad=new Promise(function(resolve,reject){
+    try{
+      var s=document.createElement('script'); s.src=GLOBE_SRC; s.async=true;
+      s.onload=function(){ typeof window.Globe==='function'?resolve(true):reject(new Error('Globe missing')); };
+      s.onerror=function(){ _globeLoad=null; reject(new Error('globe.gl load failed')); }; // 재시도 가능하게 캐시 비움
+      (document.head||document.documentElement).appendChild(s);
+    }catch(e){ _globeLoad=null; reject(e); }
+  });
+  return _globeLoad;
+}
+
+/* 지구본 열기 — 오버레이(.ad-ov 패턴) + 로딩 → 3D 시도 or 2D 폴백. */
+function openGlobe(){
+  closeGlobe(); // 중복 방지
+  var date=todayStr();
+  GLB.bt=GCTopics.localize(battleOfDay(date),LANG);
+  var token=(GLB.did=(GLB.did+1));
+  var ov=document.createElement('div'); ov.className='ad-ov'; GLB.ov=ov;
+  ov.innerHTML='<div class="ad-box" style="max-width:560px;width:100%">'+
+    '<div class="ad-top"><span class="mono">'+t('globeTitle')+'</span>'+
+      '<button class="ad-skip" id="gl-x">'+t('closeBtn')+'</button></div>'+
+    '<div class="ad-body" style="display:block;text-align:left;padding-top:6px">'+
+      '<p class="hint" style="text-align:left;margin:0 0 8px">'+t('globeIntro')+'</p>'+
+      '<div id="gl-stage" style="position:relative;width:100%;height:360px;max-height:56vh;border-radius:14px;overflow:hidden;background:radial-gradient(circle at 50% 40%,#0b1626,#05070d);display:flex;align-items:center;justify-content:center">'+
+        '<div id="gl-msg" class="hint" style="text-align:center">'+t('globeLoading')+'</div>'+
+      '</div>'+
+      '<div id="gl-note" class="hint" style="text-align:left;margin:8px 0 0"></div>'+
+    '</div>'+
+    '<div style="display:flex;gap:8px">'+
+      '<button class="btn btn-ghost" id="gl-rot" style="flex:1">'+t('globeRotate')+'</button>'+
+      '<button class="btn btn-ghost" id="gl-done" style="flex:1">'+t('closeBtn')+'</button>'+
+    '</div></div>';
+  (document.body||document.documentElement).appendChild(ov);
+  el('gl-x').onclick=closeGlobe; el('gl-done').onclick=closeGlobe;
+  el('gl-rot').onclick=function(){ GLB.rotate=!GLB.rotate; applyRotate(); this.textContent=t(GLB.rotate?'globeRotate':'globeRotateOn'); };
+
+  // 데모(백엔드 미연결): 안내만 + 빈 지구본(2D 폴백 floor로도 충분).
+  if(!netOn()){ setGlobeMsg(t('globeDemo')); return; }
+
+  // 폴백 판단(순수): WebGL/감속모션/저사양 → 2D. (라이브러리 로드 실패는 아래 catch에서 추가 폴백.)
+  var sig={ webgl:webglOK(), reducedMotion:reducedMotion(),
+    deviceMemory:(navigator.deviceMemory), hardwareConcurrency:(navigator.hardwareConcurrency) };
+  if(GCGlobe.shouldFallback(sig)){ startGlobe2D(token); return; }
+
+  // 3D 시도 — 라이브러리 지연로딩 후 초기화. 실패 시 2D 폴백(절대 안 깨짐).
+  loadGlobeLib().then(function(){ if(token!==GLB.did)return; startGlobe3D(token); })
+    .catch(function(){ if(token!==GLB.did)return; startGlobe2D(token); });
+}
+function setGlobeMsg(msg){ var m=el('gl-msg'); if(m){m.style.display='';m.textContent=msg;} }
+function hideGlobeMsg(){ var m=el('gl-msg'); if(m)m.style.display='none'; }
+function setGlobeNote(msg){ var n=el('gl-note'); if(n)n.textContent=msg||''; }
+function applyRotate(){
+  if(GLB.mode==='3d'&&GLB.globe&&GLB.globe.controls){
+    try{var c=GLB.globe.controls(); c.autoRotate=!!GLB.rotate; c.autoRotateSpeed=GLB.rotate?0.6:0;}catch(e){}
+  }
+}
+
+/* 점 데이터 갱신 — peek/watch에서 온 totals(tot.countries)로 점 배열 재계산(추가 읽기 0).
+ * 빈 데이터면 안내 메시지. 3D/2D 공통 진입점. */
+function refreshGlobeData(tot){
+  var bt=GLB.bt||{a:{},b:{}};
+  GLB.pts=GCGlobe.countryPoints(tot&&tot.countries,bt.a&&bt.a.color,bt.b&&bt.b.color,GLOBE_MAX_PTS);
+  if(GLB.mode==='3d')pushPoints3D();
+  if(!GLB.pts.length){ setGlobeMsg(t('globeEmpty')); }
+  else { hideGlobeMsg(); focusGlobe(); }
+}
+/* 구독 시작 — 기존 GCNet.watch(today) 재사용(나라순위/리더보드와 동일 집계, 신규 구독 아님 X… 단,
+ * 지구본은 rankBoard와 다른 화면이라 자체 watch 1개를 연다(탭마다 ❌·집계 문서 1개 구독 — D5/D7 범위 내).
+ * peek로 즉시 첫 그림 → watch로 라이브 갱신. closeGlobe에서 반드시 해지(누수 방지). */
+function watchGlobe(token){
+  var date=todayStr();
+  GCNet.peek(date).then(function(tot){ if(token===GLB.did)refreshGlobeData(tot); });
+  GLB.unwatch=GCNet.watch(date,function(tot){ if(token===GLB.did)refreshGlobeData(tot); });
+}
+
+/* ── 3D 경로(globe.gl) ── */
+function startGlobe3D(token){
+  var stage=el('gl-stage'); if(!stage){return;}
+  GLB.mode='3d';
+  try{
+    var g=window.Globe()(stage);
+    GLB.globe=g;
+    // 경량 설정(D7): 큰 텍스처 없이 솔리드/저대비 머티리얼, 대기효과만 가벼운 음영.
+    g.backgroundColor('rgba(0,0,0,0)')
+     .showGlobe(true).showAtmosphere(true).atmosphereColor('#3a6ea5').atmosphereAltitude(0.16)
+     .globeImageUrl(null);                 // 외부 텍스처 0(런타임 CDN 0·경량) → 솔리드 구
+    // 솔리드 구 색(큰 텍스처 대신) — three 머티리얼 직접 지정(D7: 단색/저대비, 텍스처 1장도 안 씀).
+    try{ var m=g.globeMaterial(); if(m){ m.color&&m.color.set&&m.color.set('#16243a'); m.emissive&&m.emissive.set&&m.emissive.set('#0a1626'); if('shininess'in m)m.shininess=6; } }catch(e){}
+    // 점(참여 강도) — 높이=가중치, 색=우세 진영, 반경=가중치.
+    g.pointsData([])
+     .pointLat('lat').pointLng('lng').pointColor('color')
+     .pointAltitude(function(d){return 0.02+0.45*(d.weight||0);})
+     .pointRadius(function(d){return 0.28+0.7*(d.weight||0);})
+     .pointResolution(6)                   // 저폴리(모바일)
+     .pointsMerge(false).pointsTransitionDuration(600)
+     .pointLabel(function(d){return globePointLabel(d);});
+    // 링(타격 파동) — 상위 핫스팟만 은은하게(개수 적게 — 경량).
+    g.ringsData([])
+     .ringLat('lat').ringLng('lng').ringColor(function(d){return function(){return d.color;};})
+     .ringMaxRadius(function(d){return 2+5*(d.weight||0);}).ringPropagationSpeed(1.4)
+     .ringRepeatPeriod(function(d){return 1100-500*(d.weight||0);});
+    // DPR 캡 + 픽셀 경량(고해상도 폰 보호).
+    try{ var r=g.renderer(); if(r&&r.setPixelRatio)r.setPixelRatio(GCGlobe.cappedDpr(window.devicePixelRatio,GLOBE_DPR_CAP)); }catch(e){}
+    sizeGlobe3D();
+    // 자동회전(은은) + 줌 컨트롤.
+    try{ var c=g.controls(); c.autoRotate=GLB.rotate; c.autoRotateSpeed=0.6; c.enableZoom=true; if('minDistance'in c)c.minDistance=101; }catch(e){}
+    g.pointOfView({lat:20,lng:0,altitude:GCGlobe.MAX_ALT},0); // 시작 시점(데이터 오면 focusGlobe가 이동)
+    hideGlobeMsg();
+    bindGlobeLifecycle();   // 탭 숨김 시 렌더 정지 + 리사이즈
+    watchGlobe(token);      // 데이터 구독(기존 집계 재사용)
+  }catch(e){
+    // 3D 초기화 도중 어떤 예외든 → 2D 폴백(절대 안 깨짐).
+    disposeGlobe3D(); startGlobe2D(token);
+  }
+}
+function sizeGlobe3D(){
+  var stage=el('gl-stage'); if(!stage||!GLB.globe)return;
+  var r=stage.getBoundingClientRect();
+  try{ GLB.globe.width(r.width).height(r.height); }catch(e){}
+}
+function pushPoints3D(){
+  if(!GLB.globe)return;
+  try{
+    GLB.globe.pointsData(GLB.pts.slice());
+    // 링은 상위 6개 핫스팟만(경량·시각 강조).
+    GLB.globe.ringsData(GLB.pts.slice(0,6));
+  }catch(e){}
+}
+function focusGlobe(){
+  if(!GLB.pts.length)return;
+  var target=GCGlobe.pickFocus(GLB.pts,MY);
+  if(!target)return;
+  var alt=GCGlobe.focusAltitude(GLB.pts);
+  if(GLB.mode==='3d'&&GLB.globe){
+    try{ GLB.globe.pointOfView({lat:target.lat,lng:target.lng,altitude:alt},1200); }catch(e){}
+  }else if(GLB.mode==='2d'){
+    G2D.tLat=target.lat; G2D.tLng=target.lng; G2D.tAlt=alt; // 2D는 줌(스케일)/중심에 반영
+  }
+}
+function globePointLabel(d){
+  if(!d)return '';
+  var info=GCGeo.countryInfo(d.code), nm=LANG==='ko'?info.nameKo:info.nameEn;
+  var bt=GLB.bt||{a:{},b:{}}, lt=bt[d.lead]||bt.a||{};
+  var mine=(MY&&d.code===MY)?' · '+esc(t('globeMine')):'';
+  return '<div style="font:600 12px system-ui;color:#fff;background:rgba(8,12,20,.82);padding:5px 8px;border-radius:8px">'+
+    (info.code?esc(info.flag)+' ':'')+esc(nm)+' '+(lt.emoji||'')+' '+d.share+'%'+
+    '<br><span style="opacity:.75;font-weight:400">'+t('globeTaps',{n:comma(d.tot)})+mine+'</span></div>';
+}
+/* 생명주기: 탭 숨김 시 3D 렌더 일시정지(전력/GPU 절약), 다시 보이면 재개. 리사이즈 시 캔버스 재측정. */
+function bindGlobeLifecycle(){
+  GLB.hidden=function(){
+    if(!GLB.globe)return;
+    try{
+      if(document.hidden){ if(GLB.globe.pauseAnimation)GLB.globe.pauseAnimation(); }
+      else{ if(GLB.globe.resumeAnimation)GLB.globe.resumeAnimation(); }
+    }catch(e){}
+  };
+  document.addEventListener('visibilitychange',GLB.hidden);
+  GLB.resize=function(){ if(GLB.mode==='3d')sizeGlobe3D(); else sizeGlobe2D(); };
+  window.addEventListener('resize',GLB.resize);
+}
+function disposeGlobe3D(){
+  if(!GLB.globe)return;
+  try{
+    if(GLB.globe.pauseAnimation)GLB.globe.pauseAnimation();
+    // WebGL 컨텍스트/메모리 해제(누수 방지) — globe.gl 의 정리 API + 렌더러 dispose + 컨텍스트 강제 해제.
+    try{ GLB.globe._destructor&&GLB.globe._destructor(); }catch(e){}
+    var r=null; try{ r=GLB.globe.renderer&&GLB.globe.renderer(); }catch(e){}
+    if(r){
+      try{ r.dispose&&r.dispose(); }catch(e){}
+      try{ r.forceContextLoss&&r.forceContextLoss(); }catch(e){}
+      try{ if(r.domElement&&r.domElement.parentNode)r.domElement.parentNode.removeChild(r.domElement); }catch(e){}
+    }
+  }catch(e){}
+  GLB.globe=null;
+}
+
+/* ── 2D 폴백 경로(캔버스) — WebGL 없거나/라이브러리 실패/감속모션/저사양 ──
+ * '풀 3D는 못 켜도 절대 안 깨짐'(D7 floor). 회전하는 위경도 구체 + 참여 점/색을 가볍게 그린다.
+ * FPS 제한 + 탭 숨김 시 정지 + 닫을 때 정리. 외부 에셋 0(캔버스만). */
+var G2D={canvas:null,ctx:null,w:0,h:0,dpr:1,rot:0,tLat:20,tLng:0,tAlt:GCGlobe.MAX_ALT,curAlt:GCGlobe.MAX_ALT,curLng:0};
+function startGlobe2D(token){
+  var stage=el('gl-stage'); if(!stage)return;
+  GLB.mode='2d';
+  setGlobeNote(t('globe2dNote'));
+  var c=document.createElement('canvas');
+  if(!c.getContext){ setGlobeMsg(t('globeEmpty')); return; } // 캔버스조차 없으면 메시지만(여전히 안 깨짐)
+  c.style.position='absolute'; c.style.inset='0'; c.style.width='100%'; c.style.height='100%';
+  stage.appendChild(c); G2D.canvas=c; G2D.ctx=c.getContext('2d');
+  sizeGlobe2D();
+  bindGlobeLifecycle();
+  hideGlobeMsg();
+  watchGlobe(token);
+  GLB.fps2d=0; if(!GLB.raf)GLB.raf=requestAnimationFrame(loop2D);
+}
+function sizeGlobe2D(){
+  var stage=el('gl-stage'); if(!stage||!G2D.canvas)return;
+  var r=stage.getBoundingClientRect();
+  G2D.dpr=GCGlobe.cappedDpr(window.devicePixelRatio,GLOBE_DPR_CAP);
+  G2D.w=r.width; G2D.h=r.height;
+  G2D.canvas.width=Math.max(1,Math.round(G2D.w*G2D.dpr)); G2D.canvas.height=Math.max(1,Math.round(G2D.h*G2D.dpr));
+  if(G2D.ctx)G2D.ctx.setTransform(G2D.dpr,0,0,G2D.dpr,0,0);
+}
+/* 위경도 → 2D 화면 좌표(직교 정사영, 뒷면은 숨김). 중심 경도(curLng)만큼 회전. */
+function project2D(lat,lng,cx,cy,R){
+  var la=lat*Math.PI/180, lo=(lng-G2D.curLng)*Math.PI/180;
+  var x=Math.cos(la)*Math.sin(lo), y=Math.sin(la), z=Math.cos(la)*Math.cos(lo);
+  return {x:cx+x*R,y:cy-y*R,vis:z>0,z:z};
+}
+function loop2D(ts){
+  if(GLB.mode!=='2d'||!G2D.ctx){GLB.raf=0;return;}
+  // FPS 제한(전력/발열) + 탭 숨김 시 그리지 않음(정지).
+  if(!document.hidden){
+    var minDt=1000/GLOBE_FPS_2D;
+    if(!GLB.fps2d||ts-GLB.fps2d>=minDt){ GLB.fps2d=ts; draw2D(); }
+  }
+  GLB.raf=requestAnimationFrame(loop2D);
+}
+function draw2D(){
+  var ctx=G2D.ctx,w=G2D.w,h=G2D.h; if(!ctx||w<=0)return;
+  ctx.clearRect(0,0,w,h);
+  var cx=w/2, cy=h/2;
+  // altitude(클수록 멀리/작게) → 반지름. tAlt를 부드럽게 추종(자동 줌 연출).
+  G2D.curAlt+=(G2D.tAlt-G2D.curAlt)*0.06;
+  var R=Math.min(w,h)*0.46*(GCGlobe.MAX_ALT/Math.max(GCGlobe.MIN_ALT,G2D.curAlt))*0.62;
+  R=Math.max(20,Math.min(Math.min(w,h)*0.46,R));
+  // 자동회전: 타깃 경도로 부드럽게 이동 + (회전 on이면) 천천히 자전.
+  if(GLB.rotate)G2D.curLng+=0.25; // 도/프레임(느리게)
+  else { var d=((G2D.tLng-G2D.curLng+540)%360)-180; G2D.curLng+=d*0.06; }
+  // 구체 본체(그라데이션) + 위경도 격자.
+  var grd=ctx.createRadialGradient(cx-R*0.3,cy-R*0.3,R*0.2,cx,cy,R);
+  grd.addColorStop(0,'#1d3a52'); grd.addColorStop(1,'#0a1626');
+  ctx.fillStyle=grd; ctx.beginPath(); ctx.arc(cx,cy,R,0,6.283); ctx.fill();
+  drawGraticule2D(ctx,cx,cy,R);
+  // 참여 점(앞면만) — 색=우세 진영, 크기=가중치. 내 나라는 외곽 강조.
+  for(var i=0;i<GLB.pts.length;i++){
+    var p=GLB.pts[i], pr=project2D(p.lat,p.lng,cx,cy,R);
+    if(!pr.vis)continue;
+    var rad=2.2+5.5*(p.weight||0), a=0.45+0.55*pr.z;
+    ctx.globalAlpha=Math.max(0,Math.min(1,a));
+    ctx.fillStyle=p.color; ctx.beginPath(); ctx.arc(pr.x,pr.y,rad,0,6.283); ctx.fill();
+    if(MY&&p.code===MY){ ctx.globalAlpha=0.9; ctx.strokeStyle='#fff'; ctx.lineWidth=1.6; ctx.beginPath(); ctx.arc(pr.x,pr.y,rad+3,0,6.283); ctx.stroke(); }
+  }
+  ctx.globalAlpha=1;
+}
+function drawGraticule2D(ctx,cx,cy,R){
+  ctx.strokeStyle='rgba(120,160,210,.18)'; ctx.lineWidth=1;
+  var lat,lng,first,pr,k;
+  for(lat=-60;lat<=60;lat+=30){ ctx.beginPath(); first=true;
+    for(lng=-180;lng<=180;lng+=6){ pr=project2D(lat,lng,cx,cy,R); if(!pr.vis){first=true;continue;}
+      if(first){ctx.moveTo(pr.x,pr.y);first=false;}else ctx.lineTo(pr.x,pr.y);} ctx.stroke(); }
+  for(k=0;k<12;k++){ lng=k*30-180; ctx.beginPath(); first=true;
+    for(lat=-90;lat<=90;lat+=6){ pr=project2D(lat,lng,cx,cy,R); if(!pr.vis){first=true;continue;}
+      if(first){ctx.moveTo(pr.x,pr.y);first=false;}else ctx.lineTo(pr.x,pr.y);} ctx.stroke(); }
+}
+
+/* 지구본 닫기 — 구독 해지 + 핸들러 제거 + 3D dispose(WebGL 컨텍스트 해제) + 2D 정지 + DOM 제거.
+ * 어떤 모드/상태에서도 누수 없이 정리(불신 #1). 토큰 증가로 진행중 비동기는 무효화. */
+function closeGlobe(){
+  GLB.did=(GLB.did+1); // 진행중 콜백 무효화
+  if(GLB.unwatch){ try{GLB.unwatch();}catch(e){} GLB.unwatch=null; }
+  if(GLB.hidden){ try{document.removeEventListener('visibilitychange',GLB.hidden);}catch(e){} GLB.hidden=null; }
+  if(GLB.resize){ try{window.removeEventListener('resize',GLB.resize);}catch(e){} GLB.resize=null; }
+  if(GLB.raf){ try{cancelAnimationFrame(GLB.raf);}catch(e){} GLB.raf=0; }
+  disposeGlobe3D();
+  if(G2D.canvas){ try{ if(G2D.canvas.parentNode)G2D.canvas.parentNode.removeChild(G2D.canvas); }catch(e){} }
+  G2D.canvas=null; G2D.ctx=null; G2D.curLng=0; G2D.curAlt=GCGlobe.MAX_ALT; G2D.tAlt=GCGlobe.MAX_ALT;
+  GLB.pts=[]; GLB.mode='';
+  if(GLB.ov){ try{ if(GLB.ov.parentNode)GLB.ov.parentNode.removeChild(GLB.ov); }catch(e){} GLB.ov=null; }
+}
+
 /* 전역 노출 (onclick에서 호출) */
-window.openLocker=openLocker;
+window.openLocker=openLocker; window.openGlobe=openGlobe;
 window.GO=GO; window.SHARE=SHARE; window.intro=intro; window.watch2x=watch2x;
 window.rankBoard=rankBoard; window.openSettings=openSettings; window.toggleLang=toggleLang;
 

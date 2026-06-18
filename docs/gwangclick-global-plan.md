@@ -68,4 +68,11 @@
   - 테스트 `node --test 'tests/*.test.mjs'` 39/39(기존 26 + cosmetics 13, 경계 4종: 미상 id·이중해금·변조 F·잠긴 장착 차단).
   - **검수·감사 PASS** — 보고서 `.agents/reports/phase3-*.md`. 반영: `myNameColorStyle` hex 가드(미래 회귀 방어), 죽은 키 `equipOff` 제거.
   - 사용자 확인 대기(설계 선택): 초대 공유 **취소/실패 시에도 해금**(저마찰 성장 전략) — 유지 vs 성공시만 해금.
-- [ ] Phase 4 — 3D 지구본(globe.gl 지연로딩 + 2D 폴백)
+- [x] Phase 4 — 실시간 타격 3D 지구본 — **구현 완료·테스트 통과·검수대기**
+  - 신규 `gc-globe.js`(순수 UMD, D2): 국가 집계 → 지구본 점 매핑·강도/색·핫스팟 포커스·고도·폴백판단. 신규 `tests/globe.test.mjs`.
+  - `vendor/globe.gl.min.js`(≈1.8MB, MIT) **로컬 동봉** — 런타임 CDN 0(npm으로 받아 vendor화, 오프라인 유지). `vendor/LICENSE` 포함.
+  - 지연로딩(D7): 지구본 뷰 진입 시에만 `./vendor/globe.gl.min.js` 주입. sw v6 ASSETS엔 **가벼운 gc-globe.js만** 프리캐시(1.8MB vendor는 첫 진입시 캐시 → 설치 경량·이후 오프라인).
+  - 데이터: 기존 `peek`/`watch`의 `countries` 재사용 → **Firestore 신규 I/O 0**. 점 크기=참여수, 색=우세 진영, 핫스팟/내 나라 자동 포커스·줌.
+  - 모바일 안전: DPR 캡·FPS 제한·탭 숨김시 정지·뷰 종료시 dispose(GPU 메모리 해제). **2D 폴백**(WebGL 미지원/저사양/로드실패/reduced-motion).
+  - 게임플레이·fb-config·net.js·main 불변. node_modules 미커밋. 테스트 `node --test 'tests/*.test.mjs'` **52/52**.
+  - ⚠ 빌더 응답이 API오류로 중간 종료됐으나 **오케스트레이터가 무결성 전수 검증**(구문·52/52·index.html 비잘림·vendor 유효·잔여물 0·프리캐시 정책) 완료.

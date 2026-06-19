@@ -19,6 +19,11 @@ export function modeList(state) {
   return [...PRESET_MODES, ...customs];
 }
 
+/* ── 커뮤니티 평점(다른 사용자들의 별점 집계) — main에서 서버 값을 주입 ── */
+let CSTATS = {}; // { [recipeId]: { s: sum, c: count } }
+export function setCommunityStats(map) { CSTATS = map || {}; }
+export function communityRating(id) { const x = CSTATS[id]; return x && x.c ? { avg: Math.round((x.s / x.c) * 10) / 10, count: x.c } : null; }
+
 export function getMode(state, key) {
   return modeList(state).find((m) => m.key === key) || PRESET_MODES[0];
 }
@@ -94,6 +99,10 @@ export function analyzeRecipe(recipe, state, modeOrKey) {
   // 내 별점 — 추천 가중(5★:+0.13 … 3★:0 … 1★:-0.13). 낮게 준 건 가라앉고 높게 준 건 위로.
   const rating = (state.ratings || {})[recipe.id] || 0;
   const ratingScore = rating ? ((rating - 3) / 2) * 0.13 : 0;
+  // 커뮤니티 평점 — 표본(count)이 많을수록 신뢰. 최대 +0.10(평균 5★·20명 이상).
+  const cr = CSTATS[recipe.id];
+  const cAvg = cr && cr.c ? cr.s / cr.c : 0;
+  const commScore = cAvg ? ((cAvg - 3) / 2) * Math.min(1, cr.c / 20) * 0.10 : 0;
 
   const score =
     coverage * 0.42 +
@@ -101,14 +110,14 @@ export function analyzeRecipe(recipe, state, modeOrKey) {
     (missing.length === 0 ? 0.12 : missing.length === 1 ? 0.04 : 0) +
     (fav ? 0.06 : 0) +
     modeScore * 0.2 +
-    ratingScore;
+    ratingScore + commScore;
 
   return {
     recipe, have, total: required.length, missing,
     cookable: required.length > 0 && missing.length === 0, // 영상만 저장(재료 0)은 "지금 가능" 아님
     almostCookable: missing.length === 1,
     usesExpiring: expiringBoost > 0,
-    fav, rating, score,
+    fav, rating, community: cr && cr.c ? { avg: Math.round(cAvg * 10) / 10, count: cr.c } : null, score,
   };
 }
 

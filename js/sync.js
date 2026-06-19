@@ -2,7 +2,7 @@
 // 우선순위: 가족 공유 코드(spaces/{code}) > 내 계정(userdata/{uid}) > 로컬 전용.
 // FIREBASE_CONFIG(config.js)가 채워지면 전 사용자 활성화, 없으면 관리자 설정의 JSON으로 폴백(베타).
 import { S, save, bus, replaceState, exportForSync } from './store.js';
-import { FIREBASE_CONFIG } from './config.js';
+import { FIREBASE_CONFIG, AI_FN } from './config.js';
 
 export const sync = { status: 'off', error: '', user: null }; // user: {uid, anon, name, email, photo}
 
@@ -152,6 +152,39 @@ export async function setSpaceCode(code) {
 export async function getIdToken() {
   try { return auth?.currentUser ? await auth.currentUser.getIdToken() : null; }
   catch { return null; }
+}
+
+/* ── 레시피 커뮤니티 평점 (Phase B) — 집계는 서버가 계산. 실패는 조용히 무시(로컬 별점은 그대로) ── */
+// 평가하려면 Firebase 세션이 필요 → 없으면 익명 로그인(보이지 않음). 동기화 문서는 익명이면 안 붙으므로 부작용 없음.
+async function ensureAuthed() {
+  if (!(await ensureFirebase())) return null;
+  if (!auth.currentUser) { try { await authMod.signInAnonymously(auth); } catch { return null; } }
+  return auth.currentUser ? auth.currentUser.uid : null;
+}
+export async function submitRating(rid, v) {
+  if (!AI_FN) return null;
+  try {
+    const uid = await ensureAuthed(); if (!uid) return null;
+    const token = await auth.currentUser.getIdToken();
+    const res = await fetch(`${AI_FN}/rate`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+      body: JSON.stringify({ rid, v }),
+    });
+    if (!res.ok) return null;
+    return await res.json(); // { rid, avg, count, my }
+  } catch { return null; }
+}
+export async function fetchRecipeStats() {
+  if (!AI_FN) return null;
+  try {
+    const res = await fetch(`${AI_FN}/recipestats`, {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}',
+    });
+    if (!res.ok) return null;
+    const j = await res.json();
+    return j.stats || {};
+  } catch { return null; }
 }
 
 /* ── 게임 랭킹 (leaderboard/{uid}) — 로그인 사용자만 참여 ──

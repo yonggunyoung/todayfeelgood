@@ -2,9 +2,9 @@
 import { S, save, uid, today, addDays, daysLeft, won } from './store.js';
 import { ING, findIng, defaultShelf, defaultLocation, ingredientTip } from './data/ingredients.js';
 import { isWeight, measureOf, baseUnit, unitOptions, toBase, perBase, fmtBase, fmtRaw, stepFor, defaultEntry } from './units.js';
-import { recommend, recipesUsing, expiringItems, activeLeftovers, deductionPlan, modeList, getMode, allRecipes, buildCookPlan } from './engine.js';
+import { recommend, recipesUsing, expiringItems, activeLeftovers, deductionPlan, modeList, getMode, allRecipes, buildCookPlan, setCommunityStats, communityRating } from './engine.js';
 import { scanImage, extractRecipeFromYouTube } from './ai.js';
-import { initSync, sync, makeSpaceCode, setSpaceCode, loginGoogle, logoutGoogle, syncAvailable, submitScore, topScores } from './sync.js';
+import { initSync, sync, makeSpaceCode, setSpaceCode, loginGoogle, logoutGoogle, syncAvailable, submitScore, topScores, submitRating, fetchRecipeStats } from './sync.js';
 import { AI_ENDPOINT, COUPANG_TAG } from './config.js';
 import { canListen, speak, stopSpeak, startListen, stopListen, isListening, parseCommand } from './voice.js';
 import { earn, bonus, spend, refund, EARN, earnedToday, SHOP, adFreeNow, gameBest, aiLeft, aiConsume, aiGrant, aiUnlimited, FREE_AI } from './points.js';
@@ -1686,6 +1686,7 @@ function recipeCard(a) {
               ${r.time ? `<span>⏱ ${r.time}분</span>` : ''}${r.kcal ? `<span>🔥 ${r.kcal}kcal</span>` : ''}
               ${r.protein ? `<span>단백질 <b>${r.protein}g</b></span>` : ''}
               ${a.rating ? `<span class="rstars" title="내 별점 ${a.rating}">${'★'.repeat(a.rating)}</span>` : ''}
+              ${a.community ? `<span class="rcomm">★${a.community.avg} <small>(${a.community.count})</small></span>` : ''}
               ${a.usesExpiring ? '<span style="color:var(--red)">임박재료 소진</span>' : ''}
             </div>
           </div>
@@ -1824,22 +1825,36 @@ UI.toggleFav = (id) => {
   if (i >= 0) S.favs.splice(i, 1); else S.favs.push(id);
   save(); render();
 };
-// 레시피 별점 — 내 평가(1~5). 추천 가중에 반영. 같은 별 다시 누르면 해제.
+// 레시피 별점 — 내 평가(1~5)는 로컬+추천 가중, 동시에 커뮤니티(모두의 평점)에 집계 제출.
 const ratingOf = (rid) => (S.ratings || {})[rid] || 0;
 function starRowHtml(rid) {
   const cur = ratingOf(rid);
+  const c = communityRating(rid); // {avg,count} | null
   return `<div class="star-row" id="stars-${rid}">
     ${[1, 2, 3, 4, 5].map((n) => `<button class="star${n <= cur ? ' on' : ''}" onclick="event.stopPropagation();UI.rate('${rid}',${n})" aria-label="${n}점">★</button>`).join('')}
-    <span class="star-lbl">${cur ? `내 별점 ${cur}` : '눌러서 별점'}</span></div>`;
+    <span class="star-lbl">${cur ? `내 별점 ${cur}` : '눌러서 별점'}</span>
+    ${c ? `<span class="star-comm">모두의 평점 ★${c.avg} <small>(${c.count.toLocaleString()})</small></span>` : ''}</div>`;
 }
+// 커뮤니티 평점 캐시 — 서버 집계({rid:{s,c}})를 엔진에 주입 + 즉시 표시
+let communityStats = {};
+function applyCommunityStats(map) { communityStats = map || {}; setCommunityStats(communityStats); }
 UI.rate = (rid, n) => {
   if (!S.ratings) S.ratings = {};
   if (S.ratings[rid] === n) delete S.ratings[rid]; else S.ratings[rid] = n;
   save();
+  const v = ratingOf(rid);
   const box = document.getElementById('stars-' + rid);
   if (box) box.outerHTML = starRowHtml(rid);
-  const v = ratingOf(rid);
   toast(v ? `⭐ ${v}점으로 평가했어요 — 추천에 반영돼요` : '평가를 지웠어요');
+  // 커뮤니티 집계 제출(서버가 평균 계산) → 성공 시 모두의 평점 갱신
+  submitRating(rid, v).then((r) => {
+    if (!r || typeof r.count !== 'number') return;
+    communityStats[rid] = { s: r.avg * r.count, c: r.count };
+    setCommunityStats(communityStats);
+    try { localStorage.setItem('nb_cstats', JSON.stringify(communityStats)); } catch { /* 용량 무시 */ }
+    const b2 = document.getElementById('stars-' + rid);
+    if (b2) b2.outerHTML = starRowHtml(rid);
+  });
 };
 UI.setMode = (k) => {
   S.settings.mode = k; save(); render();
@@ -3207,8 +3222,16 @@ if (AI_ENDPOINT) {
 }
 
 migratePantryUnits(); // 무게·부피 재고를 g·ml 기준으로 일괄 정렬(구버전 데이터 보정)
+// 커뮤니티 평점 — 캐시 즉시 적용 후 서버에서 갱신(실패해도 앱은 그대로 동작)
+try { applyCommunityStats(JSON.parse(localStorage.getItem('nb_cstats') || '{}')); } catch { /* noop */ }
 render();
 initSync(() => { renderTop(); if (tab === 'settings') renderSettings(); });
+fetchRecipeStats().then((m) => {
+  if (!m) return;
+  applyCommunityStats(m);
+  try { localStorage.setItem('nb_cstats', JSON.stringify(m)); } catch { /* 용량 무시 */ }
+  if (tab === 'recipes' || tab === 'home') render();
+});
 
 // 게임 모듈에 UI 콘텍스트 주입 (시트·토스트·광고 코어 공유)
 initGames({

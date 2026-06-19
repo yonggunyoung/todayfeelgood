@@ -339,6 +339,10 @@ a { color: var(--blue); text-decoration: none; }
 .star-row .star.on { color: #ffb400; }
 .star-row .star:active { transform: scale(1.25); }
 .star-row .star-lbl { margin-left: 8px; font-size: .76rem; font-weight: 700; color: var(--label-2, #888); }
+.star-row .star-comm { margin-left: auto; font-size: .78rem; font-weight: 800; color: #c98a00; white-space: nowrap; }
+.star-row .star-comm small { color: var(--label-3, #aaa); font-weight: 600; }
+.recipe-card .meta .rcomm { color: #c98a00; font-weight: 800; }
+.recipe-card .meta .rcomm small { color: var(--label-3, #aaa); font-weight: 600; }
 .ready-flag {
   position: absolute; top: 10px; left: 10px; z-index: 2;
   background: rgba(47, 174, 95, 0.95); color: #fff; font-size: 0.64rem; font-weight: 800;

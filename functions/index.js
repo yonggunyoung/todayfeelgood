@@ -7,6 +7,7 @@ const admin = require('firebase-admin');
 
 admin.initializeApp();
 const db = admin.firestore();
+let statsCache = { t: 0, data: {} }; // /recipestats 워밍 인스턴스 메모리 캐시(60초)
 
 // Claude 경로(/scan 등)는 현재 CF 워커가 담당하므로 이 함수에선 미사용 → ANTHROPIC 시크릿 불필요(배포 시 GEMINI 키만 요구).
 const GEMINI_API_KEY = defineSecret('GEMINI_API_KEY');
@@ -112,6 +113,35 @@ async function redeemCredit(uid) {
     }, { merge: true });
   });
   return { bonus };
+}
+
+/* ── 레시피 커뮤니티 평점 집계 (Phase B) ──
+   votes는 recipeVotes/{rid__uid}, 합계는 meta/recipeStats({stats:{rid:{s,c}}}) 단일 문서.
+   집계는 서버(admin)만 계산·기록 → 클라이언트가 평균을 조작할 수 없다(규칙 변경 불필요). */
+async function rateRecipe(uid, rid, v) {
+  const voteRef = db.collection('recipeVotes').doc(`${rid}__${uid}`);
+  const statsRef = db.collection('meta').doc('recipeStats');
+  let out = { rid, avg: 0, count: 0, my: v };
+  await db.runTransaction(async (tx) => {
+    const [vSnap, sSnap] = await Promise.all([tx.get(voteRef), tx.get(statsRef)]);
+    const old = vSnap.exists ? (vSnap.data().v || 0) : 0;
+    const stats = (sSnap.exists && sSnap.data().stats) || {};
+    const cur = stats[rid] || { s: 0, c: 0 };
+    let s = cur.s || 0, c = cur.c || 0;
+    if (v === 0) { // 평가 해제
+      if (old) { s -= old; c -= 1; }
+      tx.delete(voteRef);
+    } else {
+      s += v - old;
+      if (!old) c += 1;
+      tx.set(voteRef, { v, ts: admin.firestore.FieldValue.serverTimestamp() });
+    }
+    s = Math.max(0, s); c = Math.max(0, c);
+    stats[rid] = { s, c };
+    tx.set(statsRef, { stats, updatedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+    out = { rid, avg: c ? Math.round((s / c) * 10) / 10 : 0, count: c, my: v };
+  });
+  return out;
 }
 
 /* ── Anthropic 호출 ──────────────────────── */
@@ -310,6 +340,15 @@ exports.ai = onRequest(
     try {
       if (req.method !== 'POST') { res.status(405).json({ error: 'POST만 허용됩니다' }); return; }
 
+      // ── 레시피 커뮤니티 평점 집계 읽기 — 공개(인증 불필요). 60초 메모리 캐시로 읽기 폭주 완화 ──
+      if (req.path.replace(/\/+$/, '').endsWith('/recipestats')) {
+        if (Date.now() - statsCache.t < 60000) { res.json({ stats: statsCache.data }); return; }
+        const snap = await db.collection('meta').doc('recipeStats').get();
+        statsCache = { t: Date.now(), data: (snap.exists && snap.data().stats) || {} };
+        res.json({ stats: statsCache.data });
+        return;
+      }
+
       // ── Gemini 경로 (/gscan, /gytrecipe) — Cloudflare 지역차단 회피용. 익명 허용 + 전역 일일 상한으로 비용 차단 ──
       const gp = req.path.replace(/\/+$/, '');
       if (gp.endsWith('/gscan') || gp.endsWith('/gytrecipe')) {
@@ -372,6 +411,16 @@ exports.ai = onRequest(
         return;
       }
 
+      // 레시피 커뮤니티 평점 — 로그인(익명 포함) 1인 1표. 서버가 집계 계산 → 평균 조작 불가
+      if (path.endsWith('/rate')) {
+        const { rid, v } = req.body || {};
+        if (!rid || typeof rid !== 'string' || rid.length > 80) { res.status(400).json({ error: 'rid가 필요합니다' }); return; }
+        const val = Math.round(Number(v) || 0);
+        if (val < 0 || val > 5) { res.status(400).json({ error: '별점은 0~5입니다' }); return; }
+        res.json(await rateRecipe(uid, rid, val));
+        return;
+      }
+
       // 인앱 유튜브 검색 — 운영자 YT_API_KEY로 전 사용자에게 제공 (AI 한도 미차감, 무료 기능)
       if (path.endsWith('/ytsearch')) {
         const q = String((req.body || {}).q || '').trim().slice(0, 60);
@@ -390,7 +439,7 @@ exports.ai = onRequest(
         return;
       }
 
-      res.status(404).json({ error: '알 수 없는 경로입니다 (/scan, /ytrecipe, /reward, /redeem, /ytsearch)' });
+      res.status(404).json({ error: '알 수 없는 경로입니다 (/scan, /ytrecipe, /reward, /redeem, /ytsearch, /rate, /recipestats)' });
     } catch (e) {
       res.status(e.code && e.code >= 400 && e.code < 600 ? e.code : 500).json({ error: e.message || '서버 오류' });
     }

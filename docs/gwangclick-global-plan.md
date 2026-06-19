@@ -118,4 +118,11 @@
   - 해결(추가 비용 0): ① **델타 팝콘** — `gc-globe.js popEvents(prev,curr)`가 직전 스냅샷 대비 **증가한 나라만** 골라 그 증가량(sqrt·perCap 캡)만큼 🍿를 그 나라 좌표에 튀김. 누가 지구 반대편에서 라운드 끝내는 순간 그 나라에 팝콘 펑(기존 watch 재사용, 신규 I/O 0). ② **로컬 탭 팝콘** — `fxPopcorn`이 내가 탭한 자리에 즉발 🍿(완전 로컬·0지연).
   - 렌더: 3D는 `getCoords·camera` 내적으로 **뒷면 컬링** + `getScreenCoords`로 화면투영, 2D 폴백은 정사영(앞면만). `gl-pop` 오버레이에 CSS 애니 🍿 → 자동 제거. **동시 상한 28**·**감속모션 시 생략**(접근성)·첫 로드는 베이스라인만(전세계 폭죽 방지).
   - 경계(#3): `gc_battles`/`gc_scores`/게임 수치/`battleOfDay`/onTap 로직 불변 — **연출(FX/오버레이)층만**. sw v8→**v9**. 테스트 `node --test 'tests/*.test.mjs'` 57→**62**(popCount·popEvents 경계 4종: 증가국만/우세진영색/감소·리셋 무시/변조 throw 금지). i18n globeIntro ko+en 패리티 유지.
+- [x] 지구본 로비 상시 노출 + 디테일 (사용자 결정: "로비(인트로)에 항상")
+  - `openGlobe`를 `bootGlobe`(폴백판단→3D/2D)로 리팩터(모달/인라인 공용). 신규 `openGlobeInline`이 인트로 안의 `#gl-stage`에 모달 없이 마운트 → 로비에 지구본 상시. 결과/랭킹의 모달 확대는 유지(가역성).
+  - 생명주기: `cleanup()`에 `closeGlobe()` 추가 → 화면 전환(대전 시작 등)마다 지구본 정지(배터리·누수·D7). 인트로 진입마다 재마운트. `prevC`/`inline` 상태 정리.
+  - 디테일(경량·D7 유지): 로비 스테이지 CSS **별빛 배경**(::before, 0비용)+행성감 섀도, 3D **대기광 강화**(atmosphere 0.22·#5aa0ff)+바다빛 발광 머티리얼, **핫스팟 라벨**(상위 4국 국기+우세%, labelsData). 외부 텍스처 0 유지.
+  - 경계(#3): 게임 수치/`battleOfDay`/onTap 불변 — 표현·생명주기층만. sw v9→**v10**. 테스트 62/62 유지(렌더는 브라우저 전용·순수로직 불변). i18n 신규 키 0(globeTitle/Intro 재사용, 패리티 유지).
+  - 후속(이번 묶음 잔여): **떡밥 투표소(UGC)** 구현 진행.
+- [ ] ads.txt: 코드 정상(home `/ads.txt` 동적 라우트). **환경변수 `NEXT_PUBLIC_ADSENSE_CLIENT`(ca-pub) 빌드주입 + 재배포** 필요 — 미설정 시 주석만 서빙. 신청(6/16) 후 크롤링 지연은 정상. 사용자 확인: `https://ddukkit.com/ads.txt`에 `google.com, pub-…, DIRECT, f08c47fec0942fa0` 줄 노출 여부.
   - 다음: **토스(main/github.io) 동기화** — great-darwin의 최종 광클을 main에 반영(라이브·제출본, 신중).

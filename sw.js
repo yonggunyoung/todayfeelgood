@@ -1,5 +1,5 @@
 // 냉비서 서비스워커 — 앱 셸 캐시 (오프라인에서도 냉장고 확인 가능)
-const CACHE = 'naengbiseo-v63';
+const CACHE = 'naengbiseo-v64';
 const SHELL = [
   './', './index.html', './arcade.html', './js/arcade.js', './css/styles.css', './manifest.webmanifest', './icon.svg',
   './js/main.js', './js/store.js', './js/engine.js', './js/units.js', './js/ai.js', './js/sync.js', './js/voice.js', './js/config.js',

@@ -7,7 +7,7 @@ import { scanImage, extractRecipeFromYouTube } from './ai.js';
 import { initSync, sync, makeSpaceCode, setSpaceCode, loginGoogle, logoutGoogle, syncAvailable, submitScore, topScores } from './sync.js';
 import { AI_ENDPOINT, COUPANG_TAG } from './config.js';
 import { canListen, speak, stopSpeak, startListen, stopListen, isListening, parseCommand } from './voice.js';
-import { earn, spend, refund, EARN, earnedToday, SHOP, adFreeNow, gameBest, aiLeft, aiConsume, aiGrant, aiUnlimited, FREE_AI } from './points.js';
+import { earn, bonus, spend, refund, EARN, earnedToday, SHOP, adFreeNow, gameBest, aiLeft, aiConsume, aiGrant, aiUnlimited, FREE_AI } from './points.js';
 import { initGames, openGames, GAMES, gameFresh, gameVoice, gameVoicePass, gameDouble, setGameDiff } from './games.js';
 import { gameDefense, defBuy, defStart, defSpeed, defPick, defRevive, defGiveUp, defAdSkip, defAdSkill, defResume, defDraftAd, defWallMode, defElem, defMidSkill, defMidSkip, defActive } from './game-defense.js';
 import { gamePuzzle } from './game-puzzle.js';
@@ -441,6 +441,43 @@ function foodTile(l) {
 const foodRows = (foods) =>
   chunk(foods, 4).map((row) => `<div class="f-row">${row.map(foodTile).join('')}</div><div class="f-shelf"></div>`).join('');
 
+let fridgeOpen = false, fridgeJustOpened = false; // 냉장고 문 — 기본 닫힘(꾸미기 표면), 열면 안쪽+냉기 연출(1회)
+let decorEditing = false; // 냉장고 문 꾸미기 편집 모드 (붙이기·끌어 옮기기·떼기)
+
+const DECO_STICKERS = ['🍓', '🥑', '🌶️', '🧀', '🥦', '🍅', '🥕', '🌽', '🍋', '🫐', '🍞', '🥚', '🐟', '🍗', '🍳', '✨', '⭐', '❤️', '🌈', '🌸', '🐰', '🐱', '☁️', '🔥'];
+const DECO_MAGNETS = ['🧲', '🔴', '🟠', '🟡', '🟢', '🔵', '🟣', '🟤', '📌', '📎', '🏠', '🍀', '🌟', '🎀', '🧊', '🥦'];
+const NOTE_HUES = [48, 200, 132, 350, 280, 22]; // 메모지 색(hue)
+
+// 새 꾸미기 항목 기본 위치(가운데 근처 살짝 흩뿌림) + 살짝 기울임 — 중심 기준 %
+const placeNew = () => ({ x: 50 + (Math.random() * 26 - 13), y: 36 + (Math.random() * 20 - 10), rot: Math.round(Math.random() * 16 - 8) });
+function pushDecor(it) {
+  if (!S.decor) S.decor = { items: [] };
+  if (!S.decor.items) S.decor.items = [];
+  S.decor.items.push(it);
+  save();
+}
+
+// 문에 붙은 항목 1개 렌더 — 위치 %(중심), 회전 --rot. 편집 모드면 ✕ 배지 + 메모는 탭 편집.
+function decorItemHtml(it) {
+  const pos = `left:${it.x}%;top:${it.y}%;--rot:${it.rot || 0}deg`;
+  const ed = decorEditing;
+  let tap = '';
+  if (ed) { if (it.kind === 'note') tap = `onclick="UI.editDecor('${it.id}')"`; }
+  else if (it.kind === 'recipe') tap = `onclick="UI.openRecipe('${it.recipeId}')"`;
+  const x = ed ? `<span class="fd-x" onclick="event.stopPropagation();UI.removeDecor('${it.id}')">✕</span>` : '';
+  if (it.kind === 'note') {
+    return `<div class="fd-mag fd-note-i" data-deco="${it.id}" style="${pos};--paper:${it.hue ?? 48}" ${tap}>${x}<span class="fd-pin"></span><span class="fd-note-tx">${esc(it.text || '')}</span></div>`;
+  }
+  if (it.kind === 'magnet') {
+    return `<div class="fd-mag fd-magnet" data-deco="${it.id}" style="${pos}">${x}<span>${it.emoji || '🧲'}</span></div>`;
+  }
+  if (it.kind === 'recipe') {
+    const r = allRecipes(S).find((q) => q.id === it.recipeId);
+    return `<div class="fd-mag fd-recipe" data-deco="${it.id}" style="${pos}" ${tap}>${x}<span class="fd-rclip"></span>${r ? `${r.emoji || '🍳'} ${esc(r.title)}` : '레시피'}</div>`;
+  }
+  return `<div class="fd-mag fd-sticker" data-deco="${it.id}" style="${pos}">${x}${it.emoji || '✨'}</div>`;
+}
+
 function fridgeHtml(all) {
   const fr = all.filter((p) => p.location === 'fridge');
   const frMain = fr.filter((p) => p.qtyType !== 'level');
@@ -457,13 +494,56 @@ function fridgeHtml(all) {
   for (const p of all) { const d = daysLeft(p.expiresAt); if (d <= 3 && d < best) { best = d; bubbleKey = 'p:' + p.id; } }
   for (const l of foods) { const d = daysLeft(l.expiresAt); if (d <= 3 && d < best) { best = d; bubbleKey = 'f:' + l.id; } }
   const expN = all.filter((p) => daysLeft(p.expiresAt) <= 3).length;
-  return `
-    <div class="fridge">
-      <div class="f-display">
+
+  const display = `<div class="f-display">
         <span class="fd-temp">❄ 3°C</span>
         <span class="fd-stat"><b>${all.length}</b>개 보관${expN ? ` · <em>임박 ${expN}</em>` : ' · 신선'}</span>
         <span class="fd-on">●&#xfe0e; ON</span>
+      </div>`;
+  const basket = `
+    <div class="basket" data-loc="room">
+      <div class="f-sec-label" onclick="UI.openLocList('room')" style="cursor:pointer"><span>실온 선반</span><span>${rm.length ? rm.length + '개 ' : ''}›</span></div>
+      ${shelfRows(rm, 'room')}
+    </div>`;
+
+  // 닫힌 문 — 기본 상태. 문 표면이 곧 꾸미기 캔버스(메모·스티커·마그넷·핀 레시피).
+  if (!fridgeOpen) {
+    const items = (S.decor && S.decor.items) || [];
+    return `
+    <div class="fridge fridge-closed${decorEditing ? ' deco-edit' : ''}">
+      ${display}
+      <span class="f-handle"></span>
+      <div class="fd-door">
+        <div class="fd-deco">
+          ${items.map(decorItemHtml).join('')}
+          ${!items.length && !decorEditing ? `<div class="fd-empty">
+            <div class="fd-note-demo">🧲 우리집 냉장고</div>
+            <p>‘✏️ 꾸미기’를 눌러 메모·스티커·마그넷·자주 쓰는 레시피를 붙여보세요 ✨</p></div>` : ''}
+          ${decorEditing ? `<div class="fd-edithint">붙인 걸 끌어 옮기고 · 메모는 탭해서 고치고 · ✕로 떼요</div>` : ''}
+        </div>
       </div>
+      ${decorEditing ? `
+        <div class="fd-palette">
+          <button onclick="UI.addDecor('note')">📝<small>메모</small></button>
+          <button onclick="UI.addDecor('sticker')">✨<small>스티커</small></button>
+          <button onclick="UI.addDecor('magnet')">🧲<small>마그넷</small></button>
+          <button onclick="UI.pinRecipePicker()">📌<small>레시피</small></button>
+        </div>
+        <button class="fd-done" onclick="UI.toggleDecorEdit()">✓ 꾸미기 완료</button>`
+      : `<div class="fd-actions">
+          <button class="fd-decorate" onclick="UI.toggleDecorEdit()">✏️ 꾸미기</button>
+          <button class="fd-open" onclick="UI.openFridge()">🚪 냉장고 열기</button>
+        </div>
+        <button class="fd-brag" onclick="UI.openInvite()">🎉 친구에게 냉장고 자랑하고 초대하기 — 둘 다 포인트</button>`}
+    </div>
+    ${basket}`;
+  }
+
+  // 열린 문 — 안쪽 + 냉기 빌로우(열 때 1회만)
+  return `
+    <div class="fridge fridge-open">
+      ${fridgeJustOpened ? '<span class="fridge-coldair"></span>' : ''}
+      ${display}
       <span class="f-handle"></span>
       <div class="f-glass"></div>
       <div class="fridge-inner" data-loc="fridge">
@@ -486,11 +566,9 @@ function fridgeHtml(all) {
         ${shelfRows(fz, 'freezer')}
         ${fzFoods.length ? `<div class="f-sec-label" style="padding-top:2px"><span>🍱 얼려둔 음식</span><span>${fzFoods.length}개</span></div>${foodRows(fzFoods)}` : ''}
       </div>
+      <button class="fd-close" onclick="UI.closeFridge()">🚪 문 닫기</button>
     </div>
-    <div class="basket" data-loc="room">
-      <div class="f-sec-label" onclick="UI.openLocList('room')" style="cursor:pointer"><span>실온 선반</span><span>${rm.length ? rm.length + '개 ' : ''}›</span></div>
-      ${shelfRows(rm, 'room')}
-    </div>
+    ${basket}
     <p class="hint" style="text-align:center;margin-top:2px">길게 누르면 칸 이동 · ＋를 누르면 그 칸에 추가돼요</p>`;
 }
 
@@ -535,6 +613,170 @@ function renderPantry() {
 UI.setLoc = (l) => { pantryLoc = l; render(); };
 UI.setPantryView = (v) => { pantryView = v; render(); };
 UI.openLocList = (loc) => { pantryView = 'list'; pantryLoc = loc; render(); };
+// 냉장고 열기/닫기 — 열 때만 냉기 빌로우 1회(렌더 직후 플래그 내려서 다음 렌더엔 안 뜸)
+UI.openFridge = () => { pantryView = 'shelf'; fridgeOpen = true; fridgeJustOpened = true; render(); fridgeJustOpened = false; };
+UI.closeFridge = () => { fridgeOpen = false; render(); };
+
+/* ── 냉장고 문 꾸미기 (Phase 2) — 메모·스티커·마그넷·핀 레시피 ── */
+UI.toggleDecorEdit = () => { decorEditing = !decorEditing; render(); };
+UI.addDecor = (kind) => {
+  if (kind === 'note') return UI.editDecor(null);
+  const pool = kind === 'magnet' ? DECO_MAGNETS : DECO_STICKERS;
+  openSheet(`
+    <h2>${kind === 'magnet' ? '🧲 마그넷' : '✨ 스티커'} 고르기</h2>
+    <p class="sub">탭하면 냉장고 문에 붙어요. 붙인 뒤 끌어서 옮길 수 있어요.</p>
+    <div class="emoji-grid">${pool.map((em) => `<button onclick="UI.placeDecor('${kind}','${em}')">${em}</button>`).join('')}</div>`);
+};
+UI.placeDecor = (kind, emoji) => {
+  pushDecor({ id: uid(), kind, emoji, ...placeNew() });
+  decorEditing = true; UI.closeSheet(); render();
+  toast(kind === 'magnet' ? '🧲 마그넷을 붙였어요 — 끌어서 옮겨보세요' : '✨ 스티커를 붙였어요 — 끌어서 옮겨보세요');
+};
+let noteDraft = null;
+UI.editDecor = (id) => {
+  const it = id ? ((S.decor && S.decor.items) || []).find((q) => q.id === id) : null;
+  noteDraft = { id: it ? it.id : null, hue: it ? (it.hue ?? 48) : 48 };
+  openSheet(`
+    <h2>📝 ${it ? '메모 고치기' : '메모 붙이기'}</h2>
+    <div class="field"><textarea id="nd-text" rows="3" maxlength="120" placeholder="예: 우유 이번 주까지! · 주말 장보기 · 김치 새로 담금">${it ? esc(it.text || '') : ''}</textarea></div>
+    <div class="field"><label>메모지 색</label>
+      <div class="hue-row">${NOTE_HUES.map((h) => `<button class="hue-dot${noteDraft.hue === h ? ' on' : ''}" style="background:hsl(${h} 88% 86%)" onclick="UI.ndHue(${h},this)"></button>`).join('')}</div></div>
+    <div class="btn-row">
+      ${it ? `<button class="btn btn-soft" onclick="UI.removeDecor('${it.id}')">🗑️ 떼기</button>` : ''}
+      <button class="btn btn-primary grow" onclick="UI.saveDecorNote()">${it ? '저장' : '붙이기'}</button></div>`);
+};
+UI.ndHue = (h, el) => { noteDraft.hue = h; el.parentElement.querySelectorAll('.hue-dot').forEach((d) => d.classList.remove('on')); el.classList.add('on'); };
+UI.saveDecorNote = () => {
+  const text = $('#nd-text').value.trim();
+  if (!text) { toast('메모 내용을 적어주세요'); return; }
+  if (noteDraft.id) {
+    const it = ((S.decor && S.decor.items) || []).find((q) => q.id === noteDraft.id);
+    if (it) { it.text = text; it.hue = noteDraft.hue; }
+    save();
+  } else {
+    pushDecor({ id: uid(), kind: 'note', text, hue: noteDraft.hue, ...placeNew() });
+  }
+  decorEditing = true; UI.closeSheet(); render();
+};
+UI.removeDecor = (id) => {
+  if (S.decor && S.decor.items) S.decor.items = S.decor.items.filter((q) => q.id !== id);
+  save();
+  if ($('#modal-root').innerHTML.trim()) UI.closeSheet();
+  render();
+};
+UI.pinRecipePicker = () => {
+  const favs = (S.favs || []).map((id) => allRecipes(S).find((r) => r.id === id)).filter(Boolean);
+  const seen = new Set(); const list = [];
+  for (const r of [...favs, ...(S.myRecipes || [])]) { if (!seen.has(r.id)) { seen.add(r.id); list.push(r); } }
+  openSheet(`
+    <h2>📌 자주 쓰는 레시피 붙이기</h2>
+    <p class="sub">즐겨찾기 ❤️ 했거나 내가 저장한 레시피를 문에 붙여둘 수 있어요.</p>
+    ${list.length ? `<div class="pin-list">${list.map((r) => `
+      <button class="pin-row" onclick="UI.placeRecipe('${r.id}')"><span class="pin-em">${r.emoji || '🍳'}</span><span class="grow">${esc(r.title)}</span><span class="pin-add">붙이기</span></button>`).join('')}</div>`
+    : `<div class="empty"><span class="e-emoji">📌</span><b>아직 붙일 레시피가 없어요</b><small>레시피 탭에서 ❤️를 누르거나 레시피를 저장하면 여기에 떠요</small></div>`}`);
+};
+UI.placeRecipe = (rid) => {
+  pushDecor({ id: uid(), kind: 'recipe', recipeId: rid, ...placeNew() });
+  decorEditing = true; UI.closeSheet(); render();
+  toast('📌 레시피를 냉장고 문에 붙였어요');
+};
+
+/* ── 친구 초대 · 자랑하기 (Phase 3) — 신규 유입 + 성공 시 양쪽 포인트 ── */
+const REF_INVITEE = 30;  // 초대로 시작한 신규 유저 환영 보너스
+const REF_INVITER = 100; // 친구가 시작하면 초대한 사람 보상(가입 완료 링크 확인 시)
+const REF_WEEK_CAP = 10; // 주당 초대 성공 보상 한도(어뷰징 완화)
+function refDefaults() { if (!S.referral) S.referral = { rid: '', invitedBy: '', claimed: [], ok: 0 }; if (!S.referral.claimed) S.referral.claimed = []; return S.referral; }
+function ensureRid() { refDefaults(); if (!S.referral.rid) { S.referral.rid = 'r' + uid(); save({ silent: true }); } return S.referral.rid; }
+function ensureNid() { refDefaults(); if (!S.referral.nid) { S.referral.nid = 'n' + uid(); save({ silent: true }); } return S.referral.nid; }
+function refWeekKey() { const d = new Date(); const day = (d.getDay() + 6) % 7; d.setDate(d.getDate() - day); return d.toISOString().slice(0, 10); }
+const looksNew = () => !S.onboarded && (S.pantry?.length || 0) === 0 && (S.meta?.createdAt || 0) > Date.now() - 3 * 86400e3;
+
+UI.openInvite = () => {
+  ensureRid();
+  const ok = S.referral.ok || 0;
+  openSheet(`
+    <h2>🎉 친구 초대 · 냉장고 자랑</h2>
+    <p class="sub">내 냉장고를 자랑하고 친구를 초대하세요. 친구가 냉비서를 시작하면 <b>둘 다 포인트</b>를 받아요.</p>
+    <div class="card flat" style="text-align:center;padding:16px">
+      <div style="font-size:1.5rem">🧊🎁🧊</div>
+      <p style="margin:6px 0 0;font-weight:700">친구 가입 성공 <b style="color:var(--blue,#3b82f6)">${ok}</b>명 · 받은 보상 ${(ok * REF_INVITER).toLocaleString()}P</p>
+      <small class="hint">초대한 친구가 보내준 ‘가입 완료’ 링크를 누르면 +${REF_INVITER}P가 적립돼요</small>
+    </div>
+    <div class="btn-row" style="margin-top:12px"><button class="btn btn-primary btn-block" onclick="UI.shareInvite()">🔗 초대 링크 보내기 (친구 가입 시 +${REF_INVITER}P)</button></div>
+    ${S.referral.invitedBy ? `<button class="btn btn-soft btn-block" style="margin-top:8px" onclick="UI.notifyJoined()">📨 나를 초대한 친구에게 가입 완료 알리기 (친구 +${REF_INVITER}P)</button>` : ''}
+    <button class="btn btn-soft btn-block" style="margin-top:8px" onclick="UI.sendRecipePicker()">📒 레시피 보내기</button>
+    <p class="hint" style="margin-top:10px">받은 ‘가입 완료’ 링크가 자동으로 안 눌리면 설정의 ‘공유받은 것 추가’에 붙여넣어도 돼요.</p>
+    <div class="btn-row"><button class="btn btn-block" onclick="UI.closeSheet()">닫기</button></div>`);
+};
+UI.shareInvite = () => {
+  const rid = ensureRid();
+  const url = shareUrl(shareEncode('invite', { rid }));
+  const text = '🧊 내 냉장고 구경할래? 냉비서로 냉장고 관리하고 레시피 추천받아요. 이 링크로 시작하면 우리 둘 다 선물 포인트 받아요 🎁';
+  if (navigator.share) navigator.share({ title: '냉비서 초대', text, url }).catch(() => copyText(`${text}\n${url}`));
+  else copyText(`${text}\n${url}`);
+};
+UI.sendRecipePicker = () => {
+  const favs = (S.favs || []).map((id) => allRecipes(S).find((r) => r.id === id)).filter(Boolean);
+  const seen = new Set(); const list = [];
+  for (const r of [...favs, ...(S.myRecipes || [])]) { if (!seen.has(r.id)) { seen.add(r.id); list.push(r); } }
+  openSheet(`
+    <h2>📒 레시피 보내기</h2>
+    <p class="sub">친구에게 레시피를 보내요. 친구가 링크를 누르면 냉비서에 바로 담겨요.</p>
+    ${list.length ? `<div class="pin-list">${list.map((r) => `
+      <button class="pin-row" onclick="UI.sendRecipe('${r.id}')"><span class="pin-em">${r.emoji || '🍳'}</span><span class="grow">${esc(r.title)}</span><span class="pin-add">보내기</span></button>`).join('')}</div>`
+    : `<div class="empty"><span class="e-emoji">📒</span><b>보낼 레시피가 없어요</b><small>레시피 탭에서 ❤️ 하거나 저장하면 여기에 떠요</small></div>`}
+    <div class="btn-row"><button class="btn btn-block" onclick="UI.openInvite()">← 뒤로</button></div>`);
+};
+UI.sendRecipe = (rid) => {
+  const r = allRecipes(S).find((x) => x.id === rid);
+  if (!r) return;
+  const d = { ...r, id: undefined, mine: undefined, fav: undefined, photo: null }; // 사진 제외(용량) · 유튜브는 yt id 유지
+  const url = shareUrl(shareEncode('recipe', d));
+  const text = `🍳 [${r.title}] 레시피 보내요! 링크 누르면 냉비서에 바로 추가돼요 👇`;
+  if (navigator.share) navigator.share({ title: '냉비서 레시피', text, url }).catch(() => copyText(`${text}\n${url}`));
+  else copyText(`${text}\n${url}`);
+};
+UI.notifyJoined = () => {
+  refDefaults();
+  const nid = ensureNid();
+  const url = shareUrl(shareEncode('joined', { rid: S.referral.invitedBy, nid }));
+  const text = `🎉 친구 초대로 냉비서 시작했어! 이 링크 누르면 너도 초대 보상 +${REF_INVITER}P 받아 👇`;
+  if (navigator.share) navigator.share({ title: '냉비서 가입 완료', text, url }).catch(() => copyText(`${text}\n${url}`));
+  else copyText(`${text}\n${url}`);
+};
+function openInviteWelcome(first) {
+  ensureNid();
+  openSheet(`
+    <h2>🎁 환영해요!</h2>
+    <p class="sub">${first ? `친구 초대로 시작해서 <b>+${REF_INVITEE}P</b>를 받았어요.` : '이미 친구 초대로 시작한 계정이에요.'} 초대한 친구도 보상을 받게 ‘가입 완료’를 보내주세요.</p>
+    <div class="btn-row"><button class="btn btn-primary btn-block" onclick="UI.notifyJoined()">📨 친구에게 가입 완료 알리기 (친구 +${REF_INVITER}P)</button></div>
+    <div class="btn-row"><button class="btn btn-block" onclick="UI.closeSheet()">나중에</button></div>`);
+}
+function handleInvite(d) {
+  ensureRid();
+  const rid = d && d.rid;
+  if (!rid || rid === S.referral.rid) { toast('내 초대 링크예요 🙂'); return; }
+  if (S.referral.invitedBy) { openInviteWelcome(false); return; } // 이미 초대받음 — 보너스 중복 없이 안내만
+  if (!looksNew()) { toast('이미 냉비서를 쓰고 계시네요 🙂 친구를 초대해보세요!'); return; }
+  S.referral.invitedBy = rid;
+  bonus(REF_INVITEE, '친구 초대로 시작 🎁');
+  save(); renderTop();
+  openInviteWelcome(true);
+}
+function handleJoined(d) {
+  ensureRid();
+  if (!d || d.rid !== S.referral.rid) { toast('이 링크는 다른 분의 초대 보상이에요'); return; }
+  if (!d.nid) { toast('가입 완료 코드를 읽지 못했어요'); return; }
+  if (S.referral.claimed.includes(d.nid)) { toast('이미 보상을 받은 친구예요 🙂'); return; }
+  if (S.referral.week !== refWeekKey()) { S.referral.week = refWeekKey(); S.referral.weekOk = 0; }
+  if ((S.referral.weekOk || 0) >= REF_WEEK_CAP) { toast(`이번 주 초대 보상 한도(${REF_WEEK_CAP}명)에 도달했어요`); return; }
+  S.referral.claimed.push(d.nid);
+  S.referral.ok = (S.referral.ok || 0) + 1;
+  S.referral.weekOk = (S.referral.weekOk || 0) + 1;
+  bonus(REF_INVITER, '친구 초대 성공 🎉');
+  save(); renderTop();
+  toast(`🎉 초대 성공! +${REF_INVITER}P — 친구가 냉비서를 시작했어요`);
+}
 
 let qaLoc = null; // 냉장고 ＋타일로 들어온 경우 그 칸으로 바로 담기
 UI.quickAddAt = (loc) => { qaLoc = loc; UI.openQuickAdd(); };
@@ -1138,6 +1380,11 @@ UI.openPoints = () => {
     <div class="card flat" style="text-align:center;padding:18px">
       <div style="font-size:2rem;font-weight:900">${(S.points?.bal || 0).toLocaleString()}<small style="font-size:1rem">P</small></div>
       <p class="hint" style="margin:4px 0 0">누적 ${(S.points?.total || 0).toLocaleString()}P · 버리지 않을수록 쌓여요</p>
+    </div>
+    <div class="invite-cta" onclick="UI.openInvite()">
+      <span class="ic-ico">🎉</span>
+      <div class="grow"><b>친구 초대하고 +${REF_INVITER}P</b><small>친구가 냉비서를 시작하면 둘 다 포인트를 받아요</small></div>
+      <span class="ic-go">초대 ›</span>
     </div>
     <div class="section-title" style="margin-top:14px"><h2>오늘 적립</h2><small>매일 자정 리셋</small></div>
     <div class="card flat">${rows}</div>
@@ -2148,6 +2395,10 @@ function handleShareCode(code) {
     S.settings.mode = m.key;
     save(); UI.closeSheet(); tab = 'recipes'; render();
     toast(`${m.emoji} "${m.label}" 모드를 가져와 적용했어요`);
+  } else if (parsed.t === 'invite') {
+    handleInvite(parsed.d);
+  } else if (parsed.t === 'joined') {
+    handleJoined(parsed.d);
   }
 }
 
@@ -2706,6 +2957,40 @@ view.addEventListener('pointermove', (e) => {
 });
 ['pointerup', 'pointercancel'].forEach((ev) =>
   view.addEventListener(ev, () => { if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; } }));
+
+/* 냉장고 문 꾸미기 — 붙인 항목 끌어 옮기기(편집 모드 한정, 중심 기준 %로 저장) */
+view.addEventListener('pointerdown', (e) => {
+  if (!decorEditing) return;
+  const el = e.target.closest('[data-deco]');
+  if (!el || e.target.closest('.fd-x')) return;
+  const layer = el.closest('.fd-deco'); if (!layer) return;
+  const rect = layer.getBoundingClientRect();
+  const id = el.dataset.deco;
+  const sx = e.clientX, sy = e.clientY; let moved = false, nx = 0, ny = 0;
+  try { el.setPointerCapture(e.pointerId); } catch { /* noop */ }
+  el.classList.add('fd-dragging');
+  const onMove = (ev) => {
+    if (!moved && Math.hypot(ev.clientX - sx, ev.clientY - sy) > 5) moved = true;
+    if (!moved) return;
+    nx = Math.max(6, Math.min(94, ((ev.clientX - rect.left) / rect.width) * 100));
+    ny = Math.max(5, Math.min(95, ((ev.clientY - rect.top) / rect.height) * 100));
+    el.style.left = nx + '%'; el.style.top = ny + '%';
+  };
+  const onUp = () => {
+    el.classList.remove('fd-dragging');
+    el.removeEventListener('pointermove', onMove);
+    el.removeEventListener('pointerup', onUp);
+    el.removeEventListener('pointercancel', onUp);
+    if (moved) {
+      suppressClick = true; // 드래그 직후의 click(편집·열기) 억제
+      const it = ((S.decor && S.decor.items) || []).find((q) => q.id === id);
+      if (it) { it.x = +nx.toFixed(1); it.y = +ny.toFixed(1); save(); }
+    }
+  };
+  el.addEventListener('pointermove', onMove);
+  el.addEventListener('pointerup', onUp);
+  el.addEventListener('pointercancel', onUp);
+});
 
 document.addEventListener('click', (e) => {
   if (suppressClick) { suppressClick = false; e.preventDefault(); e.stopPropagation(); return; }

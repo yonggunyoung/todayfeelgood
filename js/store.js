@@ -16,6 +16,8 @@ const DEFAULT = () => ({
   shopping: [],   // {id, name, reason, done}
   myRecipes: [],  // 내가 만든/유튜브에서 저장한 레시피 (RECIPES와 동일 구조 + yt, photo, mine)
   favs: [],       // 즐겨찾기 레시피 id
+  decor: { items: [] }, // 냉장고 문 꾸미기 — {id, kind:'note'|'sticker'|'magnet'|'recipe', text?, emoji?, recipeId?, hue?, x, y, rot}
+  referral: { rid: '', invitedBy: '', claimed: [], ok: 0 }, // 초대 — rid=내 코드, claimed=보상 지급한 신규 유저 id, ok=성공 횟수
   ledger: { saved: 0, wasted: 0, cooked: 0, leftoverEaten: 0, leftoverWasted: 0 },
   plan: '',       // ''=무료 | 'premium' — 결제 웹훅/운영자가 기록, 프리미엄이면 앱 내 광고 미노출
   points: { bal: 0, total: 0, day: '', got: {}, hist: [] }, // 냉비서 포인트 — 절약 행동 보상 (무상 적립만)
@@ -39,6 +41,8 @@ function load() {
       ledger: { ...d.ledger, ...(p.ledger || {}) },
       points: { ...d.points, ...(p.points || {}) },
       games: { ...d.games, ...(p.games || {}) },
+      decor: { ...d.decor, ...(p.decor || {}) },
+      referral: { ...d.referral, ...(p.referral || {}) },
       myRecipes: p.myRecipes || [],
       favs: p.favs || [],
     };
@@ -68,7 +72,7 @@ export function replaceState(remote) {
   const keepCode = S.settings.spaceCode;
   const keepPin = S.settings.adminPin;
   for (const k of ['meta', 'settings', 'pantry', 'leftovers', 'shopping', 'myRecipes', 'favs', 'ledger',
-    'plan', 'points', 'games', 'adFreeUntil', 'planTrialUntil', 'onboarded', 'tutorialDone']) {
+    'decor', 'referral', 'plan', 'points', 'games', 'adFreeUntil', 'planTrialUntil', 'onboarded', 'tutorialDone']) {
     if (remote[k] !== undefined) S[k] = remote[k];
   }
   S.settings.aiKey = keepKey;

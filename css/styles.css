@@ -327,8 +327,18 @@ a { color: var(--blue); text-decoration: none; }
 .recipe-card h3 { font-size: 1.02rem; font-weight: 800; letter-spacing: -0.02em; }
 .recipe-card .meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 3px; color: var(--label-2); font-size: 0.73rem; font-weight: 600; }
 .recipe-card .meta b { color: var(--orange); }
+.recipe-card .meta .rstars { color: #ffb400; letter-spacing: -1px; font-size: .8rem; }
 .heart { font-size: 1.15rem; padding: 6px; flex-shrink: 0; filter: grayscale(1) opacity(0.4); transition: all 0.15s; }
 .heart.on { filter: none; transform: scale(1.08); }
+/* 레시피 별점(내 평가) */
+.star-row { display: flex; align-items: center; gap: 2px; margin: 8px 0 2px; }
+.star-row .star {
+  font-size: 1.5rem; line-height: 1; padding: 2px 1px; background: none; border: none; cursor: pointer;
+  color: #d4d4d4; transition: transform .1s, color .12s;
+}
+.star-row .star.on { color: #ffb400; }
+.star-row .star:active { transform: scale(1.25); }
+.star-row .star-lbl { margin-left: 8px; font-size: .76rem; font-weight: 700; color: var(--label-2, #888); }
 .ready-flag {
   position: absolute; top: 10px; left: 10px; z-index: 2;
   background: rgba(47, 174, 95, 0.95); color: #fff; font-size: 0.64rem; font-weight: 800;

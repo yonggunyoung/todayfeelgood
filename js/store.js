@@ -16,6 +16,7 @@ const DEFAULT = () => ({
   shopping: [],   // {id, name, reason, done}
   myRecipes: [],  // 내가 만든/유튜브에서 저장한 레시피 (RECIPES와 동일 구조 + yt, photo, mine)
   favs: [],       // 즐겨찾기 레시피 id
+  ratings: {},    // 레시피 평가 — { [recipeId]: 1~5 } (내 별점 · 추천 가중에 반영)
   decor: { items: [] }, // 냉장고 문 꾸미기 — {id, kind:'note'|'sticker'|'magnet'|'recipe', text?, emoji?, recipeId?, hue?, x, y, rot}
   referral: { rid: '', invitedBy: '', claimed: [], ok: 0 }, // 초대 — rid=내 코드, claimed=보상 지급한 신규 유저 id, ok=성공 횟수
   ledger: { saved: 0, wasted: 0, cooked: 0, leftoverEaten: 0, leftoverWasted: 0 },
@@ -45,6 +46,7 @@ function load() {
       referral: { ...d.referral, ...(p.referral || {}) },
       myRecipes: p.myRecipes || [],
       favs: p.favs || [],
+      ratings: p.ratings || {},
     };
   } catch {
     return d;
@@ -71,7 +73,7 @@ export function replaceState(remote) {
   const keepFb = S.settings.firebaseConfig;
   const keepCode = S.settings.spaceCode;
   const keepPin = S.settings.adminPin;
-  for (const k of ['meta', 'settings', 'pantry', 'leftovers', 'shopping', 'myRecipes', 'favs', 'ledger',
+  for (const k of ['meta', 'settings', 'pantry', 'leftovers', 'shopping', 'myRecipes', 'favs', 'ratings', 'ledger',
     'decor', 'referral', 'plan', 'points', 'games', 'adFreeUntil', 'planTrialUntil', 'onboarded', 'tutorialDone']) {
     if (remote[k] !== undefined) S[k] = remote[k];
   }

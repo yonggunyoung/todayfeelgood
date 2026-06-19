@@ -91,20 +91,24 @@ export function analyzeRecipe(recipe, state, modeOrKey) {
   const modeScore = Math.min(1, m);
 
   const fav = (state.favs || []).includes(recipe.id);
+  // 내 별점 — 추천 가중(5★:+0.13 … 3★:0 … 1★:-0.13). 낮게 준 건 가라앉고 높게 준 건 위로.
+  const rating = (state.ratings || {})[recipe.id] || 0;
+  const ratingScore = rating ? ((rating - 3) / 2) * 0.13 : 0;
 
   const score =
     coverage * 0.42 +
     Math.min(1, expiringBoost / 2) * 0.2 +
     (missing.length === 0 ? 0.12 : missing.length === 1 ? 0.04 : 0) +
     (fav ? 0.06 : 0) +
-    modeScore * 0.2;
+    modeScore * 0.2 +
+    ratingScore;
 
   return {
     recipe, have, total: required.length, missing,
     cookable: required.length > 0 && missing.length === 0, // 영상만 저장(재료 0)은 "지금 가능" 아님
     almostCookable: missing.length === 1,
     usesExpiring: expiringBoost > 0,
-    fav, score,
+    fav, rating, score,
   };
 }
 

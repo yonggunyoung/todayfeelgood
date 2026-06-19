@@ -1616,6 +1616,7 @@ function recipeCard(a) {
             <div class="meta">
               ${r.time ? `<span>⏱ ${r.time}분</span>` : ''}${r.kcal ? `<span>🔥 ${r.kcal}kcal</span>` : ''}
               ${r.protein ? `<span>단백질 <b>${r.protein}g</b></span>` : ''}
+              ${a.rating ? `<span class="rstars" title="내 별점 ${a.rating}">${'★'.repeat(a.rating)}</span>` : ''}
               ${a.usesExpiring ? '<span style="color:var(--red)">임박재료 소진</span>' : ''}
             </div>
           </div>
@@ -1754,6 +1755,23 @@ UI.toggleFav = (id) => {
   if (i >= 0) S.favs.splice(i, 1); else S.favs.push(id);
   save(); render();
 };
+// 레시피 별점 — 내 평가(1~5). 추천 가중에 반영. 같은 별 다시 누르면 해제.
+const ratingOf = (rid) => (S.ratings || {})[rid] || 0;
+function starRowHtml(rid) {
+  const cur = ratingOf(rid);
+  return `<div class="star-row" id="stars-${rid}">
+    ${[1, 2, 3, 4, 5].map((n) => `<button class="star${n <= cur ? ' on' : ''}" onclick="event.stopPropagation();UI.rate('${rid}',${n})" aria-label="${n}점">★</button>`).join('')}
+    <span class="star-lbl">${cur ? `내 별점 ${cur}` : '눌러서 별점'}</span></div>`;
+}
+UI.rate = (rid, n) => {
+  if (!S.ratings) S.ratings = {};
+  if (S.ratings[rid] === n) delete S.ratings[rid]; else S.ratings[rid] = n;
+  save();
+  const box = document.getElementById('stars-' + rid);
+  if (box) box.outerHTML = starRowHtml(rid);
+  const v = ratingOf(rid);
+  toast(v ? `⭐ ${v}점으로 평가했어요 — 추천에 반영돼요` : '평가를 지웠어요');
+};
 UI.setMode = (k) => {
   S.settings.mode = k; save(); render();
   const m = getMode(S, k);
@@ -1788,6 +1806,7 @@ UI.openRecipe = (rid) => {
         <p class="sub" style="margin:2px 0 0">${r.time ? `⏱ ${r.time}분 · ` : ''}${r.kcal ? `${r.kcal}kcal · ` : ''}${r.protein ? `단백질 ${r.protein}g` : ''}</p></div>
       <button class="heart ${a.fav ? 'on' : ''}" onclick="UI.toggleFav('${r.id}');this.classList.toggle('on')">❤️</button>
     </div>
+    ${starRowHtml(r.id)}
     ${r.caution ? `<div class="banner warn">⚠️ ${esc(r.caution)}</div>` : ''}
     <div class="rcp-tools">
       <button onclick="UI.recipeTimer(${r.time || 10})"><span>⏲️</span>타이머</button>

@@ -456,26 +456,24 @@ function pushDecor(it) {
   S.decor.items.push(it);
   save();
 }
+const decorById = (id) => ((S.decor && S.decor.items) || []).find((q) => q.id === id);
 
-// 문에 붙은 항목 1개 렌더 — 위치 %(중심), 회전 --rot. 편집 모드면 ✕ 배지 + 메모는 탭 편집.
+// 문에 붙은 항목 1개 렌더 — 축소판. 위치 %(중심), 회전 --rot. 탭하면 확대 상세(읽기·편집).
 function decorItemHtml(it) {
   const pos = `left:${it.x}%;top:${it.y}%;--rot:${it.rot || 0}deg`;
-  const ed = decorEditing;
-  let tap = '';
-  if (ed) { if (it.kind === 'note') tap = `onclick="UI.editDecor('${it.id}')"`; }
-  else if (it.kind === 'recipe') tap = `onclick="UI.openRecipe('${it.recipeId}')"`;
-  const x = ed ? `<span class="fd-x" onclick="event.stopPropagation();UI.removeDecor('${it.id}')">✕</span>` : '';
+  const tap = `onclick="UI.openDecorDetail('${it.id}')"`;
+  const note = it.note ? '<span class="fd-cap"></span>' : ''; // 캡션이 있으면 작은 점 표시
   if (it.kind === 'note') {
-    return `<div class="fd-mag fd-note-i" data-deco="${it.id}" style="${pos};--paper:${it.hue ?? 48}" ${tap}>${x}<span class="fd-pin"></span><span class="fd-note-tx">${esc(it.text || '')}</span></div>`;
+    return `<div class="fd-mag fd-note-i" data-deco="${it.id}" style="${pos};--paper:${it.hue ?? 48}" ${tap}><span class="fd-pin"></span><span class="fd-note-tx">${esc(it.text || '')}</span></div>`;
   }
   if (it.kind === 'magnet') {
-    return `<div class="fd-mag fd-magnet" data-deco="${it.id}" style="${pos}">${x}<span>${it.emoji || '🧲'}</span></div>`;
+    return `<div class="fd-mag fd-magnet" data-deco="${it.id}" style="${pos}" ${tap}>${note}<span>${it.emoji || '🧲'}</span></div>`;
   }
   if (it.kind === 'recipe') {
     const r = allRecipes(S).find((q) => q.id === it.recipeId);
-    return `<div class="fd-mag fd-recipe" data-deco="${it.id}" style="${pos}" ${tap}>${x}<span class="fd-rclip"></span>${r ? `${r.emoji || '🍳'} ${esc(r.title)}` : '레시피'}</div>`;
+    return `<div class="fd-mag fd-recipe" data-deco="${it.id}" style="${pos}" ${tap}><span class="fd-rclip"></span><span class="fr-em">${r ? (r.emoji || '🍳') : '🍳'}</span><span class="fr-tt">${r ? esc(r.title) : '레시피'}</span></div>`;
   }
-  return `<div class="fd-mag fd-sticker" data-deco="${it.id}" style="${pos}">${x}${it.emoji || '✨'}</div>`;
+  return `<div class="fd-mag fd-sticker" data-deco="${it.id}" style="${pos}" ${tap}>${note}${it.emoji || '✨'}</div>`;
 }
 
 function fridgeHtml(all) {
@@ -519,7 +517,7 @@ function fridgeHtml(all) {
           ${!items.length && !decorEditing ? `<div class="fd-empty">
             <div class="fd-note-demo">🧲 우리집 냉장고</div>
             <p>‘✏️ 꾸미기’를 눌러 메모·스티커·마그넷·자주 쓰는 레시피를 붙여보세요 ✨</p></div>` : ''}
-          ${decorEditing ? `<div class="fd-edithint">붙인 걸 끌어 옮기고 · 메모는 탭해서 고치고 · ✕로 떼요</div>` : ''}
+          ${decorEditing ? `<div class="fd-edithint">붙인 걸 끌어 옮기고 · 탭하면 확대돼서 내용을 쓰거나 뗄 수 있어요</div>` : ''}
         </div>
       </div>
       ${decorEditing ? `
@@ -620,50 +618,128 @@ UI.closeFridge = () => { fridgeOpen = false; render(); };
 /* ── 냉장고 문 꾸미기 (Phase 2) — 메모·스티커·마그넷·핀 레시피 ── */
 UI.toggleDecorEdit = () => { decorEditing = !decorEditing; render(); };
 UI.addDecor = (kind) => {
-  if (kind === 'note') return UI.editDecor(null);
+  if (kind === 'note') return openDecorDetail(null, 'note'); // 새 메모 — 확대 카드에서 작성
   const pool = kind === 'magnet' ? DECO_MAGNETS : DECO_STICKERS;
   openSheet(`
     <h2>${kind === 'magnet' ? '🧲 마그넷' : '✨ 스티커'} 고르기</h2>
-    <p class="sub">탭하면 냉장고 문에 붙어요. 붙인 뒤 끌어서 옮길 수 있어요.</p>
+    <p class="sub">탭하면 냉장고 문에 붙어요. 붙인 뒤 끌어서 옮기거나 탭해서 메모를 달 수 있어요.</p>
     <div class="emoji-grid">${pool.map((em) => `<button onclick="UI.placeDecor('${kind}','${em}')">${em}</button>`).join('')}</div>`);
 };
 UI.placeDecor = (kind, emoji) => {
   pushDecor({ id: uid(), kind, emoji, ...placeNew() });
   decorEditing = true; UI.closeSheet(); render();
-  toast(kind === 'magnet' ? '🧲 마그넷을 붙였어요 — 끌어서 옮겨보세요' : '✨ 스티커를 붙였어요 — 끌어서 옮겨보세요');
+  toast(kind === 'magnet' ? '🧲 마그넷을 붙였어요 — 끌어 옮기거나 탭해서 확대' : '✨ 스티커를 붙였어요 — 끌어 옮기거나 탭해서 확대');
 };
-let noteDraft = null;
-UI.editDecor = (id) => {
-  const it = id ? ((S.decor && S.decor.items) || []).find((q) => q.id === id) : null;
-  noteDraft = { id: it ? it.id : null, hue: it ? (it.hue ?? 48) : 48 };
-  openSheet(`
-    <h2>📝 ${it ? '메모 고치기' : '메모 붙이기'}</h2>
-    <div class="field"><textarea id="nd-text" rows="3" maxlength="120" placeholder="예: 우유 이번 주까지! · 주말 장보기 · 김치 새로 담금">${it ? esc(it.text || '') : ''}</textarea></div>
-    <div class="field"><label>메모지 색</label>
-      <div class="hue-row">${NOTE_HUES.map((h) => `<button class="hue-dot${noteDraft.hue === h ? ' on' : ''}" style="background:hsl(${h} 88% 86%)" onclick="UI.ndHue(${h},this)"></button>`).join('')}</div></div>
-    <div class="btn-row">
-      ${it ? `<button class="btn btn-soft" onclick="UI.removeDecor('${it.id}')">🗑️ 떼기</button>` : ''}
-      <button class="btn btn-primary grow" onclick="UI.saveDecorNote()">${it ? '저장' : '붙이기'}</button></div>`);
-};
-UI.ndHue = (h, el) => { noteDraft.hue = h; el.parentElement.querySelectorAll('.hue-dot').forEach((d) => d.classList.remove('on')); el.classList.add('on'); };
-UI.saveDecorNote = () => {
-  const text = $('#nd-text').value.trim();
-  if (!text) { toast('메모 내용을 적어주세요'); return; }
-  if (noteDraft.id) {
-    const it = ((S.decor && S.decor.items) || []).find((q) => q.id === noteDraft.id);
-    if (it) { it.text = text; it.hue = noteDraft.hue; }
-    save();
-  } else {
-    pushDecor({ id: uid(), kind: 'note', text, hue: noteDraft.hue, ...placeNew() });
+
+/* ── 꾸미기 항목 확대 상세 — 축소판을 탭하면 항목에서 자라나는 모션으로 확대, 내용 작성·확인 ── */
+let decorZoomEl = null, dzDraft = null;
+UI.openDecorDetail = (id) => openDecorDetail(id, null);
+function decorDetailBody(it, isNew) {
+  if (it.kind === 'note' || (isNew && !it.kind)) {
+    const hue = it.hue ?? 48;
+    return `
+      <div class="dz-note" style="--paper:${hue}"><span class="fd-pin"></span>
+        <textarea id="dz-text" rows="4" maxlength="160" placeholder="메모를 적어요 — 예: 우유 이번 주까지! · 주말 장보기">${esc(it.text || '')}</textarea></div>
+      <div class="hue-row dz-hues">${NOTE_HUES.map((h) => `<button class="hue-dot${hue === h ? ' on' : ''}" style="background:hsl(${h} 88% 86%)" onclick="UI.dzHue(${h},this)"></button>`).join('')}</div>`;
   }
-  decorEditing = true; UI.closeSheet(); render();
+  if (it.kind === 'recipe') {
+    const r = allRecipes(S).find((q) => q.id === it.recipeId);
+    return `
+      <div class="dz-recipe">
+        <div class="dz-rico">${r ? (r.emoji || '🍳') : '🍳'}</div>
+        <h3>${r ? esc(r.title) : '레시피를 찾을 수 없어요'}</h3>
+        ${r && (r.time || r.kcal) ? `<p class="sub">${r.time ? `⏱ ${r.time}분` : ''}${r.time && r.kcal ? ' · ' : ''}${r.kcal ? `${r.kcal}kcal` : ''}</p>` : ''}
+        ${r ? `<button class="btn btn-primary btn-block" style="margin-top:10px" onclick="UI.dzOpenRecipe('${r.id}')">📖 레시피 열기</button>` : ''}
+      </div>`;
+  }
+  return `
+    <div class="dz-emoji ${it.kind === 'magnet' ? 'is-mag' : ''}">${it.emoji || '✨'}</div>
+    <div class="field" style="margin-top:12px"><textarea id="dz-text" rows="2" maxlength="120" placeholder="여기에 메모를 적어둘 수 있어요 (선택)">${esc(it.note || '')}</textarea></div>`;
+}
+function openDecorDetail(id, newKind) {
+  if (decorZoomEl) return;
+  const isNew = !id;
+  const it = isNew ? { kind: newKind || 'note', hue: 48 } : decorById(id);
+  if (!it) return;
+  dzDraft = { id: id || null, kind: it.kind, hue: it.hue ?? 48 };
+  const srcEl = id ? document.querySelector(`[data-deco="${id}"]`) : null;
+  const r = srcEl ? srcEl.getBoundingClientRect() : null;
+  const title = it.kind === 'note' ? (isNew ? '📝 메모 쓰기' : '📝 메모') : it.kind === 'recipe' ? '📌 붙인 레시피' : it.kind === 'magnet' ? '🧲 마그넷' : '✨ 스티커';
+  const ov = document.createElement('div');
+  ov.className = 'decor-zoom';
+  ov.innerHTML = `
+    <div class="dz-card dz-${it.kind}">
+      <div class="dz-head">${title}</div>
+      ${decorDetailBody(it, isNew)}
+      <div class="dz-actions">
+        ${!isNew ? '<button class="btn btn-soft" onclick="UI.dzRemove()">🗑️ 떼기</button>' : ''}
+        <button class="btn btn-primary grow" onclick="UI.dzConfirm()">${it.kind === 'recipe' ? '닫기' : '확인'}</button>
+      </div>
+    </div>`;
+  document.body.appendChild(ov);
+  decorZoomEl = ov;
+  const card = ov.querySelector('.dz-card');
+  const cr = card.getBoundingClientRect();
+  if (r) { // FLIP — 항목 위치에서 자라나는 확대 모션
+    const s = Math.max(r.width / cr.width, r.height / cr.height, 0.12);
+    const dx = (r.left + r.width / 2) - (cr.left + cr.width / 2);
+    const dy = (r.top + r.height / 2) - (cr.top + cr.height / 2);
+    card.style.transform = `translate(${dx}px,${dy}px) scale(${s})`;
+    card.style.opacity = '0.5';
+    void card.offsetWidth; // reflow로 시작 상태 확정
+    card.style.transition = 'transform .34s cubic-bezier(.2,.85,.25,1), opacity .22s ease';
+    card.style.transform = ''; card.style.opacity = '1';
+  } else { card.style.animation = 'dzPop .3s ease both'; }
+  requestAnimationFrame(() => ov.classList.add('show'));
+  ov.addEventListener('click', (e) => { if (e.target === ov) closeDecorZoom({}); }); // 배경 탭 = 취소
+}
+UI.dzHue = (h, el) => {
+  if (!dzDraft) return;
+  dzDraft.hue = h;
+  el.parentElement.querySelectorAll('.hue-dot').forEach((d) => d.classList.remove('on')); el.classList.add('on');
+  const note = decorZoomEl && decorZoomEl.querySelector('.dz-note'); if (note) note.style.setProperty('--paper', h);
 };
-UI.removeDecor = (id) => {
-  if (S.decor && S.decor.items) S.decor.items = S.decor.items.filter((q) => q.id !== id);
-  save();
-  if ($('#modal-root').innerHTML.trim()) UI.closeSheet();
-  render();
+UI.dzConfirm = () => {
+  if (!dzDraft) return;
+  const ta = decorZoomEl && decorZoomEl.querySelector('#dz-text');
+  const val = ta ? ta.value.trim() : '';
+  const isNew = !dzDraft.id;
+  if (dzDraft.kind === 'note') {
+    if (!val) { if (isNew) { closeDecorZoom({ discard: true }); return; } toast('메모 내용을 적어주세요'); return; }
+    if (isNew) pushDecor({ id: uid(), kind: 'note', text: val, hue: dzDraft.hue, ...placeNew() });
+    else { const it = decorById(dzDraft.id); if (it) { it.text = val; it.hue = dzDraft.hue; } save(); }
+  } else if (dzDraft.kind === 'sticker' || dzDraft.kind === 'magnet') {
+    const it = decorById(dzDraft.id); if (it) { it.note = val; } save();
+  }
+  closeDecorZoom({});
 };
+UI.dzRemove = () => {
+  if (dzDraft && dzDraft.id && S.decor && S.decor.items) { S.decor.items = S.decor.items.filter((q) => q.id !== dzDraft.id); save(); }
+  closeDecorZoom({ removed: true });
+};
+UI.dzOpenRecipe = (rid) => { closeDecorZoom({}); setTimeout(() => UI.openRecipe(rid), 200); };
+function closeDecorZoom({ removed = false, discard = false } = {}) {
+  const ov = decorZoomEl; if (!ov) return;
+  decorZoomEl = null;
+  const card = ov.querySelector('.dz-card');
+  ov.classList.remove('show');
+  const el = (!removed && dzDraft && dzDraft.id) ? document.querySelector(`[data-deco="${dzDraft.id}"]`) : null;
+  const r = el ? el.getBoundingClientRect() : null;
+  const cr = card.getBoundingClientRect();
+  if (r) { // 항목 자리로 축소
+    const s = Math.max(r.width / cr.width, r.height / cr.height, 0.12);
+    const dx = (r.left + r.width / 2) - (cr.left + cr.width / 2);
+    const dy = (r.top + r.height / 2) - (cr.top + cr.height / 2);
+    card.style.transition = 'transform .26s ease, opacity .24s ease';
+    card.style.transform = `translate(${dx}px,${dy}px) scale(${s})`; card.style.opacity = '0';
+  } else {
+    card.style.transition = 'transform .2s ease, opacity .2s ease';
+    card.style.transform = 'scale(.5)'; card.style.opacity = '0';
+  }
+  const draftWasReal = dzDraft && !discard;
+  dzDraft = null;
+  setTimeout(() => { ov.remove(); if (draftWasReal) render(); }, 270);
+}
 UI.pinRecipePicker = () => {
   const favs = (S.favs || []).map((id) => allRecipes(S).find((r) => r.id === id)).filter(Boolean);
   const seen = new Set(); const list = [];
@@ -2962,7 +3038,7 @@ view.addEventListener('pointermove', (e) => {
 view.addEventListener('pointerdown', (e) => {
   if (!decorEditing) return;
   const el = e.target.closest('[data-deco]');
-  if (!el || e.target.closest('.fd-x')) return;
+  if (!el) return;
   const layer = el.closest('.fd-deco'); if (!layer) return;
   const rect = layer.getBoundingClientRect();
   const id = el.dataset.deco;

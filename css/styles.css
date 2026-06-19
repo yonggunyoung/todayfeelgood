@@ -1166,38 +1166,71 @@ input:focus, select:focus, textarea:focus { outline: none; box-shadow: 0 0 0 3px
 }
 .deco-edit .fd-mag { cursor: grab; }
 .fd-dragging { z-index: 9 !important; cursor: grabbing; filter: drop-shadow(0 10px 14px rgba(0,0,0,.45)); }
-/* 메모(포스트잇) */
+/* 메모(포스트잇) — 축소판(탭하면 확대) */
 .fd-note-i {
-  max-width: 144px; padding: 12px 13px 13px; border-radius: 3px; white-space: pre-wrap; word-break: break-word;
-  font-family: 'Gowun Batang', serif; font-weight: 700; font-size: .9rem; line-height: 1.35; color: #4a3f22;
+  width: 66px; min-height: 54px; max-height: 68px; overflow: hidden; padding: 9px 8px 8px; border-radius: 3px;
+  font-family: 'Gowun Batang', serif; font-weight: 700; color: #4a3f22;
   background: linear-gradient(180deg, hsl(var(--paper, 48) 90% 92%), hsl(var(--paper, 48) 84% 83%));
-  box-shadow: 0 9px 16px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.7);
+  box-shadow: 0 7px 13px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.7);
+}
+.fd-note-i .fd-note-tx {
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+  font-size: .56rem; line-height: 1.3; white-space: pre-wrap; word-break: break-word;
 }
 .fd-pin {
-  position: absolute; top: -8px; left: 50%; transform: translateX(-50%); width: 15px; height: 15px; border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #ff9a9a, #d8362f 62%, #931611); box-shadow: 0 3px 5px rgba(0,0,0,.4);
+  position: absolute; top: -7px; left: 50%; transform: translateX(-50%); width: 12px; height: 12px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #ff9a9a, #d8362f 62%, #931611); box-shadow: 0 2px 4px rgba(0,0,0,.4);
 }
-/* 스티커(평면 이모지) */
-.fd-sticker { font-size: 2.5rem; line-height: 1; filter: drop-shadow(0 5px 5px rgba(0,0,0,.4)); }
-/* 마그넷(둥근 자석 디스크) */
+/* 스티커(평면 이모지) — 축소판 */
+.fd-sticker { font-size: 1.95rem; line-height: 1; filter: drop-shadow(0 4px 4px rgba(0,0,0,.4)); }
+/* 마그넷(둥근 자석 디스크) — 축소판 */
 .fd-magnet {
-  width: 50px; height: 50px; border-radius: 50%; display: grid; place-items: center; font-size: 1.5rem;
+  width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; font-size: 1.2rem;
   background: radial-gradient(circle at 38% 30%, #fff, #d7dee6 60%, #aab4c0);
-  box-shadow: 0 6px 12px rgba(0,0,0,.4), inset 0 2px 3px rgba(255,255,255,.9), inset 0 -3px 5px rgba(0,0,0,.15);
+  box-shadow: 0 5px 10px rgba(0,0,0,.4), inset 0 2px 3px rgba(255,255,255,.9), inset 0 -3px 5px rgba(0,0,0,.15);
 }
-/* 핀 레시피 칩 */
+/* 핀 레시피 — 축소 타일(이모지 + 한 줄 제목) */
 .fd-recipe {
-  max-width: 168px; padding: 9px 13px; border-radius: 11px; cursor: pointer;
-  font-family: 'Jua', sans-serif; font-size: .86rem; color: #2a3744; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  background: linear-gradient(180deg, #fff, #eef3f8); box-shadow: 0 8px 15px rgba(0,0,0,.3), inset 0 1px 0 #fff;
+  width: 58px; padding: 8px 5px 6px; border-radius: 11px; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  background: linear-gradient(180deg, #fff, #eef3f8); box-shadow: 0 7px 13px rgba(0,0,0,.3), inset 0 1px 0 #fff;
 }
-.fd-rclip { position: absolute; top: -7px; left: 14px; width: 22px; height: 12px; border: 3px solid #b9c2cd; border-bottom: none; border-radius: 7px 7px 0 0; }
-/* 떼기 배지(편집 모드) */
-.fd-x {
-  position: absolute; top: -9px; right: -9px; z-index: 5; width: 22px; height: 22px; border-radius: 50%;
-  display: grid; place-items: center; font-size: .72rem; color: #fff; cursor: pointer;
-  background: #e2483d; border: 2px solid #fff; box-shadow: 0 2px 5px rgba(0,0,0,.4);
+.fd-recipe .fr-em { font-size: 1.5rem; line-height: 1; }
+.fd-recipe .fr-tt { font-family: 'Jua', sans-serif; font-size: .5rem; color: #2a3744; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fd-rclip { position: absolute; top: -6px; left: 50%; transform: translateX(-50%); width: 18px; height: 10px; border: 3px solid #b9c2cd; border-bottom: none; border-radius: 7px 7px 0 0; }
+/* 스티커/마그넷에 메모(캡션)가 있으면 작은 점 */
+.fd-cap { position: absolute; top: -3px; right: -3px; width: 9px; height: 9px; border-radius: 50%; background: #ffb14d; border: 1.5px solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,.4); }
+/* 꾸미기 확대 카드 — 축소판을 탭하면 그 자리에서 자라나는 확대 오버레이 */
+.decor-zoom {
+  position: fixed; inset: 0; z-index: 120; display: flex; align-items: center; justify-content: center; padding: 22px;
+  background: rgba(15,20,28,0); transition: background .24s ease;
 }
+.decor-zoom.show { background: rgba(15,20,28,.55); -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px); }
+.dz-card { width: min(86vw, 360px); background: var(--card, #fff); border-radius: 22px; padding: 16px; box-shadow: 0 30px 70px rgba(0,0,0,.42); will-change: transform, opacity; }
+.dz-head { font-family: 'Jua', sans-serif; font-size: 1.05rem; color: var(--label-1, #2a2a2a); text-align: center; margin-bottom: 12px; }
+.dz-note {
+  position: relative; border-radius: 6px; padding: 18px 16px 15px;
+  background: linear-gradient(180deg, hsl(var(--paper, 48) 90% 92%), hsl(var(--paper, 48) 84% 83%));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.7), 0 6px 14px rgba(0,0,0,.14);
+}
+.dz-note .fd-pin { width: 16px; height: 16px; top: -9px; }
+.dz-note textarea {
+  width: 100%; border: none; background: transparent; resize: none; outline: none;
+  font-family: 'Gowun Batang', serif; font-weight: 700; font-size: 1rem; line-height: 1.45; color: #4a3f22;
+}
+.dz-hues { justify-content: center; margin-top: 14px; }
+.dz-emoji { text-align: center; font-size: 4.2rem; line-height: 1; filter: drop-shadow(0 8px 8px rgba(0,0,0,.25)); }
+.dz-emoji.is-mag {
+  width: 96px; height: 96px; margin: 4px auto 0; border-radius: 50%; display: grid; place-items: center; font-size: 2.6rem;
+  background: radial-gradient(circle at 38% 30%, #fff, #d7dee6 60%, #aab4c0);
+  box-shadow: 0 10px 18px rgba(0,0,0,.3), inset 0 2px 4px rgba(255,255,255,.9), inset 0 -4px 7px rgba(0,0,0,.15);
+}
+.dz-recipe { text-align: center; }
+.dz-recipe .dz-rico { font-size: 3.4rem; line-height: 1; }
+.dz-recipe h3 { font-family: 'Jua', sans-serif; font-size: 1.15rem; color: var(--label-1, #2a2a2a); margin: 6px 0 2px; }
+.dz-actions { display: flex; gap: 9px; margin-top: 14px; }
+@keyframes dzPop { from { transform: scale(.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .dz-card { transition: none !important; animation: none !important; } }
 /* 빈 상태 안내 */
 .fd-empty { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; text-align: center; padding: 0 22px; pointer-events: none; }
 .fd-note-demo {

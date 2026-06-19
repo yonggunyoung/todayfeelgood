@@ -124,5 +124,9 @@
   - 디테일(경량·D7 유지): 로비 스테이지 CSS **별빛 배경**(::before, 0비용)+행성감 섀도, 3D **대기광 강화**(atmosphere 0.22·#5aa0ff)+바다빛 발광 머티리얼, **핫스팟 라벨**(상위 4국 국기+우세%, labelsData). 외부 텍스처 0 유지.
   - 경계(#3): 게임 수치/`battleOfDay`/onTap 불변 — 표현·생명주기층만. sw v9→**v10**. 테스트 62/62 유지(렌더는 브라우저 전용·순수로직 불변). i18n 신규 키 0(globeTitle/Intro 재사용, 패리티 유지).
   - 후속(이번 묶음 잔여): **떡밥 투표소(UGC)** 구현 진행.
+- [~] 떡밥 투표소(UGC) — 진행 중. **① 순수 코어 `gc-proposals.js` 완료**(테스트 62→**69**).
+  - 코어(D2 모듈분리·순수·throw금지): 입력정규화·금칙어 1차거름(`containsBanned`)·검증(`validateProposal` empty/tooLong/sameSides/banned)·읽기시점 상태(`statusOf`/`likesToGo` — likes≥50 live·reports≥5 hidden, D8/D11)·추첨(`shuffle`/`pickFeed` 숨김제외+셔플, 마태효과 차단)·기기당1회 멱등(`hasVoted`/`addVoted`)·로컬 경제(`buyTicket`/`spendTicket`/`grantFreeOnce`/`addPoints` — D9/D10). 상수 `DEFAULTS`(투척권100·일일캡3·광고30·초대50·무료1·임계50/5) owner 튜닝.
+  - ⚠ 금칙어는 1차 거름일 뿐 — 진짜 안전망은 신고+owner(D8). 경계 4종 테스트 7개(정상/매핑/None/변조).
+  - **남은 배선(다음)**: ② `index.html` 스크립트 로드 + 🗳️ 투표소 탭(제출폼 3칸·추첨피드·좋아요/신고·포인트/투척권 UI) ③ `net.js` `gc_proposals` 가산(submit/list/like/report, increment·하위호환) ④ FIREBASE.md `gc_proposals` 규칙(생성 필드검증+likes/reports 통제증가) ⑤ i18n ko/en ⑥ sw bump.
 - [ ] ads.txt: 코드 정상(home `/ads.txt` 동적 라우트). **환경변수 `NEXT_PUBLIC_ADSENSE_CLIENT`(ca-pub) 빌드주입 + 재배포** 필요 — 미설정 시 주석만 서빙. 신청(6/16) 후 크롤링 지연은 정상. 사용자 확인: `https://ddukkit.com/ads.txt`에 `google.com, pub-…, DIRECT, f08c47fec0942fa0` 줄 노출 여부.
   - 다음: **토스(main/github.io) 동기화** — great-darwin의 최종 광클을 main에 반영(라이브·제출본, 신중).

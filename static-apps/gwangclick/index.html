@@ -177,6 +177,9 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .fb-pop.x2{font-size:1.4rem;color:#ffe27a}
 .fb-pop.x3{font-size:1.7rem;color:#ff9a4d}
 .fb-shake{animation:fb-shk .3s ease}
+@keyframes gl-corn{0%{opacity:0;transform:translate(-50%,-50%) scale(.4)}18%{opacity:1;transform:translate(calc(-50% + var(--tx,0px)*.3),-115%) scale(1.15)}100%{opacity:0;transform:translate(calc(-50% + var(--tx,0px)),-235%) scale(.95)}}
+.gl-corn{position:absolute;transform:translate(-50%,-50%);line-height:1;pointer-events:none;will-change:transform,opacity;animation:gl-corn .9s ease-out forwards}
+@media (prefers-reduced-motion: reduce){.gl-corn{display:none}}
 
 /* 결과 */
 .acc{height:4px;border-radius:var(--r-pill);box-shadow:0 0 14px -2px var(--me)}
@@ -419,6 +422,13 @@ function fxSpark(x,y,n,colors){
   fxCap();
 }
 function fxRing(x,y,color){if(!FX.ctx)return;FX.list.push({type:'ring',x:x,y:y,r:6,vr:5,life:1,dec:0.045,color:color});}
+/* 🍿 로컬 팝콘 — 내가 탭한 자리에서 팝콘이 튄다(즉발·0비용). 감속모션이면 생략(접근성). */
+function fxPopcorn(x,y,n){
+  if(!FX.ctx||prefersReducedMotion())return;
+  for(var i=0;i<n;i++){var a=-1.57+(Math.random()-0.5)*1.8,sp=2.6+Math.random()*4.2;
+    FX.list.push({type:'emoji',x:x,y:y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-3.6,g:0.2,life:1,dec:0.02,size:12+Math.random()*9,emoji:'🍿',rot:(Math.random()-0.5)*1.4,vrot:(Math.random()-0.5)*0.26});}
+  fxCap();
+}
 function fxEmoji(x,y,n,emoji){
   if(!FX.ctx)return;
   for(var i=0;i<n;i++){var a=-1.57+(Math.random()-0.5)*2.1,sp=3+Math.random()*5;
@@ -593,6 +603,7 @@ function onTap(e){
   var fxCols=GCCos.equippedFxColors(F,hot?['#ffffff',B.me.color,'#ffffff']:[B.me.color,'#ffffff']);
   if(GCCos.equippedFxStyle(F)==='star'){fxEmoji(px,py,hot?6:4,'✨');}
   fxSpark(px,py,hot?10:6,fxCols);
+  fxPopcorn(px,py,hot?2:1); // 탭 자리에 팝콘 튀기기(연출만 — 탭 수·콤보·점수 불변, 경계 #3)
   if(milestone){fxRing(px,py,fxCols[0]||'#ffffff');fxEmoji(px,py,7,B.me.emoji);shake();}
   var t=el('fb-taps'); if(t)t.textContent=comma(Math.floor(B.tapsF));
 }
@@ -1077,11 +1088,13 @@ var GLB = {
   did: 0,          // 인스턴스 토큰(비동기 경쟁 방어 #1)
   hidden: null,    // visibilitychange 핸들러(정리용)
   resize: null,    // resize 핸들러(2D 폴백용)
+  prevC: null,     // 직전 countries 스냅샷(델타 팝콘용 — null=첫 로드 베이스라인)
 };
 var GLOBE_SRC = './vendor/globe.gl.min.js'; // 로컬 동봉(런타임 CDN 0). sw.js ASSETS 프리캐시엔 없음(최초 사용시 캐시).
 var GLOBE_MAX_PTS = 60;   // 점/링 개수 상한(모바일 경량)
 var GLOBE_DPR_CAP = 1.5;  // 렌더러 DPR 캡(고해상도 폰 과부하 방지)
 var GLOBE_FPS_2D = 24;    // 2D 폴백 프레임 상한(전력/발열)
+var GLOBE_POP_CAP = 28;   // 동시 팝콘 DOM 상한(모바일 폭주 방지·D7)
 var _globeLoad = null;    // 라이브러리 로드 1회 캐시(idempotent)
 
 /* WebGL 사용 가능 여부(지연 검사 — 컨텍스트 1개만 만들어 즉시 폐기). 실패/예외는 false(폴백). */
@@ -1125,6 +1138,7 @@ function openGlobe(){
       '<p class="hint" style="text-align:left;margin:0 0 8px">'+t('globeIntro')+'</p>'+
       '<div id="gl-stage" style="position:relative;width:100%;height:360px;max-height:56vh;border-radius:14px;overflow:hidden;background:radial-gradient(circle at 50% 40%,#0b1626,#05070d);display:flex;align-items:center;justify-content:center">'+
         '<div id="gl-msg" class="hint" style="text-align:center">'+t('globeLoading')+'</div>'+
+        '<div id="gl-pop" style="position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:2"></div>'+
       '</div>'+
       '<div id="gl-note" class="hint" style="text-align:left;margin:8px 0 0"></div>'+
     '</div>'+
@@ -1160,17 +1174,72 @@ function applyRotate(){
 /* 점 데이터 갱신 — peek/watch에서 온 totals(tot.countries)로 점 배열 재계산(추가 읽기 0).
  * 빈 데이터면 안내 메시지. 3D/2D 공통 진입점. */
 function refreshGlobeData(tot){
-  var bt=GLB.bt||{a:{},b:{}};
-  GLB.pts=GCGlobe.countryPoints(tot&&tot.countries,bt.a&&bt.a.color,bt.b&&bt.b.color,GLOBE_MAX_PTS);
+  var bt=GLB.bt||{a:{},b:{}}, ca=bt.a&&bt.a.color, cb=bt.b&&bt.b.color;
+  var curr=(tot&&tot.countries)||{};
+  GLB.pts=GCGlobe.countryPoints(curr,ca,cb,GLOBE_MAX_PTS);
+  // 델타 팝콘(비용0 실시간): 직전 스냅샷 대비 증가한 나라에 팝콘. 첫 로드(prevC=null)는 베이스라인만(전세계 폭죽 방지).
+  if(GLB.prevC!==null&&!prefersReducedMotion()){
+    var evs=GCGlobe.popEvents(GLB.prevC,curr,ca,cb,{perCap:6,max:12});
+    for(var i=0;i<evs.length;i++)popcornAt(evs[i].lat,evs[i].lng,evs[i].pops,evs[i].color);
+  }
+  GLB.prevC=snapshotCountries(curr);
   if(GLB.mode==='3d')pushPoints3D();
   if(!GLB.pts.length){ setGlobeMsg(t('globeEmpty')); }
   else { hideGlobeMsg(); focusGlobe(); }
+}
+/* countries 집계의 얕은 복사(다음 watch 틱과 델타 비교용 — Firestore 객체 참조 변동 방어, 불신 #1). */
+function snapshotCountries(c){
+  var o={}; if(c&&typeof c==='object'){var k=Object.keys(c);for(var i=0;i<k.length;i++){var v=c[k[i]];if(v&&typeof v==='object')o[k[i]]={a:+v.a||0,b:+v.b||0};}} return o;
+}
+/* 위경도 → gl-stage 내부 화면좌표. 3D는 카메라 뒷면 컬링(getCoords·dot) + 화면투영(getScreenCoords). 2D는 정사영(앞면만). */
+function globeScreenPos(lat,lng){
+  var stage=el('gl-stage'); if(!stage)return null;
+  if(GLB.mode==='3d'&&GLB.globe){
+    try{
+      // 뒷면 컬링: 표면점 벡터·카메라 벡터 내적<=0 이면 지구 반대편 → 생략.
+      if(GLB.globe.getCoords&&GLB.globe.camera){
+        var pw=GLB.globe.getCoords(lat,lng), cam=GLB.globe.camera();
+        if(pw&&cam&&cam.position){ var dot=pw.x*cam.position.x+pw.y*cam.position.y+pw.z*cam.position.z; if(dot<=0)return null; }
+      }
+      if(!GLB.globe.getScreenCoords)return null;
+      var s=GLB.globe.getScreenCoords(lat,lng);
+      if(!s||!isFinite(s.x)||!isFinite(s.y))return null;
+      var w=stage.clientWidth,h=stage.clientHeight;
+      if(s.x<-20||s.y<-20||s.x>w+20||s.y>h+20)return null;
+      return {x:s.x,y:s.y};
+    }catch(e){return null;}
+  }
+  if(GLB.mode==='2d'&&G2D.ctx){
+    var w2=G2D.w||stage.clientWidth,h2=G2D.h||stage.clientHeight, cx=w2/2,cy=h2/2;
+    var R=Math.min(w2,h2)*0.46*(GCGlobe.MAX_ALT/Math.max(GCGlobe.MIN_ALT,G2D.curAlt))*0.62;
+    R=Math.max(20,Math.min(Math.min(w2,h2)*0.46,R));
+    var pr=project2D(lat,lng,cx,cy,R); if(!pr.vis)return null;
+    return {x:pr.x,y:pr.y};
+  }
+  return null;
+}
+/* 🍿 팝콘 튀기기 — 해당 좌표(화면)에 n개 팝콘 스폰 + 진영색 글로우. CSS 애니메이션 후 자동 제거. 동시 상한·감속모션 가드. */
+function popcornAt(lat,lng,n,color){
+  var layer=el('gl-pop'); if(!layer||prefersReducedMotion())return;
+  if(layer.childElementCount>GLOBE_POP_CAP)return;            // 동시 폭주 방지
+  var pos=globeScreenPos(lat,lng); if(!pos)return;            // 뒷면/범위밖 생략
+  var cnt=Math.max(1,Math.min(6,n|0));
+  for(var i=0;i<cnt;i++){
+    var s=document.createElement('span'); s.className='gl-corn'; s.textContent='🍿';
+    s.style.left=(pos.x+(Math.random()-0.5)*24)+'px'; s.style.top=(pos.y+(Math.random()-0.5)*10)+'px';
+    s.style.setProperty('--tx',((Math.random()-0.5)*42)+'px');
+    s.style.fontSize=(13+Math.random()*9)+'px';
+    if(color)s.style.textShadow='0 0 9px '+color;            // 우세 진영색 글로우(타격 진영 표시)
+    layer.appendChild(s);
+    (function(node){setTimeout(function(){if(node.parentNode)node.parentNode.removeChild(node);},920);})(s);
+  }
 }
 /* 구독 시작 — 기존 GCNet.watch(today) 재사용(나라순위/리더보드와 동일 집계, 신규 구독 아님 X… 단,
  * 지구본은 rankBoard와 다른 화면이라 자체 watch 1개를 연다(탭마다 ❌·집계 문서 1개 구독 — D5/D7 범위 내).
  * peek로 즉시 첫 그림 → watch로 라이브 갱신. closeGlobe에서 반드시 해지(누수 방지). */
 function watchGlobe(token){
   GLB.lastFocus=null; // 새 뷰 진입 → 첫 데이터에 반드시 포커스(이후엔 핫스팟 바뀔 때만)
+  GLB.prevC=null;     // 새 뷰 진입 → 첫 데이터는 델타 베이스라인(팝콘 X), 이후 증가분만 팝콘
   var date=todayStr();
   GCNet.peek(date).then(function(tot){ if(token===GLB.did)refreshGlobeData(tot); });
   GLB.unwatch=GCNet.watch(date,function(tot){ if(token===GLB.did)refreshGlobeData(tot); });
@@ -1370,7 +1439,7 @@ function closeGlobe(){
   disposeGlobe3D();
   if(G2D.canvas){ try{ if(G2D.canvas.parentNode)G2D.canvas.parentNode.removeChild(G2D.canvas); }catch(e){} }
   G2D.canvas=null; G2D.ctx=null; G2D.curLng=0; G2D.curAlt=GCGlobe.MAX_ALT; G2D.tAlt=GCGlobe.MAX_ALT;
-  GLB.pts=[]; GLB.mode='';
+  GLB.pts=[]; GLB.mode=''; GLB.prevC=null;
   if(GLB.ov){ try{ if(GLB.ov.parentNode)GLB.ov.parentNode.removeChild(GLB.ov); }catch(e){} GLB.ov=null; }
 }
 

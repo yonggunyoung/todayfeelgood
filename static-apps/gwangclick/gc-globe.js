@@ -150,6 +150,56 @@
     return out;
   }
 
+  /* 증가량(gain)→팝콘 개수(1~perCap). sqrt 스케일: 작은 증가도 1개, 큰 증가도 과하지 않게(모바일 폭주 방지·D7). */
+  function popCount(gain, perCap) {
+    var g = num(gain); if (g <= 0) return 0;
+    var cap = (typeof perCap === "number" && perCap > 0) ? perCap : 6;
+    var n = Math.round(Math.sqrt(g)); // 1→1, 4→2, 9→3, 100→10 …
+    return Math.max(1, Math.min(cap, n));
+  }
+
+  /* 델타-구동 팝콘 이벤트(비용 0 실시간 연출 — 직전 스냅샷 대비 '증가한' 나라만).
+   * 입력: prev/curr = countries 집계 {ISO2:{a,b}}, colorA/colorB = 진영색.
+   *  - 어떤 나라의 tot(a+b)가 늘면 그 증가량(gain)만큼 팝콘 이벤트(누가 어디서 라운드 끝낼 때마다 그 나라에 팝콘).
+   *  - 증가 우세 진영(da vs db)으로 색 결정. centroid 없으면 생략(불신 #1). 감소/리셋(음수)은 무시.
+   *  - prev에 없던 신규국은 curr 전체가 증가분. 입력 변조(null/이상)에도 throw 금지, [].
+   *  - perCap(나라당 팝콘 상한)·max(이벤트 국가 수 상한)로 모바일 폭주 방지(D7).
+   * 출력(증가량 내림차순): [{code,lat,lng,lead,color,gain,pops}]. 첫 호출(prev 없음)은 호출부가 '베이스라인만'으로 처리. */
+  function popEvents(prev, curr, colorA, colorB, opts) {
+    var out = [];
+    if (!curr || typeof curr !== "object") return out;
+    var o = (opts && typeof opts === "object") ? opts : {};
+    var perCap = (typeof o.perCap === "number" && o.perCap > 0) ? o.perCap : 6;
+    var max = (typeof o.max === "number" && o.max >= 0) ? o.max : 12;
+    var p = (prev && typeof prev === "object") ? prev : {};
+    var keys = Object.keys(curr), rows = [], i;
+    for (i = 0; i < keys.length; i++) {
+      var code = normCode(keys[i]);
+      if (!code) continue;                     // 변조 코드 → skip
+      var cen = centroidOf(code);
+      if (!cen) continue;                       // centroid 없음 → 생략
+      var cv = curr[keys[i]];
+      if (!cv || typeof cv !== "object") continue; // 변조 값 → skip
+      var pv = p[keys[i]]; if (!pv || typeof pv !== "object") pv = p[code];
+      var pa = (pv && typeof pv === "object") ? num(pv.a) : 0;
+      var pb = (pv && typeof pv === "object") ? num(pv.b) : 0;
+      var da = num(cv.a) - pa, db = num(cv.b) - pb;
+      if (da < 0) da = 0; if (db < 0) db = 0;   // 감소/리셋 무시
+      var gain = da + db;
+      if (gain <= 0) continue;                  // 증가 없음 → 이벤트 없음
+      rows.push({ code: code, lat: cen.lat, lng: cen.lng, lead: da >= db ? "a" : "b", gain: gain });
+    }
+    rows.sort(function (x, y) { return y.gain - x.gain; });
+    if (rows.length > max) rows = rows.slice(0, max);
+    for (i = 0; i < rows.length; i++) {
+      var r = rows[i];
+      r.color = intensityColor(r.lead, colorA, colorB);
+      r.pops = popCount(r.gain, perCap);
+      out.push(r);
+    }
+    return out;
+  }
+
   /* 포커스 대상 선택: 내 나라(myCode)에 활동이 있으면 내 나라, 아니면 최다 참여국(hottest).
    * points 비었으면 null(호출부가 기본 시점). 변조 myCode는 무시. */
   function pickFocus(points, myCode) {
@@ -233,7 +283,7 @@
     CENTROIDS: CENTROIDS, MIN_ALT: MIN_ALT, MAX_ALT: MAX_ALT,
     normCode: normCode, centroidOf: centroidOf, safeHex: safeHex,
     intensityColor: intensityColor, weightOf: weightOf,
-    countryPoints: countryPoints, pickFocus: pickFocus,
+    countryPoints: countryPoints, popCount: popCount, popEvents: popEvents, pickFocus: pickFocus,
     spreadOf: spreadOf, focusAltitude: focusAltitude,
     shouldFallback: shouldFallback, cappedDpr: cappedDpr,
   };

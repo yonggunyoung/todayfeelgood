@@ -10,7 +10,7 @@ import geo from "../geo.js";
 const {
   CENTROIDS, MIN_ALT, MAX_ALT,
   normCode, centroidOf, safeHex, intensityColor, weightOf,
-  countryPoints, pickFocus, spreadOf, focusAltitude, shouldFallback, cappedDpr,
+  countryPoints, popCount, popEvents, pickFocus, spreadOf, focusAltitude, shouldFallback, cappedDpr,
 } = globe;
 
 const CA = "#36e0c8"; // 진영 A 색
@@ -157,6 +157,69 @@ test("countryPoints — 변조 입력에도 throw 금지", () => {
   assert.deepEqual(pts.map((p) => p.code).sort(), ["KR", "US"]); // 정상만 통과
   // 색 변조에도 안전(폴백 색)
   const safe = countryPoints({ KR: { a: 1, b: 0 } }, "bad", "bad");
+  assert.equal(safe[0].color, "#36e0c8");
+});
+
+test("popCount — 증가량→팝콘 개수(sqrt·캡·None/변조)", () => {
+  assert.equal(popCount(1, 6), 1);   // 작은 증가도 1
+  assert.equal(popCount(4, 6), 2);
+  assert.equal(popCount(9, 6), 3);
+  assert.equal(popCount(1000, 6), 6); // 큰 증가도 perCap로 캡
+  assert.equal(popCount(0, 6), 0);    // 0 → 0(이벤트 없음)
+  assert.equal(popCount(-5, 6), 0);   // 변조(음수) → 0
+  assert.equal(popCount("x", 6), 0);  // 변조(비숫자) → 0
+  assert.equal(popCount(100, 0), 6); // perCap 변조(0) → 기본 6으로 캡
+  assert.equal(popCount(100), 6);     // perCap 누락 → 기본 6
+});
+
+test("popEvents — 정상(증가국만·우세진영색·내림차순)", () => {
+  const prev = { KR: { a: 10, b: 0 }, US: { a: 5, b: 5 } };
+  const curr = { KR: { a: 110, b: 0 }, US: { a: 5, b: 5 }, JP: { a: 4, b: 0 } };
+  const evs = popEvents(prev, curr, CA, CB);
+  // KR +100(증가), JP 신규 +4(증가), US 변화 0(제외)
+  assert.deepEqual(evs.map((e) => e.code), ["KR", "JP"]); // 증가량 내림차순
+  assert.ok(!evs.find((e) => e.code === "US"));           // 변화 없으면 이벤트 X
+  const kr = evs.find((e) => e.code === "KR");
+  assert.equal(kr.lead, "a"); assert.equal(kr.color, CA); // 증가 우세 진영색
+  assert.equal(kr.gain, 100);
+  assert.ok(typeof kr.lat === "number" && kr.pops >= 1 && kr.pops <= 6);
+  const jp = evs.find((e) => e.code === "JP");
+  assert.equal(jp.gain, 4); // prev에 없던 신규국 = curr 전체가 증가분
+});
+
+test("popEvents — 매핑(증가 우세 진영 b·소문자키·perCap/max 캡)", () => {
+  const prev = { US: { a: 0, b: 0 } };
+  const curr = { us: { a: 1, b: 50 }, KR: { a: 9, b: 0 }, JP: { a: 16, b: 0 }, FR: { a: 25, b: 0 } };
+  const evs = popEvents(prev, curr, CA, CB, { perCap: 3, max: 2 });
+  assert.equal(evs.length, 2); // max=2 (증가량 상위: US 51, FR 25)
+  const us = evs.find((e) => e.code === "US");
+  assert.ok(us); assert.equal(us.lead, "b"); assert.equal(us.color, CB); // b 우세 증가
+  assert.ok(us.pops <= 3); // perCap 캡
+});
+
+test("popEvents — None/감소/리셋 안전", () => {
+  assert.deepEqual(popEvents(null, null, CA, CB), []);   // None
+  assert.deepEqual(popEvents({ KR: { a: 5, b: 5 } }, {}, CA, CB), []); // curr 빈 → []
+  // 첫 호출(prev 없음): curr 전체가 증가분 → 호출부가 베이스라인 처리하지만 함수는 이벤트 반환
+  const first = popEvents(null, { KR: { a: 3, b: 0 } }, CA, CB);
+  assert.equal(first.length, 1); assert.equal(first[0].gain, 3);
+  // 감소(롤백/날짜전환)는 음수 무시 → 이벤트 없음
+  const dec = popEvents({ KR: { a: 100, b: 0 } }, { KR: { a: 10, b: 0 } }, CA, CB);
+  assert.deepEqual(dec, []);
+});
+
+test("popEvents — 변조 입력에도 throw 금지", () => {
+  assert.doesNotThrow(() => popEvents(42, "nope", CA, CB));
+  assert.doesNotThrow(() => popEvents({}, [1, 2], CA, CB));
+  const evs = popEvents({}, {
+    KR: { a: 10, b: 0 }, // 정상 증가
+    BAD: null,           // 변조 → skip
+    "1Z": { a: 9, b: 9 },// 변조 코드 → skip
+    ZZ: { a: 50, b: 0 }, // centroid 없음 → skip
+  }, CA, CB);
+  assert.deepEqual(evs.map((e) => e.code), ["KR"]); // 정상만
+  // 색 변조에도 안전(폴백색)
+  const safe = popEvents({}, { KR: { a: 1, b: 0 } }, "bad", "bad");
   assert.equal(safe[0].color, "#36e0c8");
 });
 

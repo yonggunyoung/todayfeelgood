@@ -104,7 +104,7 @@
       premiumBadgeOn: "🏅 프리미엄 배지 장착: {b}", badgeCleared: "배지를 비웠어요",
       // 지구본(Phase 4) — 실시간 타격 3D 지구본(globe.gl 지연로딩 + 2D 폴백, D7)
       globeBtn: "🌍 지구본", globeTitle: "🌍 실시간 타격 지구본",
-      globeIntro: "전 세계 광클 강도를 실시간 지구본으로. 점이 클수록 참여가 많고, 색은 우세 진영이에요.",
+      globeIntro: "전 세계 광클 강도를 실시간 지구본으로. 점이 클수록 참여가 많고, 색은 우세 진영. 누가 광클하면 그 나라에 🍿 팝콘이 튀어요.",
       globeLoading: "지구본 불러오는 중…", globeRotate: "⏸ 회전 멈춤", globeRotateOn: "▶ 회전 시작",
       globeEmpty: "아직 오늘 참전한 나라가 없어요 — 첫 광클로 지구본을 켜보세요!",
       globeDemo: "데모 모드예요 — fb-config.js에 Firebase를 연결하면 실제 세계 타격이 지구본에 떠요.",
@@ -197,7 +197,7 @@
       premiumBadgeOn: "🏅 Premium badge equipped: {b}", badgeCleared: "Badge cleared",
       // globe (Phase 4) — live-strike 3D globe (lazy-loaded globe.gl + 2D fallback, D7)
       globeBtn: "🌍 Globe", globeTitle: "🌍 Live strike globe",
-      globeIntro: "Worldwide click intensity on a live globe. Bigger dots mean more taps; color shows the leading side.",
+      globeIntro: "Worldwide click intensity on a live globe. Bigger dots mean more taps; color shows the leading side. When someone clicks, 🍿 popcorn pops over their country.",
       globeLoading: "Loading globe…", globeRotate: "⏸ Stop spin", globeRotateOn: "▶ Spin",
       globeEmpty: "No country has joined today yet — be the first to light up the globe!",
       globeDemo: "Demo mode — connect Firebase in fb-config.js to see real worldwide strikes on the globe.",

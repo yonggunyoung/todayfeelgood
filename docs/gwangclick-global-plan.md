@@ -94,5 +94,5 @@
 - [x] 폴리시 검수·감사 반영 — **Review 합격·Security/Audit PASS(0B), 대비 회귀 0**
   - 보고서 `.agents/reports/polish-*.md`. 반영: i18n 키/플레이스홀더 **패리티 자동 테스트** 추가(57/57), `--ink-3` 대비 상향(#646a74→#828a96·소형텍스트 AA), 전역 `@media (prefers-reduced-motion)` 블록(모션 최소화).
   - 결정 확정: **초대 = 저마찰 유지**(공유 취소/실패시에도 해금) — 사용자 결정.
-  - ⚠ 잔여(사용자 결정 필요): **Pretendard 폰트가 jsdelivr CDN 로드**(기존부터·비용0/오프라인 철칙과 상충). 옵션 ① 로컬 `vendor/` 동봉 ② 시스템 폰트 스택만 ③ 현행 유지 → 결정 후 반영.
+  - [해결] **Pretendard 폰트 로컬 동봉**(사용자 결정): jsdelivr CDN 링크 제거 → `vendor/pretendard/`(dynamic-subset CSS + 92청크, OFL-1.1)로 self-host. 런타임 외부 URL **0**(완전 오프라인·비용0), 쓰는 글자 청크만 로드(경량). sw v7에 CSS만 프리캐시(청크는 첫 사용시 캐시). 룩 유지.
   - 다음: **토스(main/github.io) 동기화** — great-darwin의 최종 광클을 main에 반영(라이브·제출본, 신중).

@@ -27,8 +27,8 @@
 <!-- Phase 4 순수 헬퍼(지구본 데이터 매핑·포커스·색/강도). 가벼움(좌표표+계산만).
      ⚠ 무거운 globe.gl(≈1.8MB)은 여기 없음 — 지구본 뷰 진입 시 ./vendor/globe.gl.min.js 만 지연주입(D7). -->
 <script src="./gc-globe.js"></script>
-<link rel="stylesheet" as="style" crossorigin
-      href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+<!-- Pretendard(OFL-1.1) 로컬 동봉 — 런타임 CDN 0(오프라인·비용0). dynamic-subset: 쓰는 글자 청크만 로드. -->
+<link rel="stylesheet" href="./vendor/pretendard/pretendard.css" />
 <style>
 /* ⚡ 광클대전 — 디자인: 심야 아레나 / 네오 아케이드 스코어보드 (진영색은 --team-a/--team-b/--me로 런타임 리스킨) */
 :root{

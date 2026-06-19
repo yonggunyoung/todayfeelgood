@@ -40,6 +40,8 @@ oci_api_key*.pem
 *.woff2
 *.ttf
 *.otf
+# 예외: self-host 벤더 폰트는 반드시 커밋(런타임 CDN 0·오프라인). 위 *.woff2 규칙 무시.
+!static-apps/gwangclick/vendor/pretendard/woff2-dynamic-subset/*.woff2
 !packages/**/assets/**
 
 # logs / os

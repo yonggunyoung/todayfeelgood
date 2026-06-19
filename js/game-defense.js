@@ -8,7 +8,7 @@ import { enemySprite, fridgeSprite, itemSprite, drawSprite } from './pixel.js';
 // ── 밸런스: 100+ 웨이브용 완만한 곡선. 초반은 아주 너그럽게(잘 안 죽음), 후반은 업그레이드로 따라잡기. ──
 const BALANCE = {
   enemy: {
-    baseHP: 10, hpGrow: 1.135, speedBase: 16, speedGrow: 1.015, speedCap: 48,
+    baseHP: 10, hpGrow: 1.145, speedBase: 16, speedGrow: 1.015, speedCap: 48,
     countBase: 4, countGrow: 1.28, countCap: 40,
     // dmg=냉장고에 닿을 때 깎는 신선도 (작게 — 누적 실수만 위험). from=등장 시작 웨이브.
     // elem=속성(상극 시스템): mold곰팡이 / bug벌레 / frozen냉동 / waste음식물 / bone뼈
@@ -69,6 +69,7 @@ const AFFIX = {
   tough:  { icon: '💪', ring: '#ff9f43', name: '비대', w: 0.9 },   // HP 1.7배
   shield: { icon: '🔰', ring: '#bdffe4', name: '보호막', w: 0.8 }, // 첫 피격 1회 무효
   regen:  { icon: '💚', ring: '#5ef0b0', name: '재생', w: 0.7 },   // 초당 HP 회복
+  enrage: { icon: '😡', ring: '#ff7a3d', name: '격노', w: 0.8 },   // HP 35% 이하면 이동 1.6배 (스킬: 막판 가속)
 };
 
 // 적 속성(원소) — 표현 다양화 + 상극 시스템
@@ -457,12 +458,16 @@ function mkEnemy(key, hp, r, spd, dmg, opt = {}) {
     elem: opt.elem || (typ && typ.elem) || null, bossName: opt.bossName || '',
     zombie: D.wave >= 50 && !opt.boss, // 공포 구간(50+) 좀비화
     armorMul: af === 'armor' ? 0.55 : 1, shield: af === 'shield' ? 1 : 0, regen: af === 'regen' ? hp * 0.04 : 0,
+    // 뒤로 갈수록 방어력↑ — 받는 피해를 줄이는 배수(웨이브8부터, 최대 35% 경감). 보스는 면제.
+    warmor: opt.boss || opt.midboss ? 1 : 1 - clamp((D.wave - 8) * 0.005, 0, 0.35),
     burn: 0, burnDps: 0, slowT: 0, slowMul: 1,
     x: 22 + Math.random() * (D.W - 44), y: -r - 6,
     ph: Math.random() * 6.28, blinkS: { blink: 1 }, flash: 0, squash: 0, age: 0, sporeT: 0, sporeZ: 0, minionT: 1.6,
   };
   if (af === 'swift') e.spd *= 1.45;
   if (af === 'tough') { e.hp *= 1.7; e.maxhp *= 1.7; e.r *= 1.12; }
+  // 방패 몬스터 — 본체 HP 앞에 깨야 하는 방패 풀(앞면 호로 표시). 깨질 때까지 본체 보호.
+  if (key === 'shield') { e.shieldMax = hp * 0.55; e.shieldHp = e.shieldMax; }
   return e;
 }
 
@@ -505,9 +510,15 @@ function pickTargets(n) {
 function hitEnemy(en, dmg, opt) {
   const sec = opt && (opt.chained || opt.frag); // 2차타(체인·파편)는 원소/분열 재적용 안 함
   const atk = (opt && opt.atk) || D.atkElem; // 발사 주체(냉장고/포탑)의 공격 속성
-  if (en.shield) { en.shield = 0; en.flash = 0.12; D.parts.burst(en.x, en.y, '#bdffe4', 7, { spread: 0.6, life: 0.3 }); beep(520, 0.05); return; }
+  if (en.shield) { en.shield = 0; en.flash = 0.12; D.parts.burst(en.x, en.y, '#bdffe4', 7, { spread: 0.6, life: 0.3 }); beep(520, 0.05); return; } // 보호막 어픽스: 첫 피격 무효
   const ctr = counters(en, atk) ? COUNTER_MUL : 1; // 상극: 약점 속성에 추가 피해
-  en.hp -= dmg * ctr * sizeDmgMul(en) * (en.armorMul || 1); en.flash = ctr > 1 ? 0.16 : 0.1; en.squash = 0.22;
+  const eff = dmg * ctr * sizeDmgMul(en) * (en.armorMul || 1) * (en.warmor || 1); // 방어력(어픽스·웨이브) 적용 후 실제 피해
+  if (en.shieldHp > 0) { // 방패 몬스터 — 방패가 먼저 받아내고, 깨지기 전엔 본체 보호
+    en.shieldHp -= eff; en.flash = 0.1; en.squash = 0.16;
+    if (en.shieldHp <= 0) { en.shieldHp = 0; en.flash = 0.18; D.parts.burst(en.x, en.y, '#bdffe4', 11, { spread: 1, life: 0.35 }); beep(440, 0.08, 'square', 0.1); }
+    return;
+  }
+  en.hp -= eff; en.flash = ctr > 1 ? 0.16 : 0.1; en.squash = 0.22;
   if (ctr > 1 && !sec) {
     const t = performance.now(), col = (ATK[atk] || ATK.blunt).col;
     if (!en._ctrT || t - en._ctrT > 380) { en._ctrT = t; D.fx.add(en.x, en.y - en.r - 4, '상극!', { color: col, size: 12, font: 'Jua' }); D.parts.burst(en.x, en.y, col, 5, { spread: 0.8, life: 0.3 }); }
@@ -838,6 +849,7 @@ function update(dt) {
     if (SP('thorn') && Math.hypot(en.x - f.x, en.y - f.y) < 90) { en.hp -= SP('thorn') * dt; if (en.hp <= 0) { killEnemy(en); continue; } }
     let sp = en.spd;
     if (en.slowT > 0) { en.slowT -= dt; sp *= en.slowMul; }
+    if (en.affix === 'enrage' && en.hp < en.maxhp * 0.35) sp *= 1.6; // 격노: 막판 가속
     if (auraR && Math.hypot(en.x - f.x, en.y - f.y) < auraR) sp *= slow;
     // 칸막이: 벽 윗선에서 막히고 벽 HP를 깎음 (보스급은 돌파 강화 + 금가기 모션·사운드)
     let blocked = false;
@@ -1012,14 +1024,13 @@ function render(dt) {
     const cv = en.flash > 0 && spr.white ? spr.white : spr.base;
     // 어픽스 링
     if (en.affix) { const a = AFFIX[en.affix]; c.save(); c.globalAlpha = 0.5 + Math.sin(en.ph * 1.5) * 0.2; c.strokeStyle = a.ring; c.lineWidth = 2.5; c.beginPath(); c.arc(en.x, en.y, en.r + 4, 0, 6.28); c.stroke(); c.restore(); }
-    // 글로우: 화상>보스>어픽스>좀비초록>속성색
-    const elc = en.elem ? ELEM[en.elem].col : '';
+    // 방패 몬스터 — 앞면(냉장고 쪽) 호로 방패 표시, 잔량에 따라 두께
+    if (en.shieldHp > 0) { c.save(); c.globalAlpha = 0.55 + 0.25 * (en.shieldHp / en.shieldMax); c.strokeStyle = '#bdffe4'; c.lineWidth = 3.5; c.beginPath(); c.arc(en.x, en.y, en.r + 6, 0.18 * Math.PI, 0.82 * Math.PI); c.stroke(); c.restore(); }
+    // 글로우: 화상>보스>어픽스 (일반/좀비/속성에는 그림자 글로우 미사용 — 다수 적 렌더 비용↓·버벅임 개선)
     const glow = en.burn > 0 ? 'rgba(255,138,61,0.9)'
       : en.boss ? 'rgba(207,134,255,0.8)'
-        : en.affix ? AFFIX[en.affix].ring
-          : en.zombie ? 'rgba(122,160,60,0.85)'
-            : elc;
-    drawSprite(c, cv, en.x, en.y, th, { sx: (1 + breath + en.squash), sy: (1 - breath - en.squash * 0.8) * pop, glow, glowR: (en.affix || en.boss || en.burn > 0 || en.zombie) ? 14 : (elc ? 10 : 0) });
+        : en.affix ? AFFIX[en.affix].ring : '';
+    drawSprite(c, cv, en.x, en.y, th, { sx: (1 + breath + en.squash), sy: (1 - breath - en.squash * 0.8) * pop, glow, glowR: glow ? 13 : 0 });
     // 좀비화: 사독한 초록 오염 오버레이
     if (en.zombie) { c.save(); c.globalAlpha = 0.26; c.fillStyle = '#7aa03c'; c.beginPath(); c.arc(en.x, en.y, en.r * 0.92 * (1 + breath), 0, 6.28); c.fill(); c.restore(); }
     // 속성 배지(우하단) + 어픽스 아이콘(상단)

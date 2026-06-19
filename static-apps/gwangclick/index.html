@@ -184,7 +184,11 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 @media (prefers-reduced-motion: reduce){.gl-corn{display:none}}
 .globe-hero{margin-top:14px}
 .globe-cap{display:flex;align-items:center;gap:6px;font-size:.82rem;opacity:.85;margin-bottom:7px;letter-spacing:.2px}
-.globe-stage{position:relative;width:100%;height:236px;border-radius:18px;overflow:hidden;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 34%,#0e1d34 0%,#081120 55%,#04060c 100%);box-shadow:inset 0 0 70px rgba(0,0,0,.55),0 12px 34px -18px rgba(0,0,0,.7);border:1px solid rgba(120,160,210,.12)}
+.gl-slot{position:relative;width:100%}
+.globe-stage{position:relative;width:100%;height:100%;min-height:80px;border-radius:18px;overflow:hidden;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 34%,#0e1d34 0%,#081120 55%,#04060c 100%);box-shadow:inset 0 0 70px rgba(0,0,0,.55),0 12px 34px -18px rgba(0,0,0,.7);border:1px solid rgba(120,160,210,.12)}
+/* 배틀 화면 미니 지구본(코너 뱃지) — 탭 통과(pointer-events:none)·탭게임 방해 없음 */
+.gl-mini{position:absolute;top:10px;right:10px;width:92px;height:92px;z-index:4;border-radius:50%;overflow:hidden;pointer-events:none;box-shadow:0 6px 18px -8px rgba(0,0,0,.7)}
+.gl-mini .globe-stage{border-radius:50%;min-height:0}
 .globe-stage::before{content:"";position:absolute;inset:0;pointer-events:none;background-image:radial-gradient(1.2px 1.2px at 18% 28%,#fff,transparent),radial-gradient(1px 1px at 72% 62%,#cfe3ff,transparent),radial-gradient(1px 1px at 42% 82%,#fff,transparent),radial-gradient(1.4px 1.4px at 86% 22%,#bcd2ff,transparent),radial-gradient(1px 1px at 58% 12%,#fff,transparent),radial-gradient(1px 1px at 30% 60%,#e9f1ff,transparent),radial-gradient(1px 1px at 90% 75%,#fff,transparent);opacity:.55}
 /* 떡밥 투표소 모달 */
 .pp-in{width:100%;padding:9px 11px;border-radius:10px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.04);color:inherit;font-size:.9rem;font-family:inherit;box-sizing:border-box;flex:1;min-width:0}
@@ -255,6 +259,8 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 </head>
 <body>
 <div id="app"></div>
+<!-- 영속 지구본 대기실(화면에 슬롯 없을 때 여기 보관 + 렌더 정지). 모든 장면 공용 단일 인스턴스(D13). -->
+<div id="gl-park" style="position:fixed;left:-9999px;top:0;width:1px;height:1px;overflow:hidden" aria-hidden="true"></div>
 <div id="toast"></div>
 <script>
 "use strict";
@@ -561,13 +567,10 @@ function intro(){
         '<button class="btn btn-ghost" style="flex:1" onclick="openLocker()">'+t('lockerBtn')+'</button>'+
         '<button class="btn btn-ghost" style="flex:1" onclick="openProposals()">'+t('propBtn')+'</button>'+
       '</div>'+
-      // 로비 인라인 지구본(항상 보임) — 전 세계 실시간 + 🍿 팝콘. 모달은 결과/랭킹에서 확대용으로 유지.
+      // 로비 지구본 — 전 세계 실시간 + 🍿 팝콘(영속 인스턴스를 이 슬롯으로 이동·D13).
       '<div class="globe-hero">'+
         '<div class="globe-cap mono">'+t('globeTitle')+'</div>'+
-        '<div id="gl-stage" class="globe-stage">'+
-          '<div id="gl-msg" class="hint" style="text-align:center;position:relative;z-index:1">'+t(netOn()?'globeLoading':'globeDemo')+'</div>'+
-          '<div id="gl-pop" style="position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:2"></div>'+
-        '</div>'+
+        '<div id="gl-slot" class="gl-slot" style="height:236px"></div>'+
         '<div class="hint" style="margin:6px 2px 0;font-size:.74rem;opacity:.7">'+t('globeIntro')+'</div>'+
       '</div>'+
       '<p class="hint">'+t('tapHint')+'</p>'+
@@ -575,7 +578,7 @@ function intro(){
   var iga=el('ig-a'); if(iga)iga._seed=base;
   startWatch(date);
   if(netOn()&&LIVE.date===date&&LIVE.tot)onLive();
-  openGlobeInline(); // 로비 진입마다 인라인 지구본 마운트(cleanup에서 정지됨)
+  mountGlobe(); // 로비 슬롯으로 지구본 이동
 }
 
 /* ── 배틀 ── */
@@ -596,6 +599,7 @@ function GO(side){
   app.innerHTML=
     '<div class="stage" id="fb-stage" style="--team-a:'+bt.a.color+';--team-b:'+bt.b.color+';--me:'+me.color+';--foe:'+foe.color+';--tapink:'+ink(me.color)+'">'+
       '<div class="urgentbar"></div>'+
+      '<div id="gl-slot" class="gl-slot gl-mini"></div>'+   // 배틀 중에도 전세계 실시간(미니)+팝콘(D13)
       '<div class="bhdr"><span class="l"><span class="dot">●</span>'+t('battleHead')+'</span><span class="chip" id="fb-chip">'+t('chipNormal')+'</span></div>'+
       '<div class="ticker" id="fb-ticker">'+t('startCry',{team:me.emoji+' '+me.name})+'</div>'+
       '<div>'+
@@ -620,6 +624,7 @@ function GO(side){
   fxInit();
   B.tick=setInterval(tickerBeat,2300);
   B.raf=requestAnimationFrame(frame);
+  mountGlobe(); // 배틀 화면 미니 슬롯으로 지구본 이동(실시간 유지)
 }
 
 function onTap(e){
@@ -806,6 +811,10 @@ function renderResult(){
       '<div class="tags"><span>'+t('hashApp')+'</span><span>#'+bt.tag+'</span></div>'+
       (r.newBest?'<div class="newbest">'+t('newBest',{n:comma(r.contrib)})+'</div>':'')+
       (r.streak>1?'<div class="streak-chip">🔥 '+t('streakDaysOn',{n:r.streak})+'</div>':'')+
+      '<div class="globe-hero" style="margin-top:12px">'+
+        '<div class="globe-cap mono">'+t('globeTitle')+'</div>'+
+        '<div id="gl-slot" class="gl-slot" style="height:200px"></div>'+
+      '</div>'+
       '<div class="actions">'+
         (r.x2?'<div class="x2done">'+t('x2done')+'</div>'
              :'<button class="btn btn-reward" onclick="watch2x()">'+t('rewardBtn')+'</button>')+
@@ -815,12 +824,10 @@ function renderResult(){
           '<button class="btn btn-ghost" style="flex:1" onclick="rankBoard()">'+t('rankBtn')+'</button>'+
           '<button class="btn btn-ghost" style="flex:1" onclick="openLocker()">'+t('lockerBtn')+'</button>'+
         '</div>'+
-        '<div style="display:flex;gap:8px">'+
-          '<button class="btn btn-ghost" style="flex:1" onclick="openGlobe()">'+t('globeBtn')+'</button>'+
-          '<button class="btn btn-ghost" style="flex:1" onclick="intro()">'+t('todayBattle')+'</button>'+
-        '</div>'+
+        '<button class="btn btn-ghost" onclick="intro()">'+t('todayBattle')+'</button>'+
       '</div>'+
     '</div>';
+  mountGlobe(); // 결과 화면 슬롯으로 지구본 이동(실시간 유지)
 }
 function rankLabel(r){return r.rankState==='real'?t('rankNation'):t('rankEst');}
 function rankValue(r){
@@ -866,7 +873,7 @@ function SHARE(){
   }else{toast(t('shareScreenshot'));}
 }
 
-function cleanup(){if(B){cancelAnimationFrame(B.raf);clearInterval(B.tick);B=null;}FX.list.length=0;closeGlobe();/*화면 전환 시 인라인/모달 지구본 정지(배터리·누수 방지·D7)*/}
+function cleanup(){if(B){cancelAnimationFrame(B.raf);clearInterval(B.tick);B=null;}FX.list.length=0;/*지구본은 부수지 않음(D13: 영속 단일 인스턴스 — 각 화면 mountGlobe로 이동)*/}
 
 /* ── 전국 랭킹 + 지역 점령 화면 ── */
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return c==='&'?'&amp;':c==='<'?'&lt;':c==='>'?'&gt;':'&quot;';});}
@@ -883,14 +890,18 @@ function rankBoard(){
       '<div class="gauge-head" style="margin-top:8px"><span class="mono">'+t('topToday')+'</span>'+
         (netOn()?'<span class="chip-soft"><span class="dot">●</span> '+t('realtime')+'</span>':'<span class="chip-soft">'+t('demo')+'</span>')+'</div>'+
       '<div id="rb-list" class="hint" style="text-align:left">'+t('loading')+'</div>'+
+      '<div class="globe-hero" style="margin-top:12px">'+
+        '<div class="globe-cap mono">'+t('globeTitle')+'</div>'+
+        '<div id="gl-slot" class="gl-slot" style="height:210px"></div>'+
+      '</div>'+
       '<div class="actions" style="margin-top:14px">'+
-        '<button class="btn btn-ghost" onclick="openGlobe()">'+t('globeBtn')+'</button>'+
         '<div style="display:flex;gap:8px">'+
           '<button class="btn btn-ghost" style="flex:1" onclick="rankBoard()">'+t('refreshBtn')+'</button>'+
           '<button class="btn btn-ghost" style="flex:1" onclick="intro()">'+t('todayBattle')+'</button>'+
         '</div>'+
       '</div>'+
     '</div>';
+  mountGlobe(); // 랭킹 화면 슬롯으로 지구본 이동(실시간 유지)
   if(!netOn()){el('rb-list').textContent=t('boardDemo');return;}
   GCNet.leaderboard(date,20).then(function(rows){renderBoard(bt,rows);});
   // 단일 peek 1회로 나라대전(countries)·지역 점령(regions) 둘 다 렌더 — 추가 읽기 없음(D5).
@@ -1261,9 +1272,13 @@ var GLB = {
   resize: null,    // resize 핸들러(2D 폴백용)
   prevC: null,     // 직전 countries 스냅샷(델타 팝콘용 — null=첫 로드 베이스라인)
   inline: false,   // 로비 인라인 모드(모달 아님) — 화면 전환 시 정지 대상
+  started: false,  // 영속 인스턴스 1회 생성 플래그(D13: 모든 장면 공용·재사용)
+  host: null,      // 영속 호스트 DOM(#gl-stage) — 화면 전환 시 슬롯으로 '이동'(부수지 않음)
 };
 var GLOBE_SRC = './vendor/globe.gl.min.js'; // 로컬 동봉(런타임 CDN 0). sw.js ASSETS 프리캐시엔 없음(최초 사용시 캐시).
-var GLOBE_MAX_PTS = 60;   // 점/링 개수 상한(모바일 경량)
+var GLOBE_MAX_PTS = 250;  // 점 상한 — '전체 실시간 다 보이게'(사용자 요구). 거의 전 국가 표시(merge로 경량).
+var GLOBE_LAND_SRC = './vendor/world-110m.geo.json'; // 대륙/바다/국경 폴리곤(로컬 동봉·런타임 CDN 0). sw 프리캐시 제외(최초 사용 시 캐시).
+var _landData = null;     // 지형 GeoJSON 로드 1회 캐시
 var GLOBE_DPR_CAP = 1.5;  // 렌더러 DPR 캡(고해상도 폰 과부하 방지)
 var GLOBE_FPS_2D = 24;    // 2D 폴백 프레임 상한(전력/발열)
 var GLOBE_POP_CAP = 28;   // 동시 팝콘 DOM 상한(모바일 폭주 방지·D7)
@@ -1296,46 +1311,44 @@ function loadGlobeLib(){
   return _globeLoad;
 }
 
-/* 지구본 열기 — 오버레이(.ad-ov 패턴) + 로딩 → 3D 시도 or 2D 폴백. */
-function openGlobe(){
-  closeGlobe(); // 중복 방지
-  var date=todayStr();
-  GLB.bt=GCTopics.localize(battleOfDay(date),LANG);
+/* ── 영속 지구본(D13: 모든 장면에서 실시간·팝콘) ──────────────────────────────────────
+ * 화면마다 부수지 않는다. 단일 인스턴스를 만들어 각 화면의 #gl-slot 으로 '이동'시킨다.
+ * 슬롯 없는 화면이면 gl-park 로 보관 + 렌더 정지(절전). 데이터 구독·팝콘은 끊기지 않음. */
+function ensureGlobe(){
+  if(GLB.started)return;
+  GLB.started=true;
+  var host=document.createElement('div'); host.id='gl-stage'; host.className='globe-stage'; GLB.host=host;
+  host.innerHTML='<div id="gl-msg" class="hint" style="text-align:center;position:relative;z-index:1">'+t(netOn()?'globeLoading':'globeDemo')+'</div>'+
+    '<div id="gl-pop" style="position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:2"></div>';
+  (el('gl-park')||document.body).appendChild(host);
+  GLB.inline=true;
+  GLB.bt=GCTopics.localize(battleOfDay(todayStr()),LANG);
   var token=(GLB.did=(GLB.did+1));
-  var ov=document.createElement('div'); ov.className='ad-ov'; GLB.ov=ov;
-  ov.innerHTML='<div class="ad-box" style="max-width:560px;width:100%">'+
-    '<div class="ad-top"><span class="mono">'+t('globeTitle')+'</span>'+
-      '<button class="ad-skip" id="gl-x">'+t('closeBtn')+'</button></div>'+
-    '<div class="ad-body" style="display:block;text-align:left;padding-top:6px">'+
-      '<p class="hint" style="text-align:left;margin:0 0 8px">'+t('globeIntro')+'</p>'+
-      '<div id="gl-stage" style="position:relative;width:100%;height:360px;max-height:56vh;border-radius:14px;overflow:hidden;background:radial-gradient(circle at 50% 40%,#0b1626,#05070d);display:flex;align-items:center;justify-content:center">'+
-        '<div id="gl-msg" class="hint" style="text-align:center">'+t('globeLoading')+'</div>'+
-        '<div id="gl-pop" style="position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:2"></div>'+
-      '</div>'+
-      '<div id="gl-note" class="hint" style="text-align:left;margin:8px 0 0"></div>'+
-    '</div>'+
-    '<div style="display:flex;gap:8px">'+
-      '<button class="btn btn-ghost" id="gl-rot" style="flex:1">'+t('globeRotate')+'</button>'+
-      '<button class="btn btn-ghost" id="gl-done" style="flex:1">'+t('closeBtn')+'</button>'+
-    '</div></div>';
-  (document.body||document.documentElement).appendChild(ov);
-  el('gl-x').onclick=closeGlobe; el('gl-done').onclick=closeGlobe;
-  el('gl-rot').onclick=function(){ GLB.rotate=!GLB.rotate; applyRotate(); this.textContent=t(GLB.rotate?'globeRotate':'globeRotateOn'); };
-  GLB.inline=false;
-  // 데모(백엔드 미연결): 안내만 + 빈 지구본(2D 폴백 floor로도 충분).
-  if(!netOn()){ setGlobeMsg(t('globeDemo')); return; }
+  if(!netOn()){ setGlobeMsg(t('globeDemo')); return; } // 데모: 빈 지구본(연결 시 자동 표시)
   bootGlobe(token);
 }
-/* 로비(인트로) 인라인 지구본 — '항상 보이게'(사용자 결정). 모달 없이 인트로 안의 #gl-stage에 마운트.
- * 인트로 DOM에 gl-stage/gl-pop가 이미 렌더된 뒤 호출. 화면 전환 시 cleanup()→closeGlobe()로 정지(배터리·D7). */
-function openGlobeInline(){
-  if(!el('gl-stage'))return;            // 인트로에 스테이지 없으면(타화면) skip
-  closeGlobe(); GLB.inline=true;
-  var date=todayStr();
-  GLB.bt=GCTopics.localize(battleOfDay(date),LANG);
-  var token=(GLB.did=(GLB.did+1));
-  if(!netOn()){ setGlobeMsg(t('globeDemo')); return; }
-  bootGlobe(token);
+/* 현재 화면의 #gl-slot 으로 지구본을 이동(없으면 park). 매 화면 렌더 끝에서 호출. */
+function mountGlobe(){
+  ensureGlobe();
+  var host=GLB.host; if(!host)return;
+  GLB.bt=GCTopics.localize(battleOfDay(todayStr()),LANG); // 언어 토글 반영
+  var slot=el('gl-slot');
+  if(slot){
+    if(host.parentNode!==slot)slot.appendChild(host);   // 라이브 노드 이동(globe 계속 동작)
+    host.style.display=''; resumeGlobe();
+    // 슬롯 크기 반영(레이아웃 후) + 핫스팟으로 카메라 정렬.
+    sizeGlobeNow(); setTimeout(function(){ sizeGlobeNow(); focusGlobe(true); if(GLB.mode==='3d')pushPoints3D(); },0);
+  }else{ parkGlobe(); }
+}
+function sizeGlobeNow(){ if(GLB.mode==='3d')sizeGlobe3D(); else if(GLB.mode==='2d')sizeGlobe2D(); }
+function parkGlobe(){ var host=GLB.host,p=el('gl-park'); if(host&&p&&host.parentNode!==p)p.appendChild(host); pauseGlobe(); }
+function pauseGlobe(){ try{ if(GLB.globe&&GLB.globe.pauseAnimation)GLB.globe.pauseAnimation(); }catch(e){} if(GLB.mode==='2d'&&GLB.raf){cancelAnimationFrame(GLB.raf);GLB.raf=0;} }
+function resumeGlobe(){ try{ if(GLB.globe&&GLB.globe.resumeAnimation)GLB.globe.resumeAnimation(); }catch(e){} if(GLB.mode==='2d'&&!GLB.raf){GLB.fps2d=0;GLB.raf=requestAnimationFrame(loop2D);} }
+/* 지형 GeoJSON(대륙/바다/국경) 1회 로드 — 실패해도 지구본은 솔리드 구로 동작(불신 #1). */
+function loadLand(){
+  if(_landData)return _landData;
+  _landData=fetch(GLOBE_LAND_SRC).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;});
+  return _landData;
 }
 /* 폴백 판단(순수) 후 3D 시도 or 2D 폴백 — 모달/인라인 공용 진입점. */
 function bootGlobe(token){
@@ -1440,15 +1453,25 @@ function startGlobe3D(token){
     g.backgroundColor('rgba(0,0,0,0)')
      .showGlobe(true).showAtmosphere(true).atmosphereColor('#5aa0ff').atmosphereAltitude(0.22)
      .globeImageUrl(null);                 // 외부 텍스처 0(런타임 CDN 0·경량) → 솔리드 구
-    // 솔리드 구 색(큰 텍스처 대신) — three 머티리얼 직접 지정. 디테일: 바다빛+은은한 발광으로 행성감.
-    try{ var m=g.globeMaterial(); if(m){ m.color&&m.color.set&&m.color.set('#13314f'); m.emissive&&m.emissive.set&&m.emissive.set('#0a1c30'); if('emissiveIntensity'in m)m.emissiveIntensity=0.55; if('shininess'in m)m.shininess=10; } }catch(e){}
+    // 바다 = 구 머티리얼(텍스처 0). 디테일: 심해빛+은은한 발광으로 행성감.
+    try{ var m=g.globeMaterial(); if(m){ m.color&&m.color.set&&m.color.set('#0f2742'); m.emissive&&m.emissive.set&&m.emissive.set('#08182b'); if('emissiveIntensity'in m)m.emissiveIntensity=0.5; if('shininess'in m)m.shininess=8; } }catch(e){}
+    // 대륙/국경(D14) — 로컬 GeoJSON 폴리곤. 외부 텍스처 0. 점은 centroid라 올바른 대륙 위에 떠 '어디쯤'이 정확.
+    g.polygonsData([])
+     .polygonCapColor(function(){return 'rgba(46,74,54,0.92)';})       // 육지(차분한 녹/회록)
+     .polygonSideColor(function(){return 'rgba(20,38,30,0.65)';})
+     .polygonStrokeColor(function(){return 'rgba(150,180,160,0.35)';}) // 국경선(은은)
+     .polygonAltitude(0.006);                                          // 바다 위 살짝 띄움
+    loadLand().then(function(geo){
+      if(!geo||!geo.features||!GLB.globe||GLB.mode!=='3d')return;
+      try{ GLB.globe.polygonsData(geo.features); }catch(e){}
+    });
     // 점(참여 강도) — 높이=가중치, 색=우세 진영, 반경=가중치.
     g.pointsData([])
      .pointLat('lat').pointLng('lng').pointColor('color')
      .pointAltitude(function(d){return 0.02+0.45*(d.weight||0);})
      .pointRadius(function(d){return 0.28+0.7*(d.weight||0);})
      .pointResolution(6)                   // 저폴리(모바일)
-     .pointsMerge(false).pointsTransitionDuration(600)
+     .pointsMerge(true)                     // 전 국가(최대 250) 표시해도 1지오메트리로 병합 → 경량(D15)
      .pointLabel(function(d){return globePointLabel(d);});
     // 링(타격 파동) — 상위 핫스팟만 은은하게(개수 적게 — 경량).
     g.ringsData([])
@@ -1484,11 +1507,11 @@ function sizeGlobe3D(){
 function pushPoints3D(){
   if(!GLB.globe)return;
   try{
-    GLB.globe.pointsData(GLB.pts.slice());
-    // 링은 상위 6개 핫스팟만(경량·시각 강조).
-    GLB.globe.ringsData(GLB.pts.slice(0,6));
-    // 라벨은 상위 4개만(경량) — 국기+우세% 디테일.
-    if(GLB.globe.labelsData)GLB.globe.labelsData(GLB.pts.slice(0,4));
+    GLB.globe.pointsData(GLB.pts.slice());   // 전체(최대 250) — 전세계 실시간(D15)
+    // 링은 상위 8개 핫스팟만(경량·시각 강조).
+    GLB.globe.ringsData(GLB.pts.slice(0,8));
+    // 라벨은 상위 6개(국기+우세%) — '어디쯤'을 글자로도(D14).
+    if(GLB.globe.labelsData)GLB.globe.labelsData(GLB.pts.slice(0,6));
   }catch(e){}
 }
 /* 지구본 라벨 텍스트 — 국기 + 우세%. 국기 없으면 코드. (집계 데이터 기반·짧게) */
@@ -1643,7 +1666,7 @@ function closeGlobe(){
 }
 
 /* 전역 노출 (onclick에서 호출) */
-window.openLocker=openLocker; window.openGlobe=openGlobe; window.openProposals=openProposals;
+window.openLocker=openLocker; window.openProposals=openProposals;
 window.GO=GO; window.SHARE=SHARE; window.intro=intro; window.watch2x=watch2x;
 window.rankBoard=rankBoard; window.openSettings=openSettings; window.toggleLang=toggleLang;
 

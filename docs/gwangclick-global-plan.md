@@ -124,6 +124,12 @@
   - 디테일(경량·D7 유지): 로비 스테이지 CSS **별빛 배경**(::before, 0비용)+행성감 섀도, 3D **대기광 강화**(atmosphere 0.22·#5aa0ff)+바다빛 발광 머티리얼, **핫스팟 라벨**(상위 4국 국기+우세%, labelsData). 외부 텍스처 0 유지.
   - 경계(#3): 게임 수치/`battleOfDay`/onTap 불변 — 표현·생명주기층만. sw v9→**v10**. 테스트 62/62 유지(렌더는 브라우저 전용·순수로직 불변). i18n 신규 키 0(globeTitle/Intro 재사용, 패리티 유지).
   - 후속(이번 묶음 잔여): **떡밥 투표소(UGC)** 구현 진행.
+- [x] 지구본 = 모든 장면 실시간 + 대륙/바다/위치 (사용자 추가 요구: "모든 장면에서 실시간·팝콘", "대륙·바다·정확한 위치")
+  - **D13 영속 단일 인스턴스.** 화면마다 부수지 않고 단일 지구본을 만들어 각 화면의 `#gl-slot`으로 '이동'(로비/배틀(미니 코너)/결과/랭킹 전부). 슬롯 없으면 `gl-park`로 보관+렌더 정지(절전). `cleanup()`에서 더는 closeGlobe 안 함 → 데이터 구독·🍿팝콘이 **모든 장면에서 끊김 없이** 유지. 모달(openGlobe) 제거(중복 #gl-stage 방지·전 화면 상시라 불필요).
+    - 이유: 사용자 요구. 비용: 영속 GPU(슬롯 없을 때 pause). 탈출구: 슬롯 미배치 시 자동 park+pause. 배틀은 `pointer-events:none` 미니라 탭게임 무방해.
+  - **D14 대륙/바다/국경 = 로컬 GeoJSON.** `vendor/world-110m.geo.json`(npm world-atlas→topojson-client 변환, 177국, 좌표 2자리, **161KB**) 폴리곤으로 육지/국경 렌더, 바다=구 머티리얼. 외부 텍스처 0 유지. 점은 centroid라 올바른 대륙 위 → '어디쯤' 정확. 라벨 상위 4→**6**국(국기+우세%). 2D 폴백은 D7 위해 격자 유지(대륙은 3D 전용).
+  - **D15 전체 실시간.** `GLOBE_MAX_PTS` 60→**250**(거의 전 국가 점). 성능: `pointsMerge(true)`로 1지오메트리 병합. 링 6→8.
+  - 경계(#3): 게임 수치/onTap 불변. sw v11→**v12**. 테스트 **69/69** 유지. geojson은 sw 프리캐시 제외(globe.gl처럼 최초 사용 시 런타임 캐시). i18n 신규 키 0.
 - [x] 떡밥 투표소(UGC) — **완료**(설계+코어+배선). 테스트 62→**69**.
   - 코어(D2 모듈분리·순수·throw금지): 입력정규화·금칙어 1차거름(`containsBanned`)·검증(`validateProposal` empty/tooLong/sameSides/banned)·읽기시점 상태(`statusOf`/`likesToGo` — likes≥50 live·reports≥5 hidden, D8/D11)·추첨(`shuffle`/`pickFeed` 숨김제외+셔플, 마태효과 차단)·기기당1회 멱등(`hasVoted`/`addVoted`)·로컬 경제(`buyTicket`/`spendTicket`/`grantFreeOnce`/`addPoints` — D9/D10). 상수 `DEFAULTS`(투척권100·일일캡3·광고30·초대50·무료1·임계50/5) owner 튜닝.
   - ⚠ 금칙어는 1차 거름일 뿐 — 진짜 안전망은 신고+owner(D8). 경계 4종 테스트 7개(정상/매핑/None/변조).

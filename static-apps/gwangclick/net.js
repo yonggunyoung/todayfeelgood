@@ -167,9 +167,63 @@
     } catch (e) { return null; }
   }
 
+  // ── 떡밥 투표소(UGC, D8~D12) — 신규 컬렉션 gc_proposals(격리·기존 집계 무관). ──
+  // 제출 전 GCProp.validateProposal로 정제(없으면 보수적 폴백). 서버 규칙이 최종 가드(필드검증·증가통제).
+  function sanProposal(p) {
+    try { if (typeof GCProp !== 'undefined' && GCProp.validateProposal) { var r = GCProp.validateProposal(p); return r.ok ? r.value : null; } } catch (e) {}
+    var q = ((p && p.q) || '').toString().replace(/[\x00-\x1f\x7f-\x9f]/g, ' ').trim().slice(0, 40);
+    var a = ((p && p.aName) || '').toString().replace(/[\x00-\x1f\x7f-\x9f]/g, ' ').trim().slice(0, 14);
+    var b = ((p && p.bName) || '').toString().replace(/[\x00-\x1f\x7f-\x9f]/g, ' ').trim().slice(0, 14);
+    if (!q || !a || !b || a.toLowerCase() === b.toLowerCase()) return null;
+    return { q: q, aName: a, bName: b };
+  }
+  // 떡밥 제출 → addDoc. 반환 {ok,id} (검증/네트워크 실패 시 null). likes/reports는 0으로 생성(규칙이 강제).
+  async function submitProposal(p) {
+    try {
+      if (!(await init())) return null;
+      var v = sanProposal(p); if (!v) return null;
+      var col = state.fs.collection(state.db, 'gc_proposals');
+      var ref = await state.fs.addDoc(col, {
+        q: v.q, aName: v.aName, bName: v.bName, uid: state.uid,
+        likes: 0, reports: 0, createdAt: Date.now(),
+      });
+      return { ok: true, id: ref.id };
+    } catch (e) { return null; }
+  }
+  // 최신 떡밥 목록 → [{id,q,aName,bName,likes,reports,mine}]. 추첨/숨김판정은 클라(GCProp.pickFeed/statusOf).
+  async function listProposals(max) {
+    try {
+      if (!(await init())) return null;
+      var col = state.fs.collection(state.db, 'gc_proposals');
+      var q = state.fs.query(col, state.fs.orderBy('createdAt', 'desc'), state.fs.limit(max || 60));
+      var snap = await state.fs.getDocs(q);
+      var rows = [];
+      snap.forEach(function (d) {
+        var v = d.data();
+        rows.push({
+          id: d.id, q: v.q || '', aName: v.aName || '', bName: v.bName || '',
+          likes: v.likes || 0, reports: v.reports || 0, mine: v.uid === state.uid,
+        });
+      });
+      return rows;
+    } catch (e) { return null; }
+  }
+  // 좋아요/신고 1회 증가(멱등성은 클라 로컬셋 GCProp.hasVoted로 보강). 반환 {ok} 또는 null.
+  async function voteProposal(id, kind) {
+    try {
+      if (!id || typeof id !== 'string' || !(await init())) return null;
+      var field = kind === 'report' ? 'reports' : 'likes';
+      var ref = state.fs.doc(state.db, 'gc_proposals', id);
+      var patch = {}; patch[field] = state.fs.increment(1);
+      await state.fs.updateDoc(ref, patch);
+      return { ok: true };
+    } catch (e) { return null; }
+  }
+
   window.GCNet = {
     available: available, init: init, peek: peek, watch: watch,
     submit: submit, rankOf: rankOf, leaderboard: leaderboard,
+    submitProposal: submitProposal, listProposals: listProposals, voteProposal: voteProposal,
     uid: function () { return state.uid; },
     on: function () { return state.on; },
     err: function () { return state.err; },

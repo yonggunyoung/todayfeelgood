@@ -17,6 +17,8 @@
 <script src="./gc-util.js"></script>
 <!-- Phase 3 순수 헬퍼(꾸미기 카탈로그·해금/장착 리듀서·레퍼럴) — 표현만, 게임 수치 불변 -->
 <script src="./gc-cosmetics.js"></script>
+<!-- 떡밥 투표소(UGC) 순수 헬퍼(검증·금칙어·추첨·로컬 경제) — net.js가 참조하므로 먼저 로드 -->
+<script src="./gc-proposals.js"></script>
 <!-- 실제 전국 대전 백엔드(선택) — fb-config.js 비우면 자동으로 폰 단독 시뮬레이션 폴백 -->
 <script src="./fb-config.js"></script>
 <script src="./net.js"></script>
@@ -184,6 +186,16 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .globe-cap{display:flex;align-items:center;gap:6px;font-size:.82rem;opacity:.85;margin-bottom:7px;letter-spacing:.2px}
 .globe-stage{position:relative;width:100%;height:236px;border-radius:18px;overflow:hidden;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 34%,#0e1d34 0%,#081120 55%,#04060c 100%);box-shadow:inset 0 0 70px rgba(0,0,0,.55),0 12px 34px -18px rgba(0,0,0,.7);border:1px solid rgba(120,160,210,.12)}
 .globe-stage::before{content:"";position:absolute;inset:0;pointer-events:none;background-image:radial-gradient(1.2px 1.2px at 18% 28%,#fff,transparent),radial-gradient(1px 1px at 72% 62%,#cfe3ff,transparent),radial-gradient(1px 1px at 42% 82%,#fff,transparent),radial-gradient(1.4px 1.4px at 86% 22%,#bcd2ff,transparent),radial-gradient(1px 1px at 58% 12%,#fff,transparent),radial-gradient(1px 1px at 30% 60%,#e9f1ff,transparent),radial-gradient(1px 1px at 90% 75%,#fff,transparent);opacity:.55}
+/* 떡밥 투표소 모달 */
+.pp-in{width:100%;padding:9px 11px;border-radius:10px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.04);color:inherit;font-size:.9rem;font-family:inherit;box-sizing:border-box;flex:1;min-width:0}
+.pp-in:focus{outline:none;border-color:rgba(120,160,210,.55)}
+.pp-card{border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:10px 12px;margin-bottom:8px;background:rgba(255,255,255,.03)}
+.pp-q{font-weight:700;font-size:.95rem;margin-bottom:4px;word-break:break-word}
+.pp-sides{font-size:.82rem;opacity:.88;margin-bottom:8px;word-break:break-word}
+.pp-act{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.pp-act .btn{padding:5px 10px;font-size:.8rem;flex:none}
+.pp-act .btn:disabled{opacity:.55}
+.pp-live{font-size:.74rem;font-weight:800;color:#ffcf5a;margin-left:auto}
 
 /* 결과 */
 .acc{height:4px;border-radius:var(--r-pill);box-shadow:0 0 14px -2px var(--me)}
@@ -287,6 +299,16 @@ F.badge=GCUtil.sanitizeBadge(F.badge||''); F.comment=GCUtil.sanitizeComment(F.co
  * F.unlocked=[해금 id]  ·  F.cosmetics={tapFx,nameColor}  ·  F.badgeId=장착한 프리미엄 배지 id(없으면 '').
  * 꾸미기는 표현만 — 게임 밸런스 수치엔 절대 영향 없음(경계 #3). */
 (function(){ var st=GCCos.normState(F); F.unlocked=st.unlocked; F.cosmetics=st.equipped; F.badgeId=GCCos.isUnlocked(F,F.badgeId)?F.badgeId:''; })();
+/* 떡밥 투표소 경제(D9/D10) — 로컬 전용 포인트/투척권 + 기기당 1회 투표셋 + 일일 제출 카운트.
+ * 항상 GCProp.normEcon으로 재조립(불신 #1: 변조 음수/문자 방어). 신규 무료 투척권 1회 지급. */
+(function(){
+  var e=GCProp.normEcon({points:F.points,tickets:F.tickets,freeDay:F.propFree});
+  var g=GCProp.grantFreeOnce(e); e=g.econ;                       // 계정당 1회 무료 투척권
+  F.points=e.points; F.tickets=e.tickets; F.propFree=e.freeDay;
+  if(!F.voted||typeof F.voted!=='object')F.voted={};             // {l:id|r:id → 1} 멱등셋
+  F.propDay=F.propDay||''; F.propCount=+F.propCount||0;           // 일일 제출 한도(도배 백스톱)
+  if(g.granted)persist();
+})();
 /* 레퍼럴 코드: 들어온 ?ref= 는 '저장/표시'만(불신 #1 — 해금 판정엔 절대 미사용). 내 코드는 uid/시드로 결정적 생성. */
 try{ var _ref=GCCos.parseRef(location.search||''); if(_ref){F.refFrom=F.refFrom||_ref;persist();} }catch(e){}
 function myRefCode(){return GCCos.refCode((netOn()&&GCNet.uid&&GCNet.uid())||F.nick||'anon');}
@@ -535,7 +557,10 @@ function intro(){
         '<button class="btn btn-ghost" style="flex:1" onclick="openSettings()">📍 '+regionName(F.region)+(F.nick?' · '+esc(F.nick):'')+'</button>'+
         '<button class="btn btn-ghost" style="flex:1" onclick="rankBoard()">'+t('rankBtn')+'</button>'+
       '</div>'+
-      '<button class="btn btn-ghost" onclick="openLocker()">'+t('lockerBtn')+'</button>'+
+      '<div style="display:flex;gap:8px">'+
+        '<button class="btn btn-ghost" style="flex:1" onclick="openLocker()">'+t('lockerBtn')+'</button>'+
+        '<button class="btn btn-ghost" style="flex:1" onclick="openProposals()">'+t('propBtn')+'</button>'+
+      '</div>'+
       // 로비 인라인 지구본(항상 보임) — 전 세계 실시간 + 🍿 팝콘. 모달은 결과/랭킹에서 확대용으로 유지.
       '<div class="globe-hero">'+
         '<div class="globe-cap mono">'+t('globeTitle')+'</div>'+
@@ -1083,6 +1108,138 @@ function cosToggleEquip(id,isOn){
   persist();
 }
 
+/* ── 떡밥 투표소(UGC · D8~D12) ────────────────────────────────────────────────────────
+ * "플레이어가 다음 떡밥을 만들고 투표 → 좋아요 모이면 등판 대기"(사용자 결정).
+ * 순수 로직(검증·금칙어·추첨·상태·로컬경제)은 gc-proposals.js(GCProp, 테스트됨). 여기는 모달/배선만.
+ * 격리(D12): 신규 컬렉션 gc_proposals — 기존 대전 집계/수치와 완전 무관(경계 #3).
+ * 경제(D9/D10): 포인트/투척권은 로컬(F). 도배 백스톱은 '일일 제출 한도'(포인트 파밍해도 하루 N개 상한). */
+var PP = { ov:null, rows:[] }; // 모달 ref + 마지막 목록(부분 리페인트용)
+function propWalletHTML(){ return t('propWallet',{p:F.points,t:F.tickets}); }
+function propWalletRepaint(){ var w=el('pp-wallet'); if(w)w.innerHTML=propWalletHTML(); }
+function openProposals(){
+  var demo=!netOn();
+  var D=GCProp.DEFAULTS;
+  var ov=document.createElement('div'); ov.className='ad-ov'; PP.ov=ov;
+  ov.innerHTML='<div class="ad-box"><div class="ad-top"><span class="mono">'+t('propTitle')+'</span><button class="ad-skip" id="pp-x">'+t('closeBtn')+'</button></div>'+
+    '<div class="ad-body" style="display:block;text-align:left;max-height:66vh;overflow:auto">'+
+      '<p class="hint" style="text-align:left;margin:0 0 8px">'+t('propIntro',{n:D.likeThreshold})+'</p>'+
+      '<div id="pp-wallet" class="mono" style="font-size:.84rem;margin-bottom:8px">'+propWalletHTML()+'</div>'+
+      '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">'+
+        '<button class="btn btn-ghost" id="pp-ad" style="flex:1;min-width:110px;font-size:.8rem">'+t('propEarnAd',{n:D.adPoints})+'</button>'+
+        '<button class="btn btn-ghost" id="pp-inv" style="flex:1;min-width:110px;font-size:.8rem">'+t('propEarnInvite',{n:D.invitePoints})+'</button>'+
+        '<button class="btn btn-ghost" id="pp-buy" style="flex:1;min-width:110px;font-size:.8rem">'+t('propBuy',{n:D.ticketCost})+'</button>'+
+      '</div>'+
+      '<div style="display:grid;gap:6px;margin-bottom:4px">'+
+        '<input id="pp-q" maxlength="40" placeholder="'+esc(t('propQph'))+'" class="pp-in"/>'+
+        '<div style="display:flex;gap:6px">'+
+          '<input id="pp-a" maxlength="14" placeholder="'+esc(t('propAph'))+'" class="pp-in"/>'+
+          '<input id="pp-b" maxlength="14" placeholder="'+esc(t('propBph'))+'" class="pp-in"/>'+
+        '</div>'+
+        '<button class="btn" id="pp-sub">'+t('propSubmit')+'</button>'+
+      '</div>'+
+      '<div id="pp-feed" style="margin-top:12px">'+(demo?'<p class="hint">'+t('propDemo')+'</p>':'<p class="hint">'+t('globeLoading')+'</p>')+'</div>'+
+    '</div>'+
+    '<button class="btn btn-ghost" id="pp-done">'+t('closeBtn')+'</button></div>';
+  (document.body||document.documentElement).appendChild(ov);
+  function shut(){ if(ov.parentNode)ov.parentNode.removeChild(ov); PP.ov=null; }
+  el('pp-x').onclick=shut; el('pp-done').onclick=shut;
+  el('pp-ad').onclick=function(){ propEarn('ad'); };
+  el('pp-inv').onclick=function(){ propEarn('invite'); };
+  el('pp-buy').onclick=propBuyTicket;
+  el('pp-sub').onclick=propDoSubmit;
+  // 피드 클릭 위임: 좋아요/신고.
+  el('pp-feed').onclick=function(e){
+    var lb=e.target&&e.target.closest?e.target.closest('.pp-like'):null;
+    var rb=e.target&&e.target.closest?e.target.closest('.pp-report'):null;
+    if(lb){ propVote(lb.getAttribute('data-id'),'like'); return; }
+    if(rb){ propVote(rb.getAttribute('data-id'),'report'); return; }
+  };
+  if(!demo)propRefresh();
+}
+/* 목록 새로고침 → 추첨 피드 리페인트. (네트워크 결과는 불신 #1: null 폴백) */
+function propRefresh(){
+  if(!netOn())return;
+  GCNet.listProposals(60).then(function(rows){ PP.rows=rows||[]; propFeedRepaint(); });
+}
+function propFeedRepaint(){
+  var f=el('pp-feed'); if(!f)return;
+  var feed=GCProp.pickFeed(PP.rows,20); // 숨김(신고임계) 제외 + 셔플(신규 노출 기회)
+  f.innerHTML=feed.length?feed.map(propRowHTML).join(''):'<p class="hint">'+t('propEmpty')+'</p>';
+}
+function propRowHTML(p){
+  var st=GCProp.statusOf(p), togo=GCProp.likesToGo(p);
+  var liked=GCProp.hasVoted(F.voted,'like',p.id), reported=GCProp.hasVoted(F.voted,'report',p.id);
+  var badge = st==='live' ? '<span class="pp-live">'+t('propLive')+'</span>'
+    : (togo!=null ? '<span class="hint" style="font-size:.72rem;margin-left:auto">'+t('propToGo',{n:togo})+'</span>' : '');
+  return '<div class="pp-card">'+
+    '<div class="pp-q">'+esc(p.q)+'</div>'+
+    '<div class="pp-sides mono">'+esc(p.aName)+' <span class="hint">'+t('vs')+'</span> '+esc(p.bName)+'</div>'+
+    '<div class="pp-act">'+
+      '<button class="pp-like btn btn-ghost" data-id="'+esc(p.id)+'"'+(liked?' disabled':'')+'>'+(liked?t('propVoted')+' ':'')+t('propLike',{n:p.likes})+'</button>'+
+      '<button class="pp-report btn btn-ghost" data-id="'+esc(p.id)+'"'+(reported?' disabled':'')+'>'+t('propReport')+'</button>'+
+      badge+
+    '</div></div>';
+}
+/* 좋아요/신고 — 기기당 1회(GCProp 로컬셋). 낙관적 반영 후 서버 증가(가벼운 소셜 액션·실패 무시). */
+function propVote(id,kind){
+  if(!id||GCProp.hasVoted(F.voted,kind,id))return;          // 이미 투표 → 무시(멱등)
+  if(!netOn()){ toast(t('propDemo')); return; }
+  F.voted=GCProp.addVoted(F.voted,kind,id); persist();
+  for(var i=0;i<PP.rows.length;i++){ if(PP.rows[i].id===id){ PP.rows[i][kind==='report'?'reports':'likes']++; break; } }
+  propFeedRepaint();
+  toast(kind==='report'?t('propReported'):t('propLiked'));
+  GCNet.voteProposal(id,kind); // 서버 increment(실패해도 로컬 유지)
+}
+/* 제출 — 검증(GCProp) → 일일한도 → 투척권 1장 소모 → addDoc. 실패 시 투척권 환불(가역성 #4). */
+function propDoSubmit(){
+  var v=GCProp.validateProposal({q:el('pp-q').value,aName:el('pp-a').value,bName:el('pp-b').value});
+  if(!v.ok){
+    var c=v.errors[0];
+    toast(c==='tooLong'?t('propErrLong'):c==='sameSides'?t('propErrSame'):c==='banned'?t('propErrBanned'):t('propErrEmpty'));
+    return;
+  }
+  if(!netOn()){ toast(t('propDemo')); return; }
+  var today=todayStr();
+  if(F.propDay!==today){ F.propDay=today; F.propCount=0; }                 // 날짜 바뀌면 카운트 리셋
+  if(F.propCount>=GCProp.DEFAULTS.dailyCap){ toast(t('propDailyCap',{n:GCProp.DEFAULTS.dailyCap})); return; }
+  var sp=GCProp.spendTicket({points:F.points,tickets:F.tickets,freeDay:F.propFree});
+  if(!sp.ok){ toast(t('propNeedTicket')); return; }
+  F.tickets=sp.econ.tickets; persist(); propWalletRepaint();
+  var btn=el('pp-sub'); if(btn)btn.disabled=true;
+  GCNet.submitProposal(v.value).then(function(res){
+    if(btn)btn.disabled=false;
+    if(res&&res.ok){
+      F.propCount++; persist();
+      el('pp-q').value=''; el('pp-a').value=''; el('pp-b').value='';
+      toast(t('propSubmitted')); propRefresh();
+    }else{
+      F.tickets++; persist(); propWalletRepaint();                        // 환불
+      toast(t('propSubmitFail'));
+    }
+  });
+}
+/* 투척권 구매(포인트 차감) — GCProp.buyTicket 리듀서로 원자적 처리. */
+function propBuyTicket(){
+  var r=GCProp.buyTicket({points:F.points,tickets:F.tickets,freeDay:F.propFree});
+  if(!r.ok){ toast(t('propNoPoints')); return; }
+  F.points=r.econ.points; F.tickets=r.econ.tickets; persist(); propWalletRepaint();
+  toast(t('propBought'));
+}
+/* 포인트 적립 — 광고(보상형 기존 경로 재사용) / 초대(공유). 도배 상한은 일일 제출 한도가 백스톱. */
+function propEarn(kind){
+  if(kind==='ad'){
+    adRewarded({onReward:function(){
+      F.points=GCProp.addPoints({points:F.points},GCProp.DEFAULTS.adPoints).points; persist(); propWalletRepaint();
+      toast(t('propEarnedAd',{n:GCProp.DEFAULTS.adPoints}));
+    }});
+  }else{
+    cosInviteShare(function(){
+      F.points=GCProp.addPoints({points:F.points},GCProp.DEFAULTS.invitePoints).points; persist(); propWalletRepaint();
+      toast(t('propEarnedInvite',{n:GCProp.DEFAULTS.invitePoints}));
+    });
+  }
+}
+
 /* ── 실시간 타격 3D 지구본(Phase 4 · D7) ──────────────────────────────────────────────
  * "풀 3D지만 모바일에 안 버겁게"(사용자 결정). globe.gl 를 *지연로딩*(첫 페인트 비차단),
  * WebGL 미지원/라이브러리 로드 실패/감속모션/저사양이면 *2D 캔버스 폴백*(절대 안 깨짐, 평면 floor).
@@ -1486,7 +1643,7 @@ function closeGlobe(){
 }
 
 /* 전역 노출 (onclick에서 호출) */
-window.openLocker=openLocker; window.openGlobe=openGlobe;
+window.openLocker=openLocker; window.openGlobe=openGlobe; window.openProposals=openProposals;
 window.GO=GO; window.SHARE=SHARE; window.intro=intro; window.watch2x=watch2x;
 window.rankBoard=rankBoard; window.openSettings=openSettings; window.toggleLang=toggleLang;
 

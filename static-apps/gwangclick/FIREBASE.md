@@ -60,6 +60,29 @@ service cloud.firestore {
         && (!('comment' in request.resource.data)
             || (request.resource.data.comment is string && request.resource.data.comment.size() <= 24));
     }
+
+    // 떡밥 투표소(UGC) — 누구나 읽기. 생성은 로그인 + 필드/길이 검증 + likes/reports=0 강제.
+    // 좋아요/신고는 update 로 '카운터 +1 만' 허용(다른 필드 변조·임의 점프 차단). 삭제 금지(owner는 콘솔에서).
+    match /gc_proposals/{id} {
+      allow read: if true;
+      allow create: if request.auth != null
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.q is string && request.resource.data.q.size() >= 1 && request.resource.data.q.size() <= 40
+        && request.resource.data.aName is string && request.resource.data.aName.size() >= 1 && request.resource.data.aName.size() <= 14
+        && request.resource.data.bName is string && request.resource.data.bName.size() >= 1 && request.resource.data.bName.size() <= 14
+        && request.resource.data.likes == 0 && request.resource.data.reports == 0;
+      // 좋아요/신고: 정확히 한 카운터만 +1, 나머지 불변(q/aName/bName/uid 보존).
+      allow update: if request.auth != null
+        && request.resource.data.q == resource.data.q
+        && request.resource.data.aName == resource.data.aName
+        && request.resource.data.bName == resource.data.bName
+        && request.resource.data.uid == resource.data.uid
+        && (
+          (request.resource.data.likes == resource.data.likes + 1 && request.resource.data.reports == resource.data.reports)
+          || (request.resource.data.reports == resource.data.reports + 1 && request.resource.data.likes == resource.data.likes)
+        );
+      allow delete: if false;
+    }
   }
 }
 ```
@@ -82,6 +105,8 @@ service cloud.firestore {
 
 > **Phase 2 색인 추가 없음.** 나라대전(국가 순위·내 나라 vs 세계)은 `gc_battles/{오늘}` 한 문서의 `countries` 맵을
 > 그대로 읽어 클라에서 집계하므로(기존 `regions`와 동일) **새 쿼리·복합 색인이 필요 없습니다.** 위 2개 그대로 유지.
+>
+> **떡밥 투표소 — 복합 색인 없음.** 목록은 `gc_proposals` 를 `createdAt` **단일 필드 내림차순**으로만 정렬(자동 색인) → 복합 색인 불필요. 추첨/숨김(신고임계) 판정은 클라(`GCProp.pickFeed`/`statusOf`)에서 처리. **콘솔에서 위 `gc_proposals` 규칙만 1회 추가 게시**하면 됩니다(신규 컬렉션이라 기존 규칙 영향 0).
 
 ---
 
@@ -95,6 +120,8 @@ gc_battles/{YYYY-MM-DD} = { a, b, na, nb,
 gc_scores/{날짜__uid}    = { date, uid, nick, side, taps, region,
                             country, badge, comment,          // ← Phase 2 신규(없으면 '')
                             ts }                              // 랭킹/순위
+gc_proposals/{자동id}    = { q, aName, bName, uid,            // ← 떡밥 투표소(UGC) 신규 컬렉션
+                            likes, reports, createdAt }       // 좋아요/신고는 +1 update 만 허용(규칙)
 ```
 - 광클 수는 **라운드 종료 시 1회**만 합산 전송 (비용·어뷰징 최소화). `countries` 도 이 1회 쓰기에 **편승**(탭마다 ❌).
 - 배틀 게이지는 `gc_battles/{오늘}` 을 **실시간 구독** → 남이 끝낼 때마다 진짜로 움직임. 나라 순위도 같은 구독/읽기 재사용(추가 구독 ❌).

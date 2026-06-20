@@ -68,8 +68,12 @@ body::after{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;opa
     linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px) 0 0/38px 100%;
   mask:linear-gradient(180deg, #000 0%, transparent 70%)}
 /* 필름 노이즈(질감) — 'AI 매끈함' 줄이는 손맛 레이어. */
-body::before{content:'';position:fixed;inset:0;z-index:60;pointer-events:none;opacity:.055;mix-blend-mode:overlay;
+/* 필름 노이즈(질감) — 'AI 매끈함' 줄이는 손맛 레이어. mix-blend-mode는 그 아래 지구본이 매 프레임
+ * 회전할 때 전체화면 재합성을 유발(특히 PC 버벅임) → 제거. opacity .055라 일반 합성으로도 질감 동일. */
+body::before{content:'';position:fixed;inset:0;z-index:60;pointer-events:none;opacity:.05;
   background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+/* 배틀(타격) 중엔 장식 오버레이(노이즈·그리드) 정지 → 탭 프레임 최대한 가볍게. */
+body.playing::before,body.playing::after{display:none}
 button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
 #app{max-width:480px;margin:0 auto;min-height:100dvh;padding:20px 18px 32px;position:relative}
 .screen{display:flex;flex-direction:column;gap:15px}
@@ -611,7 +615,9 @@ function GO(side){
   app.innerHTML=
     '<div class="stage" id="fb-stage" style="--team-a:'+bt.a.color+';--team-b:'+bt.b.color+';--me:'+me.color+';--foe:'+foe.color+';--tapink:'+ink(me.color)+'">'+
       '<div class="urgentbar"></div>'+
-      '<div id="gl-slot" class="gl-slot gl-mini"></div>'+   // 배틀 중에도 전세계 실시간(미니)+팝콘(D13)
+      // 배틀 중엔 지구본 미표시(slot 없음 → mountGlobe가 park=렌더정지). lite 미니구가 대륙/원형이 배경에 묻혀
+      //   '깨진 듯' 보이고 헤더를 가리며 PC 성능을 깎음(사용자 피드백). 지구본은 로비/결과/랭킹에서 크게 표시.
+      //   대전 실시간성은 게이지(startWatch 집계)로 유지 — 시각 지구본만 그 화면들로 한정.
       '<div class="bhdr"><span class="l"><span class="dot">●</span>'+t('battleHead')+'</span><span class="chip" id="fb-chip">'+t('chipNormal')+'</span></div>'+
       '<div class="ticker" id="fb-ticker">'+t('startCry',{team:me.emoji+' '+me.name})+'</div>'+
       '<div>'+
@@ -637,7 +643,7 @@ function GO(side){
   fxInit();
   B.tick=setInterval(tickerBeat,2300);
   B.raf=requestAnimationFrame(frame);
-  mountGlobe(); // 배틀 화면 미니 슬롯으로 지구본 이동(실시간 유지)
+  mountGlobe(); // 배틀엔 gl-slot 없음 → 지구본 park(렌더 정지)로 탭 프레임 확보
 }
 
 function onTap(e){

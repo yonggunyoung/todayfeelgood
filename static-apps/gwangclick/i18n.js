@@ -33,7 +33,7 @@
       streakDaysOn: "{n}일째 광클 출근 중",
       connecting: "🔴 전국 실시간 집계 물어오는 중…",
       liveCount: "🔴 벌써 {n}명 참전 — 실시간 집계 반영 중",
-      rankBtn: "🏆 전국 랭킹", todayBattle: "⚡ 오늘의 떡밥",
+      rankBtn: "🏆 전국 랭킹", todayBattle: "⚡ 오늘의 떡밥", moreApps: "🧩 딴짓거리 더 보기",
       // 배틀
       battleHead: "LIVE · BATTLE", startCry: "광클 시작! {team} 가보자고 🚀",
       myContribution: "내 기여", comboLbl: "콤보", timeLbl: "Time", tapLab: "TAP!",
@@ -145,7 +145,7 @@
       streakDaysOn: "{n}-day clock-in streak",
       connecting: "🔴 Grabbing the live count…",
       liveCount: "🔴 {n} already in — live count is on",
-      rankBtn: "🏆 Rankings", todayBattle: "⚡ Today's beef",
+      rankBtn: "🏆 Rankings", todayBattle: "⚡ Today's beef", moreApps: "🧩 More to mess with",
       // battle
       battleHead: "LIVE · BATTLE", startCry: "It's on! Let's go {team} 🚀",
       myContribution: "My taps", comboLbl: "Combo", timeLbl: "Time", tapLab: "TAP!",

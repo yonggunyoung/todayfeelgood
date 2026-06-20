@@ -399,6 +399,8 @@ var AC=null;
 function beep(freq,dur,type,vol){try{AC=AC||new(window.AudioContext||window.webkitAudioContext)();var o=AC.createOscillator(),g=AC.createGain();o.type=type||'sine';o.frequency.value=freq;g.gain.setValueAtTime(vol||0.18,AC.currentTime);g.gain.exponentialRampToValueAtTime(0.001,AC.currentTime+dur);o.connect(g).connect(AC.destination);o.start();o.stop(AC.currentTime+dur);}catch(e){}}
 function chord(fs,dur){fs.forEach(function(f,i){setTimeout(function(){beep(f,dur||0.12,'triangle',0.14);},i*55);});}
 function buzz(ms){try{if(window.Toss&&Toss.haptic){Toss.haptic(ms);return;}}catch(e){}if(navigator.vibrate)navigator.vibrate(ms);}
+// 토스 미니앱 안에서 실행 중인가 — 외부 유도(홈 허브 링크 등)는 토스 정책상 금지라 토스 안에선 숨김(D6).
+function isToss(){try{return !!(window.Toss&&Toss.inToss&&Toss.inToss());}catch(e){return false;}}
 
 /* ── 화려한 액션: 캔버스 파티클 (외부 에셋 0, 캔버스 미지원이면 조용히 비활성) ──
  * 성능(D-perf): 이모지 파티클은 매 프레임 fillText 대신 *한 번 래스터화한 스프라이트*를 drawImage.
@@ -639,6 +641,7 @@ function GO(side){
       '<canvas id="fb-fx"></canvas>'+
     '</div>';
   el('fb-stage').addEventListener('pointerdown',onTap,{passive:true});
+  try{ history.pushState(null,''); }catch(e){}  // 뒤로가기 가드(배틀 중 이탈 방지 → popstate가 로비로)
   document.body.classList.add('playing');   // 배틀 중 스크롤/주소창 흔들림 잠금
   fxInit();
   B.tick=setInterval(tickerBeat,2300);
@@ -846,6 +849,8 @@ function renderResult(){
           '<button class="btn btn-ghost" style="flex:1" onclick="openLocker()">'+t('lockerBtn')+'</button>'+
         '</div>'+
         '<button class="btn btn-ghost" onclick="intro()">'+t('todayBattle')+'</button>'+
+        // 홈 허브 유도(ddukkit.com) — 웹 전용. 토스 안에선 숨김(외부 유도 금지·D6). 같은 사이트라 동일 탭 이동.
+        (isToss()?'':'<a class="btn btn-ghost" href="https://ddukkit.com/" style="text-decoration:none;text-align:center">'+t('moreApps')+'</a>')+
       '</div>'+
     '</div>';
   mountGlobe(); // 결과 화면 슬롯으로 지구본 이동(실시간 유지)
@@ -1730,6 +1735,20 @@ var _lastTouchEnd=0;
 document.addEventListener('touchend',function(e){
   var n=Date.now(); if(n-_lastTouchEnd<=300)e.preventDefault(); _lastTouchEnd=n;
 },{passive:false});
+
+/* 뒤로가기 이탈 방지(사용자 결정): 배틀(타격) 중에만 가로채 로비로. 그 외 화면은 정상 동작.
+ * SPA(단일 URL)라 GO에서 가드 1개 push → 뒤로가기 시 popstate로 잡아 로비 복귀. 가드를 다시 심어 연속 차단. */
+window.addEventListener('popstate', function(){
+  if(B && !B.ended){
+    try{ history.pushState(null,''); }catch(e){}   // 가드 재설치(다음 back도 배틀이면 또 잡힘)
+    cleanup();                                     // 배틀 정리(스크롤 잠금 해제 포함)
+    intro();                                       // 로비로 복귀(이탈 X)
+  }
+});
+/* 새로고침·탭닫기 경고 — 배틀 중에만(진행 중 기여 날아감 방지). 평소엔 경고 없음. */
+window.addEventListener('beforeunload', function(e){
+  if(B && !B.ended){ e.preventDefault(); e.returnValue=''; return ''; }
+});
 
 /* 시작 */
 intro();

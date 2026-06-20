@@ -1,0 +1,15 @@
+{
+  "name": "냉비서 — 내 냉장고 비서",
+  "short_name": "냉비서",
+  "description": "영수증 한 장으로 냉장고 등록, 목표 모드별 오늘의 요리 추천, 요리 완료 원탭 차감까지.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f7f2e7",
+  "theme_color": "#f7f2e7",
+  "lang": "ko",
+  "icons": [
+    { "src": "./icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "./icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}

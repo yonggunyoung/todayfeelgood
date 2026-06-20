@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>냉비서 아케이드 — 미니게임</title>
+  <meta name="theme-color" content="#160b22" />
+  <meta name="description" content="냉장고 지키기·재료 매치·상식 퀴즈 등 미니게임 5종. 짬시간에 한 판." />
+  <link rel="icon" href="./icon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Jua&family=Press+Start+2P&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" as="style" crossorigin
+        href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+  <link rel="stylesheet" href="./css/styles.css" />
+  <style>
+    body { background: linear-gradient(180deg, #1a0f2b, #0c1830); min-height: 100dvh; }
+    #app { max-width: 480px; margin: 0 auto; min-height: 100dvh; display: grid; place-items: center; }
+    .arc-hero { text-align: center; padding: 30px 20px; color: #fff; font-family: 'Jua', sans-serif; }
+    .arc-mascot { font-size: 4rem; animation: arcBob 1.8s ease-in-out infinite; }
+    @keyframes arcBob { 0%,100%{ transform: translateY(0) scale(1,1) } 50%{ transform: translateY(-8px) scale(1.05,.95) } }
+    .arc-hero h1 { font-size: 2rem; margin: 10px 0 4px; letter-spacing: -.02em; }
+    .arc-hero h1 b { color: #5ef0b0; }
+    .arc-hero p { color: #b9a7d6; font-size: .9rem; }
+    .arc-foot { margin-top: 16px; color: #ffe04a; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  <div id="sheet"></div>
+  <div id="toast-root"></div>
+  <script type="module" src="./js/arcade.js"></script>
+</body>
+</html>

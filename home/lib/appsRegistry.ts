@@ -90,8 +90,8 @@ export const APPS: AppEntry[] = [
   },
   {
     "id": "naengbiseo",
-    "path": "https://yonggunyoung.github.io/todayfeelgood/",
-    "type": "external",
+    "path": "/fridge",
+    "type": "static",
     "status": "live",
     "featured": false,
     "emoji": "🧊",

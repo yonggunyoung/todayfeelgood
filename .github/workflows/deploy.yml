@@ -52,4 +52,11 @@ jobs:
             docker compose pull || true
             # 무료티어 OOM 시: 아래 한 줄을 'docker compose up -d --build home && docker compose up -d nginx' 로 바꿔 나눠 빌드
             docker compose up -d --build
+            # ★ nginx는 apps.generated.conf·static-apps 를 바인드 마운트로 읽으므로, 파일이 바뀌어도
+            #   컨테이너를 재시작하지 않으면 옛 설정으로 돈다(→ /fridge 404). 그래서 강제로 재시작해 새 라우트를 로드.
+            docker compose restart nginx || docker compose up -d --force-recreate nginx
             docker compose ps
+            echo "── 배포 확인 ──"
+            ls -ld static-apps/naengbiseo && echo "static-apps/naengbiseo: 있음" || echo "⚠ static-apps/naengbiseo: 없음"
+            curl -sS -o /dev/null -w "GET /fridge/  → HTTP %{http_code}\n" http://localhost/fridge/ || true
+            curl -sS -o /dev/null -w "GET /gwangclick/ → HTTP %{http_code}\n" http://localhost/gwangclick/ || true

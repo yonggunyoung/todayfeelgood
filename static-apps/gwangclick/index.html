@@ -189,6 +189,16 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 /* 배틀 화면 미니 지구본(코너 뱃지) — 탭 통과(pointer-events:none)·탭게임 방해 없음 */
 .gl-mini{position:absolute;top:10px;right:10px;width:92px;height:92px;z-index:4;border-radius:50%;overflow:hidden;pointer-events:none;box-shadow:0 6px 18px -8px rgba(0,0,0,.7)}
 .gl-mini .globe-stage{border-radius:50%;min-height:0}
+/* ☀️ 태양 — 투명 캔버스 뒤(우주)에서 비치는 배경 글로우(외부 에셋 0) */
+.gl-sun{position:absolute;top:7%;left:9%;width:36%;height:36%;border-radius:50%;z-index:0;pointer-events:none;filter:blur(1px);background:radial-gradient(circle at 50% 50%,rgba(255,245,205,.95) 0%,rgba(255,214,128,.6) 24%,rgba(255,176,84,.22) 46%,rgba(255,160,70,0) 70%)}
+/* ☁️ 구름 — 행성 위로 천천히 흐르는 반투명 wisp(경량·blur). 감속모션이면 정지 */
+.gl-clouds{position:absolute;inset:0;overflow:hidden;z-index:2;pointer-events:none}
+.gl-clouds span{position:absolute;border-radius:50%;filter:blur(7px);opacity:.16;background:radial-gradient(closest-side,rgba(255,255,255,.55),rgba(255,255,255,0));animation:gl-cloud linear infinite}
+.gl-clouds span:nth-child(1){top:20%;left:-35%;width:50%;height:20%;animation-duration:28s}
+.gl-clouds span:nth-child(2){top:54%;left:-45%;width:62%;height:24%;animation-duration:40s;animation-delay:-12s;opacity:.12}
+.gl-clouds span:nth-child(3){top:37%;left:-55%;width:42%;height:16%;animation-duration:34s;animation-delay:-22s;opacity:.14}
+@keyframes gl-cloud{from{transform:translateX(0)}to{transform:translateX(330%)}}
+@media (prefers-reduced-motion: reduce){.gl-clouds span{animation:none;opacity:.1}}
 .globe-stage::before{content:"";position:absolute;inset:0;pointer-events:none;background-image:radial-gradient(1.2px 1.2px at 18% 28%,#fff,transparent),radial-gradient(1px 1px at 72% 62%,#cfe3ff,transparent),radial-gradient(1px 1px at 42% 82%,#fff,transparent),radial-gradient(1.4px 1.4px at 86% 22%,#bcd2ff,transparent),radial-gradient(1px 1px at 58% 12%,#fff,transparent),radial-gradient(1px 1px at 30% 60%,#e9f1ff,transparent),radial-gradient(1px 1px at 90% 75%,#fff,transparent);opacity:.55}
 /* 떡밥 투표소 모달 */
 .pp-in{width:100%;padding:9px 11px;border-radius:10px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.04);color:inherit;font-size:.9rem;font-family:inherit;box-sizing:border-box;flex:1;min-width:0}
@@ -1319,8 +1329,10 @@ function ensureGlobe(){
   if(GLB.started)return;
   GLB.started=true;
   var host=document.createElement('div'); host.id='gl-stage'; host.className='globe-stage'; GLB.host=host;
-  host.innerHTML='<div id="gl-msg" class="hint" style="text-align:center;position:relative;z-index:1">'+t(netOn()?'globeLoading':'globeDemo')+'</div>'+
-    '<div id="gl-pop" style="position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:2"></div>';
+  host.innerHTML='<div class="gl-sun" aria-hidden="true"></div>'+                 // ☀️ 태양(배경 글로우·우주에 비침)
+    '<div class="gl-clouds" aria-hidden="true"><span></span><span></span><span></span></div>'+ // ☁️ 흐르는 구름(썰렁함 완화)
+    '<div id="gl-msg" class="hint" style="text-align:center;position:relative;z-index:1">'+t(netOn()?'globeLoading':'globeDemo')+'</div>'+
+    '<div id="gl-pop" style="position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:3"></div>';
   (el('gl-park')||document.body).appendChild(host);
   GLB.inline=true;
   GLB.bt=GCTopics.localize(battleOfDay(todayStr()),LANG);

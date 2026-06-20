@@ -1,0 +1,55 @@
+# 허브(ddukkit.com) 수동 배포 버튼 — Actions 탭 "Deploy (ddukkit hub)" → Run workflow.
+# 오라클 서버에 SSH로 접속해 git 최신화 + docker compose 재기동까지 해준다.
+# (push 자동배포 아님 — 무료티어 보호용 '버튼' 방식)
+#
+# ── 1회 설정: 레포 Settings → Secrets and variables → Actions 에 아래 4개 등록 ──
+#   ORACLE_HOST    : 오라클 서버 공인 IP (또는 도메인)
+#   ORACLE_USER    : SSH 사용자 (Ubuntu 이미지=ubuntu / Oracle Linux=opc)
+#   ORACLE_SSH_KEY : SSH 개인키 '전체 내용' (서버 ~/.ssh/authorized_keys 에 등록된 키의 짝)
+#   DEPLOY_PATH    : 서버의 레포 경로 (예: /home/ubuntu/webapp)
+# 자세한 절차: 허브 브랜치 docs/배포-자동화-설정.md
+name: Deploy (ddukkit hub)
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "배포할 브랜치/태그 (허브 = claude/great-darwin-1FmUy)"
+        required: true
+        default: "claude/great-darwin-1FmUy"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-hub
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Guard — 시크릿 확인
+        run: |
+          if [ -z "${{ secrets.ORACLE_HOST }}" ] || [ -z "${{ secrets.ORACLE_SSH_KEY }}" ] || [ -z "${{ secrets.DEPLOY_PATH }}" ]; then
+            echo "::error::오라클 시크릿이 없어요. 레포 Settings → Secrets and variables → Actions 에 ORACLE_HOST·ORACLE_USER·ORACLE_SSH_KEY·DEPLOY_PATH 4개를 등록한 뒤 다시 실행하세요."
+            exit 1
+          fi
+      - name: SSH 배포 (git 최신화 + docker compose)
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.ORACLE_HOST }}
+          username: ${{ secrets.ORACLE_USER }}
+          key: ${{ secrets.ORACLE_SSH_KEY }}
+          script: |
+            set -euo pipefail
+            cd "${{ secrets.DEPLOY_PATH }}"
+            REF="${{ github.event.inputs.ref }}"
+            echo "▶ deploy ref: $REF"
+            git fetch origin "$REF"
+            git checkout -f "$REF"
+            git reset --hard "origin/$REF"
+            docker compose pull || true
+            # 무료티어 OOM 시: 아래 한 줄을 'docker compose up -d --build home && docker compose up -d nginx' 로 바꿔 나눠 빌드
+            docker compose up -d --build
+            docker compose ps

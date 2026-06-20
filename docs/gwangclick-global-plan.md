@@ -130,6 +130,12 @@
   - **D14 대륙/바다/국경 = 로컬 GeoJSON.** `vendor/world-110m.geo.json`(npm world-atlas→topojson-client 변환, 177국, 좌표 2자리, **161KB**) 폴리곤으로 육지/국경 렌더, 바다=구 머티리얼. 외부 텍스처 0 유지. 점은 centroid라 올바른 대륙 위 → '어디쯤' 정확. 라벨 상위 4→**6**국(국기+우세%). 2D 폴백은 D7 위해 격자 유지(대륙은 3D 전용).
   - **D15 전체 실시간.** `GLOBE_MAX_PTS` 60→**250**(거의 전 국가 점). 성능: `pointsMerge(true)`로 1지오메트리 병합. 링 6→8.
   - 경계(#3): 게임 수치/onTap 불변. sw v11→**v12**. 테스트 **69/69** 유지. geojson은 sw 프리캐시 제외(globe.gl처럼 최초 사용 시 런타임 캐시). i18n 신규 키 0.
+- [x] 지구본 비주얼·성능 추가 튜닝 (사용자 피드백): 점 더 가늘게(선처럼)·태양 제거·육지색 또렷(덜 어둡게)·구름 불투명도↑(보이게). **배틀 미니=lite 모드**(대륙/링/라벨 생략 → 탭게임 끊김 방지, `applyGlobeDetail`/`GLB.lite`). sw v12→v15.
+- [x] 게임 모델 검토 + 밸런스(사용자 결정). 현행=**단일 공유 실시간 줄다리기**(`gc_battles/{날짜}` 1문서 전세계 increment)+개인점수 — 장르 정답이라 유지.
+  - **D16 재참전=최고점수.** 계속 시도 가능하되 **오늘 최고점만 적용**: 집단 집계엔 최고 대비 **증가분(delta)만** `increment`, 참가자수 na/nb는 **첫 참전만 +1**(`endBattle`의 dayBest 단일슬롯 + `net.js submit` opts.aggDelta/first, 하위호환). → 그라인딩이 세계 승패를 좌우하던 형평성 문제 해소.
+  - **D17 2배 부풀리기 제거.** 결과화면 광고 2배 버튼/로직 제거(서버 미반영 '가짜 순위'였음) → 정직성↑. (광고 touchpoint는 추후 '광고→투표소 포인트' 정직 보상으로 재도입 가능 — 보류.)
+  - **D18 샤딩=나중에.** 단일 핫문서 쓰기 경합은 동시접속 폭증 시 위험 → 그때 샤딩 카운터 도입(FIREBASE.md 기재). 지금 규모엔 불필요.
+  - 경계(#3): 콤보·타이머·타격물리 불변. sw→**v16**. 테스트 69/69.
 - [x] 떡밥 투표소(UGC) — **완료**(설계+코어+배선). 테스트 62→**69**.
   - 코어(D2 모듈분리·순수·throw금지): 입력정규화·금칙어 1차거름(`containsBanned`)·검증(`validateProposal` empty/tooLong/sameSides/banned)·읽기시점 상태(`statusOf`/`likesToGo` — likes≥50 live·reports≥5 hidden, D8/D11)·추첨(`shuffle`/`pickFeed` 숨김제외+셔플, 마태효과 차단)·기기당1회 멱등(`hasVoted`/`addVoted`)·로컬 경제(`buyTicket`/`spendTicket`/`grantFreeOnce`/`addPoints` — D9/D10). 상수 `DEFAULTS`(투척권100·일일캡3·광고30·초대50·무료1·임계50/5) owner 튜닝.
   - ⚠ 금칙어는 1차 거름일 뿐 — 진짜 안전망은 신고+owner(D8). 경계 4종 테스트 7개(정상/매핑/None/변조).

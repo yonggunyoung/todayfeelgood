@@ -759,7 +759,11 @@ function endBattle(){
   if(!B||B.ended)return; B.ended=true;
   cancelAnimationFrame(B.raf); clearInterval(B.tick);
   var bt=B.bt, side=B.side, me=B.me, foe=B.foe, date=B.date;
-  var contrib=Math.floor(B.tapsF), myShare=side==='a'?B.aShare:100-B.aShare;
+  var round=Math.floor(B.tapsF), myShare=side==='a'?B.aShare:100-B.aShare;
+  // 재참전=최고점수 적용(사용자 결정): 오늘 최고 대비 증가분만 집단 집계에 반영. dayBest는 단일 슬롯(날짜+값).
+  var sameDay=(F.dayBest&&F.dayBest.d===date), prevBest=sameDay?(F.dayBest.v||0):0, first=!sameDay;
+  var contrib=Math.max(prevBest,round), aggDelta=Math.max(0,contrib-prevBest);
+  F.dayBest={d:date,v:contrib};
   var newBest=contrib>(F.best||0); if(newBest)F.best=contrib; persist();
   var verdict=myShare>=53?{t:t('verdictWin'),c:'win'}:myShare<=47?{t:t('verdictLose'),c:'lose'}:{t:t('verdictTie'),c:'tie'};
   R={bt:bt,me:me,foe:foe,side:side,date:date,contrib:contrib,myShare:myShare,maxStreak:B.maxStreak,
@@ -772,9 +776,8 @@ function endBattle(){
   renderResult();
   if(netOn()){
     var rr=R;
-    // Phase 2: 내 국가(MY)로 나라대전 집계 + 미리 써둔 배지·멘트 동봉(net.js가 정제·하위호환).
-    // Phase 3: 배지는 effectiveBadge()(프리미엄 장착 시 우선) — 기존 제출 경로 재사용, 신규 필드 없음.
-    GCNet.submit(date,side,contrib,F.region,nickOf(),MY,{badge:effectiveBadge(),comment:F.comment}).then(function(res){
+    // Phase 2: 내 국가(MY)로 나라대전 집계 + 배지·멘트. 재참전: aggDelta(증가분)·first만 집계 반영(net.js).
+    GCNet.submit(date,side,contrib,F.region,nickOf(),MY,{badge:effectiveBadge(),comment:F.comment,aggDelta:aggDelta,first:first}).then(function(res){
       if(rr!==R)return;
       if(res){R.rank=res.rank;R.total=res.total;R.rankState='real';}
       else{R.rank=rankEstimate(R.contrib);R.rankState='estimate';}
@@ -824,8 +827,6 @@ function renderResult(){
         '<div id="gl-slot" class="gl-slot" style="height:200px"></div>'+
       '</div>'+
       '<div class="actions">'+
-        (r.x2?'<div class="x2done">'+t('x2done')+'</div>'
-             :'<button class="btn btn-reward" onclick="watch2x()">'+t('rewardBtn')+'</button>')+
         '<button class="btn btn-primary" style="color:'+ink(me.color)+'" onclick="SHARE()">'+t('shareBtn')+'</button>'+
         '<button class="btn btn-ghost" onclick="GO(\''+r.side+'\')">'+t('againBtn')+'</button>'+
         '<div style="display:flex;gap:8px">'+

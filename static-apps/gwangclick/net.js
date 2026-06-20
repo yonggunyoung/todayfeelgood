@@ -113,16 +113,22 @@
     try {
       if (!(await init())) return null;
       opts = opts || {};
-      taps = Math.max(0, Math.min(TAP_CAP, Math.floor(taps || 0)));
+      taps = Math.max(0, Math.min(TAP_CAP, Math.floor(taps || 0)));      // 기록 점수(=오늘 최고)
+      // 재참전 형평성(사용자 결정): 집단 집계엔 '최고점수의 증가분(delta)'만 반영, 참가자수(na/nb)는 첫 참전만 +1.
+      //   opts.aggDelta(집계 가산량)·opts.first(첫 참전 여부) 없으면 옛 동작(taps 전량·+1)로 폴백(하위호환).
+      var amt = (opts.aggDelta != null) ? Math.max(0, Math.min(TAP_CAP, Math.floor(opts.aggDelta))) : taps;
+      var first = (opts.first != null) ? !!opts.first : true;
       var inc = state.fs.increment, side2 = side === 'a' ? 'a' : 'b';
       var cc = normCountry(country);
-      var agg = { updatedAt: Date.now() };
-      agg[side2] = inc(taps); agg[side2 === 'a' ? 'na' : 'nb'] = inc(1);
-      // 중첩 객체 + merge:true 라야 regions.<지역>.<진영> 가 올바르게 증가 (점 표기 키는 setDoc에서 미동작)
-      if (region) { var rg = {}; rg[side2] = inc(taps); agg.regions = {}; agg.regions[region] = rg; }
-      // 국가 집계 — regions 와 정확히 동일한 패턴(D4). 옛 문서에 countries 없어도 merge로 안전 생성.
-      if (cc) { var cg = {}; cg[side2] = inc(taps); agg.countries = {}; agg.countries[cc] = cg; }
-      await state.fs.setDoc(battleRef(date), agg, { merge: true });
+      if (amt > 0 || first) {                          // 더할 게 있을 때만 집계 문서 쓰기(불필요 쓰기 절감)
+        var agg = { updatedAt: Date.now() };
+        if (amt > 0) agg[side2] = inc(amt);
+        if (first) agg[side2 === 'a' ? 'na' : 'nb'] = inc(1);
+        // 중첩 객체 + merge:true 라야 regions.<지역>.<진영>/countries.<ISO2>.<진영> 가 올바르게 증가.
+        if (amt > 0 && region) { var rg = {}; rg[side2] = inc(amt); agg.regions = {}; agg.regions[region] = rg; }
+        if (amt > 0 && cc) { var cg = {}; cg[side2] = inc(amt); agg.countries = {}; agg.countries[cc] = cg; }
+        await state.fs.setDoc(battleRef(date), agg, { merge: true });
+      }
       await state.fs.setDoc(scoreRef(date, state.uid), {
         date: date, uid: state.uid, nick: (nick || '익명광클러').slice(0, 16),
         side: side2, taps: taps, region: region || '', country: cc,

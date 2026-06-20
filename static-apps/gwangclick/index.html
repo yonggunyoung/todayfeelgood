@@ -1274,6 +1274,7 @@ var GLB = {
   inline: false,   // 로비 인라인 모드(모달 아님) — 화면 전환 시 정지 대상
   started: false,  // 영속 인스턴스 1회 생성 플래그(D13: 모든 장면 공용·재사용)
   host: null,      // 영속 호스트 DOM(#gl-stage) — 화면 전환 시 슬롯으로 '이동'(부수지 않음)
+  pulse: 0,        // 핫스팟 주기 팝콘 인터벌(포인트에서 '튀는' 연출 — 데이터 없어도 살아있게)
 };
 var GLOBE_SRC = './vendor/globe.gl.min.js'; // 로컬 동봉(런타임 CDN 0). sw.js ASSETS 프리캐시엔 없음(최초 사용시 캐시).
 var GLOBE_MAX_PTS = 250;  // 점 상한 — '전체 실시간 다 보이게'(사용자 요구). 거의 전 국가 표시(merge로 경량).
@@ -1324,8 +1325,20 @@ function ensureGlobe(){
   GLB.inline=true;
   GLB.bt=GCTopics.localize(battleOfDay(todayStr()),LANG);
   var token=(GLB.did=(GLB.did+1));
+  startPulse(); // 포인트에서 🍿 주기적으로 튀게(화면에 떠 있을 때만)
   if(!netOn()){ setGlobeMsg(t('globeDemo')); return; } // 데모: 빈 지구본(연결 시 자동 표시)
   bootGlobe(token);
+}
+/* 핫스팟 주기 팝콘 — 새 데이터(델타) 없어도 상위 포인트에서 🍿가 '톡톡' 튀게(사용자 요구).
+ * 화면(슬롯)에 떠 있고 탭 활성·감속모션 아닐 때만(절전·접근성). globe 영속이라 1회만 등록. */
+function startPulse(){
+  if(GLB.pulse)return;
+  GLB.pulse=setInterval(function(){
+    if(document.hidden||prefersReducedMotion()||!GLB.pts.length)return;
+    var host=GLB.host; if(!host||!host.parentNode||host.parentNode.id==='gl-park')return; // 화면 밖이면 skip
+    var n=Math.min(3,GLB.pts.length);
+    for(var i=0;i<n;i++){ var p=GLB.pts[i]; popcornAt(p.lat,p.lng,1,p.color); }
+  },1100);
 }
 /* 현재 화면의 #gl-slot 으로 지구본을 이동(없으면 park). 매 화면 렌더 끝에서 호출. */
 function mountGlobe(){
@@ -1449,29 +1462,29 @@ function startGlobe3D(token){
   try{
     var g=window.Globe()(stage);
     GLB.globe=g;
-    // 경량 설정(D7): 큰 텍스처 없이 솔리드/저대비 머티리얼, 대기효과만 가벼운 음영(디테일 강화: 대기 더 선명).
+    // 카툰풍·저자극(사용자 피드백: 너무 밝음/초록/구름낌 → 차분하게). 텍스처 0·플랫 음영.
     g.backgroundColor('rgba(0,0,0,0)')
-     .showGlobe(true).showAtmosphere(true).atmosphereColor('#5aa0ff').atmosphereAltitude(0.22)
+     .showGlobe(true).showAtmosphere(true).atmosphereColor('#3b5e86').atmosphereAltitude(0.12)
      .globeImageUrl(null);                 // 외부 텍스처 0(런타임 CDN 0·경량) → 솔리드 구
-    // 바다 = 구 머티리얼(텍스처 0). 디테일: 심해빛+은은한 발광으로 행성감.
-    try{ var m=g.globeMaterial(); if(m){ m.color&&m.color.set&&m.color.set('#0f2742'); m.emissive&&m.emissive.set&&m.emissive.set('#08182b'); if('emissiveIntensity'in m)m.emissiveIntensity=0.5; if('shininess'in m)m.shininess=8; } }catch(e){}
-    // 대륙/국경(D14) — 로컬 GeoJSON 폴리곤. 외부 텍스처 0. 점은 centroid라 올바른 대륙 위에 떠 '어디쯤'이 정확.
+    // 바다 = 구 머티리얼. 카툰: 어둡고 매트(specular 0, 발광 낮게) → 덜 밝고 안정적.
+    try{ var m=g.globeMaterial(); if(m){ m.color&&m.color.set&&m.color.set('#11283f'); m.emissive&&m.emissive.set&&m.emissive.set('#0a1828'); if('emissiveIntensity'in m)m.emissiveIntensity=0.25; if('shininess'in m)m.shininess=0; if(m.specular&&m.specular.set)m.specular.set('#000000'); } }catch(e){}
+    // 대륙/국경(D14) — 카툰: 채도 낮춘 평평한 육지 + 또렷한 가는 국경선. 거의 평면(altitude↓)으로 경량.
     g.polygonsData([])
-     .polygonCapColor(function(){return 'rgba(46,74,54,0.92)';})       // 육지(차분한 녹/회록)
-     .polygonSideColor(function(){return 'rgba(20,38,30,0.65)';})
-     .polygonStrokeColor(function(){return 'rgba(150,180,160,0.35)';}) // 국경선(은은)
-     .polygonAltitude(0.006);                                          // 바다 위 살짝 띄움
+     .polygonCapColor(function(){return 'rgba(58,74,66,0.96)';})       // 차분한 회록(덜 초록)
+     .polygonSideColor(function(){return 'rgba(18,30,26,0.55)';})
+     .polygonStrokeColor(function(){return 'rgba(140,170,155,0.45)';}) // 국경선
+     .polygonAltitude(0.002);                                          // 거의 평면(경량·카툰)
     loadLand().then(function(geo){
       if(!geo||!geo.features||!GLB.globe||GLB.mode!=='3d')return;
       try{ GLB.globe.polygonsData(geo.features); }catch(e){}
     });
-    // 점(참여 강도) — 높이=가중치, 색=우세 진영, 반경=가중치.
+    // 점(참여 강도) — '굵은 막대' → 가는 선(needle). 반경↓ 크게, 높이는 가중치로.
     g.pointsData([])
      .pointLat('lat').pointLng('lng').pointColor('color')
-     .pointAltitude(function(d){return 0.02+0.45*(d.weight||0);})
-     .pointRadius(function(d){return 0.28+0.7*(d.weight||0);})
-     .pointResolution(6)                   // 저폴리(모바일)
-     .pointsMerge(true)                     // 전 국가(최대 250) 표시해도 1지오메트리로 병합 → 경량(D15)
+     .pointAltitude(function(d){return 0.015+0.32*(d.weight||0);})
+     .pointRadius(function(d){return 0.07+0.11*(d.weight||0);})       // 가늘게(선처럼)
+     .pointResolution(4)                   // 더 저폴리(경량)
+     .pointsMerge(true)                     // 전 국가(최대 250) 1지오메트리 병합 → 경량(D15)
      .pointLabel(function(d){return globePointLabel(d);});
     // 링(타격 파동) — 상위 핫스팟만 은은하게(개수 적게 — 경량).
     g.ringsData([])
@@ -1508,10 +1521,10 @@ function pushPoints3D(){
   if(!GLB.globe)return;
   try{
     GLB.globe.pointsData(GLB.pts.slice());   // 전체(최대 250) — 전세계 실시간(D15)
-    // 링은 상위 8개 핫스팟만(경량·시각 강조).
-    GLB.globe.ringsData(GLB.pts.slice(0,8));
-    // 라벨은 상위 6개(국기+우세%) — '어디쯤'을 글자로도(D14).
-    if(GLB.globe.labelsData)GLB.globe.labelsData(GLB.pts.slice(0,6));
+    // 링은 상위 6개 핫스팟만(경량·시각 강조).
+    GLB.globe.ringsData(GLB.pts.slice(0,6));
+    // 라벨은 상위 4개(국기+우세%) — '어디쯤'을 글자로도(D14·경량).
+    if(GLB.globe.labelsData)GLB.globe.labelsData(GLB.pts.slice(0,4));
   }catch(e){}
 }
 /* 지구본 라벨 텍스트 — 국기 + 우세%. 국기 없으면 코드. (집계 데이터 기반·짧게) */

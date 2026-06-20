@@ -189,16 +189,14 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 /* 배틀 화면 미니 지구본(코너 뱃지) — 탭 통과(pointer-events:none)·탭게임 방해 없음 */
 .gl-mini{position:absolute;top:10px;right:10px;width:92px;height:92px;z-index:4;border-radius:50%;overflow:hidden;pointer-events:none;box-shadow:0 6px 18px -8px rgba(0,0,0,.7)}
 .gl-mini .globe-stage{border-radius:50%;min-height:0}
-/* ☀️ 태양 — 투명 캔버스 뒤(우주)에서 비치는 배경 글로우(외부 에셋 0) */
-.gl-sun{position:absolute;top:7%;left:9%;width:36%;height:36%;border-radius:50%;z-index:0;pointer-events:none;filter:blur(1px);background:radial-gradient(circle at 50% 50%,rgba(255,245,205,.95) 0%,rgba(255,214,128,.6) 24%,rgba(255,176,84,.22) 46%,rgba(255,160,70,0) 70%)}
-/* ☁️ 구름 — 행성 위로 천천히 흐르는 반투명 wisp(경량·blur). 감속모션이면 정지 */
+/* ☁️ 구름 — 행성 위로 천천히 흐르는 반투명 wisp(경량·blur). 또렷하게(보이도록). 감속모션이면 정지 */
 .gl-clouds{position:absolute;inset:0;overflow:hidden;z-index:2;pointer-events:none}
-.gl-clouds span{position:absolute;border-radius:50%;filter:blur(7px);opacity:.16;background:radial-gradient(closest-side,rgba(255,255,255,.55),rgba(255,255,255,0));animation:gl-cloud linear infinite}
-.gl-clouds span:nth-child(1){top:20%;left:-35%;width:50%;height:20%;animation-duration:28s}
-.gl-clouds span:nth-child(2){top:54%;left:-45%;width:62%;height:24%;animation-duration:40s;animation-delay:-12s;opacity:.12}
-.gl-clouds span:nth-child(3){top:37%;left:-55%;width:42%;height:16%;animation-duration:34s;animation-delay:-22s;opacity:.14}
+.gl-clouds span{position:absolute;border-radius:50%;filter:blur(6px);opacity:.34;background:radial-gradient(closest-side,rgba(255,255,255,.8),rgba(255,255,255,0));animation:gl-cloud linear infinite}
+.gl-clouds span:nth-child(1){top:20%;left:-35%;width:50%;height:20%;animation-duration:26s}
+.gl-clouds span:nth-child(2){top:54%;left:-45%;width:62%;height:24%;animation-duration:38s;animation-delay:-12s;opacity:.26}
+.gl-clouds span:nth-child(3){top:37%;left:-55%;width:42%;height:16%;animation-duration:32s;animation-delay:-20s;opacity:.3}
 @keyframes gl-cloud{from{transform:translateX(0)}to{transform:translateX(330%)}}
-@media (prefers-reduced-motion: reduce){.gl-clouds span{animation:none;opacity:.1}}
+@media (prefers-reduced-motion: reduce){.gl-clouds span{animation:none;opacity:.22}}
 .globe-stage::before{content:"";position:absolute;inset:0;pointer-events:none;background-image:radial-gradient(1.2px 1.2px at 18% 28%,#fff,transparent),radial-gradient(1px 1px at 72% 62%,#cfe3ff,transparent),radial-gradient(1px 1px at 42% 82%,#fff,transparent),radial-gradient(1.4px 1.4px at 86% 22%,#bcd2ff,transparent),radial-gradient(1px 1px at 58% 12%,#fff,transparent),radial-gradient(1px 1px at 30% 60%,#e9f1ff,transparent),radial-gradient(1px 1px at 90% 75%,#fff,transparent);opacity:.55}
 /* 떡밥 투표소 모달 */
 .pp-in{width:100%;padding:9px 11px;border-radius:10px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.04);color:inherit;font-size:.9rem;font-family:inherit;box-sizing:border-box;flex:1;min-width:0}
@@ -1285,6 +1283,7 @@ var GLB = {
   started: false,  // 영속 인스턴스 1회 생성 플래그(D13: 모든 장면 공용·재사용)
   host: null,      // 영속 호스트 DOM(#gl-stage) — 화면 전환 시 슬롯으로 '이동'(부수지 않음)
   pulse: 0,        // 핫스팟 주기 팝콘 인터벌(포인트에서 '튀는' 연출 — 데이터 없어도 살아있게)
+  lite: false,     // 경량 모드(배틀 미니): 대륙/링/라벨 생략 → 탭 게임 끊김 방지
 };
 var GLOBE_SRC = './vendor/globe.gl.min.js'; // 로컬 동봉(런타임 CDN 0). sw.js ASSETS 프리캐시엔 없음(최초 사용시 캐시).
 var GLOBE_MAX_PTS = 250;  // 점 상한 — '전체 실시간 다 보이게'(사용자 요구). 거의 전 국가 표시(merge로 경량).
@@ -1329,8 +1328,7 @@ function ensureGlobe(){
   if(GLB.started)return;
   GLB.started=true;
   var host=document.createElement('div'); host.id='gl-stage'; host.className='globe-stage'; GLB.host=host;
-  host.innerHTML='<div class="gl-sun" aria-hidden="true"></div>'+                 // ☀️ 태양(배경 글로우·우주에 비침)
-    '<div class="gl-clouds" aria-hidden="true"><span></span><span></span><span></span></div>'+ // ☁️ 흐르는 구름(썰렁함 완화)
+  host.innerHTML='<div class="gl-clouds" aria-hidden="true"><span></span><span></span><span></span></div>'+ // ☁️ 흐르는 구름(썰렁함 완화)
     '<div id="gl-msg" class="hint" style="text-align:center;position:relative;z-index:1">'+t(netOn()?'globeLoading':'globeDemo')+'</div>'+
     '<div id="gl-pop" style="position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:3"></div>';
   (el('gl-park')||document.body).appendChild(host);
@@ -1359,11 +1357,21 @@ function mountGlobe(){
   GLB.bt=GCTopics.localize(battleOfDay(todayStr()),LANG); // 언어 토글 반영
   var slot=el('gl-slot');
   if(slot){
+    GLB.lite = !!(slot.classList&&slot.classList.contains('gl-mini')); // 배틀 미니 = 경량(탭 끊김 방지)
     if(host.parentNode!==slot)slot.appendChild(host);   // 라이브 노드 이동(globe 계속 동작)
     host.style.display=''; resumeGlobe();
+    applyGlobeDetail();                                  // 경량/풀 디테일(대륙·링·라벨) 전환
     // 슬롯 크기 반영(레이아웃 후) + 핫스팟으로 카메라 정렬.
     sizeGlobeNow(); setTimeout(function(){ sizeGlobeNow(); focusGlobe(true); if(GLB.mode==='3d')pushPoints3D(); },0);
   }else{ parkGlobe(); }
+}
+/* 화면별 디테일 전환 — 배틀 미니는 대륙/링/라벨 생략(경량), 그 외는 대륙 복원(D13 최적화). */
+function applyGlobeDetail(){
+  if(GLB.mode!=='3d'||!GLB.globe)return;
+  try{
+    if(GLB.lite){ GLB.globe.polygonsData([]); GLB.globe.ringsData([]); if(GLB.globe.labelsData)GLB.globe.labelsData([]); }
+    else { loadLand().then(function(geo){ if(geo&&geo.features&&GLB.globe&&!GLB.lite){ try{GLB.globe.polygonsData(geo.features);}catch(e){} } }); }
+  }catch(e){}
 }
 function sizeGlobeNow(){ if(GLB.mode==='3d')sizeGlobe3D(); else if(GLB.mode==='2d')sizeGlobe2D(); }
 function parkGlobe(){ var host=GLB.host,p=el('gl-park'); if(host&&p&&host.parentNode!==p)p.appendChild(host); pauseGlobe(); }
@@ -1482,9 +1490,9 @@ function startGlobe3D(token){
     try{ var m=g.globeMaterial(); if(m){ m.color&&m.color.set&&m.color.set('#11283f'); m.emissive&&m.emissive.set&&m.emissive.set('#0a1828'); if('emissiveIntensity'in m)m.emissiveIntensity=0.25; if('shininess'in m)m.shininess=0; if(m.specular&&m.specular.set)m.specular.set('#000000'); } }catch(e){}
     // 대륙/국경(D14) — 카툰: 채도 낮춘 평평한 육지 + 또렷한 가는 국경선. 거의 평면(altitude↓)으로 경량.
     g.polygonsData([])
-     .polygonCapColor(function(){return 'rgba(58,74,66,0.96)';})       // 차분한 회록(덜 초록)
-     .polygonSideColor(function(){return 'rgba(18,30,26,0.55)';})
-     .polygonStrokeColor(function(){return 'rgba(140,170,155,0.45)';}) // 국경선
+     .polygonCapColor(function(){return 'rgba(108,142,112,0.97)';})    // 또렷한 카툰 육지(덜 어둡게)
+     .polygonSideColor(function(){return 'rgba(40,60,46,0.6)';})
+     .polygonStrokeColor(function(){return 'rgba(180,205,185,0.5)';})  // 국경선(또렷)
      .polygonAltitude(0.002);                                          // 거의 평면(경량·카툰)
     loadLand().then(function(geo){
       if(!geo||!geo.features||!GLB.globe||GLB.mode!=='3d')return;
@@ -1493,9 +1501,9 @@ function startGlobe3D(token){
     // 점(참여 강도) — '굵은 막대' → 가는 선(needle). 반경↓ 크게, 높이는 가중치로.
     g.pointsData([])
      .pointLat('lat').pointLng('lng').pointColor('color')
-     .pointAltitude(function(d){return 0.015+0.32*(d.weight||0);})
-     .pointRadius(function(d){return 0.07+0.11*(d.weight||0);})       // 가늘게(선처럼)
-     .pointResolution(4)                   // 더 저폴리(경량)
+     .pointAltitude(function(d){return 0.02+0.36*(d.weight||0);})     // 가중치만큼 솟는 '선'
+     .pointRadius(function(d){return 0.03+0.05*(d.weight||0);})       // 아주 가늘게(실선처럼)
+     .pointResolution(3)                   // 더 저폴리(경량)
      .pointsMerge(true)                     // 전 국가(최대 250) 1지오메트리 병합 → 경량(D15)
      .pointLabel(function(d){return globePointLabel(d);});
     // 링(타격 파동) — 상위 핫스팟만 은은하게(개수 적게 — 경량).
@@ -1533,6 +1541,7 @@ function pushPoints3D(){
   if(!GLB.globe)return;
   try{
     GLB.globe.pointsData(GLB.pts.slice());   // 전체(최대 250) — 전세계 실시간(D15)
+    if(GLB.lite){ GLB.globe.ringsData([]); if(GLB.globe.labelsData)GLB.globe.labelsData([]); return; } // 배틀: 점만(경량)
     // 링은 상위 6개 핫스팟만(경량·시각 강조).
     GLB.globe.ringsData(GLB.pts.slice(0,6));
     // 라벨은 상위 4개(국기+우세%) — '어디쯤'을 글자로도(D14·경량).

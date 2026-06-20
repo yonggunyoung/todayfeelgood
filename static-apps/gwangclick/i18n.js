@@ -47,8 +47,8 @@
       tkCombo: "💥 방금 누가 ×{mult} 콤보 터뜨림!",
       tkGen1: "🚀 단톡방에 소문 도는 중…", tkGen2: "👀 옆 반도 참전했다던데?", tkGen3: "📣 지금이 흐름 뒤집을 각이다!",
       // 결과
-      resultTag: "RESULT", verdictWin: "우리 편이 다 씹어먹었다 🎉",
-      verdictLose: "오늘은 졌잘싸…<br>내일 복수전 가자 🔥", verdictTie: "심장 쫄깃 무승부 ⚔️",
+      resultTag: "RESULT", verdictWin: "우리 편 완승 🎉<br>손가락이 제 몫 했다",
+      verdictLose: "졌지만 잘 싸웠다<br>내일, 조용히 복수전 🔥", verdictTie: "한 끗도 안 밀린 무승부 ⚔️",
       titleLbl: "칭호", finalShare: "최종 {n}%", maxCombo: "최고 콤보",
       rankNation: "전국 순위", rankEst: "예상 전국", counting: "집계 중…",
       rankUnit: "위", rankOf: "{n}명", hashApp: "#광클대전",
@@ -159,8 +159,8 @@
       tkCombo: "💥 Someone just popped a ×{mult} combo!",
       tkGen1: "🚀 Word's spreading in the group chat…", tkGen2: "👀 The other class just joined too?", tkGen3: "📣 Now's your shot to flip it!",
       // result
-      resultTag: "RESULT", verdictWin: "Our side ate it all up 🎉",
-      verdictLose: "Got pushed back today…<br>Run it back tomorrow 🔥", verdictTie: "Dead heat — a draw ⚔️",
+      resultTag: "RESULT", verdictWin: "Clean sweep 🎉<br>your thumb earned its keep",
+      verdictLose: "Lost the round, not the war 🔥<br>quiet revenge tomorrow", verdictTie: "Down to the wire — dead even ⚔️",
       titleLbl: "Title", finalShare: "Final {n}%", maxCombo: "Max combo",
       rankNation: "Global rank", rankEst: "Est. rank", counting: "Counting…",
       rankUnit: "", rankOf: "of {n}", hashApp: "#ClickBattle",

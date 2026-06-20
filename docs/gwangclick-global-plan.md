@@ -136,6 +136,12 @@
   - **D17 2배 부풀리기 제거.** 결과화면 광고 2배 버튼/로직 제거(서버 미반영 '가짜 순위'였음) → 정직성↑. (광고 touchpoint는 추후 '광고→투표소 포인트' 정직 보상으로 재도입 가능 — 보류.)
   - **D18 샤딩=나중에.** 단일 핫문서 쓰기 경합은 동시접속 폭증 시 위험 → 그때 샤딩 카운터 도입(FIREBASE.md 기재). 지금 규모엔 불필요.
   - 경계(#3): 콤보·타이머·타격물리 불변. sw→**v16**. 테스트 69/69.
+- [x] 모바일 UX·성능 픽스(사용자 피드백: iPhone/Galaxy서 게임 중 화면 확대/축소/흔들림 + 지구본 '절단기 불꽃' 성능저하 + 멘트 유치).
+  - **확대/축소 차단(D19).** iOS는 `user-scalable=no` 무시 → JS로 `gesturestart/change/end` preventDefault + **멀티터치 touchmove** preventDefault + 300ms 더블탭 차단. CSS: `body{touch-action:manipulation}`·`html{-webkit-text-size-adjust:100%}`·`html,body{overscroll-behavior:none}`·`.stage{touch-action:none}`.
+  - **흔들림 차단.** 배틀 중 `body.playing{position:fixed;overflow:hidden}`로 스크롤/주소창 토글 잠금(GO서 add·cleanup/endBattle서 remove). juice `shake()` 진폭 6px→2px.
+  - **지구본 팝콘 끄기(성능).** 배틀 미니(lite)에서 `popcornAt`/`startPulse` 전면 정지 → '절단기 불꽃' 잔상·탭 끊김 제거.
+  - **멘트 톤(위트↑).** 승패 멘트(KO/EN)·등급(TITLES KO) 유치함↓ 위트↑로 교체. 게임 수치 불변.
+  - 경계(#3): onTap/콤보/타이머/타격물리·집계 로직 불변. sw v16→**v17**. 테스트 69/69.
 - [x] 떡밥 투표소(UGC) — **완료**(설계+코어+배선). 테스트 62→**69**.
   - 코어(D2 모듈분리·순수·throw금지): 입력정규화·금칙어 1차거름(`containsBanned`)·검증(`validateProposal` empty/tooLong/sameSides/banned)·읽기시점 상태(`statusOf`/`likesToGo` — likes≥50 live·reports≥5 hidden, D8/D11)·추첨(`shuffle`/`pickFeed` 숨김제외+셔플, 마태효과 차단)·기기당1회 멱등(`hasVoted`/`addVoted`)·로컬 경제(`buyTicket`/`spendTicket`/`grantFreeOnce`/`addPoints` — D9/D10). 상수 `DEFAULTS`(투척권100·일일캡3·광고30·초대50·무료1·임계50/5) owner 튜닝.
   - ⚠ 금칙어는 1차 거름일 뿐 — 진짜 안전망은 신고+owner(D8). 경계 4종 테스트 7개(정상/매핑/None/변조).

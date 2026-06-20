@@ -194,9 +194,15 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .globe-cap{display:flex;align-items:center;gap:6px;font-size:.82rem;opacity:.85;margin-bottom:7px;letter-spacing:.2px}
 .gl-slot{position:relative;width:100%}
 .globe-stage{position:relative;width:100%;height:100%;min-height:80px;border-radius:18px;overflow:hidden;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 34%,#0e1d34 0%,#081120 55%,#04060c 100%);box-shadow:inset 0 0 70px rgba(0,0,0,.55),0 12px 34px -18px rgba(0,0,0,.7);border:1px solid rgba(120,160,210,.12)}
-/* 배틀 화면 미니 지구본(코너 뱃지) — 탭 통과(pointer-events:none)·탭게임 방해 없음 */
-.gl-mini{position:absolute;top:10px;right:10px;width:92px;height:92px;z-index:4;border-radius:50%;overflow:hidden;pointer-events:none;box-shadow:0 6px 18px -8px rgba(0,0,0,.7)}
-.gl-mini .globe-stage{border-radius:50%;min-height:0}
+/* 배틀 헤더 옆 미니 지구본 — 인라인 뱃지(절대배치 X → 헤더/티커 안 가림, 사용자 피드백).
+ * 어두운 배경에 묻혀 '원형이 안 보이던' 문제 → 밝은 림 + 바탕 글로우로 구(球) 윤곽이 또렷하게. */
+.bhead{display:flex;gap:11px;align-items:center}
+.bhead .bcol{flex:1;min-width:0;display:flex;flex-direction:column;gap:7px}
+.gl-mini{flex:none;width:62px;height:62px;border-radius:50%;overflow:hidden;pointer-events:none;
+  border:1.5px solid rgba(140,180,230,.42);
+  background:radial-gradient(circle at 50% 36%,#15294a 0%,#060d18 72%);
+  box-shadow:0 4px 14px -6px rgba(0,0,0,.7),0 0 0 4px rgba(120,160,210,.07)}
+.gl-mini .globe-stage{border-radius:50%;min-height:0;background:transparent;box-shadow:none;border:none}
 /* ☁️ 구름 — 행성 위로 천천히 흐르는 반투명 wisp(경량·blur). 또렷하게(보이도록). 감속모션이면 정지 */
 .gl-clouds{position:absolute;inset:0;overflow:hidden;z-index:2;pointer-events:none}
 .gl-clouds span{position:absolute;border-radius:50%;filter:blur(6px);opacity:.34;background:radial-gradient(closest-side,rgba(255,255,255,.8),rgba(255,255,255,0));animation:gl-cloud linear infinite}
@@ -617,11 +623,15 @@ function GO(side){
   app.innerHTML=
     '<div class="stage" id="fb-stage" style="--team-a:'+bt.a.color+';--team-b:'+bt.b.color+';--me:'+me.color+';--foe:'+foe.color+';--tapink:'+ink(me.color)+'">'+
       '<div class="urgentbar"></div>'+
-      // 배틀 중엔 지구본 미표시(slot 없음 → mountGlobe가 park=렌더정지). lite 미니구가 대륙/원형이 배경에 묻혀
-      //   '깨진 듯' 보이고 헤더를 가리며 PC 성능을 깎음(사용자 피드백). 지구본은 로비/결과/랭킹에서 크게 표시.
-      //   대전 실시간성은 게이지(startWatch 집계)로 유지 — 시각 지구본만 그 화면들로 한정.
-      '<div class="bhdr"><span class="l"><span class="dot">●</span>'+t('battleHead')+'</span><span class="chip" id="fb-chip">'+t('chipNormal')+'</span></div>'+
-      '<div class="ticker" id="fb-ticker">'+t('startCry',{team:me.emoji+' '+me.name})+'</div>'+
+      // 헤더+티커(좌측 열) + 미니 지구본(우측 인라인 뱃지). 인라인이라 서로 안 가림(사용자 피드백 반영).
+      //   지구본은 lite(대륙ON·링/라벨/팝콘OFF·자동회전OFF)로 가볍게, 대전 실시간성은 게이지로 유지.
+      '<div class="bhead">'+
+        '<div class="bcol">'+
+          '<div class="bhdr"><span class="l"><span class="dot">●</span>'+t('battleHead')+'</span><span class="chip" id="fb-chip">'+t('chipNormal')+'</span></div>'+
+          '<div class="ticker" id="fb-ticker">'+t('startCry',{team:me.emoji+' '+me.name})+'</div>'+
+        '</div>'+
+        '<div id="gl-slot" class="gl-slot gl-mini" aria-hidden="true"></div>'+
+      '</div>'+
       '<div>'+
         '<div class="brow"><span style="color:var(--team-a)">A <b id="fb-pa" class="tnum">'+base.toFixed(0)+'</b>%</span>'+
           '<span style="color:var(--team-b)">B <b id="fb-pb" class="tnum">'+(100-base).toFixed(0)+'</b>%</span></div>'+
@@ -646,7 +656,7 @@ function GO(side){
   fxInit();
   B.tick=setInterval(tickerBeat,2300);
   B.raf=requestAnimationFrame(frame);
-  mountGlobe(); // 배틀엔 gl-slot 없음 → 지구본 park(렌더 정지)로 탭 프레임 확보
+  mountGlobe(); // 배틀 헤더 옆 미니 슬롯으로 지구본 이동(lite·실시간 유지)
 }
 
 function onTap(e){
@@ -1383,12 +1393,14 @@ function mountGlobe(){
     sizeGlobeNow(); setTimeout(function(){ sizeGlobeNow(); focusGlobe(true); if(GLB.mode==='3d')pushPoints3D(); },0);
   }else{ parkGlobe(); }
 }
-/* 화면별 디테일 전환 — 배틀 미니는 대륙/링/라벨 생략(경량), 그 외는 대륙 복원(D13 최적화). */
+/* 화면별 디테일 전환 — 대륙은 항상 표시(원형/지형이 보이도록, 정적 지오메트리라 경량).
+ * 배틀 미니(lite)는 링/라벨/자동회전만 끔(반복 파동·텍스트·매프레임 회전이 탭 프레임을 깎으므로). */
 function applyGlobeDetail(){
   if(GLB.mode!=='3d'||!GLB.globe)return;
   try{
-    if(GLB.lite){ GLB.globe.polygonsData([]); GLB.globe.ringsData([]); if(GLB.globe.labelsData)GLB.globe.labelsData([]); }
-    else { loadLand().then(function(geo){ if(geo&&geo.features&&GLB.globe&&!GLB.lite){ try{GLB.globe.polygonsData(geo.features);}catch(e){} } }); }
+    loadLand().then(function(geo){ if(geo&&geo.features&&GLB.globe){ try{GLB.globe.polygonsData(geo.features);}catch(e){} } });
+    if(GLB.lite){ GLB.globe.ringsData([]); if(GLB.globe.labelsData)GLB.globe.labelsData([]); }
+    try{ var c=GLB.globe.controls(); if(c)c.autoRotate=(!GLB.lite && GLB.rotate); }catch(e){}  // 배틀 중 자동회전 OFF(경량·차분)
   }catch(e){}
 }
 function sizeGlobeNow(){ if(GLB.mode==='3d')sizeGlobe3D(); else if(GLB.mode==='2d')sizeGlobe2D(); }

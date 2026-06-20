@@ -134,13 +134,19 @@ const SP_BY = Object.fromEntries(SPECIALS.map((s) => [s.id, s]));
 const SP = (id) => (D.spec[id] ? D.spec[id].val : 0);
 
 let D = null;
-let savedRun = null; // 나갔다 들어와도 이어서 하기
+const DEF_SAVE_KEY = 'nb_def_save';
+let savedRun = null; // 나갔다 들어와도 이어서 하기 (localStorage 영속 — 앱을 닫았다 와도 보존)
+try { savedRun = JSON.parse(localStorage.getItem(DEF_SAVE_KEY) || 'null'); } catch { savedRun = null; }
+// 백그라운드 전환/종료 시에도 저장 — 루프가 멈춰도(프리즈) 진행상황이 보존되게 루프 밖에서 보장
+document.addEventListener('visibilitychange', () => { if (document.hidden) snapshotRun(); });
+window.addEventListener('pagehide', () => snapshotRun());
 
 // 게임이 진행 중인지 (나가기 경고용) — 시작 전 화면/종료 후엔 false
 export function defActive() { return !!(D && !D.over && D.wave >= 1); }
 
 export function gameDefense() {
   const ui = gameUI();
+  if (!savedRun) { try { savedRun = JSON.parse(localStorage.getItem(DEF_SAVE_KEY) || 'null'); } catch { /* noop */ } } // 저장본 복구(앱 닫았다 와도 이어하기)
   const resume = (savedRun && !savedRun.over)
     ? `<button class="gx-btn-go" style="margin-bottom:10px;background:linear-gradient(145deg,#ffe04a,#ff9f43);color:#3a2400" onclick="UI.defResume()">▶ 이어서 하기 — WAVE ${savedRun.wave} · 난이도 ${DIFF[savedRun.diffKey].name}</button>` : '';
   ui.openSheet(`
@@ -312,11 +318,12 @@ export function defWallMode() {
 function toastNo() { beep(200, 0.1, 'square', 0.08); }
 
 function snapshotRun() {
-  if (!D || D.over || D.wave < 1) { savedRun = null; return; }
+  if (!D || D.over || D.wave < 1) { savedRun = null; try { localStorage.removeItem(DEF_SAVE_KEY); } catch { /* noop */ } return; }
   savedRun = {
     diffKey: D.diff.key, speed: D.speed, lv: { ...D.lv }, spec: JSON.parse(JSON.stringify(D.spec)),
     coins: D.coins, score: D.score, kills: D.kills, bossesKilled: D.bossesKilled, midKilled: D.midKilled, hp: D.hp, maxHp: D.maxHp, wave: D.wave, revived: D.revived, atkElem: D.atkElem, turretElem: [...(D.turretElem || [])], special: { charges: D.special ? D.special.charges : 1 },
   };
+  try { localStorage.setItem(DEF_SAVE_KEY, JSON.stringify(savedRun)); } catch { /* 용량 초과 무시 */ }
 }
 export function defResume() {
   if (!savedRun || !D) return;
@@ -436,7 +443,7 @@ function spawnOne() {
   let r = Math.random() * total, key = pool[0][0], t = pool[0][1];
   for (let i = 0; i < pool.length; i++) { r -= wts[i]; if (r <= 0) { key = pool[i][0]; t = pool[i][1]; break; } }
   const n = t.group || 1; // 세균 떼는 한 번에 여러 마리
-  const dmg = Math.max(1, Math.round(t.dmg * D.diff.dmg * (1 + w * 0.026))); // 후반 침투 피해↑(긴장)
+  const dmg = Math.max(1, Math.round(t.dmg * D.diff.dmg * (1 + w * 0.04))); // 후반 침투 피해↑(뚫리면 아프게 — 긴장)
   for (let i = 0; i < n; i++) {
     D.enemies.push(mkEnemy(key, waveHP(w) * t.hpx, t.r, waveSpd(w) * t.spx, dmg, { split: t.split, elem: t.elem, affix: rollAffix(w) }));
   }
@@ -458,8 +465,8 @@ function mkEnemy(key, hp, r, spd, dmg, opt = {}) {
     elem: opt.elem || (typ && typ.elem) || null, bossName: opt.bossName || '',
     zombie: D.wave >= 50 && !opt.boss, // 공포 구간(50+) 좀비화
     armorMul: af === 'armor' ? 0.55 : 1, shield: af === 'shield' ? 1 : 0, regen: af === 'regen' ? hp * 0.04 : 0,
-    // 뒤로 갈수록 방어력↑ — 받는 피해를 줄이는 배수(웨이브8부터, 최대 35% 경감). 보스는 면제.
-    warmor: opt.boss || opt.midboss ? 1 : 1 - clamp((D.wave - 8) * 0.005, 0, 0.35),
+    // 뒤로 갈수록 방어력↑ — 받는 피해를 줄이는 배수(웨이브8부터, 최대 18% 경감). 과하면 총알스펀지+물량적체로 지루·렉이라 절제.
+    warmor: opt.boss || opt.midboss ? 1 : 1 - clamp((D.wave - 8) * 0.004, 0, 0.18),
     burn: 0, burnDps: 0, slowT: 0, slowMul: 1,
     x: 22 + Math.random() * (D.W - 44), y: -r - 6,
     ph: Math.random() * 6.28, blinkS: { blink: 1 }, flash: 0, squash: 0, age: 0, sporeT: 0, sporeZ: 0, minionT: 1.6,
@@ -586,16 +593,28 @@ function killEnemy(en) {
 
 function loop(now) {
   if (!D || !D.running) return;
-  let dt = Math.min(0.034, (now - D.last) / 1000); D.last = now;
   if (!D.canvas.isConnected) { D.running = false; snapshotRun(); return; } // 시트 닫힘 → 이어하기 저장
-  // 배속(1·2·3) — 한 프레임에 update를 여러 번 (렌더는 1회)
-  const steps = D.speed;
-  for (let s = 0; s < steps; s++) {
-    if (D.hitStop > 0) { D.hitStop -= dt; } else { update(dt); }
-    if (D.over || D.pendingDraft || D.pendingMidAd) break;
+  let dt = Math.min(0.034, (now - D.last) / 1000); D.last = now;
+  try {
+    // 배속(1·2·3) — 한 프레임에 update를 여러 번 (렌더는 1회)
+    const steps = D.speed;
+    for (let s = 0; s < steps; s++) {
+      if (D.hitStop > 0) { D.hitStop -= dt; } else { update(dt); }
+      if (D.over || D.pendingDraft || D.pendingMidAd) break;
+    }
+    render(dt);
+    D.shopT -= dt; if (D.shopT <= 0) { renderShop(); D.shopT = 0.25; }
+    D._errs = 0;
+  } catch (err) {
+    // 한 프레임의 예외로 루프가 영구 정지(멈춤)되고 저장도 안 되던 문제 방지:
+    // 즉시 저장하고, 꼬인 멈춤값 해제 후 다음 프레임을 계속 시도한다.
+    console.error('[defense] frame error', err);
+    snapshotRun();
+    D.hitStop = 0;
+    if ((D._errs = (D._errs || 0) + 1) > 90) { D.running = false; return; } // 계속 오류면 안전 정지(이어하기로 보존됨)
+    D.raf = requestAnimationFrame(loop);
+    return;
   }
-  render(dt);
-  D.shopT -= dt; if (D.shopT <= 0) { renderShop(); D.shopT = 0.25; }
   if (D.over) { offerRevive(); return; }
   if (D.pendingDraft) { D.pendingDraft = false; bossDraft(); return; } // 보스 처치 → 스킬 3택
   if (D.pendingMidAd) { D.pendingMidAd = false; offerMidSkill(); return; } // 중간보스 → 짧은 광고로 스킬
@@ -767,8 +786,9 @@ function update(dt) {
   if (D.horror && (D._ambT = (D._ambT || 0) - dt) <= 0) { D._ambT = 0.55; D.parts.burst(Math.random() * D.W, D.H * 0.92, 'rgba(122,160,60,0.5)', 1, { up: 36, life: 2.0, grav: -8, spread: 0.3 }); }
 
   // 스폰
-  if (D.toSpawn > 0) { D.since += dt; if (D.since >= D.spawnGap) { D.since = 0; spawnOne(); D.toSpawn -= 1; } }
-  else if (D.enemies.length === 0) nextWave();
+  // 동시 생존 적 상한 — 후반 물량 적체로 인한 렉/지루함 방지(상한 차면 잠시 스폰 멈춤)
+  if (D.toSpawn > 0 && D.enemies.length < 46) { D.since += dt; if (D.since >= D.spawnGap) { D.since = 0; spawnOne(); D.toSpawn -= 1; } }
+  else if (D.toSpawn <= 0 && D.enemies.length === 0) nextWave();
 
   // 보스전 정전 이벤트 — 보스/중간보스가 있을 때 간헐 발생, 콘센트 탭 전까지 전원 50%
   const bossPresent = D.enemies.some((e) => e.boss || e.midboss);
@@ -1121,11 +1141,11 @@ function render(dt) {
     }
   }
   drawHud(c, W, H);
-  // 위험 비네트
+  // 위험 비네트 — 적을 가리지 않게 가장자리 위주로 은은하게(데미지 시 과한 번쩍임 완화)
   if (D.hp <= D.maxHp * 0.3 || D.vign > 0.04) {
-    const pulse = D.hp <= D.maxHp * 0.3 ? 0.3 + Math.sin(performance.now() / 160) * 0.18 : D.vign * 0.5;
-    const vg = c.createRadialGradient(W / 2, H / 2, H * 0.3, W / 2, H / 2, H * 0.7);
-    vg.addColorStop(0, 'rgba(255,77,106,0)'); vg.addColorStop(1, `rgba(255,77,106,${clamp(pulse, 0, 0.6)})`);
+    const pulse = D.hp <= D.maxHp * 0.3 ? 0.16 + Math.sin(performance.now() / 200) * 0.07 : D.vign * 0.32;
+    const vg = c.createRadialGradient(W / 2, H / 2, H * 0.46, W / 2, H / 2, H * 0.74);
+    vg.addColorStop(0, 'rgba(255,77,106,0)'); vg.addColorStop(1, `rgba(255,77,106,${clamp(pulse, 0, 0.34)})`);
     c.fillStyle = vg; c.fillRect(0, 0, W, H);
   }
   // 보스 등장 암전
@@ -1276,7 +1296,7 @@ export function defBuy(k) {
 }
 
 function endGame() {
-  savedRun = null;
+  savedRun = null; try { localStorage.removeItem(DEF_SAVE_KEY); } catch { /* noop */ }
   const s = D; D = null; cancelAnimationFrame(s.raf);
   beep(160, 0.3, 'square', 0.12);
   const specs = Object.keys(s.spec).length;

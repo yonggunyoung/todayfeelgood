@@ -2,6 +2,7 @@
 // 사용자는 API 키를 모른다. 운영자 키(시크릿) 1개로 호출하고, 사용자별 월 한도를 집계한다.
 // 배포 가이드: docs/07-server-ai-deploy.md
 const { onRequest } = require('firebase-functions/v2/https');
+const { onSchedule } = require('firebase-functions/v2/scheduler');
 const { defineSecret } = require('firebase-functions/params');
 const admin = require('firebase-admin');
 
@@ -421,6 +422,16 @@ exports.ai = onRequest(
         return;
       }
 
+      // 만료 임박 푸시 — FCM 토큰 등록(스케줄 함수가 이걸로 발송). token→{uid,code} 매핑 저장.
+      if (path.endsWith('/pushtoken')) {
+        const { token, code } = req.body || {};
+        if (!token || typeof token !== 'string' || token.length > 4096) { res.status(400).json({ error: '토큰이 필요합니다' }); return; }
+        await db.collection('pushTokens').doc(token).set(
+          { uid, code: (code || '').trim(), updatedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+        res.json({ ok: true });
+        return;
+      }
+
       // 인앱 유튜브 검색 — 운영자 YT_API_KEY로 전 사용자에게 제공 (AI 한도 미차감, 무료 기능)
       if (path.endsWith('/ytsearch')) {
         const q = String((req.body || {}).q || '').trim().slice(0, 60);
@@ -443,5 +454,45 @@ exports.ai = onRequest(
     } catch (e) {
       res.status(e.code && e.code >= 400 && e.code < 600 ? e.code : 500).json({ error: e.message || '서버 오류' });
     }
+  }
+);
+
+/* ── 만료 임박 푸시 (매일 1회) ──
+   pushTokens 의 각 토큰 → 해당 사용자의 동기화 냉장고(state.pantry)를 보고
+   오늘/내일 상하는 재료가 있으면 FCM 발송. "앱이 닫혀 있어도 돌아올 이유"를 만든다. */
+exports.expiryPush = onSchedule(
+  { schedule: '0 9 * * *', timeZone: 'Asia/Seoul', region: 'asia-northeast3', memory: '256MiB' },
+  async () => {
+    const today = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10); // KST 기준 오늘
+    const dayDiff = (s) => (!s ? 999 : Math.round((new Date(s + 'T00:00:00Z') - new Date(today + 'T00:00:00Z')) / 86400000));
+    const snap = await db.collection('pushTokens').get();
+    let sent = 0;
+    for (const doc of snap.docs) {
+      const { uid, code } = doc.data() || {};
+      try {
+        const ref = (code ? db.collection('spaces').doc(code) : db.collection('userdata').doc(uid));
+        if (!uid && !code) { await doc.ref.delete().catch(() => {}); continue; }
+        const s = await ref.get();
+        const pantry = (s.exists && s.data().state && s.data().state.pantry) || [];
+        const exp = pantry.filter((p) => { const d = dayDiff(p.expiresAt); return d >= 0 && d <= 1; });
+        if (!exp.length) continue;
+        const names = exp.slice(0, 2).map((p) => p.name).filter(Boolean).join(', ');
+        const body = exp.length > 2
+          ? `${names} 외 ${exp.length - 2}개가 곧 상해요 — 오늘 뭐 해먹지? 🍳`
+          : `${names}${exp.length > 1 ? ' 외' : ''} 곧 상해요 — 오늘 메뉴 추천받기 🍳`;
+        await admin.messaging().send({
+          token: doc.id,
+          data: { title: '❄️ 냉장고가 부르네요', body, url: '/' },
+          webpush: { headers: { Urgency: 'normal' }, fcmOptions: { link: '/' } },
+        });
+        sent += 1;
+      } catch (e) {
+        const code2 = e && e.errorInfo ? e.errorInfo.code : e && e.code;
+        if (code2 === 'messaging/registration-token-not-registered' || code2 === 'messaging/invalid-registration-token' || code2 === 'messaging/invalid-argument') {
+          await doc.ref.delete().catch(() => {}); // 죽은/잘못된 토큰 정리
+        }
+      }
+    }
+    console.log(`expiryPush: ${snap.size} tokens, ${sent} sent`);
   }
 );

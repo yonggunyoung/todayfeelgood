@@ -156,11 +156,12 @@ export async function getIdToken() {
 
 /* ── 레시피 커뮤니티 평점 (Phase B) — 집계는 서버가 계산. 실패는 조용히 무시(로컬 별점은 그대로) ── */
 // 평가하려면 Firebase 세션이 필요 → 없으면 익명 로그인(보이지 않음). 동기화 문서는 익명이면 안 붙으므로 부작용 없음.
-async function ensureAuthed() {
+export async function ensureAuthed() {
   if (!(await ensureFirebase())) return null;
   if (!auth.currentUser) { try { await authMod.signInAnonymously(auth); } catch { return null; } }
   return auth.currentUser ? auth.currentUser.uid : null;
 }
+export const getFirebaseApp = () => app;
 export async function submitRating(rid, v) {
   if (!AI_FN) return null;
   try {

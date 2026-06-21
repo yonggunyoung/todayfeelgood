@@ -6,6 +6,7 @@ import { recommend, recipesUsing, expiringItems, activeLeftovers, deductionPlan,
 import { scanImage, extractRecipeFromYouTube } from './ai.js';
 import { initSync, sync, makeSpaceCode, setSpaceCode, loginGoogle, logoutGoogle, syncAvailable, submitScore, topScores, submitRating, fetchRecipeStats } from './sync.js';
 import { initAnalytics, track, trackScreen } from './analytics.js';
+import { enablePush, pushSupported, pushOn, pushPermission } from './push.js';
 import { AI_ENDPOINT, COUPANG_TAG } from './config.js';
 import { canListen, speak, stopSpeak, startListen, stopListen, isListening, parseCommand } from './voice.js';
 import { earn, bonus, spend, refund, EARN, earnedToday, SHOP, adFreeNow, gameBest, aiLeft, aiConsume, aiGrant, aiUnlimited, FREE_AI } from './points.js';
@@ -2891,6 +2892,34 @@ UI.shopCommit = () => {
   toast(`${done.length}개 품목 입고 완료 🧊`);
 };
 
+/* ── 만료 임박 푸시 알림 (설정 카드) ── */
+function pushSettingHtml() {
+  if (!pushSupported()) {
+    return `<p class="hint" style="margin:0">이 기기/브라우저에선 푸시 알림이 아직 안 돼요.<br>아이폰은 <b>홈 화면에 추가(설치)</b> 후, 사파리 최신 버전에서 가능해요.</p>`;
+  }
+  if (pushPermission() === 'denied') {
+    return `<p class="hint" style="margin:0">알림이 <b>차단</b>돼 있어요. 브라우저 사이트 설정에서 알림을 허용한 뒤 다시 시도해 주세요.</p>`;
+  }
+  if (pushOn()) {
+    return `<div class="row"><div class="grow"><b>✅ 켜짐</b><p class="hint" style="margin:2px 0 0">재료가 상하기 전(오늘·내일)에 알려드려요. 매일 오전에 확인해요.</p></div></div>`;
+  }
+  return `<div class="row"><div class="grow"><b>임박 재료, 놓치지 마세요</b>
+       <p class="hint" style="margin:2px 0 0">"우유 내일 상해요 — 오늘 뭐 해먹지?" 알림을 받아요. (로그인 시 기기 꺼져 있어도 도착)</p></div></div>
+     <button class="btn btn-block btn-tint" style="margin-top:8px" onclick="UI.enablePush()">🔔 임박 알림 켜기</button>`;
+}
+UI.enablePush = async () => {
+  if (!pushSupported()) { toast('이 기기/브라우저에서는 알림을 지원하지 않아요'); return; }
+  toast('알림 권한을 확인할게요…');
+  const r = await enablePush((S.settings.spaceCode || '').trim());
+  if (r.ok) { track('push_enable'); toast('🔔 임박 알림을 켰어요 — 상하기 전에 알려드릴게요'); }
+  else if (r.reason === 'denied') toast('알림이 차단돼 있어요 — 브라우저 사이트 설정에서 허용해 주세요');
+  else if (r.reason === 'dismissed') toast('알림 권한을 허용하면 켤 수 있어요');
+  else if (r.reason === 'unsupported') toast('이 기기에선 푸시가 안 돼요 (아이폰은 홈화면 설치 후 가능)');
+  else if (r.reason === 'auth') toast('로그인이 필요해요 — 설정에서 구글로 시작하기를 눌러주세요');
+  else toast('알림 켜기에 실패했어요 — 잠시 후 다시 시도해 주세요');
+  if (tab === 'settings') renderSettings();
+};
+
 /* ── 설정 ─────────────────────────────── */
 function renderSettings() {
   const st = S.settings;
@@ -2925,6 +2954,8 @@ function renderSettings() {
   $('#view').innerHTML = `
     <div class="hero"><h1>내 <em>계정</em>과 설정</h1><p>모드를 바꾸면 추천이 통째로 달라져요</p></div>
     ${acct}
+    <div class="section-title"><h2>🔔 임박 알림</h2><small>상하기 전에 알려줘요</small></div>
+    <div class="card flat">${pushSettingHtml()}</div>
     <div class="section-title"><h2>🍽️ 추천 모드</h2><small>나에게 맞게</small></div>
     <div class="mode-grid">
       ${modes.map((m) => `

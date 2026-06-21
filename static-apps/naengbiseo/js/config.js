@@ -15,7 +15,7 @@ export const FIREBASE_CONFIG = {
   measurementId: 'G-K8S0MT7NTL',
   // 푸시 알림(FCM 웹) — 콘솔 → 프로젝트 설정 → Cloud Messaging → 웹 푸시 인증서(VAPID)에서 '키 쌍' 공개키를 붙여넣으면 켜진다.
   // 공개값이라 커밋 안전. 비어 있으면 푸시 기능은 조용히 꺼짐.
-  fcmVapidKey: '',
+  fcmVapidKey: 'BEAeuy_kg-T9vJxNS1ymYySa3Yxmq44BuA8MRAxOg0xAWmWmkZO7RLCNgMRhBqyXZ1B54C4gKa2YEhAgenE54VY',
 };
 /* 예시:
 export const FIREBASE_CONFIG = {

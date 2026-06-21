@@ -11,7 +11,7 @@
 - **카테고리**: 게임 (대안: 엔터테인먼트)
 - **연령 등급**: 전체 이용가 (폭력/사행성/선정성 없음 · 보상형 광고만, 옵트인)
 - **아이콘**: `icon-512.png` (정사각 512×512, 콘솔 기본) · 라운드 필요 시 `icon-512-rounded.png`
-- **개인정보처리방침 URL**: `https://dduckkit.com/privacy.html`
+- **개인정보처리방침 URL**: `https://ddukkit.com/privacy.html`
 - **고객 문의**: yonggunyoung@gmail.com
 
 ---
@@ -72,7 +72,7 @@
 ## ✅ 제출 직전 셀프 체크
 - [ ] 아이콘: `icon-512.png` 업로드 (코너 라운드는 콘솔/플랫폼이 마스킹)
 - [ ] 스크린샷 2~4장 (위 가이드)
-- [ ] 개인정보처리방침 URL 접속 확인: https://dduckkit.com/privacy.html
+- [ ] 개인정보처리방침 URL 접속 확인: https://ddukkit.com/privacy.html
 - [ ] 한 줄 소개·상세 설명 글자수 콘솔 한도 내 (초과 시 위 '중/소' 버전 사용)
 - [ ] 연령 등급 = 콘텐츠 일치(전체 이용가)
 - [ ] 보상형 광고 그룹ID를 `AD.tossAdGroupId`에 입력 (없으면 하우스 광고 폴백)

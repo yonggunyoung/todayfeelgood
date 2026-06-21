@@ -7,7 +7,7 @@ import { scanImage, extractRecipeFromYouTube } from './ai.js';
 import { initSync, sync, makeSpaceCode, setSpaceCode, loginGoogle, logoutGoogle, syncAvailable, submitScore, topScores, submitRating, fetchRecipeStats } from './sync.js';
 import { initAnalytics, track, trackScreen } from './analytics.js';
 import { enablePush, pushSupported, pushOn, pushPermission } from './push.js';
-import { AI_ENDPOINT, COUPANG_TAG } from './config.js';
+import { AI_ENDPOINT, COUPANG_TAG, AI_FN } from './config.js';
 import { canListen, speak, stopSpeak, startListen, stopListen, isListening, parseCommand } from './voice.js';
 import { earn, bonus, spend, refund, EARN, earnedToday, SHOP, adFreeNow, gameBest, aiLeft, aiConsume, aiGrant, aiUnlimited, FREE_AI } from './points.js';
 import { initGames, openGames, GAMES, gameFresh, gameVoice, gameVoicePass, gameDouble, setGameDiff } from './games.js';
@@ -2920,6 +2920,40 @@ UI.enablePush = async () => {
   if (tab === 'settings') renderSettings();
 };
 
+/* ── 의견·이탈사유 수집 (작은 인앱 설문) — 시드 테스트에서 "왜 안 남나"를 직접 듣는다 ── */
+const FB_REASONS = ['복잡해요', '레시피가 안 맞아요', '스캔이 부정확', '쓸 일이 없어요', '느려요/버벅', '그냥 둘러봤어요'];
+let fbDraft = { reason: '', churn: false };
+UI.openFeedback = (churn = false) => {
+  fbDraft = { reason: '', churn: !!churn };
+  try { localStorage.setItem('nb_fb_asked', '1'); } catch { /* noop */ }
+  openSheet(`
+    <h2>💬 ${churn ? '냉비서, 뭐가 아쉬웠어요?' : '의견 보내기'}</h2>
+    <p class="sub">${churn ? '한 번만 여쭤볼게요 — 솔직한 한마디가 큰 도움이 돼요. (익명)' : '개선에 큰 힘이 됩니다. 익명이에요.'}</p>
+    <div class="tag-toggles" id="fb-reasons">
+      ${FB_REASONS.map((r) => `<button onclick="UI.fbReason(this,'${r}')">${r}</button>`).join('')}
+    </div>
+    <div class="field" style="margin-top:10px"><textarea id="fb-text" rows="3" maxlength="500" placeholder="더 하고 싶은 말 (선택) — 어떤 점이 불편했는지, 뭐가 있으면 쓸지"></textarea></div>
+    <div class="btn-row">
+      <button class="btn" onclick="UI.closeSheet()">${churn ? '다음에' : '취소'}</button>
+      <button class="btn btn-primary grow" onclick="UI.submitFeedback()">보내기</button>
+    </div>`);
+};
+UI.fbReason = (el, r) => { fbDraft.reason = r; el.parentElement.querySelectorAll('button').forEach((b) => b.classList.remove('on')); el.classList.add('on'); };
+UI.submitFeedback = () => {
+  const text = (($('#fb-text') || {}).value || '').trim();
+  if (!fbDraft.reason && !text) { toast('한 가지만 골라주거나 한 줄 적어주세요'); return; }
+  track('feedback', { reason: fbDraft.reason || 'text', churn: fbDraft.churn });
+  try { localStorage.setItem('nb_fb_done', '1'); } catch { /* noop */ }
+  if (AI_FN) {
+    fetch(`${AI_FN}/feedback`, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ reason: fbDraft.reason, text, churn: fbDraft.churn, opens: Number(localStorage.getItem('nb_opens')) || 0, cooked: S.ledger.cooked, pantry: S.pantry.length }),
+    }).catch(() => { /* 전송 실패는 무시 */ });
+  }
+  UI.closeSheet();
+  toast('💬 고마워요! 의견 잘 받았어요 — 꼭 반영할게요');
+};
+
 /* ── 설정 ─────────────────────────────── */
 function renderSettings() {
   const st = S.settings;
@@ -2956,6 +2990,7 @@ function renderSettings() {
     ${acct}
     <div class="section-title"><h2>🔔 임박 알림</h2><small>상하기 전에 알려줘요</small></div>
     <div class="card flat">${pushSettingHtml()}</div>
+    <button class="btn btn-soft btn-block" style="margin-top:8px" onclick="UI.openFeedback()">💬 의견·건의 보내기 (개선에 큰 힘이 돼요)</button>
     <div class="section-title"><h2>🍽️ 추천 모드</h2><small>나에게 맞게</small></div>
     <div class="mode-grid">
       ${modes.map((m) => `
@@ -3283,6 +3318,14 @@ initGames({
 initAnalytics();
 track('app_open', { pantry: S.pantry.length, recipes: (S.myRecipes || []).length, logged_in: !!(sync.user && !sync.user.anon) });
 trackScreen(tab);
+// 이탈사유 수집 — 3번 이상 열었는데 한 번도 요리 안 한(미활성) 사용자에게 딱 1회만 살짝 물어봄
+try {
+  const opens = (Number(localStorage.getItem('nb_opens')) || 0) + 1;
+  localStorage.setItem('nb_opens', String(opens));
+  if (opens >= 3 && S.ledger.cooked === 0 && !localStorage.getItem('nb_fb_asked') && !localStorage.getItem('nb_fb_done')) {
+    setTimeout(() => { if (!document.querySelector('#modal-root .sheet')) UI.openFeedback(true); }, 2500);
+  }
+} catch { /* noop */ }
 
 // 출석 포인트 — 하루 한 번, 앱을 연 것 자체가 절약의 시작
 {

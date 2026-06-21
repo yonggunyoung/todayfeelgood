@@ -515,8 +515,9 @@ function tickerBeat(){
 /* ── 광고 수익화: 보상형 '결과 2배 자랑' (둘 다 자동 분기) ──
    우선순위: ① 토스 안 → 토스 보상형 SDK  ② 웹 보상형 훅(AD.webRewarded)  ③ 하우스(데모) 광고 폴백.
    ▸ 실광고 전환: 토스 입점 후 콘솔 보상형 '광고 그룹ID'를 tossAdGroupId에, 웹은 webRewarded에 함수 연결.
-   ▸ 10대 대상 → 비개인화 광고(nonPersonalized)로 강제. 보상형(옵트인)만 사용 — 배너/전면 없음. */
-var AD={ enabled:true, tossAdGroupId:'', webRewarded:null, houseSeconds:15, nonPersonalized:true };
+   ▸ 10대 대상 → 비개인화 광고(nonPersonalized)로 강제. 보상형(옵트인)만 사용 — 배너/전면 없음.
+   ▸ [출시 상태] 광고 승인 전이라 enabled:false (광고 0 · '2배'는 무료 동작). 승인 후 enabled:true + tossAdGroupId만 채우면 광고판. */
+var AD={ enabled:false, tossAdGroupId:'', webRewarded:null, houseSeconds:15, nonPersonalized:true };
 function adRewarded(opts){
   opts=opts||{};
   if(!AD.enabled){opts.onReward&&opts.onReward();return;}

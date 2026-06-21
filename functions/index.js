@@ -350,6 +350,22 @@ exports.ai = onRequest(
         return;
       }
 
+      // ── 의견/이탈사유 수집 — 공개(비로그인도 가능). 길이 제한으로 스팸 완화. 운영자는 Firestore 'feedback'에서 읽음 ──
+      if (req.path.replace(/\/+$/, '').endsWith('/feedback')) {
+        const b = req.body || {};
+        const reason = String(b.reason || '').slice(0, 40);
+        const text = String(b.text || '').slice(0, 500);
+        if (!reason && !text) { res.status(400).json({ error: '내용이 필요합니다' }); return; }
+        await db.collection('feedback').add({
+          reason, text, churn: !!b.churn,
+          opens: Number(b.opens) || 0, cooked: Number(b.cooked) || 0, pantry: Number(b.pantry) || 0,
+          origin: req.get('origin') || '', ua: (req.get('user-agent') || '').slice(0, 200),
+          ts: admin.firestore.FieldValue.serverTimestamp(),
+        });
+        res.json({ ok: true });
+        return;
+      }
+
       // ── Gemini 경로 (/gscan, /gytrecipe) — Cloudflare 지역차단 회피용. 익명 허용 + 전역 일일 상한으로 비용 차단 ──
       const gp = req.path.replace(/\/+$/, '');
       if (gp.endsWith('/gscan') || gp.endsWith('/gytrecipe')) {

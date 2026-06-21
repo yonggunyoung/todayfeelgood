@@ -8,7 +8,8 @@
 <meta name="description" content="민초 vs 반민초? 부먹 vs 찍먹? 오늘의 떡밥에 내 편을 골라 60초 광클! 전국 흐름을 내 편으로 끌어와라." />
 <link rel="manifest" href="./manifest.webmanifest" />
 <link rel="icon" href="./icon.svg" type="image/svg+xml" />
-<link rel="apple-touch-icon" href="./icon.svg" />
+<link rel="apple-touch-icon" href="./icon-512.png" /><!-- iOS는 SVG apple-touch-icon 미지원 → PNG 필수 -->
+
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <!-- 토스 미니앱 어댑터(선택) — 토스 밖에서는 안전한 폴백, 의존성 없음 -->
@@ -738,14 +739,15 @@ function tickerBeat(){
 }
 /* ── 광고 수익화: 보상형 '결과 2배 자랑' (둘 다 자동 분기) ──
    우선순위: ① 토스 안 → 토스 보상형 SDK  ② 웹 보상형 훅(AD.webRewarded)  ③ 하우스(데모) 광고 폴백.
-   ▸ 실광고 전환: 토스 입점 후 콘솔 광고단위 ID를 tossRewardUnitId에, 웹은 webRewarded에 제공자 함수 연결.
+   ▸ 실광고 전환: 토스 입점 후 콘솔에서 만든 보상형 '광고 그룹ID'를 tossAdGroupId에, 웹은 webRewarded에 함수 연결.
+     (앱인토스 SDK는 adUnitId가 아니라 adGroupId로 보상형/전면형을 구분 — toss.js 정합 완료)
    ▸ 10대 대상 → 비개인화 광고(nonPersonalized)로 강제. 보상형(옵트인)만 사용 — 배너/전면 없음. */
-var AD={ enabled:true, tossRewardUnitId:'', webRewarded:null, houseSeconds:15, nonPersonalized:true };
+var AD={ enabled:true, tossAdGroupId:'', webRewarded:null, houseSeconds:15, nonPersonalized:true };
 function adRewarded(opts){
   opts=opts||{};
   if(!AD.enabled){opts.onReward&&opts.onReward();return;}
-  try{ if(window.Toss&&Toss.inToss&&Toss.inToss()&&AD.tossRewardUnitId){
-    Toss.rewardedAd(AD.tossRewardUnitId).then(function(r){
+  try{ if(window.Toss&&Toss.inToss&&Toss.inToss()&&AD.tossAdGroupId){
+    Toss.rewardedAd(AD.tossAdGroupId).then(function(r){
       if(r===true)opts.onReward&&opts.onReward();
       else if(r===false)toast(t('adNeedFull'));
       else houseAd(opts);

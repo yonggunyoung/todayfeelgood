@@ -5,6 +5,7 @@ import { isWeight, measureOf, baseUnit, unitOptions, toBase, perBase, fmtBase, f
 import { recommend, recipesUsing, expiringItems, activeLeftovers, deductionPlan, modeList, getMode, allRecipes, buildCookPlan, setCommunityStats, communityRating } from './engine.js';
 import { scanImage, extractRecipeFromYouTube } from './ai.js';
 import { initSync, sync, makeSpaceCode, setSpaceCode, loginGoogle, logoutGoogle, syncAvailable, submitScore, topScores, submitRating, fetchRecipeStats } from './sync.js';
+import { initAnalytics, track, trackScreen } from './analytics.js';
 import { AI_ENDPOINT, COUPANG_TAG } from './config.js';
 import { canListen, speak, stopSpeak, startListen, stopListen, isListening, parseCommand } from './voice.js';
 import { earn, bonus, spend, refund, EARN, earnedToday, SHOP, adFreeNow, gameBest, aiLeft, aiConsume, aiGrant, aiUnlimited, FREE_AI } from './points.js';
@@ -855,6 +856,7 @@ UI.openInvite = () => {
 };
 UI.shareInvite = () => {
   const rid = ensureRid();
+  track('invite_share', { ok: S.referral?.ok || 0 });
   const url = shareUrl(shareEncode('invite', { rid }));
   const text = '🧊 내 냉장고 구경할래? 냉비서로 냉장고 관리하고 레시피 추천받아요. 이 링크로 시작하면 우리 둘 다 선물 포인트 받아요 🎁';
   if (navigator.share) navigator.share({ title: '냉비서 초대', text, url }).catch(() => copyText(`${text}\n${url}`));
@@ -1228,6 +1230,7 @@ UI.runScan = async () => {
   try {
     const items = await scanImage(scanFile, S.settings);
     aiConsume(); // 성공했을 때만 1회 차감 (실패는 차감 안 함)
+    track('scan_success', { items: Array.isArray(items) ? items.length : 0 });
     const fixes = loadScanFixes();
     scanResults = items.map((it) => {
       let raw = it.name;
@@ -1843,6 +1846,7 @@ UI.rate = (rid, n) => {
   if (S.ratings[rid] === n) delete S.ratings[rid]; else S.ratings[rid] = n;
   save();
   const v = ratingOf(rid);
+  track('rate_recipe', { rid, stars: v });
   const box = document.getElementById('stars-' + rid);
   if (box) box.outerHTML = starRowHtml(rid);
   toast(v ? `⭐ ${v}점으로 평가했어요 — 추천에 반영돼요` : '평가를 지웠어요');
@@ -2641,6 +2645,7 @@ UI.applyDeduct = () => {
   S.ledger.cooked += 1;
   S.ledger.saved += savedFromExpiring;
   save();
+  track('cook_complete', { servings, saved: savedFromExpiring, total_cooked: S.ledger.cooked }); // 핵심 가치 이벤트
   if (savedFromExpiring > 0) proverbFloat('save'); // 절약 위트 한마디
   // 포인트: 요리 완료 +10P, 임박 재료를 구출했으면 +20P 추가 (각각 일일 상한)
   const pCook = earn('cook');
@@ -3099,7 +3104,7 @@ function render() {
   $$('#tabbar button').forEach((b) => b.classList.toggle('active', b.dataset.tab === tab));
   window.scrollTo({ top: 0 });
 }
-UI.go = (t) => { endMove(); tab = t; render(); };
+UI.go = (t) => { endMove(); tab = t; render(); trackScreen(t); };
 
 $$('#tabbar button').forEach((b) => b.addEventListener('click', () => UI.go(b.dataset.tab)));
 
@@ -3242,6 +3247,11 @@ initGames({
   onPoints: () => { renderTop(); if (tab === 'home') renderHome(); },
   submitScore,
 });
+
+// 사용 계측 시작 — 앱 진입 + 첫 화면(무엇이 쓰이나/리텐션 측정). measurementId 없으면 조용히 no-op.
+initAnalytics();
+track('app_open', { pantry: S.pantry.length, recipes: (S.myRecipes || []).length, logged_in: !!(sync.user && !sync.user.anon) });
+trackScreen(tab);
 
 // 출석 포인트 — 하루 한 번, 앱을 연 것 자체가 절약의 시작
 {

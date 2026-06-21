@@ -12,8 +12,10 @@ export const FIREBASE_CONFIG = {
   messagingSenderId: '63517169912',
   appId: '1:63517169912:web:c1ac9ec44c27c34f58c30d',
   // 사용 계측(GA4) — Firebase 콘솔에서 Analytics 사용 설정 후, 웹앱 구성에 나오는 measurementId(G-XXXX)를 붙여넣으면 켜진다.
-  // 비어 있으면 계측은 조용히 꺼져 있고 앱 동작엔 영향 없음.
-  measurementId: '',
+  measurementId: 'G-K8S0MT7NTL',
+  // 푸시 알림(FCM 웹) — 콘솔 → 프로젝트 설정 → Cloud Messaging → 웹 푸시 인증서(VAPID)에서 '키 쌍' 공개키를 붙여넣으면 켜진다.
+  // 공개값이라 커밋 안전. 비어 있으면 푸시 기능은 조용히 꺼짐.
+  fcmVapidKey: '',
 };
 /* 예시:
 export const FIREBASE_CONFIG = {

@@ -1,0 +1,61 @@
+# 냉비서(main)가 바뀌면 → 허브(great-darwin)의 static-apps/naengbiseo 사본을 자동 갱신.
+# 그래야 ddukkit.com/fridge 가 항상 최신 냉비서를 보여준다(복사방식 자동화).
+# ※ 동기화는 자동, 실제 라이브 반영(오라클)은 Actions "Deploy (ddukkit hub)" 버튼으로.
+name: Sync naengbiseo to hub (/fridge)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'index.html'
+      - 'arcade.html'
+      - 'sw.js'
+      - 'manifest.webmanifest'
+      - 'icon.svg'
+      - 'css/**'
+      - 'js/**'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-fridge
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout 냉비서 (main)
+        uses: actions/checkout@v4
+        with:
+          path: app
+      - name: Checkout 허브 (great-darwin)
+        uses: actions/checkout@v4
+        with:
+          ref: claude/great-darwin-1FmUy
+          path: hub
+          fetch-depth: 0
+      - name: 냉비서 정적 파일을 허브 static-apps/naengbiseo 로 복사
+        run: |
+          set -euo pipefail
+          DEST=hub/static-apps/naengbiseo
+          rm -rf "$DEST"
+          mkdir -p "$DEST"
+          cp -r app/index.html app/arcade.html app/sw.js app/manifest.webmanifest app/icon.svg app/css app/js "$DEST"/
+          echo "복사된 항목:"; ls "$DEST"
+      - name: 변경 있으면 커밋·푸시
+        run: |
+          set -euo pipefail
+          cd hub
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A static-apps/naengbiseo
+          if git diff --cached --quiet; then
+            echo "변경 없음 — 동기화 스킵"
+            exit 0
+          fi
+          git commit -m "sync: 냉비서 → /fridge 사본 갱신 (main ${GITHUB_SHA::7})"
+          git push origin HEAD:claude/great-darwin-1FmUy
+          echo "✅ 허브 사본 갱신 완료 — 라이브 반영은 'Deploy (ddukkit hub)' 버튼을 눌러주세요."

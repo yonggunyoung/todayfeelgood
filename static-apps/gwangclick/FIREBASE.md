@@ -25,7 +25,7 @@ Authentication → 로그인 방법 → **익명(Anonymous)** → 사용 설정.
 (로그인 없이도 모든 기기가 전국 집계에 참여하게 해줍니다)
 
 ## 3) 승인된 도메인 추가
-Authentication → 설정 → 승인된 도메인 → **`ddukkit.com`** 추가.
+Authentication → 설정 → 승인된 도메인 → **`dduckkit.com`** 추가.
 (GitHub Pages로도 열려면 `yonggunyoung.github.io` 도 추가)
 
 ## 4) Firestore 보안 규칙 (복붙)

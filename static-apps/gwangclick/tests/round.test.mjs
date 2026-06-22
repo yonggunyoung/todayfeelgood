@@ -1,58 +1,50 @@
-// gc-round.js 경계 테스트 — 기본 1h / 예외(아샷추 24h) / 경계 전환 / 결정성
+// gc-round.js 경계 테스트 — 기본 6h 순환 / 1회 특집(아샷추 24h) / 경계 / 결정성
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import round from "../gc-round.js";
 
-const B = [{ id: "a" }, { id: "b" }, { id: "ashotchu" }, { id: "c" }];
-const SP = { ashotchu: 24 };
-const ANCHOR = 0; // 1970-01-01 UTC 기준(테스트용)
+const B = [{ id: "a" }, { id: "b" }, { id: "c" }, { id: "d" }];
 const H = 3600000;
+const OPTS = { defaultHours: 6, anchorMs: 0 };
+const FOPTS = { defaultHours: 6, anchorMs: 0, featured: { id: "c", startMs: 100 * H, hours: 24 } };
 
-test("cycle = 1+1+24+1 = 27h", () => {
-  assert.equal(round.cycleHours(B, SP), 27);
+test("기본 6시간 순환", () => {
+  assert.equal(round.roundAt(B, OPTS, 1 * H).id, "a");   // slot0
+  assert.equal(round.roundAt(B, OPTS, 7 * H).id, "b");   // slot1
+  assert.equal(round.roundAt(B, OPTS, 1 * H).hours, 6);
 });
 
-test("기본 1시간 라운드 전환", () => {
-  const r0 = round.roundAt(B, SP, ANCHOR, 0.5 * H);     // 0~1h → a
-  const r1 = round.roundAt(B, SP, ANCHOR, 1.5 * H);     // 1~2h → b
-  assert.equal(r0.id, "a"); assert.equal(r1.id, "b");
-  assert.equal(r0.hours, 1);
+test("같은 6h 라운드 내 키 안정 / 경계서 변경", () => {
+  const x = round.roundAt(B, OPTS, 1 * H), y = round.roundAt(B, OPTS, 5 * H);
+  assert.equal(x.key, y.key);
+  assert.notEqual(x.key, round.roundAt(B, OPTS, 7 * H).key);
 });
 
-test("아샷추는 24시간(예외)", () => {
-  const r = round.roundAt(B, SP, ANCHOR, 2.5 * H);      // 2h부터 24h짜리 ashotchu
-  assert.equal(r.id, "ashotchu"); assert.equal(r.hours, 24);
-  // 2h~26h 내내 같은 라운드 키
-  const mid = round.roundAt(B, SP, ANCHOR, 20 * H);
-  assert.equal(mid.key, r.key);
-  // 26h 지나면 c로
-  const next = round.roundAt(B, SP, ANCHOR, 26.5 * H);
-  assert.equal(next.id, "c");
+test("1회 특집(아샷추=c) 24h 오버라이드", () => {
+  const f = round.roundAt(B, FOPTS, 100.5 * H);
+  assert.equal(f.id, "c"); assert.equal(f.hours, 24); assert.equal(f.featured, true);
+  assert.equal(round.roundAt(B, FOPTS, 123 * H).key, f.key);   // 100~124h 내내 같은 라운드
 });
 
-test("같은 라운드 내 키 안정 / 경계서 키 변경", () => {
-  const x = round.roundAt(B, SP, ANCHOR, 0.1 * H);
-  const y = round.roundAt(B, SP, ANCHOR, 0.9 * H);
-  assert.equal(x.key, y.key);                            // 같은 라운드 = 같은 키(집계 공유)
-  const z = round.roundAt(B, SP, ANCHOR, 1.1 * H);
-  assert.notEqual(x.key, z.key);
+test("특집 끝나면 일반 순환 복귀", () => {
+  const after = round.roundAt(B, FOPTS, 125 * H);             // 124h 이후
+  assert.equal(after.featured, false);
+  assert.equal(after.hours, 6);
 });
 
-test("endMs/startMs 일관 + 다음 사이클 반복", () => {
-  const r = round.roundAt(B, SP, ANCHOR, 0.5 * H);
-  assert.equal(r.endMs - r.startMs, 1 * H);
-  const cyc = 27 * H;
-  const r2 = round.roundAt(B, SP, ANCHOR, 0.5 * H + cyc); // 한 사이클 뒤 같은 떡밥
-  assert.equal(r2.id, r.id);
+test("특집 전/후 일반 순환은 정상", () => {
+  assert.equal(round.roundAt(B, FOPTS, 1 * H).id, "a");        // 특집 창 밖 → 일반
+  assert.equal(round.roundAt(B, FOPTS, 1 * H).featured, false);
 });
 
-test("previousRound = 직전 떡밥", () => {
-  const prev = round.previousRound(B, SP, ANCHOR, 1.5 * H); // 현재 b → 직전 a
+test("previousRound — 직전 라운드", () => {
+  const prev = round.previousRound(B, OPTS, 7 * H);            // 현재 b → 직전 a
   assert.equal(prev.id, "a");
+  const prevF = round.previousRound(B, FOPTS, 100.5 * H);      // 특집 직전 = 일반 라운드
+  assert.equal(prevF.featured, false);
 });
 
-test("변조 입력에도 throw 없이 null/기본", () => {
-  assert.equal(round.roundAt(null, SP, ANCHOR, 0), null);
-  assert.equal(round.roundAt([], SP, ANCHOR, 0), null);
-  assert.equal(round.hoursOf({ id: "x" }, SP), 1);       // 미지정 → 1
+test("변조 입력 throw 없이 null", () => {
+  assert.equal(round.roundAt(null, OPTS, 0), null);
+  assert.equal(round.roundAt([], OPTS, 0), null);
 });

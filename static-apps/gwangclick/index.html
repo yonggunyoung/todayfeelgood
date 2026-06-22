@@ -202,6 +202,8 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .gl-flash{position:absolute;width:16px;height:16px;border-radius:50%;background:radial-gradient(circle,#fff 0%,var(--c,#ffd76a) 40%,transparent 70%);pointer-events:none;will-change:transform,opacity;animation:gl-flash .5s ease-out forwards}
 @media (prefers-reduced-motion: reduce){.gl-spark,.gl-flash{display:none}}
 .winner-banner{margin:8px 0 2px;padding:8px 12px;border-radius:12px;font-size:.86rem;font-weight:700;text-align:center;background:linear-gradient(90deg,rgba(255,215,106,.16),rgba(255,255,255,.05));border:1px solid rgba(255,215,106,.35)}
+.gl-flagchip{display:flex;align-items:center;gap:5px;font:700 11px system-ui;color:#fff;white-space:nowrap;pointer-events:none;transform:translate(-50%,-130%);text-shadow:0 1px 3px rgba(0,0,0,.9)}
+.gl-flagchip img{border-radius:2px;box-shadow:0 0 0 1px rgba(255,255,255,.3)}
 .globe-hero{margin-top:14px}
 .globe-cap{display:flex;align-items:center;gap:6px;font-size:.82rem;opacity:.85;margin-bottom:7px;letter-spacing:.2px}
 .gl-slot{position:relative;width:100%}
@@ -307,10 +309,11 @@ var BATTLES = GCTopics.BATTLES;
 function fnv1a(s){var h=2166136261;for(var i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619);}return h>>>0;}
 function dayNumber(d){var ms=Date.parse(d+'T00:00:00Z');return isNaN(ms)?0:Math.floor(ms/86400000);}
 function battleOfDay(d){var n=dayNumber(d);return BATTLES[((n%BATTLES.length)+BATTLES.length)%BATTLES.length];}
-/* ── 라운드(대전 한 판) — 기본 1시간, 예외(아샷추=24h). 전 세계 공유·집계 키 = round.key ── */
-var ROUND_ANCHOR=Date.UTC(2026,0,1,0,0,0), ROUND_SPECIAL={ashotchu:24};
-function roundNow(){ try{ var r=GCRound.roundAt(GCTopics.BATTLES,ROUND_SPECIAL,ROUND_ANCHOR,Date.now()); if(r)return r; }catch(e){} var d=todayStr(); return {key:d,topic:battleOfDay(d),hours:24,startMs:Date.now(),endMs:Date.now()+3600000}; }
-function roundPrev(){ try{ return GCRound.previousRound(GCTopics.BATTLES,ROUND_SPECIAL,ROUND_ANCHOR,Date.now()); }catch(e){ return null; } }
+/* ── 라운드(대전 한 판) — 기본 6시간 순환. 아샷추는 1회 특집 24시간(지금부터). 전세계 공유·키=round.key ── */
+var ROUND_OPTS={ defaultHours:6, anchorMs:Date.UTC(2026,0,1,0,0,0),
+  featured:{ id:'ashotchu', startMs:Date.UTC(2026,5,22,12,0,0), hours:24 } };
+function roundNow(){ try{ var r=GCRound.roundAt(GCTopics.BATTLES,ROUND_OPTS,Date.now()); if(r)return r; }catch(e){} var d=todayStr(); return {key:d,topic:battleOfDay(d),hours:6,startMs:Date.now(),endMs:Date.now()+6*3600000}; }
+function roundPrev(){ try{ return GCRound.previousRound(GCTopics.BATTLES,ROUND_OPTS,Date.now()); }catch(e){ return null; } }
 function roundClock(ms){ ms=Math.max(0,ms|0); var s=Math.floor(ms/1000),h=Math.floor(s/3600),m=Math.floor((s%3600)/60),x=s%60; var p=function(n){return (n<10?'0':'')+n;}; return (h>0?h+':':'')+p(m)+':'+p(x); }
 var INTRO_KEY='';
 function startRoundTimer(){ if(window._roundT)return; window._roundT=setInterval(roundTick,1000); }
@@ -1452,7 +1455,7 @@ function applyGlobeDetail(){
   if(GLB.mode!=='3d'||!GLB.globe)return;
   try{
     loadLand().then(function(geo){ if(geo&&geo.features&&GLB.globe){ try{GLB.globe.polygonsData(geo.features);}catch(e){} } });
-    if(GLB.lite){ GLB.globe.ringsData([]); if(GLB.globe.labelsData)GLB.globe.labelsData([]); }
+    if(GLB.lite){ GLB.globe.ringsData([]); if(GLB.globe.labelsData)GLB.globe.labelsData([]); if(GLB.globe.htmlElementsData)GLB.globe.htmlElementsData([]); }
     try{ var c=GLB.globe.controls(); if(c)c.autoRotate=(!GLB.lite && GLB.rotate); }catch(e){}  // 배틀 중 자동회전 OFF(경량·차분)
   }catch(e){}
 }
@@ -1615,6 +1618,13 @@ function startGlobe3D(token){
      .labelSize(function(d){return 0.9+1.1*(d.weight||0);})
      .labelDotRadius(function(d){return 0.16+0.4*(d.weight||0);})
      .labelResolution(2).labelAltitude(0.01);
+    // 막대 옆 국기칩(HTML 요소) — 실제 국기 이미지(이모지 ?? 깨짐 회피). globe.gl이 뒷면 자동 숨김.
+    if(g.htmlElementsData){
+      g.htmlElementsData([])
+       .htmlLat('lat').htmlLng('lng')
+       .htmlAltitude(function(d){return 0.05+0.08*(d.weight||0);})
+       .htmlElement(function(d){return globeFlagChip(d);});
+    }
     // DPR 캡 + 픽셀 경량(고해상도 폰 보호).
     try{ var r=g.renderer(); if(r&&r.setPixelRatio)r.setPixelRatio(GCGlobe.cappedDpr(window.devicePixelRatio,GLOBE_DPR_CAP)); }catch(e){}
     sizeGlobe3D();
@@ -1638,11 +1648,12 @@ function pushPoints3D(){
   if(!GLB.globe)return;
   try{
     GLB.globe.pointsData(GLB.pts.slice());   // 전체(최대 250) — 전세계 실시간(D15)
-    if(GLB.lite){ GLB.globe.ringsData([]); if(GLB.globe.labelsData)GLB.globe.labelsData([]); return; } // 배틀: 점만(경량)
+    if(GLB.lite){ GLB.globe.ringsData([]); if(GLB.globe.labelsData)GLB.globe.labelsData([]); if(GLB.globe.htmlElementsData)GLB.globe.htmlElementsData([]); return; } // 배틀: 점만(경량)
     // 링은 상위 10개 핫스팟(쇳물 펄스·여전히 경량).
     GLB.globe.ringsData(GLB.pts.slice(0,10));
-    // 라벨은 상위 4개(국기+우세%) — '어디쯤'을 글자로도(D14·경량).
-    if(GLB.globe.labelsData)GLB.globe.labelsData(GLB.pts.slice(0,4));
+    // 막대 옆 국기칩(상위 8개) — 텍스트 라벨 대신 실제 국기(?? 깨짐 해결). 글자 라벨은 끔(중복 방지).
+    if(GLB.globe.htmlElementsData)GLB.globe.htmlElementsData(GLB.pts.slice(0,8));
+    if(GLB.globe.labelsData)GLB.globe.labelsData([]);
   }catch(e){}
 }
 /* 지구본 라벨 텍스트 — 국기 + 우세%. 국기 없으면 코드. (집계 데이터 기반·짧게) */
@@ -1661,9 +1672,19 @@ function ringHot(d){
 }
 function globeLabelText(d){
   if(!d)return '';
-  // 국기 이모지는 윈도우에서 ??로 깨짐 → 나라 이름(언어별)으로. (3D 라벨은 텍스트라 국기 이미지 불가)
   var nm=''; try{nm=countryNameLocal(d.code)||d.code||'';}catch(e){nm=d.code||'';}
   return (nm?nm+' ':'')+(d.share!=null?d.share+'%':'');
+}
+/* 지구본 막대 옆 국기칩(HTML) — 실제 국기 이미지(flagcdn) + 나라명 + 우세%. 이모지 ?? 깨짐 회피.
+ * 이미지 로드 실패(차단 등)면 onerror로 국기만 숨김 → 글자는 남음(graceful). */
+function globeFlagChip(d){
+  var box=document.createElement('div'); box.className='gl-flagchip';
+  if(!d)return box;
+  var code=String(d.code||'').toLowerCase(), nm=''; try{nm=countryNameLocal(d.code)||d.code||'';}catch(e){nm=d.code||'';}
+  var sh=(d.share!=null?' '+d.share+'%':''), col=d.color||'#fff';
+  box.innerHTML=(/^[a-z]{2}$/.test(code)?'<img src="https://flagcdn.com/20x15/'+code+'.png" width="20" height="15" loading="lazy" alt="" onerror="this.remove()">':'')+
+    '<span style="border-bottom:2px solid '+col+'">'+esc(nm)+sh+'</span>';
+  return box;
 }
 function focusGlobe(force){
   if(!GLB.pts.length)return;

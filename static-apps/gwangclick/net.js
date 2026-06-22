@@ -42,6 +42,7 @@
         var appM = mods[0], authM = mods[1], fsM = mods[2];
         state.app = appM.initializeApp(state.cfg, 'gwangclick'); // 냉비서와 같은 프로젝트라도 앱 인스턴스는 분리
         state.auth = authM.getAuth(state.app);
+        state.authM = authM;
         state.fs = fsM;
         state.db = fsM.getFirestore(state.app);
         var cred = state.auth.currentUser || (await authM.signInAnonymously(state.auth)).user;
@@ -226,10 +227,44 @@
     } catch (e) { return null; }
   }
 
+  // ── 구글 로그인(선택) ── 익명 계정을 그대로 업그레이드(linkWithPopup)해 기존 기록 유지.
+  //   이미 그 구글계정이 쓰던 uid가 있으면 그쪽으로 전환(signInWithPopup) → 기기 간 동일 신원.
+  //   ⚠️ 콘솔에서 'Google 로그인 사용' + 승인된 도메인(ddukkit.com) 설정돼야 동작(FIREBASE.md).
+  function userInfo() {
+    var u = state.auth && state.auth.currentUser; if (!u) return null;
+    return { uid: u.uid, name: u.displayName || '', photo: u.photoURL || '', anon: !!u.isAnonymous };
+  }
+  async function signInGoogle() {
+    try {
+      if (!(await init())) return null;
+      var A = state.authM, provider = new A.GoogleAuthProvider(), u = state.auth.currentUser, cred;
+      if (u && u.isAnonymous && A.linkWithPopup) {
+        try { cred = await A.linkWithPopup(u, provider); }
+        catch (e) {
+          if (e && (e.code === 'auth/credential-already-in-use' || e.code === 'auth/email-already-in-use')) cred = await A.signInWithPopup(state.auth, provider);
+          else throw e;
+        }
+      } else { cred = await A.signInWithPopup(state.auth, provider); }
+      var nu = (cred && cred.user) || state.auth.currentUser;
+      state.uid = nu && nu.uid; state.on = !!state.uid;
+      return userInfo();
+    } catch (e) { state.err = (e && e.code) || String(e); return null; }
+  }
+  async function signOutUser() {
+    try {
+      if (!state.auth) return null;
+      await state.authM.signOut(state.auth);
+      var c = await state.authM.signInAnonymously(state.auth);
+      state.uid = c.user && c.user.uid; state.on = !!state.uid;
+      return userInfo();
+    } catch (e) { return null; }
+  }
+
   window.GCNet = {
     available: available, init: init, peek: peek, watch: watch,
     submit: submit, rankOf: rankOf, leaderboard: leaderboard,
     submitProposal: submitProposal, listProposals: listProposals, voteProposal: voteProposal,
+    signInGoogle: signInGoogle, signOutUser: signOutUser, userInfo: userInfo,
     uid: function () { return state.uid; },
     on: function () { return state.on; },
     err: function () { return state.err; },

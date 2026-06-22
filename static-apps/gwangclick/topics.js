@@ -306,7 +306,19 @@
           name:{ ko:"퍼진파", en:"Team Soft" },
           slogan:{ ko:"국물 머금고 푹 퍼져야 맛", en:"Soaked soft is the real taste" } },
       taunts:{ ko:["퍼진 면은 그냥 죽이잖아","꼬들은 덜 익은 거 아니냐","면 불기 전에 빨리 먹어","국물 밴 면이 진리지"],
-               en:["Soggy noodles are basically porridge","Firm is just undercooked, no?","Eat fast before it bloats","Broth-soaked noodles win"] } }
+               en:["Soggy noodles are basically porridge","Firm is just undercooked, no?","Eat fast before it bloats","Broth-soaked noodles win"] } },
+
+    { id:"ashotchu",
+      tag:{ ko:"아샷추 대전", en:"A-Shot-Chu" },
+      q:{ ko:"'아샷추' 너는 뭐로 알았어?", en:"'A-shot-chu' — what did you think it meant?" },
+      a:{ key:"americano", emoji:"☕", color:"#6f4e37",
+          name:{ ko:"아아+샷파", en:"Americano+Shot" },
+          slogan:{ ko:"아이스 아메리카노에 샷 추가인 줄", en:"Thought it's iced americano + shot" } },
+      b:{ key:"icetea", emoji:"🥤", color:"#d99a2b",
+          name:{ ko:"아이스티+샷파", en:"Iced Tea+Shot" },
+          slogan:{ ko:"아이스티에 샷 추가, 이게 정답", en:"Iced tea + shot — that's the real one" } },
+      taunts:{ ko:["아아+샷은 그냥 진한 아메리카노 아님? ㅋㅋ","아이스티+샷이 국룰이지","컴포즈 가서 직접 시켜봐","결국 둘 다 카페인 폭탄"],
+               en:["Americano+shot is just... strong americano?","Iced tea + shot is the way","Go order it yourself","Either way it's a caffeine bomb"] } }
   ];
 
   // {ko,en} 맵에서 lang 값을 고르되, 없으면 ko로 폴백. 둘 다 없거나 비객체면 ''.

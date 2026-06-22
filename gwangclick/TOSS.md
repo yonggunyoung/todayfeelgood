@@ -7,12 +7,15 @@
 
 ## ✅ 이미 끝난 것 (코드/구조)
 - [x] **단독 정적 웹앱** — 빌드 없이 URL 하나로 토스 WebView에서 바로 구동 (`index.html`)
-- [x] **토스 어댑터** `toss.js` — `window.AppsInToss` 등 전역 자동 감지, 밖에선 안전 폴백
-- [x] **보상형 광고 코드** — 결과 화면 '2배 자랑'이 토스 보상형 SDK로 자동 분기 (`AD.tossRewardUnitId`만 채우면 실광고)
+- [x] **토스 어댑터** `toss.js` — 전역 자동 감지(`getOperationalEnvironment`/`window.AppsInToss` 등), 밖에선 안전 폴백
+- [x] **보상형 광고 코드(실 SDK 정합 완료)** — 결과 화면 '2배 자랑'이 자동 분기. `AD.tossAdGroupId`만 채우면 실광고.
+  - 공식 예제로 검증: **로드→표시 2단계**(`loadAppsInTossAdMob`→`showAppsInTossAdMob`), 식별자 **`adGroupId`**(adUnitId 아님), 이벤트 `loaded·impression·show·dismissed·failedToShow·userEarnedReward`, load는 cleanup 반환.
+  - web-framework(정적웹)/Granite(RN) 전역명 차이는 `toss.js`가 **폴백 탐색**으로 흡수 · 미존재 시 하우스 광고 폴백.
+- [x] **입점 자산** — 아이콘 `icon-512.png`(정사각)·`icon-512-rounded.png`(마스커블), 스토어 문구+스크린샷 가이드 `STORE.md`, manifest PNG 아이콘·iOS apple-touch-icon(PNG).
 - [x] **비개인화/청소년 안전** — 배틀 화면 광고 0, `AD.nonPersonalized=true`
 - [x] **safe-area/풀스크린** — `viewport-fit=cover`, 세로 고정, PWA 매니페스트/아이콘
 - [x] **실제 전국 대전 백엔드 코드** — `net.js`로 진영·광클 실시간 집계 + 진짜 순위·전국 랭킹·지역 점령 (`fb-config.js`만 채우면 ON · 없으면 데모 폴백 → **FIREBASE.md** 참고)
-- [x] **개인정보처리방침** `privacy.html` — 서버/광고 식별자 고지 포함
+- [x] **개인정보처리방침** `privacy.html` — 광고 식별자 + **전국 집계(Firebase 익명 데이터) 고지** 반영(서버없음 단정 → 모드별 정확화, 반려 리스크 제거)
 
 ## ⬜ 당신만 할 수 있는 것 (계정·콘솔·자산)
 계정 로그인·심사 제출·정산은 소유자만 가능합니다. 아래가 실제 "할 일".
@@ -23,8 +26,8 @@
 - [ ] 광고/정산 받을 거면 **정산 계좌·세금 정보** 등록 *(개인 개발자도 가능 · 정산·세금 기준은 콘솔 확인)*
 
 ### 1. 호스팅 URL 확정 *(제출에 필요)*
-- [x] 게임이 열리는 **공개 URL**: `https://dduckkit.com` (뚝딱웹 연결 완료)
-- [ ] https 필수 · `https://dduckkit.com/privacy.html` 도 함께 열리는지 확인
+- [x] 게임이 열리는 **공개 URL**: `https://ddukkit.com` (뚝딱웹 연결 완료)
+- [ ] https 필수 · `https://ddukkit.com/privacy.html` 도 함께 열리는지 확인
 - [ ] 외부요청: 폰트 CDN 1 + Firebase(전국 집계). 둘 다 정상 통신 — 심사 시 "광고/네트워크 사용" 고지에 반영
 
 ### 1-B. 실제 대전 백엔드 켜기 *(net.js 활성화)*
@@ -34,16 +37,16 @@
 ### 2. 미니앱 등록 (콘솔)
 - [ ] 앱 이름: **광클대전**
 - [ ] 카테고리: **게임**(또는 엔터테인먼트)
-- [ ] **아이콘**: 규격 PNG(예 512×512) — `icon.svg`를 PNG로 변환해 업로드 *(규격은 콘솔 기준)*
-- [ ] **스크린샷**: 인트로 / 배틀 / 결과 폰 캡처 2~4장
-- [ ] **한 줄 소개·설명**: "오늘의 떡밥에 내 편 골라 60초 광클! 전국 진영전"
+- [x] **아이콘**: `icon-512.png` 생성 완료(512×512 PNG) — 그대로 업로드 *(규격은 콘솔 기준)*
+- [ ] **스크린샷**: 인트로 / 배틀 / 결과 폰 캡처 2~4장 → 촬영 가이드 **`STORE.md`**
+- [x] **한 줄 소개·상세 설명·키워드**: **`STORE.md`**에 대/중/소 버전 정리 — 복붙
 - [ ] **개인정보처리방침 URL** *(필수)* — 아래 4번
 - [ ] **고객 문의 채널**(이메일 등)
 - [ ] **연령 등급** — 전체이용가/청소년 적합 확인
 
 ### 3. 보상형 광고 연결 (우리 코드와 1:1)
-- [ ] 콘솔에서 **보상형 광고 단위 생성** → 발급 ID를 `index.html`의 `AD.tossRewardUnitId='...'`에 입력
-- [ ] `toss.js`의 `rewardedAd()`가 `showFullScreenAd`→`userEarnedReward` 흐름 호출 → **입점 시점 공식 광고 API로 함수/이벤트명 최종 확인**(다르면 `toss.js`만 30분 수정)
+- [ ] 콘솔에서 **보상형 광고 그룹 생성** → 발급된 **광고 그룹ID**를 `index.html`의 `AD.tossAdGroupId='...'`에 입력 (※ adUnitId 아님)
+- [x] `toss.js`가 실제 흐름(`loadAppsInTossAdMob`→`showAppsInTossAdMob`·`adGroupId`·`userEarnedReward`)에 정합 — 전역명 차이는 폴백 흡수. *입점 시 콘솔 SDK 버전과 1회 대조 권장*
 - [ ] 광고 설정에서 **비개인화/child-directed** 옵션 확인(청소년 보호)
 
 ### 4. 개인정보처리방침 페이지 *(차단 요소)*
@@ -72,4 +75,4 @@
 - **스토어 문구**(한 줄 소개·설명·키워드)
 - 아이콘 PNG 변환 가이드 / 스크린샷 촬영용 깔끔한 화면
 
-> 가장 빠른 길: **① 호스팅 URL 확정(dduckkit) → ② privacy.html 올리기 → ③ 개발자 등록 → ④ 미니앱 등록·광고단위 생성 → ⑤ 제출.**
+> 가장 빠른 길: **① 호스팅 URL 확정(ddukkit) → ② privacy.html 올리기 → ③ 개발자 등록 → ④ 미니앱 등록·광고단위 생성 → ⑤ 제출.**

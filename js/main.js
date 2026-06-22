@@ -242,6 +242,45 @@ function qtyLabel(p) {
 
 const catClass = (name) => `t-${findIng(name)?.cat || '기타'}`;
 
+/* ── 재료 아이콘 (디자인 시안 FoodIcon) — 재료를 귀여운 플랫 SVG 캐릭터로.
+   임박(d<=1)하면 우는 표정(눈물 애니), 그 외엔 웃는 표정. 매칭 안 되는 재료는
+   기존 이모지로 폴백(특이 재료·조리음식까지 커버 유지). 사진이 있으면 사진 우선. */
+function foodShape(name) {
+  const f = String(name || '');
+  const has = (...a) => a.some((x) => f.includes(x));
+  if (has('토마토', '방울토마토')) return '<circle cx="16" cy="18" r="9.5" fill="#FF6B5E"/><circle cx="12.5" cy="14.5" r="2.4" fill="#fff" opacity=".18"/><path d="M16 9 l2.4 -3 M16 9 l-2.4 -3 M16 9 l0 -3.6" stroke="#3FA45A" stroke-width="1.7" stroke-linecap="round"/>';
+  if (has('양배추', '배추')) return '<circle cx="16" cy="18" r="9.5" fill="#76C24F"/><path d="M9 17 Q16 11.5 23 17 M10 21 Q16 16.5 22 21" stroke="#A7DD80" stroke-width="1.4" fill="none" stroke-linecap="round"/>';
+  if (has('우유', '두유')) return '<path d="M10 12 L16 7 L22 12 Z" fill="#EAF3FA"/><rect x="10" y="12" width="12" height="16" rx="2" fill="#fff" stroke="#DCE6EE" stroke-width="1"/><rect x="10" y="18" width="12" height="3.4" fill="#7FB5E6"/>';
+  if (has('달걀', '계란')) return '<ellipse cx="16" cy="19" rx="8.5" ry="10.5" fill="#fff" stroke="#F0E9D8" stroke-width="1"/><ellipse cx="12.5" cy="14" rx="2.2" ry="3" fill="#fff" opacity=".7"/>';
+  if (has('양파')) return '<circle cx="16" cy="18" r="9.5" fill="#E7C9E2"/><path d="M16 9 v-3 M14 9 l-1 -2.5 M18 9 l1 -2.5" stroke="#B98FB0" stroke-width="1.4" stroke-linecap="round"/><path d="M11 18 Q16 27 21 18" stroke="#CFA6C8" stroke-width="1.2" fill="none"/>';
+  if (has('당근')) return '<path d="M16 28 L9.5 12 Q16 9.5 22.5 12 Z" fill="#F59331"/><path d="M16 9.5 l0 -4 M13 9.5 l-2 -3.6 M19 9.5 l2 -3.6" stroke="#5BB85C" stroke-width="1.9" stroke-linecap="round"/>';
+  if (has('닭')) return '<ellipse cx="16" cy="18" rx="9.5" ry="8.4" fill="#F4C9B8"/><ellipse cx="12.5" cy="14.5" rx="2.2" ry="1.8" fill="#fff" opacity=".4"/>';
+  if (has('치즈', '버터')) return '<path d="M7 24 L7 16 L25 12 L25 24 Z" fill="#FFCE4A"/><circle cx="12" cy="20" r="1.3" fill="#F0B400"/><circle cx="18.5" cy="19" r="1.5" fill="#F0B400"/>';
+  if (has('브로콜리')) return '<rect x="14.5" y="18" width="3" height="9" rx="1.5" fill="#BFD89A"/><circle cx="12" cy="15" r="5" fill="#4FB36B"/><circle cx="20" cy="15" r="5" fill="#4FB36B"/><circle cx="16" cy="11.5" r="5.2" fill="#5CC078"/>';
+  if (has('밥', '쌀')) return '<path d="M7.5 18 Q16 11.5 24.5 18 Z" fill="#fff"/><path d="M6.5 18 L25.5 18 Q24 26 16 26 Q8 26 6.5 18 Z" fill="#EDEFF1" stroke="#DDE2E6" stroke-width="1"/>';
+  if (has('만두')) return '<path d="M7 22 Q7 13 16 13 Q25 13 25 22 Z" fill="#EFE2C2"/><path d="M10 16 l1.4 4 M14 14.5 l1 5 M18 14.5 l-1 5 M22 16 l-1.4 4" stroke="#D8C49A" stroke-width="1" stroke-linecap="round"/>';
+  if (has('두부')) return '<rect x="7" y="11" width="18" height="15" rx="3.5" fill="#FFFDF6" stroke="#ECE7D6" stroke-width="1"/>';
+  if (has('돼지', '삼겹')) return '<rect x="7" y="12" width="18" height="13" rx="5.5" fill="#F3B6BE"/><rect x="7" y="18" width="18" height="3" fill="#fff" opacity=".5"/>';
+  if (has('애호박', '호박')) return '<rect x="8" y="13" width="16" height="10" rx="5" fill="#6FB84A" transform="rotate(-12 16 18)"/>';
+  if (has('대파')) return '<rect x="14" y="8" width="4" height="20" rx="2" fill="#8CC63F"/><rect x="14" y="20" width="4" height="8" rx="2" fill="#EFEAD0"/>';
+  if (has('바나나')) return '<path d="M9 11 Q11 24 23 23 Q15 21 13 11 Z" fill="#F6D33C"/>';
+  return null;
+}
+// 매칭되는 재료만 SVG, 아니면 null(호출부가 이모지로 폴백)
+function foodIcon(name, { expiring = false, size = 44 } = {}) {
+  const shape = foodShape(name);
+  if (!shape) return null;
+  const face = expiring
+    ? '<path d="M13.8 21.6 Q16 19.2 18.2 21.6" stroke="#2b2b2b" stroke-width="1.3" fill="none" stroke-linecap="round"/><path d="M20.4 18.6 Q22 21.2 22 22.4 a1.4 1.4 0 0 1 -2.8 0 Q19 21.2 20.4 18.6 Z" fill="#69B7F0" class="nb-tear"/>'
+    : '<ellipse cx="9.6" cy="19.4" rx="1.8" ry="1.1" fill="#FF9E8E" opacity=".75"/><ellipse cx="22.4" cy="19.4" rx="1.8" ry="1.1" fill="#FF9E8E" opacity=".75"/><path d="M14 20 Q16 22.4 18 20" stroke="#2b2b2b" stroke-width="1.3" fill="none" stroke-linecap="round"/>';
+  return `<svg class="food-ic" viewBox="0 0 32 32" width="${size}" height="${size}" style="display:block;overflow:visible" aria-hidden="true"><ellipse cx="16" cy="29.5" rx="8" ry="1.6" fill="#000" opacity=".07"/>${shape}<circle cx="12.5" cy="16.5" r="1.7" fill="#2b2b2b"/><circle cx="19.5" cy="16.5" r="1.7" fill="#2b2b2b"/><circle cx="11.9" cy="15.9" r=".5" fill="#fff"/><circle cx="18.9" cy="15.9" r=".5" fill="#fff"/>${face}</svg>`;
+}
+// 재료 글리프: 사진 > FoodIcon SVG > 이모지 (조리음식·특이재료는 이모지 유지)
+function ingGlyph(name, emoji, { photo = '', expiring = false, size = 44 } = {}) {
+  if (photo) return `<img src="${photo}" alt="" />`;
+  return foodIcon(name, { expiring, size }) || emoji || '🍽️';
+}
+
 // 유튜브 링크 → 영상 ID
 function ytId(url) {
   if (!url) return null;
@@ -347,7 +386,7 @@ function renderHome() {
         </div>`).join('') +
       expiring.map((p) => `
         <div class="item">
-          <span class="emoji ${catClass(p.name)}">${p.photo ? `<img src="${p.photo}" alt="" />` : p.emoji}</span>
+          <span class="emoji ${catClass(p.name)}">${ingGlyph(p.name, p.emoji, { photo: p.photo, expiring: daysLeft(p.expiresAt) <= 1, size: 36 })}</span>
           <div class="grow" onclick="UI.editPantry('${p.id}')"><div class="name">${esc(p.name)}</div><div class="sub">${qtyLabel(p)} · ${LOC_LABEL[p.location]}</div></div>
           ${stampFor(daysLeft(p.expiresAt))}
           <button class="btn btn-sm btn-tint" onclick="UI.useIdeas('${esc(p.name)}')">활용 →</button>
@@ -432,11 +471,14 @@ function chrBits(d, key) {
 function fItem(p) {
   const d = daysLeft(p.expiresAt);
   const c = chrBits(d, 'p:' + p.id);
+  // 시안 FoodIcon이 매칭되면 그 자체가 표정 캐릭터 → 별도 눈/눈물 오버레이는 생략(중복 방지).
+  // 매칭 안 되는 재료는 기존 이모지 + 눈 오버레이 유지(특이재료 커버 + 위트 보존).
+  const useSvg = !p.photo && !!foodShape(p.name);
   return `
     <button class="f-item${c.cls}" data-move="p:${p.id}" onclick="UI.editPantry('${p.id}')">
-      ${c.bubble}${c.hand}
+      ${c.bubble}${useSvg ? '' : c.hand}
       ${d <= 3 ? `<span class="fi-dot ${d <= 1 ? 'dot-red' : 'dot-amber'}"></span>` : ''}
-      <span class="fi-face">${p.photo ? `<img src="${p.photo}" alt="" />` : p.emoji}</span>
+      <span class="fi-face">${ingGlyph(p.name, p.emoji, { photo: p.photo, expiring: d <= 1, size: 44 })}</span>
       <span class="fi-name">${esc(p.name)}</span>
     </button>`;
 }
@@ -613,7 +655,7 @@ function renderPantry() {
       </div>` +
       (list.length ? list.map((p) => `
         <div class="item" onclick="UI.editPantry('${p.id}')">
-          <span class="emoji ${catClass(p.name)}">${p.photo ? `<img src="${p.photo}" alt="" />` : p.emoji}</span>
+          <span class="emoji ${catClass(p.name)}">${ingGlyph(p.name, p.emoji, { photo: p.photo, expiring: daysLeft(p.expiresAt) <= 1, size: 36 })}</span>
           <div class="grow"><div class="name">${esc(p.name)}</div>
             <div class="sub">${qtyLabel(p)} · ${LOC_LABEL[p.location]} · ~${p.expiresAt || '기한 없음'}</div></div>
           ${stampFor(daysLeft(p.expiresAt))}

@@ -1578,11 +1578,12 @@ function startGlobe3D(token){
      .pointResolution(3)                   // 더 저폴리(경량)
      .pointsMerge(true)                     // 전 국가(최대 250) 1지오메트리 병합 → 경량(D15)
      .pointLabel(function(d){return globePointLabel(d);});
-    // 링(타격 파동) — 상위 핫스팟만 은은하게(개수 적게 — 경량).
+    // 링(타격 펄스) — 볼륨 비례 '쇳물': 핫스팟=빠르고 잦고 밝게(흰쇳물), 한산=느리고 드물게.
     g.ringsData([])
-     .ringLat('lat').ringLng('lng').ringColor(function(d){return function(){return d.color;};})
-     .ringMaxRadius(function(d){return 2+5*(d.weight||0);}).ringPropagationSpeed(1.4)
-     .ringRepeatPeriod(function(d){return 1100-500*(d.weight||0);});
+     .ringLat('lat').ringLng('lng').ringColor(function(d){return ringHot(d);})
+     .ringMaxRadius(function(d){return 1.6+6*(d.weight||0);})
+     .ringPropagationSpeed(function(d){return 2+5*(d.weight||0);})       // 가중치 비례 속도
+     .ringRepeatPeriod(function(d){return 1000-780*(d.weight||0);});     // 핫스팟≈220ms(연타)·한산≈1000ms
     // 라벨(디테일) — 상위 핫스팟에 국기+우세% 표기. 개수 적게(경량). 텍스트는 비신뢰값 아님(집계).
     g.labelsData([])
      .labelLat('lat').labelLng('lng').labelText(function(d){return globeLabelText(d);})
@@ -1614,13 +1615,26 @@ function pushPoints3D(){
   try{
     GLB.globe.pointsData(GLB.pts.slice());   // 전체(최대 250) — 전세계 실시간(D15)
     if(GLB.lite){ GLB.globe.ringsData([]); if(GLB.globe.labelsData)GLB.globe.labelsData([]); return; } // 배틀: 점만(경량)
-    // 링은 상위 6개 핫스팟만(경량·시각 강조).
-    GLB.globe.ringsData(GLB.pts.slice(0,6));
+    // 링은 상위 10개 핫스팟(쇳물 펄스·여전히 경량).
+    GLB.globe.ringsData(GLB.pts.slice(0,10));
     // 라벨은 상위 4개(국기+우세%) — '어디쯤'을 글자로도(D14·경량).
     if(GLB.globe.labelsData)GLB.globe.labelsData(GLB.pts.slice(0,4));
   }catch(e){}
 }
 /* 지구본 라벨 텍스트 — 국기 + 우세%. 국기 없으면 코드. (집계 데이터 기반·짧게) */
+/* 링 색: 시간 t(0→1)에 따라 알파가 사라지는 '펄스'. 핫스팟(weight↑)은 시작이 흰쇳물처럼 밝게. */
+function ringHot(d){
+  var hex=((d&&d.color)||'#ffd76a').replace('#','');
+  if(hex.length===3)hex=hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2];
+  var r=parseInt(hex.slice(0,2),16)||255, g=parseInt(hex.slice(2,4),16)||215, b=parseInt(hex.slice(4,6),16)||100;
+  var w=(d&&d.weight)||0;
+  return function(t){
+    var a=Math.max(0,1-t);
+    var m=w>0.5?(1-t)*0.65:0;                 // 핫스팟: 초반 흰색 혼합(쇳물 코어)
+    var rr=Math.round(r+(255-r)*m), gg=Math.round(g+(245-g)*m), bb=Math.round(b+(190-b)*m);
+    return 'rgba('+rr+','+gg+','+bb+','+a.toFixed(3)+')';
+  };
+}
 function globeLabelText(d){
   if(!d)return '';
   // 국기 이모지는 윈도우에서 ??로 깨짐 → 나라 이름(언어별)으로. (3D 라벨은 텍스트라 국기 이미지 불가)

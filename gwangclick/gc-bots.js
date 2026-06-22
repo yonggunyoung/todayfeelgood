@@ -183,7 +183,7 @@
   }
 
   var api = {
-    enabled: true,           // ← 클라 표시모드 ON(설정 0). 끄려면 false
+    enabled: true,           // 라이브 켜기(구분불가·실유저 차면 자동소멸). 끄려면 false
     FLOOR: FLOOR, PEAK: PEAK, FADE: FADE,
     leanOf: leanOf, participants: participants, totals: totals,
     blend: blend, rows: rows, mergeRows: mergeRows, blendRank: blendRank, fade: fade,

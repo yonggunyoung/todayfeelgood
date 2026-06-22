@@ -8,36 +8,75 @@
 <meta name="description" content="민초 vs 반민초? 부먹 vs 찍먹? 오늘의 떡밥에 내 편을 골라 60초 광클! 전국 흐름을 내 편으로 끌어와라." />
 <link rel="manifest" href="./manifest.webmanifest" />
 <link rel="icon" href="./icon.svg" type="image/svg+xml" />
-<link rel="apple-touch-icon" href="./icon.svg" />
+<link rel="apple-touch-icon" href="./icon-512.png" /><!-- iOS는 SVG apple-touch-icon 미지원 → PNG 필수 -->
+
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <!-- 토스 미니앱 어댑터(선택) — 토스 밖에서는 안전한 폴백, 의존성 없음 -->
 <script src="./toss.js"></script>
+<!-- Phase 2 순수 헬퍼(나라대전 집계·배지/멘트 정제) — net.js가 참조하므로 먼저 로드 -->
+<script src="./gc-util.js"></script>
+<!-- Phase 3 순수 헬퍼(꾸미기 카탈로그·해금/장착 리듀서·레퍼럴) — 표현만, 게임 수치 불변 -->
+<script src="./gc-cosmetics.js"></script>
+<!-- 떡밥 투표소(UGC) 순수 헬퍼(검증·금칙어·추첨·로컬 경제) — net.js가 참조하므로 먼저 로드 -->
+<script src="./gc-proposals.js"></script>
 <!-- 실제 전국 대전 백엔드(선택) — fb-config.js 비우면 자동으로 폰 단독 시뮬레이션 폴백 -->
 <script src="./fb-config.js"></script>
 <script src="./net.js"></script>
-<!-- 초반 콜드스타트용 가상 플레이어(화면 표시 전용). gc-bots.js의 enabled=false로 OFF -->
+<!-- 초반 콜드스타트용 가상 플레이어(표시 전용·DB 무기록·실데이터 차면 자동소멸). GCBots.enabled=false로 OFF -->
 <script src="./gc-bots.js"></script>
-<link rel="stylesheet" as="style" crossorigin
-      href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+<!-- 글로벌 기반(Phase 1): 언어/국가감지/양어 떡밥 — 메인 스크립트보다 먼저 로드 -->
+<script src="./i18n.js"></script>
+<script src="./geo.js"></script>
+<script src="./topics.js"></script>
+<!-- Phase 4 순수 헬퍼(지구본 데이터 매핑·포커스·색/강도). 가벼움(좌표표+계산만).
+     ⚠ 무거운 globe.gl(≈1.8MB)은 여기 없음 — 지구본 뷰 진입 시 ./vendor/globe.gl.min.js 만 지연주입(D7). -->
+<script src="./gc-globe.js"></script>
+<!-- Pretendard(OFL-1.1) 로컬 동봉 — 런타임 CDN 0(오프라인·비용0). dynamic-subset: 쓰는 글자 청크만 로드. -->
+<link rel="stylesheet" href="./vendor/pretendard/pretendard.css" />
 <style>
 /* ⚡ 광클대전 — 디자인: 심야 아레나 / 네오 아케이드 스코어보드 (진영색은 --team-a/--team-b/--me로 런타임 리스킨) */
 :root{
-  --bg:#0a0b0d; --bg-2:#111317; --bg-3:#191c22; --bg-card:#0e1014;
-  --ink:#f2f3f6; --ink-2:#9da3ad; --ink-3:#646a74;
+  --bg:#08090c; --bg-2:#121419; --bg-3:#1b1f27; --bg-card:#0e1014;
+  --ink:#f4f5f8; --ink-2:#9da3ad; --ink-3:#828a96;
   --line:rgba(255,255,255,.07); --line-2:rgba(255,255,255,.15);
   --team-a:#12b39a; --team-b:#7b6ef0; --me:#12b39a; --foe:#7b6ef0; --tapink:#04130f; --live:#ff3a3a;
-  --r-sm:9px; --r-md:14px; --r-lg:20px;
+  /* Y2K/아케이드 네온 액센트 — 진영색(데이터)과 별개의 '브랜드 크롬' 컬러. */
+  --neon:#ff2d9b; --neon-2:#36e3ff; --neon-3:#ffe14d;
+  /* 의도된 깊이: 라디우스를 더 다양하게(작은=날카로움, 큰=스티커감). */
+  --r-xs:6px; --r-sm:10px; --r-md:15px; --r-lg:22px; --r-pill:99px;
   --ease-snap:cubic-bezier(.2,.9,.25,1.05); --ease-wipe:cubic-bezier(.74,0,.18,1);
   --mono:ui-monospace,'SF Mono',Menlo,monospace;
+  --display:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,'Apple SD Gothic Neo',sans-serif;
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-html{font-size:16px}
-body{background:var(--bg);color:var(--ink);min-height:100dvh;
-  font-family:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,system-ui,'Apple SD Gothic Neo',sans-serif;
-  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
-body::before{content:'';position:fixed;inset:0;z-index:60;pointer-events:none;opacity:.05;mix-blend-mode:overlay;
+html{font-size:16px;-webkit-text-size-adjust:100%;text-size-adjust:100%} /* iOS 글자 자동확대(레이아웃 들썩임) 차단 */
+/* 모바일 '확대/축소/흔들림' 잡기(사용자 피드백): 당겨서새로고침·고무줄 바운스 차단 + 더블탭 줌 차단(전역). */
+html,body{overscroll-behavior:none}
+/* 배틀 중엔 스크롤/주소창 토글로 인한 화면 흔들림을 아예 잠금(belt-and-suspenders). */
+body.playing{overflow:hidden;position:fixed;inset:0;width:100%}
+body{color:var(--ink);min-height:100dvh;touch-action:manipulation;
+  font-family:var(--display);
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+  /* 평평한 풀페이지 그라데이션 대신: 코너 네온 글로우 2점 + 베이스 색. 단색 그라데이션 티 줄임. */
+  background:
+    radial-gradient(120% 80% at 12% -8%, color-mix(in oklch,var(--neon) 22%,transparent) 0%, transparent 42%),
+    radial-gradient(120% 80% at 90% 6%, color-mix(in oklch,var(--neon-2) 18%,transparent) 0%, transparent 46%),
+    var(--bg);
+  background-attachment:fixed}
+/* 아케이드 그리드 — 아주 옅은 격자(스코어보드/Y2K 무드). 콘텐츠 뒤(z-index<0), 모션 없음. */
+body::after{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.5;
+  background:
+    linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px) 0 0/100% 38px,
+    linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px) 0 0/38px 100%;
+  mask:linear-gradient(180deg, #000 0%, transparent 70%)}
+/* 필름 노이즈(질감) — 'AI 매끈함' 줄이는 손맛 레이어. */
+/* 필름 노이즈(질감) — 'AI 매끈함' 줄이는 손맛 레이어. mix-blend-mode는 그 아래 지구본이 매 프레임
+ * 회전할 때 전체화면 재합성을 유발(특히 PC 버벅임) → 제거. opacity .055라 일반 합성으로도 질감 동일. */
+body::before{content:'';position:fixed;inset:0;z-index:60;pointer-events:none;opacity:.05;
   background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+/* 배틀(타격) 중엔 장식 오버레이(노이즈·그리드) 정지 → 탭 프레임 최대한 가볍게. */
+body.playing::before,body.playing::after{display:none}
 button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
 #app{max-width:480px;margin:0 auto;min-height:100dvh;padding:20px 18px 32px;position:relative}
 .screen{display:flex;flex-direction:column;gap:15px}
@@ -49,7 +88,11 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .hint{color:var(--ink-3);font-size:12.5px;line-height:1.55;text-align:center;margin-top:2px}
 .dot{color:var(--live);animation:liveBlink 1.4s steps(1) infinite}
 .hdr{display:flex;justify-content:space-between;align-items:center}
-.hdr .brand{font-family:var(--mono);font-weight:800;font-size:12px;letter-spacing:.04em}
+/* 브랜드 워드마크 — 스티커 락업: 살짝 기울인 굵은 글씨 + 네온 언더라인. 아케이드 간판 무드. */
+.hdr .brand{position:relative;display:inline-block;font-family:var(--display);font-weight:900;font-size:16px;
+  letter-spacing:-.03em;transform:skewX(-5deg);text-shadow:0 1px 0 rgba(0,0,0,.4)}
+.hdr .brand::after{content:'';position:absolute;left:1px;right:1px;bottom:-3px;height:3px;border-radius:2px;
+  background:linear-gradient(90deg,var(--neon),var(--neon-2));box-shadow:0 0 8px color-mix(in oklch,var(--neon) 60%,transparent)}
 .hdr .live{display:flex;align-items:center;gap:7px;font-family:var(--mono);font-weight:700;font-size:10px;letter-spacing:.14em;color:var(--ink-2)}
 
 @keyframes liveBlink{0%,55%{opacity:1}75%,100%{opacity:.2}}
@@ -59,14 +102,22 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 @keyframes auraPulse{0%{box-shadow:0 0 0 0 color-mix(in oklch,var(--me) 55%,transparent),0 18px 38px -16px var(--me)}100%{box-shadow:0 0 0 16px color-mix(in oklch,var(--me) 0%,transparent),0 18px 38px -16px var(--me)}}
 @keyframes tickBeat{0%{opacity:0;transform:translateY(4px)}100%{opacity:1;transform:none}}
 @keyframes fb-rise{0%{opacity:0;transform:translate(-50%,-50%) scale(.6)}25%{opacity:1;transform:translate(-50%,-120%) scale(1.1)}100%{opacity:0;transform:translate(-50%,-240%) scale(1)}}
-@keyframes fb-shk{0%,100%{transform:translate(0,0)}20%{transform:translate(-6px,3px)}40%{transform:translate(5px,-4px)}60%{transform:translate(-4px,-3px)}80%{transform:translate(4px,3px)}}
+@keyframes fb-shk{0%,100%{transform:translate(0,0)}25%{transform:translate(-2px,1px)}50%{transform:translate(2px,-1px)}75%{transform:translate(-1px,-1px)}}
 
 /* 인트로 */
-.kicker{font-family:var(--mono);font-weight:600;font-size:10.5px;letter-spacing:.16em;color:var(--ink-3);line-height:1.5}
-.q{font-size:clamp(34px,10.5vw,46px);font-weight:900;line-height:.97;letter-spacing:-.04em}
-.qa{color:var(--team-a)}
+.kicker{display:inline-flex;align-self:flex-start;align-items:center;gap:6px;font-family:var(--mono);font-weight:700;font-size:10px;
+  letter-spacing:.12em;color:var(--ink-2);line-height:1;padding:6px 10px;border-radius:var(--r-pill);
+  background:rgba(255,255,255,.04);border:1px solid var(--line-2)}
+/* 디스플레이 타이포 위계 강화: 큰 질문은 더 크게/꽉 차게 + 미세 그림자(평면 탈피). */
+.q{font-size:clamp(36px,11.5vw,52px);font-weight:900;line-height:.94;letter-spacing:-.045em;text-shadow:0 2px 14px rgba(0,0,0,.35)}
+/* 떡밥의 '?'는 네온 액센트 — 한 글자만 튀게(브랜드 일관성, 진영색 데이터는 불변). */
+.qa{color:var(--neon);text-shadow:0 0 18px color-mix(in oklch,var(--neon) 55%,transparent)}
 .teams{display:flex;flex-direction:column;gap:9px}
-.team{display:flex;gap:13px;align-items:center;padding:13px 14px;background:var(--bg-3);border:1px solid var(--line);border-radius:var(--r-sm)}
+.team{display:flex;gap:13px;align-items:center;padding:14px 15px;border-radius:var(--r-md);
+  background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,0)),var(--bg-3);
+  border:1px solid var(--line);box-shadow:0 10px 24px -18px rgba(0,0,0,.9),inset 0 1px 0 rgba(255,255,255,.04);
+  transition:transform .14s var(--ease-snap)}
+.team:active{transform:scale(.99)}
 .team .em{font-size:28px;line-height:1}
 .team .nm{display:flex;align-items:baseline;gap:8px}
 .team .nm b{font-weight:800;font-size:16px}
@@ -80,12 +131,15 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .gauge.tall{height:8px}
 .gauge i{height:100%;display:block}
 .go{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.go button{border-radius:var(--r-md);font-weight:800;font-size:14px;padding:16px 6px;letter-spacing:-.01em;transition:transform .12s var(--ease-snap)}
-.go button:active{transform:scale(.96)}
+/* 참전 버튼 — 진영색 위에 입체 솔리드(3D 눌림감). 색은 인라인 데이터(진영색) 유지, 깊이만 추가. */
+.go button{position:relative;border-radius:var(--r-md);font-weight:900;font-size:14.5px;padding:17px 6px;letter-spacing:-.01em;
+  box-shadow:0 5px 0 rgba(0,0,0,.32),0 12px 20px -10px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.3);
+  transition:transform .1s var(--ease-snap),box-shadow .1s var(--ease-snap)}
+.go button:active{transform:translateY(4px);box-shadow:0 1px 0 rgba(0,0,0,.32),0 5px 10px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.3)}
 .streak-chip{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:var(--ink-2);border:1px solid var(--line-2);border-radius:99px;padding:5px 10px;align-self:flex-start}
 
 /* 배틀 스테이지 */
-.stage{position:relative;display:flex;flex-direction:column;gap:13px;touch-action:manipulation;user-select:none;-webkit-user-select:none}
+.stage{position:relative;display:flex;flex-direction:column;gap:13px;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
 .urgentbar{height:3px;border-radius:99px;background:transparent}
 .stage.urgent .urgentbar{background:var(--live);animation:urgent .7s steps(1) infinite}
 .bhdr{display:flex;justify-content:space-between;align-items:center}
@@ -114,7 +168,10 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .tap:active{transform:translateY(6px);box-shadow:inset 0 2px 0 color-mix(in oklch,var(--me) 55%,#fff),inset 0 -3px 1px color-mix(in oklch,var(--me) 70%,#000),0 2px 0 color-mix(in oklch,var(--me) 50%,#000),0 9px 16px -12px color-mix(in oklch,var(--me) 62%,transparent)}
 .tap .orb{display:grid;place-items:center;width:60px;height:60px;border-radius:50%;font-size:30px;line-height:1;
   background:radial-gradient(circle at 38% 28%,rgba(255,255,255,.6),rgba(255,255,255,0) 58%),color-mix(in oklch,var(--me) 72%,#000);
-  box-shadow:inset 0 2px 5px rgba(255,255,255,.45),inset 0 -6px 10px rgba(0,0,0,.4),0 5px 12px rgba(0,0,0,.35)}
+  box-shadow:inset 0 2px 5px rgba(255,255,255,.45),inset 0 -6px 10px rgba(0,0,0,.4),0 5px 12px rgba(0,0,0,.35);
+  transition:transform .08s var(--ease-snap)}
+/* 누름 순간 오브가 살짝 수축 → 손가락이 '먹은' 느낌(연출만, onTap 수치/타이밍 불변). */
+.tap:active .orb{transform:scale(.9)}
 .tap .lab{font-size:27px;font-weight:900;letter-spacing:.06em;text-shadow:0 2px 0 color-mix(in oklch,var(--me) 68%,#000),0 3px 6px rgba(0,0,0,.22)}
 .stage.combo .tap{transform:translateY(-2px)}
 .stage.combo .tap::after{content:'';position:absolute;inset:-7px;border-radius:27px;pointer-events:none;animation:auraPulse .7s var(--ease-snap) infinite alternate}
@@ -133,11 +190,48 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .fb-pop.x2{font-size:1.4rem;color:#ffe27a}
 .fb-pop.x3{font-size:1.7rem;color:#ff9a4d}
 .fb-shake{animation:fb-shk .3s ease}
+@keyframes gl-corn{0%{opacity:0;transform:translate(-50%,-50%) scale(.4)}18%{opacity:1;transform:translate(calc(-50% + var(--tx,0px)*.3),-115%) scale(1.15)}100%{opacity:0;transform:translate(calc(-50% + var(--tx,0px)),-235%) scale(.95)}}
+.gl-corn{position:absolute;transform:translate(-50%,-50%);line-height:1;pointer-events:none;will-change:transform,opacity;animation:gl-corn .9s ease-out forwards}
+@media (prefers-reduced-motion: reduce){.gl-corn{display:none}}
+.globe-hero{margin-top:14px}
+.globe-cap{display:flex;align-items:center;gap:6px;font-size:.82rem;opacity:.85;margin-bottom:7px;letter-spacing:.2px}
+.gl-slot{position:relative;width:100%}
+.globe-stage{position:relative;width:100%;height:100%;min-height:80px;border-radius:18px;overflow:hidden;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 34%,#0e1d34 0%,#081120 55%,#04060c 100%);box-shadow:inset 0 0 70px rgba(0,0,0,.55),0 12px 34px -18px rgba(0,0,0,.7);border:1px solid rgba(120,160,210,.12)}
+/* 배틀 헤더 옆 미니 지구본 — 인라인 뱃지(절대배치 X → 헤더/티커 안 가림, 사용자 피드백).
+ * 어두운 배경에 묻혀 '원형이 안 보이던' 문제 → 밝은 림 + 바탕 글로우로 구(球) 윤곽이 또렷하게. */
+.bhead{display:flex;gap:11px;align-items:center}
+.bhead .bcol{flex:1;min-width:0;display:flex;flex-direction:column;gap:7px}
+.gl-mini{flex:none;width:62px;height:62px;border-radius:50%;overflow:hidden;pointer-events:none;
+  border:1.5px solid rgba(140,180,230,.42);
+  background:radial-gradient(circle at 50% 36%,#15294a 0%,#060d18 72%);
+  box-shadow:0 4px 14px -6px rgba(0,0,0,.7),0 0 0 4px rgba(120,160,210,.07)}
+.gl-mini .globe-stage{border-radius:50%;min-height:0;background:transparent;box-shadow:none;border:none}
+/* ☁️ 구름 — 행성 위로 천천히 흐르는 반투명 wisp(경량·blur). 또렷하게(보이도록). 감속모션이면 정지 */
+.gl-clouds{position:absolute;inset:0;overflow:hidden;z-index:2;pointer-events:none}
+.gl-clouds span{position:absolute;border-radius:50%;filter:blur(6px);opacity:.34;background:radial-gradient(closest-side,rgba(255,255,255,.8),rgba(255,255,255,0));animation:gl-cloud linear infinite}
+.gl-clouds span:nth-child(1){top:20%;left:-35%;width:50%;height:20%;animation-duration:26s}
+.gl-clouds span:nth-child(2){top:54%;left:-45%;width:62%;height:24%;animation-duration:38s;animation-delay:-12s;opacity:.26}
+.gl-clouds span:nth-child(3){top:37%;left:-55%;width:42%;height:16%;animation-duration:32s;animation-delay:-20s;opacity:.3}
+@keyframes gl-cloud{from{transform:translateX(0)}to{transform:translateX(330%)}}
+@media (prefers-reduced-motion: reduce){.gl-clouds span{animation:none;opacity:.22}}
+.globe-stage::before{content:"";position:absolute;inset:0;pointer-events:none;background-image:radial-gradient(1.2px 1.2px at 18% 28%,#fff,transparent),radial-gradient(1px 1px at 72% 62%,#cfe3ff,transparent),radial-gradient(1px 1px at 42% 82%,#fff,transparent),radial-gradient(1.4px 1.4px at 86% 22%,#bcd2ff,transparent),radial-gradient(1px 1px at 58% 12%,#fff,transparent),radial-gradient(1px 1px at 30% 60%,#e9f1ff,transparent),radial-gradient(1px 1px at 90% 75%,#fff,transparent);opacity:.55}
+/* 떡밥 투표소 모달 */
+.pp-in{width:100%;padding:9px 11px;border-radius:10px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.04);color:inherit;font-size:.9rem;font-family:inherit;box-sizing:border-box;flex:1;min-width:0}
+.pp-in:focus{outline:none;border-color:rgba(120,160,210,.55)}
+.pp-card{border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:10px 12px;margin-bottom:8px;background:rgba(255,255,255,.03)}
+.pp-q{font-weight:700;font-size:.95rem;margin-bottom:4px;word-break:break-word}
+.pp-sides{font-size:.82rem;opacity:.88;margin-bottom:8px;word-break:break-word}
+.pp-act{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.pp-act .btn{padding:5px 10px;font-size:.8rem;flex:none}
+.pp-act .btn:disabled{opacity:.55}
+.pp-live{font-size:.74rem;font-weight:800;color:#ffcf5a;margin-left:auto}
 
 /* 결과 */
-.acc{height:4px}
-.verdict{font-size:30px;font-weight:900;line-height:1.05;letter-spacing:-.035em}
-.rcard{position:relative;background:var(--bg-2);border:1px solid var(--line);border-left:3px solid var(--me);border-radius:var(--r-sm);padding:16px 15px}
+.acc{height:4px;border-radius:var(--r-pill);box-shadow:0 0 14px -2px var(--me)}
+.verdict{font-size:clamp(30px,8.5vw,38px);font-weight:900;line-height:1.02;letter-spacing:-.04em;text-shadow:0 2px 14px rgba(0,0,0,.35)}
+.rcard{position:relative;border:1px solid var(--line);border-left:3px solid var(--me);border-radius:var(--r-md);padding:16px 15px;
+  background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,0)),var(--bg-2);
+  box-shadow:0 14px 30px -22px rgba(0,0,0,.9)}
 .rcard .frow{display:flex;align-items:center;gap:10px}
 .rcard .frow .em{font-size:24px}
 .rcard .frow .nm{font-weight:800;font-size:15px;white-space:nowrap}
@@ -153,10 +247,15 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .tags{display:flex;gap:8px;font-family:var(--mono);font-weight:700;font-size:12px;color:var(--me)}
 .newbest{font-weight:800;font-size:12px;color:#ffd76a}
 .actions{display:flex;flex-direction:column;gap:9px;margin-top:2px}
-.btn{border-radius:var(--r-md);font-weight:800;font-size:14px;padding:15px 0;text-align:center;transition:transform .12s var(--ease-snap)}
-.btn:active{transform:scale(.97)}
-.btn-primary{background:var(--me)}
-.btn-ghost{border:1px solid var(--line-2);background:transparent;color:var(--ink);font-weight:700}
+.btn{border-radius:var(--r-md);font-weight:800;font-size:14px;padding:15px 0;text-align:center;
+  transition:transform .1s var(--ease-snap),box-shadow .1s var(--ease-snap),background .15s ease}
+.btn:active{transform:translateY(3px)}
+/* 주요 CTA — 진영색 솔리드 + 입체 눌림(참전 버튼과 일관된 택타일감). */
+.btn-primary{background:var(--me);font-weight:900;
+  box-shadow:0 5px 0 rgba(0,0,0,.3),0 12px 20px -10px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.28)}
+.btn-primary:active{box-shadow:0 1px 0 rgba(0,0,0,.3),0 5px 10px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.28)}
+.btn-ghost{border:1px solid var(--line-2);background:rgba(255,255,255,.02);color:var(--ink);font-weight:700}
+.btn-ghost:active{background:rgba(255,255,255,.06)}
 
 /* 보상형 광고 — 결과 2배 자랑 */
 .btn-reward{background:linear-gradient(180deg,#ffe08a,#ff9a3d);color:#1c1206;box-shadow:0 8px 22px -8px rgba(255,154,61,.6)}
@@ -177,50 +276,23 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 #toast{position:fixed;left:50%;bottom:30px;transform:translateX(-50%);background:rgba(255,255,255,.96);color:#0a0b0d;
   padding:11px 18px;border-radius:99px;font-size:13px;font-weight:800;opacity:0;transition:opacity .2s;z-index:70;pointer-events:none;max-width:90vw;text-align:center}
 #toast.on{opacity:1}
+/* 접근성: 모션 최소화 선호 시 애니메이션/트랜지션 사실상 정지(축포는 JS에서 0, 여기선 CSS단까지 차단). */
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;scroll-behavior:auto!important}
+}
 </style>
 </head>
 <body>
 <div id="app"></div>
+<!-- 영속 지구본 대기실(화면에 슬롯 없을 때 여기 보관 + 렌더 정지). 모든 장면 공용 단일 인스턴스(D13). -->
+<div id="gl-park" style="position:fixed;left:-9999px;top:0;width:1px;height:1px;overflow:hidden" aria-hidden="true"></div>
 <div id="toast"></div>
 <script>
 "use strict";
 /* ⚡ 광클대전 — 단독 실행 버전 (서버·빌드·백엔드 없이 파일 하나로 동작) */
 
-/* ── 소재(밈 떡밥) ── */
-var BATTLES = [
-  { id:'mintchoco', tag:'민초대전', q:'민트초코, 너는?',
-    a:{key:'mint',name:'민초단',emoji:'🌿',color:'#12b39a',slogan:'치약? 이건 신이 내린 맛'},
-    b:{key:'anti',name:'반민초파',emoji:'🚫',color:'#7b6ef0',slogan:'디저트에 치약을 왜 넣냐고'},
-    taunts:['치약 자랑 그만 🪥','민초 모르면 인생 손해 ㅋㅋ','반민초는 미각 테러범','결국 다 민초로 온다'] },
-  { id:'tangsuyuk', tag:'부먹찍먹', q:'탕수육은 역시?',
-    a:{key:'bu',name:'부먹파',emoji:'🥣',color:'#e8633a',slogan:'소스에 촉촉하게 적셔야 진리'},
-    b:{key:'jjik',name:'찍먹파',emoji:'🥢',color:'#2f9ec4',slogan:'바삭함을 어떻게 포기해'},
-    taunts:['눅눅이들 잘 있냐 🫠','소스 부으면 그게 탕수육 죽이야','찍먹이 국룰 모르나','부먹은 사랑입니다'] },
-  { id:'chicken', tag:'양념후라이드', q:'치킨 한 마리면?',
-    a:{key:'yn',name:'양념파',emoji:'🍗',color:'#d83838',slogan:'손에 묻은 양념까지 핥아먹는다'},
-    b:{key:'fr',name:'후라이드파',emoji:'🍤',color:'#cf911f',slogan:'치킨 본연의 맛, 후라이드'},
-    taunts:['후라이드는 심심하지 않냐','양념은 소스맛이지 치킨맛이냐 ㅋ','반반? 회색분자 나가라','결국 시키면 양념'] },
-  { id:'pineapple', tag:'파인애플피자', q:'파인애플 피자, 인정?',
-    a:{key:'o',name:'하와이안단',emoji:'🍍',color:'#d9a400',slogan:'달콤짭짤 이게 천국'},
-    b:{key:'x',name:'파인애플아웃',emoji:'🙅',color:'#3f8f4f',slogan:'피자에 과일은 반칙'},
-    taunts:['피자에 과일 올린 사람 누구야','먹어보고 말해라 진짜 맛있음','이탈리아 가면 잡혀간다','단짠 모르면 입맛 초딩'] },
-  { id:'naengmyeon', tag:'물냉비냉', q:'여름엔 어떤 냉면?',
-    a:{key:'mul',name:'물냉파',emoji:'🧊',color:'#2f8fd0',slogan:'시원한 육수 들이켜는 그 맛'},
-    b:{key:'bib',name:'비냉파',emoji:'🌶️',color:'#d8452f',slogan:'매콤새콤 비벼야 제맛'},
-    taunts:['물냉은 밍밍하잖아','비냉은 그냥 매운 국수지','면치기 못하면 물냉 자격 없음','둘 다 시키는 게 정답 아님?'] },
-  { id:'milk', tag:'딸기바나나우유', q:'편의점 우유는?',
-    a:{key:'st',name:'딸기우유단',emoji:'🍓',color:'#e85a92',slogan:'핑크빛 행복 한 모금'},
-    b:{key:'bn',name:'바나나우유단',emoji:'🍌',color:'#e0a800',slogan:'국민 단지우유 영원하라'},
-    taunts:['딸기우유는 색소맛 ㅋ','바나나우유 안 먹어본 사람 있냐','단지 모양 못 이김','딸기우유가 더 고급짐'] },
-  { id:'gimbap', tag:'김밥꼬다리', q:'김밥, 어디부터 먹어?',
-    a:{key:'end',name:'꼬다리파',emoji:'🍙',color:'#8d6e63',slogan:'못생긴 끝이 제일 맛있어'},
-    b:{key:'mid',name:'가운데파',emoji:'🌀',color:'#3a9b4f',slogan:'예쁜 가운데가 정석이지'},
-    taunts:['꼬다리 안 주면 서운함','가운데부터 먹는 건 국룰','꼬다리 버리는 사람 손절','엄마는 늘 꼬다리만 드셨지…'] },
-  { id:'mandu', tag:'군만두물만두', q:'만두는 역시?',
-    a:{key:'gun',name:'군만두파',emoji:'🥟',color:'#c07c2a',slogan:'바삭바삭 겉면이 생명'},
-    b:{key:'mul',name:'물만두파',emoji:'💧',color:'#4d9ec4',slogan:'촉촉하게 터지는 육즙'},
-    taunts:['군만두는 기름맛 아니냐','물만두는 밋밋해','냉동만두는 무조건 군만두','둘 다 맛있는 거 인정하자 사실'] }
-];
+/* ── 소재(밈 떡밥) — 양어 원본은 topics.js(GCTopics.BATTLES). 표시 직전 localize(LANG)로 평탄화 ── */
+var BATTLES = GCTopics.BATTLES;
 
 /* ── 순수 헬퍼 ── */
 function fnv1a(s){var h=2166136261;for(var i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619);}return h>>>0;}
@@ -228,15 +300,16 @@ function dayNumber(d){var ms=Date.parse(d+'T00:00:00Z');return isNaN(ms)?0:Math.
 function battleOfDay(d){var n=dayNumber(d);return BATTLES[((n%BATTLES.length)+BATTLES.length)%BATTLES.length];}
 function dailyBias(d,bt){return (fnv1a(d+'|'+(bt?bt.id:''))%1201)/100-6;}
 function comboMult(streak){return Math.min(3,1+Math.max(0,streak)*0.04);}
-var TITLES=[[0,'구경꾼 👀'],[50,'일반인 🙂'],[150,'광클 입문 🐣'],[300,'손가락 좀 쓰네 ✌️'],[500,'광클러 ⚡'],[800,'광클 고수 🔥'],[1200,'광클의 신 👑'],[1800,'손가락 분신술 🌀']];
+var TITLES=[[0,'눈팅족 👀'],[50,'미지근 🙂'],[150,'손가락 예열 🐣'],[300,'좀 치는데? ✌️'],[500,'광클러 ⚡'],[800,'손가락 장인 🔥'],[1200,'광클의 신 👑'],[1800,'손가락 잔상 🌀']];
 function titleForTaps(t){var l=TITLES[0][1];for(var i=0;i<TITLES.length;i++)if(t>=TITLES[i][0])l=TITLES[i][1];return l;}
 function rankEstimate(t){var pop=87431,f=Math.max(0,Math.min(1,1-t/2000));return Math.max(1,Math.round(pop*(0.0002+0.9998*f*f)));}
-function comma(n){return Math.round(n).toLocaleString('ko-KR');}
+function comma(n){return Math.round(n).toLocaleString(LANG==='ko'?'ko-KR':'en-US');}
 function clamp(v,lo,hi){return Math.max(lo,Math.min(hi,v));}
 function pad2(n){return (n<10?'0':'')+n;}
 function todayStr(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
-function mdLabel(d){var p=String(d).split('-');return (+p[1])+'월 '+(+p[2])+'일';}
-function mdShort(d){var p=String(d).split('-');return (+p[1])+'.'+(+p[2]);}
+var MON_EN=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function mdLabel(d){var p=String(d).split('-');return LANG==='ko'?((+p[1])+'월 '+(+p[2])+'일'):(MON_EN[(+p[1]-1)]||'?')+' '+(+p[2]);}
+function mdShort(d){var p=String(d).split('-');return LANG==='ko'?((+p[1])+'.'+(+p[2])):(MON_EN[(+p[1]-1)]||'?')+' '+(+p[2]);}
 function addDaysStr(n,from){var d=new Date(from+'T00:00:00');d.setDate(d.getDate()+n);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function withEuro(name){var c=name.charCodeAt(name.length-1)-0xac00;var jong=c>=0&&c<=11171&&c%28!==0;return name+(jong?'으로':'로');}
 function introQ(q){return q.replace(/, /,',<br>').replace(/\?$/,'<span class="qa">?</span>');}
@@ -251,6 +324,36 @@ function load(){try{var r=localStorage.getItem(KEY);if(r)return JSON.parse(r);}c
 function persist(){try{localStorage.setItem(KEY,JSON.stringify(F));}catch(e){}}
 var F=load();
 F.region=F.region||''; F.nick=F.nick||'';
+/* Phase 2: 순위권에 노출될 미리 써둔 배지(이모지/짧은 태그)·멘트(한 줄). 저장 즉시 GCUtil로 정제(보안 #1). */
+F.badge=GCUtil.sanitizeBadge(F.badge||''); F.comment=GCUtil.sanitizeComment(F.comment||'');
+/* Phase 3(D6): 꾸미기 해금/장착 상태. localStorage → 항상 GCCos.normState로 재조립(불신 #1: 변조·미상 id 방어).
+ * F.unlocked=[해금 id]  ·  F.cosmetics={tapFx,nameColor}  ·  F.badgeId=장착한 프리미엄 배지 id(없으면 '').
+ * 꾸미기는 표현만 — 게임 밸런스 수치엔 절대 영향 없음(경계 #3). */
+(function(){ var st=GCCos.normState(F); F.unlocked=st.unlocked; F.cosmetics=st.equipped; F.badgeId=GCCos.isUnlocked(F,F.badgeId)?F.badgeId:''; })();
+/* 떡밥 투표소 경제(D9/D10) — 로컬 전용 포인트/투척권 + 기기당 1회 투표셋 + 일일 제출 카운트.
+ * 항상 GCProp.normEcon으로 재조립(불신 #1: 변조 음수/문자 방어). 신규 무료 투척권 1회 지급. */
+(function(){
+  var e=GCProp.normEcon({points:F.points,tickets:F.tickets,freeDay:F.propFree});
+  var g=GCProp.grantFreeOnce(e); e=g.econ;                       // 계정당 1회 무료 투척권
+  F.points=e.points; F.tickets=e.tickets; F.propFree=e.freeDay;
+  if(!F.voted||typeof F.voted!=='object')F.voted={};             // {l:id|r:id → 1} 멱등셋
+  F.propDay=F.propDay||''; F.propCount=+F.propCount||0;           // 일일 제출 한도(도배 백스톱)
+  if(g.granted)persist();
+})();
+/* 레퍼럴 코드: 들어온 ?ref= 는 '저장/표시'만(불신 #1 — 해금 판정엔 절대 미사용). 내 코드는 uid/시드로 결정적 생성. */
+try{ var _ref=GCCos.parseRef(location.search||''); if(_ref){F.refFrom=F.refFrom||_ref;persist();} }catch(e){}
+function myRefCode(){return GCCos.refCode((netOn()&&GCNet.uid&&GCNet.uid())||F.nick||'anon');}
+
+/* ── 글로벌 기반(Phase 1): 언어 + 국가 감지 ──
+ * LANG: 저장값(F.lang) 우선 → 없으면 브라우저 언어에서 추정(ko/en). 미상은 ko 폴백(불신 #1).
+ * MY/MYINFO: 무료 국가감지(geo.js, 외부 API 0). 미상이면 '전 세계/Global'로 폴백. */
+var LANG=F.lang||GCI18n.pickLang((navigator.languages&&navigator.languages[0])||navigator.language||'');
+var MY=GCGeo.detectFromBrowser();
+var MYINFO=GCGeo.countryInfo(MY);
+function t(k,v){return GCI18n.t(LANG,k,v);} // 크롬(UI) 문자열 단축 헬퍼
+try{document.documentElement.lang=LANG;}catch(e){} // <html lang> 동적 반영
+/* 언어 토글: F.lang 저장 → 현재 화면 재렌더(intro). 반대 언어로 즉시 전환. */
+function toggleLang(){LANG=(LANG==='ko')?'en':'ko';F.lang=LANG;persist();try{document.documentElement.lang=LANG;}catch(e){}intro();}
 
 /* ── 실제 전국 대전(백엔드) 연동 ── */
 var REGIONS=[{k:'',n:'전국'},{k:'seoul',n:'서울'},{k:'gyeonggi',n:'경기'},{k:'incheon',n:'인천'},
@@ -258,12 +361,22 @@ var REGIONS=[{k:'',n:'전국'},{k:'seoul',n:'서울'},{k:'gyeonggi',n:'경기'},
   {k:'chungnam',n:'충남'},{k:'daegu',n:'대구'},{k:'gyeongbuk',n:'경북'},{k:'busan',n:'부산'},
   {k:'ulsan',n:'울산'},{k:'gyeongnam',n:'경남'},{k:'gwangju',n:'광주'},{k:'jeonbuk',n:'전북'},
   {k:'jeonnam',n:'전남'},{k:'jeju',n:'제주'}];
-function regionName(k){for(var i=0;i<REGIONS.length;i++)if(REGIONS[i].k===k)return REGIONS[i].n;return '전국';}
-function nickOf(){return (F.nick||'').trim()||'익명광클러';}
+/* 지역명: 한국 지역 데이터는 Phase 2(countries)까지 한글 유지.
+ * 단 '전국'(빈 키) 기본 라벨만 언어 인식 — en은 감지 국가명(없으면 Global). */
+function regionDefault(){return LANG==='ko'?'전국':(MYINFO&&MYINFO.nameEn||'Global');}
+function regionName(k){if(!k)return regionDefault();for(var i=0;i<REGIONS.length;i++)if(REGIONS[i].k===k)return REGIONS[i].n;return regionDefault();}
+function nickOf(){return (F.nick||'').trim()||t('anon');}
+/* 꾸미기(Phase 3): 장착된 '이름 색'을 내 닉에만 적용하는 인라인 스타일 조각. 잠김/기본은 '' (테마 기본색).
+ * 로컬 전용 코스메틱 — 타 사용자에겐 미노출(Firestore 미제출)이라 내 화면의 '(나)/(you)' 행에만 쓴다. */
+function myNameColorStyle(){var c=GCCos.equippedNameColor(F);return (c&&/^#[0-9a-fA-F]{3,8}$/.test(c))?' style="color:'+c+'"':'';}
+/* 꾸미기(Phase 3): 제출/표시에 쓸 '실효 배지'. 프리미엄 배지(F.badgeId)가 해금·장착됐으면 그걸 우선,
+ * 아니면 무료 설정 배지(F.badge). 기존 배지 제출 경로(net.js)를 그대로 재사용 → 신규 Firestore 필드·규칙 없음.
+ * 프리미엄 이모지는 카탈로그 화이트리스트(GCCos.badgeOf)만 통과 → 자유입력 위변조 불가(보안 #1). */
+function effectiveBadge(){var pb=GCCos.badgeOf(F,F.badgeId);return pb||F.badge||'';}
 function netOn(){try{return !!(window.GCNet&&GCNet.available());}catch(e){return false;}}
 var LIVE={date:'',tot:null,unwatch:null};
 function shareFromTot(tot,seed){return (tot&&(tot.a+tot.b)>0)?clamp(tot.a/(tot.a+tot.b)*100,5,95):seed;}
-/* 가상 플레이어 합성(표시 전용). GCBots 없거나 OFF면 원본 그대로 — 항상 안전. */
+/* 가상 플레이어 합성 헬퍼(표시 전용). GCBots 없거나 OFF면 원본 그대로 — 항상 안전(불신#1). */
 function botsOn(){try{return !!(window.GCBots&&GCBots.enabled);}catch(e){return false;}}
 function blendTot(t,date){try{return botsOn()?GCBots.blend(t,date):t;}catch(e){return t;}}
 function blendRows(rows,date,max){try{return botsOn()?GCBots.mergeRows(rows,date,max):rows;}catch(e){return rows;}}
@@ -284,7 +397,7 @@ function onLive(){
   if(iga){paintIntroGauge(shareFromTot(LIVE.tot,iga._seed||50));
     var pop=el('ig-pop');
     if(pop&&LIVE.tot){var n=LIVE.tot.na+LIVE.tot.nb;
-      pop.textContent=n>0?('🔴 지금까지 '+comma(n)+'명 참전 — 실제 전국 집계 반영 중'):'🔴 오늘의 첫 참전자가 되어보세요';}
+      pop.textContent=n>0?t('liveCount',{n:comma(n)}):t('firstJoin');}
   }
 }
 /* 배틀 중 실제 게이지 목표 = (서버 집계 + 내 실시간 기여) 기준 A 비율. 라이브 아니면 null → 시뮬 폴백 */
@@ -301,15 +414,68 @@ var AC=null;
 function beep(freq,dur,type,vol){try{AC=AC||new(window.AudioContext||window.webkitAudioContext)();var o=AC.createOscillator(),g=AC.createGain();o.type=type||'sine';o.frequency.value=freq;g.gain.setValueAtTime(vol||0.18,AC.currentTime);g.gain.exponentialRampToValueAtTime(0.001,AC.currentTime+dur);o.connect(g).connect(AC.destination);o.start();o.stop(AC.currentTime+dur);}catch(e){}}
 function chord(fs,dur){fs.forEach(function(f,i){setTimeout(function(){beep(f,dur||0.12,'triangle',0.14);},i*55);});}
 function buzz(ms){try{if(window.Toss&&Toss.haptic){Toss.haptic(ms);return;}}catch(e){}if(navigator.vibrate)navigator.vibrate(ms);}
+// 토스 미니앱 안에서 실행 중인가 — 외부 유도(홈 허브 링크 등)는 토스 정책상 금지라 토스 안에선 숨김(D6).
+function isToss(){try{return !!(window.Toss&&Toss.inToss&&Toss.inToss());}catch(e){return false;}}
 
-/* ── 화려한 액션: 캔버스 파티클 (외부 에셋 0, 캔버스 미지원이면 조용히 비활성) ── */
+/* ── 화려한 액션: 캔버스 파티클 (외부 에셋 0, 캔버스 미지원이면 조용히 비활성) ──
+ * 성능(D-perf): 이모지 파티클은 매 프레임 fillText 대신 *한 번 래스터화한 스프라이트*를 drawImage.
+ *   - 이모지 글리프 래스터화는 비싸다(특히 DPR 2). 글리프×크기버킷별로 오프스크린 캔버스 1장에 굽고 재사용.
+ *   - 파티클 수는 기기에 맞춰 스케일(모바일/저사양은 ↓), DPR은 sky 캔버스에서 ~1.5로 캡.
+ *   - prefers-reduced-motion이면 축포 최소화/생략(접근성). 게임 수치엔 전혀 무관(연출만). */
+function prefersReducedMotion(){try{return !!(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches);}catch(e){return false;}}
+/* 기기 등급(0~1): 코어 수·메모리·터치(모바일 추정)·화면폭으로 가벼운 휴리스틱. 1=데스크탑급, 0=저사양 모바일. */
+function deviceTier(){
+  var cores=navigator.hardwareConcurrency||4, mem=navigator.deviceMemory||4;
+  var coarse=false; try{coarse=!!(window.matchMedia&&window.matchMedia('(pointer:coarse)').matches);}catch(e){}
+  var narrow=(window.innerWidth||480)<700;
+  var mobile=coarse||narrow;
+  var s=0;
+  s+=cores>=8?0.4:cores>=4?0.25:0.1;
+  s+=mem>=8?0.35:mem>=4?0.22:0.1;
+  s+=mobile?0.0:0.25;
+  return clamp(s,0,1);
+}
+/* 기기 등급으로 입자 수를 lo(저사양 모바일)~hi(데스크탑) 사이로 보간. reduced-motion이면 0. */
+function scaledCount(lo,hi){ if(prefersReducedMotion())return 0; return Math.round(lo+(hi-lo)*deviceTier()); }
+/* ── 이모지 스프라이트 캐시 ──
+ * key = emoji + '@' + sizeBucket(@dpr). 오프스크린 캔버스에 글리프 1회 렌더 → 이후 drawImage.
+ * sizeBucket로 묶어 캐시 폭증 방지(파티클마다 size가 미세하게 달라도 한 버킷 공유). */
+var EMOJI_SPRITES={};
+function emojiSprite(emoji,size,dpr){
+  var bucket=Math.max(8,Math.round(size/4)*4);           // 4px 단위 버킷
+  var key=emoji+'@'+bucket+'x'+dpr;
+  var hit=EMOJI_SPRITES[key];
+  if(hit!==undefined)return hit;                          // null도 캐시(미지원/실패 재시도 방지)
+  var sprite=null;
+  try{
+    var pad=Math.ceil(bucket*0.3), side=bucket+pad*2;     // 회전/오버플로 여유 패딩
+    var oc=document.createElement('canvas');
+    if(oc.getContext){
+      oc.width=Math.round(side*dpr); oc.height=Math.round(side*dpr);
+      var octx=oc.getContext('2d');
+      octx.setTransform(dpr,0,0,dpr,0,0);
+      octx.font=bucket+'px serif'; octx.textAlign='center'; octx.textBaseline='middle';
+      octx.fillText(emoji,side/2,side/2);
+      sprite={canvas:oc,side:side};                       // side=CSS px(드로잉 시 절반만큼 오프셋)
+    }
+  }catch(e){sprite=null;}
+  EMOJI_SPRITES[key]=sprite;
+  return sprite;
+}
+/* 캐시된 스프라이트를 (x,y) 중심·rot 회전으로 그린다. 스프라이트 없으면 false(호출부가 fillText 폴백). */
+function drawEmojiSprite(ctx,emoji,x,y,size,rot,dpr){
+  var sp=emojiSprite(emoji,size,dpr); if(!sp)return false;
+  ctx.save(); ctx.translate(x,y); if(rot)ctx.rotate(rot);
+  ctx.drawImage(sp.canvas,-sp.side/2,-sp.side/2,sp.side,sp.side);
+  ctx.restore(); return true;
+}
 var FX={ctx:null,w:0,h:0,dpr:1,list:[]};
 var SKY={ctx:null,canvas:null,list:[],raf:0,w:0,h:0,dpr:1,on:false};
 function fxInit(){
   var c=el('fb-fx'), stage=el('fb-stage');
   if(!c||!c.getContext||!stage){FX.ctx=null;return;}
   var r=stage.getBoundingClientRect();
-  FX.dpr=Math.min(2,window.devicePixelRatio||1); FX.w=r.width; FX.h=r.height;
+  FX.dpr=Math.min(1.5,window.devicePixelRatio||1); FX.w=r.width; FX.h=r.height;
   c.width=FX.w*FX.dpr; c.height=FX.h*FX.dpr; c.style.width=FX.w+'px'; c.style.height=FX.h+'px';
   var ctx=c.getContext('2d'); ctx.setTransform(FX.dpr,0,0,FX.dpr,0,0); FX.ctx=ctx; FX.list=[];
 }
@@ -321,6 +487,13 @@ function fxSpark(x,y,n,colors){
   fxCap();
 }
 function fxRing(x,y,color){if(!FX.ctx)return;FX.list.push({type:'ring',x:x,y:y,r:6,vr:5,life:1,dec:0.045,color:color});}
+/* 🍿 로컬 팝콘 — 내가 탭한 자리에서 팝콘이 튄다(즉발·0비용). 감속모션이면 생략(접근성). */
+function fxPopcorn(x,y,n){
+  if(!FX.ctx||prefersReducedMotion())return;
+  for(var i=0;i<n;i++){var a=-1.57+(Math.random()-0.5)*1.8,sp=2.6+Math.random()*4.2;
+    FX.list.push({type:'emoji',x:x,y:y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-3.6,g:0.2,life:1,dec:0.02,size:12+Math.random()*9,emoji:'🍿',rot:(Math.random()-0.5)*1.4,vrot:(Math.random()-0.5)*0.26});}
+  fxCap();
+}
 function fxEmoji(x,y,n,emoji){
   if(!FX.ctx)return;
   for(var i=0;i<n;i++){var a=-1.57+(Math.random()-0.5)*2.1,sp=3+Math.random()*5;
@@ -333,7 +506,9 @@ function fxStep(){
   for(var i=FX.list.length-1;i>=0;i--){var p=FX.list[i];
     if(p.type==='ring'){p.r+=p.vr;p.life-=p.dec;ctx.globalAlpha=Math.max(0,p.life);ctx.strokeStyle=p.color;ctx.lineWidth=2.5;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,6.283);ctx.stroke();}
     else{p.vy+=p.g||0;p.x+=p.vx;p.y+=p.vy;if(p.vrot)p.rot+=p.vrot;p.life-=p.dec;ctx.globalAlpha=Math.max(0,p.life);
-      if(p.emoji){ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.rot||0);ctx.font=p.size+'px serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(p.emoji,0,0);ctx.restore();}
+      if(p.emoji){
+        if(!drawEmojiSprite(ctx,p.emoji,p.x,p.y,p.size,p.rot||0,FX.dpr)){ // 스프라이트 캐시 우선, 실패 시 폴백
+          ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.rot||0);ctx.font=p.size+'px serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(p.emoji,0,0);ctx.restore();}}
       else{ctx.fillStyle=p.color;ctx.beginPath();ctx.arc(p.x,p.y,p.size,0,6.283);ctx.fill();}}
     if(p.life<=0||p.y>FX.h+60)FX.list.splice(i,1);
   }
@@ -344,21 +519,25 @@ function skyInit(){
   if(SKY.canvas||typeof document==='undefined'||!document.body)return;
   var c=document.createElement('canvas'); if(!c.getContext)return;
   c.id='fb-sky'; document.body.appendChild(c);
-  function size(){SKY.dpr=Math.min(2,window.devicePixelRatio||1);SKY.w=window.innerWidth;SKY.h=window.innerHeight;c.width=SKY.w*SKY.dpr;c.height=SKY.h*SKY.dpr;var x=c.getContext('2d');x.setTransform(SKY.dpr,0,0,SKY.dpr,0,0);SKY.ctx=x;}
+  function size(){SKY.dpr=Math.min(1.5,window.devicePixelRatio||1);SKY.w=window.innerWidth;SKY.h=window.innerHeight;c.width=SKY.w*SKY.dpr;c.height=SKY.h*SKY.dpr;var x=c.getContext('2d');x.setTransform(SKY.dpr,0,0,SKY.dpr,0,0);SKY.ctx=x;}
   size(); if(window.addEventListener)window.addEventListener('resize',size); SKY.canvas=c;
 }
 function skyConfetti(emojis,colors){
+  // 입자 수를 기기에 맞춰 스케일: 데스크탑 ~110, 모바일 ~45, reduced-motion 0(축포 생략).
+  var n=scaledCount(45,110); if(n<=0)return;
   skyInit(); if(!SKY.ctx)return;
-  for(var i=0;i<110;i++){SKY.list.push({x:Math.random()*SKY.w,y:-20-Math.random()*SKY.h*0.4,vx:(Math.random()-0.5)*2.4,vy:2+Math.random()*4,g:0.05,life:1,dec:0.0035,size:11+Math.random()*15,emoji:Math.random()<0.5?emojis[i%emojis.length]:null,color:colors[i%colors.length],rot:Math.random()*6.28,vrot:(Math.random()-0.5)*0.3});}
+  for(var i=0;i<n;i++){SKY.list.push({x:Math.random()*SKY.w,y:-20-Math.random()*SKY.h*0.4,vx:(Math.random()-0.5)*2.4,vy:2+Math.random()*4,g:0.05,life:1,dec:0.0035,size:11+Math.random()*15,emoji:Math.random()<0.5?emojis[i%emojis.length]:null,color:colors[i%colors.length],rot:Math.random()*6.28,vrot:(Math.random()-0.5)*0.3});}
   if(!SKY.on){SKY.on=true;SKY.raf=requestAnimationFrame(skyLoop);}
 }
 function skyLoop(){
   var ctx=SKY.ctx; if(!ctx){SKY.on=false;return;}
   ctx.clearRect(0,0,SKY.w,SKY.h);
   for(var i=SKY.list.length-1;i>=0;i--){var p=SKY.list[i];p.vy+=p.g;p.x+=p.vx;p.y+=p.vy;p.rot+=p.vrot;p.life-=p.dec;ctx.globalAlpha=Math.max(0,Math.min(1,p.life));
-    ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.rot);
-    if(p.emoji){ctx.font=p.size+'px serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(p.emoji,0,0);}else{ctx.fillStyle=p.color;ctx.fillRect(-p.size/2,-p.size/3,p.size,p.size*0.62);}
-    ctx.restore();
+    if(p.emoji){
+      // 매 프레임 fillText 대신 캐시된 스프라이트를 drawImage(이모지 래스터화 비용 제거). 실패 시 폴백.
+      if(!drawEmojiSprite(ctx,p.emoji,p.x,p.y,p.size,p.rot,SKY.dpr)){
+        ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.rot);ctx.font=p.size+'px serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(p.emoji,0,0);ctx.restore();}
+    }else{ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.rot);ctx.fillStyle=p.color;ctx.fillRect(-p.size/2,-p.size/3,p.size,p.size*0.62);ctx.restore();}
     if(p.life<=0||p.y>SKY.h+40)SKY.list.splice(i,1);}
   ctx.globalAlpha=1;
   if(SKY.list.length)SKY.raf=requestAnimationFrame(skyLoop);else{SKY.on=false;ctx.clearRect(0,0,SKY.w,SKY.h);}
@@ -383,47 +562,64 @@ function paintIntroGauge(aShare){
   if(fa)fa.style.width=aShare.toFixed(2)+'%';
   if(fb)fb.style.width=(100-aShare).toFixed(2)+'%';
 }
+/* 진영 참전 버튼 라벨: ko는 조사(withEuro), en은 "Join {name}" — LANG 분기. */
+function joinLabel(team){return LANG==='ko'?(withEuro(team.name)+' 참전'):t('join',{name:team.name});}
 function intro(){
   cleanup();
-  var date=todayStr(), bt=battleOfDay(date), base=clamp(50+dailyBias(date,bt),12,88), ra=Math.round(base);
-  var liveBadge=netOn()?'LIVE · 전국 동시':'데모 · 흐름 시뮬';
+  var date=todayStr(), bt=GCTopics.localize(battleOfDay(date),LANG), base=clamp(50+dailyBias(date,bt),12,88), ra=Math.round(base);
+  var liveBadge=netOn()?t('liveBadge'):t('demoBadge');
   app.innerHTML=
     '<div class="screen" style="--team-a:'+bt.a.color+';--team-b:'+bt.b.color+';--me:'+bt.a.color+';--foe:'+bt.b.color+'">'+
-      '<div class="hdr"><span class="brand">⚡ 광클대전</span><span class="live"><span class="dot">●</span>'+liveBadge+'</span></div>'+
+      '<div class="hdr"><span class="brand">'+t('brand')+'</span>'+
+        '<span style="display:flex;align-items:center;gap:8px">'+
+          '<button class="chip-soft" onclick="toggleLang()" aria-label="language">'+t('langToggle')+'</button>'+
+          '<span class="live"><span class="dot">●</span>'+liveBadge+'</span></span></div>'+
       '<div class="rule"></div>'+
-      '<div class="kicker">광클대전 · '+mdLabel(date)+' · '+regionName(F.region)+'</div>'+
+      '<div class="kicker">'+t('appName')+' · '+mdLabel(date)+' · '+(MYINFO.code?MYINFO.flag+' ':'')+regionName(F.region)+'</div>'+
       '<h1 class="q">'+introQ(bt.q)+'</h1>'+
       '<div class="teams">'+teamCard(bt.a,'A')+teamCard(bt.b,'B')+'</div>'+
       '<div>'+
-        '<div class="gauge-head"><span class="mono">전국 흐름</span>'+
-          (F.streak>1?'<span class="chip-soft">🔥 '+F.streak+'일 연속 참전</span>':'<span class="chip-soft"><span class="dot">●</span> LIVE</span>')+'</div>'+
+        '<div class="gauge-head"><span class="mono">'+t('todayFlow')+'</span>'+
+          (F.streak>1?'<span class="chip-soft">🔥 '+t('streakDays',{n:F.streak})+'</span>':'<span class="chip-soft"><span class="dot">●</span> '+t('live')+'</span>')+'</div>'+
         '<div class="gnums"><span class="gnum" id="ig-a" style="color:var(--team-a)">'+ra+'</span>'+
-          '<span class="mono" style="align-self:center">VS</span>'+
+          '<span class="mono" style="align-self:center">'+t('vs')+'</span>'+
           '<span class="gnum" id="ig-b" style="color:var(--team-b)">'+(100-ra)+'</span></div>'+
         '<div class="gauge" style="margin-top:9px"><i id="ig-fill-a" style="width:'+base+'%;background:var(--team-a);transform-origin:left;animation:wipeIn .8s var(--ease-wipe) both"></i>'+
           '<i id="ig-fill-b" style="width:'+(100-base)+'%;background:var(--team-b);transform-origin:right;animation:wipeIn .8s var(--ease-wipe) both"></i></div>'+
-        '<div class="hint" id="ig-pop" style="margin-top:6px">'+(netOn()?'🔴 전국 실시간 집계 연결 중…':'')+'</div>'+
+        '<div class="hint" id="ig-pop" style="margin-top:6px">'+(netOn()?t('connecting'):'')+'</div>'+
       '</div>'+
       '<div class="go">'+
-        '<button style="background:'+bt.a.color+';color:'+ink(bt.a.color)+'" onclick="GO(\'a\')">'+bt.a.emoji+' '+withEuro(bt.a.name)+' 참전</button>'+
-        '<button style="background:'+bt.b.color+';color:'+ink(bt.b.color)+'" onclick="GO(\'b\')">'+bt.b.emoji+' '+withEuro(bt.b.name)+' 참전</button>'+
+        '<button style="background:'+bt.a.color+';color:'+ink(bt.a.color)+'" onclick="GO(\'a\')">'+bt.a.emoji+' '+joinLabel(bt.a)+'</button>'+
+        '<button style="background:'+bt.b.color+';color:'+ink(bt.b.color)+'" onclick="GO(\'b\')">'+bt.b.emoji+' '+joinLabel(bt.b)+'</button>'+
       '</div>'+
       '<div style="display:flex;gap:8px;margin-top:10px">'+
-        '<button class="btn btn-ghost" style="flex:1" onclick="openSettings()">📍 '+regionName(F.region)+(F.nick?' · '+F.nick:'')+'</button>'+
-        '<button class="btn btn-ghost" style="flex:1" onclick="rankBoard()">🏆 전국 랭킹</button>'+
+        '<button class="btn btn-ghost" style="flex:1" onclick="openSettings()">📍 '+regionName(F.region)+(F.nick?' · '+esc(F.nick):'')+'</button>'+
+        '<button class="btn btn-ghost" style="flex:1" onclick="rankBoard()">'+t('rankBtn')+'</button>'+
       '</div>'+
-      '<p class="hint">60초 동안 미친듯이 탭 → 내 편 흐름을 끌어와라. 콤보를 이으면 한 탭이 <b style="color:var(--team-a)">×3</b>까지.</p>'+
+      '<div style="display:flex;gap:8px">'+
+        '<button class="btn btn-ghost" style="flex:1" onclick="openLocker()">'+t('lockerBtn')+'</button>'+
+        '<button class="btn btn-ghost" style="flex:1" onclick="openProposals()">'+t('propBtn')+'</button>'+
+      '</div>'+
+      // 로비 지구본 — 전 세계 실시간 + 🍿 팝콘(영속 인스턴스를 이 슬롯으로 이동·D13).
+      '<div class="globe-hero">'+
+        '<div class="globe-cap mono">'+t('globeTitle')+'</div>'+
+        '<div id="gl-slot" class="gl-slot" style="height:236px"></div>'+
+        '<div class="hint" style="margin:6px 2px 0;font-size:.74rem;opacity:.7">'+t('globeIntro')+'</div>'+
+      '</div>'+
+      '<p class="hint">'+t('tapHint')+'</p>'+
     '</div>';
   var iga=el('ig-a'); if(iga)iga._seed=base;
   startWatch(date);
   if(netOn()&&LIVE.date===date&&LIVE.tot)onLive();
+  mountGlobe(); // 로비 슬롯으로 지구본 이동
 }
 
 /* ── 배틀 ── */
 var B=null, DURATION=60;
 function GO(side){
   cleanup();
-  var date=todayStr(), bt=battleOfDay(date), me=bt[side], foe=bt[side==='a'?'b':'a'];
+  // 배틀 시작 시 1회 localize → B.bt에 평탄 저장. 이후 frame/ticker/result는 B.bt를 그대로 사용.
+  var date=todayStr(), bt=GCTopics.localize(battleOfDay(date),LANG), me=bt[side], foe=bt[side==='a'?'b':'a'];
   startWatch(date);
   var base=clamp(50+dailyBias(date,bt),12,88);
   if(netOn()&&LIVE.tot)base=shareFromTot(LIVE.tot,base);
@@ -436,8 +632,15 @@ function GO(side){
   app.innerHTML=
     '<div class="stage" id="fb-stage" style="--team-a:'+bt.a.color+';--team-b:'+bt.b.color+';--me:'+me.color+';--foe:'+foe.color+';--tapink:'+ink(me.color)+'">'+
       '<div class="urgentbar"></div>'+
-      '<div class="bhdr"><span class="l"><span class="dot">●</span>LIVE · BATTLE</span><span class="chip" id="fb-chip">평상</span></div>'+
-      '<div class="ticker" id="fb-ticker">전국에서 광클 시작 — '+me.emoji+' '+me.name+' 가즈아!</div>'+
+      // 헤더+티커(좌측 열) + 미니 지구본(우측 인라인 뱃지). 인라인이라 서로 안 가림(사용자 피드백 반영).
+      //   지구본은 lite(대륙ON·링/라벨/팝콘OFF·자동회전OFF)로 가볍게, 대전 실시간성은 게이지로 유지.
+      '<div class="bhead">'+
+        '<div class="bcol">'+
+          '<div class="bhdr"><span class="l"><span class="dot">●</span>'+t('battleHead')+'</span><span class="chip" id="fb-chip">'+t('chipNormal')+'</span></div>'+
+          '<div class="ticker" id="fb-ticker">'+t('startCry',{team:me.emoji+' '+me.name})+'</div>'+
+        '</div>'+
+        '<div id="gl-slot" class="gl-slot gl-mini" aria-hidden="true"></div>'+
+      '</div>'+
       '<div>'+
         '<div class="brow"><span style="color:var(--team-a)">A <b id="fb-pa" class="tnum">'+base.toFixed(0)+'</b>%</span>'+
           '<span style="color:var(--team-b)">B <b id="fb-pb" class="tnum">'+(100-base).toFixed(0)+'</b>%</span></div>'+
@@ -445,21 +648,24 @@ function GO(side){
           '<i id="fb-fill-b" style="width:'+(100-base)+'%;background:var(--team-b)"></i></div>'+
       '</div>'+
       '<div class="mid">'+
-        '<div><div class="lbl">내 기여</div><div class="contrib tnum"><b id="fb-taps">0</b></div>'+
-          '<div class="combo-line">콤보 <b id="fb-combo">×1.0</b></div></div>'+
-        '<div style="text-align:right"><div class="lbl">Time</div><div class="timer tnum" id="fb-time">'+DURATION+'</div></div>'+
+        '<div><div class="lbl">'+t('myContribution')+'</div><div class="contrib tnum"><b id="fb-taps">0</b></div>'+
+          '<div class="combo-line">'+t('comboLbl')+' <b id="fb-combo">×1.0</b></div></div>'+
+        '<div style="text-align:right"><div class="lbl">'+t('timeLbl')+'</div><div class="timer tnum" id="fb-time">'+DURATION+'</div></div>'+
       '</div>'+
       '<button class="tap" id="fb-tap"><span class="combobadge" id="fb-combobadge">COMBO ×1.0</span>'+
-        '<span class="orb">'+me.emoji+'</span><span class="lab">TAP!</span></button>'+
-      '<div class="third"><span class="bar"></span><div><div class="k" id="fb-thirdk">전국 실시간</div>'+
-        '<div class="v" id="fb-thirdv">'+me.name+' · 흐름 잡아라</div></div></div>'+
+        '<span class="orb">'+me.emoji+'</span><span class="lab">'+t('tapLab')+'</span></button>'+
+      '<div class="third"><span class="bar"></span><div><div class="k" id="fb-thirdk">'+t('thirdLive')+'</div>'+
+        '<div class="v" id="fb-thirdv">'+t('thirdGrab',{name:me.name})+'</div></div></div>'+
       '<div class="fb-pops" id="fb-pops"></div>'+
       '<canvas id="fb-fx"></canvas>'+
     '</div>';
   el('fb-stage').addEventListener('pointerdown',onTap,{passive:true});
+  try{ history.pushState(null,''); }catch(e){}  // 뒤로가기 가드(배틀 중 이탈 방지 → popstate가 로비로)
+  document.body.classList.add('playing');   // 배틀 중 스크롤/주소창 흔들림 잠금
   fxInit();
   B.tick=setInterval(tickerBeat,2300);
   B.raf=requestAnimationFrame(frame);
+  mountGlobe(); // 배틀 헤더 옆 미니 슬롯으로 지구본 이동(lite·실시간 유지)
 }
 
 function onTap(e){
@@ -477,8 +683,13 @@ function onTap(e){
   var px=(e.clientX||r.left+r.width/2)-r.left, py=(e.clientY||r.top+r.height/2)-r.top;
   popNum(px,py,mult);
   var hot=B.streak>10;
-  fxSpark(px,py,hot?10:6,hot?['#ffffff',B.me.color,'#ffffff']:[B.me.color,'#ffffff']);
-  if(milestone){fxRing(px,py,'#ffffff');fxEmoji(px,py,7,B.me.emoji);shake();}
+  // 꾸미기(Phase 3): 장착된 탭 이펙트 색/스타일로 파티클만 변경 — 탭 수·콤보·점수엔 영향 없음(경계 #3).
+  // 잠긴 항목은 GCCos.normState가 기본으로 폴백 → 진영색(B.me.color) 사용. fallback 팔레트는 기존과 동일.
+  var fxCols=GCCos.equippedFxColors(F,hot?['#ffffff',B.me.color,'#ffffff']:[B.me.color,'#ffffff']);
+  if(GCCos.equippedFxStyle(F)==='star'){fxEmoji(px,py,hot?6:4,'✨');}
+  fxSpark(px,py,hot?10:6,fxCols);
+  fxPopcorn(px,py,hot?2:1); // 탭 자리에 팝콘 튀기기(연출만 — 탭 수·콤보·점수 불변, 경계 #3)
+  if(milestone){fxRing(px,py,fxCols[0]||'#ffffff');fxEmoji(px,py,7,B.me.emoji);shake();}
   var t=el('fb-taps'); if(t)t.textContent=comma(Math.floor(B.tapsF));
 }
 function popNum(px,py,mult){
@@ -516,43 +727,45 @@ function frame(now){
   fxStep();
   var hot=B.streak>14, urg=(B.endsAt-now)/1000<=10;
   if(stage&&stage.classList){stage.classList.toggle('combo',hot);stage.classList.toggle('urgent',urg);}
-  setTxt('fb-chip',urg?'막판 10초':(hot?'콤보!':'평상'));
+  setTxt('fb-chip',urg?t('chipUrgent'):(hot?t('chipCombo'):t('chipNormal')));
   var lead=B.aShare>=50?B.bt.a:B.bt.b, diff=Math.abs(B.aShare-50)*2;
-  setTxt('fb-thirdk',urg?'긴급':(hot?'콤보 가속':'전국 실시간'));
-  setTxt('fb-thirdv',urg?'막판 10초 · 총력전':(hot?'버튼 발광 · 기여 강조':(lead.name+' 우세 · 차이 '+diff.toFixed(0)+'%p')));
+  setTxt('fb-thirdk',urg?t('thirdUrgent'):(hot?t('thirdComboAcc'):t('thirdLive')));
+  setTxt('fb-thirdv',urg?t('thirdUrgentMsg'):(hot?t('thirdComboMsg'):t('thirdLeadMsg',{name:lead.name,diff:diff.toFixed(0)})));
   if(now>=B.endsAt){endBattle();return;}
   B.raf=requestAnimationFrame(frame);
 }
 function tickerBeat(){
-  var t=el('fb-ticker'); if(!B||!t){cleanup();return;}
+  var tk=el('fb-ticker'); if(!B||!tk){cleanup();return;}
   var bt=B.bt, lead=B.aShare>=50?bt.a:bt.b, leadShare=Math.max(B.aShare,100-B.aShare), pool=[];
-  if(Math.abs(B.aShare-50)<2.5)pool.push('⚔️ 초접전! 한 끗 차이다');
-  else pool.push('🔥 '+lead.emoji+' '+lead.name+' 흐름 장악 '+leadShare.toFixed(0)+'%');
-  if(B.maxStreak>14)pool.push('💥 누군가 ×'+comboMult(B.maxStreak).toFixed(1)+' 콤보 폭발!');
-  bt.taunts.forEach(function(x){pool.push('🗣️ '+x);});
-  pool.push('🚀 단톡방에 소문이 퍼지는 중…','👀 옆 반도 참전했다는데?','📣 지금 흐름 끌어올 타이밍!');
-  t.textContent=pool[Math.floor(Math.random()*pool.length)];
-  t.classList.remove('beat'); void t.offsetWidth; t.classList.add('beat');
+  if(Math.abs(B.aShare-50)<2.5)pool.push(t('tkClose'));
+  else pool.push(t('tkLead',{team:lead.emoji+' '+lead.name,share:leadShare.toFixed(0)}));
+  if(B.maxStreak>14)pool.push(t('tkCombo',{mult:comboMult(B.maxStreak).toFixed(1)}));
+  bt.taunts.forEach(function(x){pool.push('🗣️ '+x);}); // 떡밥별 도발은 이미 localize됨(B.bt.taunts)
+  pool.push(t('tkGen1'),t('tkGen2'),t('tkGen3'));
+  tk.textContent=pool[Math.floor(Math.random()*pool.length)];
+  tk.classList.remove('beat'); void tk.offsetWidth; tk.classList.add('beat');
 }
 /* ── 광고 수익화: 보상형 '결과 2배 자랑' (둘 다 자동 분기) ──
    우선순위: ① 토스 안 → 토스 보상형 SDK  ② 웹 보상형 훅(AD.webRewarded)  ③ 하우스(데모) 광고 폴백.
-   ▸ 실광고 전환: 토스 입점 후 콘솔 광고단위 ID를 tossRewardUnitId에, 웹은 webRewarded에 제공자 함수 연결.
-   ▸ 10대 대상 → 비개인화 광고(nonPersonalized)로 강제. 보상형(옵트인)만 사용 — 배너/전면 없음. */
-var AD={ enabled:true, tossRewardUnitId:'', webRewarded:null, houseSeconds:15, nonPersonalized:true };
+   ▸ 실광고 전환: 토스 입점 후 콘솔에서 만든 보상형 '광고 그룹ID'를 tossAdGroupId에, 웹은 webRewarded에 함수 연결.
+     (앱인토스 SDK는 adUnitId가 아니라 adGroupId로 보상형/전면형을 구분 — toss.js 정합 완료)
+   ▸ 10대 대상 → 비개인화 광고(nonPersonalized)로 강제. 보상형(옵트인)만 사용 — 배너/전면 없음.
+   ▸ [출시 상태] 광고 승인 전이라 enabled:false (광고 0 · '2배'는 무료 동작). 승인 후 enabled:true + tossAdGroupId만 채우면 광고판. */
+var AD={ enabled:false, tossAdGroupId:'', webRewarded:null, houseSeconds:15, nonPersonalized:true };
 function adRewarded(opts){
   opts=opts||{};
   if(!AD.enabled){opts.onReward&&opts.onReward();return;}
-  try{ if(window.Toss&&Toss.inToss&&Toss.inToss()&&AD.tossRewardUnitId){
-    Toss.rewardedAd(AD.tossRewardUnitId).then(function(r){
+  try{ if(window.Toss&&Toss.inToss&&Toss.inToss()&&AD.tossAdGroupId){
+    Toss.rewardedAd(AD.tossAdGroupId).then(function(r){
       if(r===true)opts.onReward&&opts.onReward();
-      else if(r===false)toast('끝까지 봐야 보상을 받아요');
+      else if(r===false)toast(t('adNeedFull'));
       else houseAd(opts);
     }); return;
   } }catch(e){}
   if(typeof AD.webRewarded==='function'){
     try{ Promise.resolve(AD.webRewarded({nonPersonalized:AD.nonPersonalized})).then(function(r){
       if(r===true)opts.onReward&&opts.onReward();
-      else if(r===false)toast('끝까지 봐야 보상을 받아요');
+      else if(r===false)toast(t('adNeedFull'));
       else houseAd(opts);
     }).catch(function(){houseAd(opts);}); return;
     }catch(e){}
@@ -561,18 +774,18 @@ function adRewarded(opts){
 }
 function houseAd(opts){
   var sec=AD.houseSeconds, ov=document.createElement('div'); ov.className='ad-ov';
-  ov.innerHTML='<div class="ad-box"><div class="ad-top"><span class="mono">AD · 광고</span>'+
-    '<button class="ad-skip" id="ad-skip">✕ 건너뛰기(보상 없음)</button></div>'+
-    '<div class="ad-body"><div class="ad-emoji">⚡</div><b>광클대전</b>'+
-    '<p class="hint" style="margin-top:6px">광고 자리 — 토스/애드센스/애드핏 연결 시 실제 광고가 나옵니다</p></div>'+
+  ov.innerHTML='<div class="ad-box"><div class="ad-top"><span class="mono">'+t('adTag')+'</span>'+
+    '<button class="ad-skip" id="ad-skip">'+t('adSkip')+'</button></div>'+
+    '<div class="ad-body"><div class="ad-emoji">⚡</div><b>'+t('appName')+'</b>'+
+    '<p class="hint" style="margin-top:6px">'+t('adNote')+'</p></div>'+
     '<div class="ad-bar"><i id="ad-bar"></i></div>'+
-    '<button class="btn btn-ghost" id="ad-btn" disabled>광고 시청 중… '+sec+'초</button></div>';
+    '<button class="btn btn-ghost" id="ad-btn" disabled>'+t('adWatching',{n:sec})+'</button></div>';
   (document.body||document.documentElement).appendChild(ov);
   var bar=document.getElementById('ad-bar'); if(bar){bar.style.transition='width '+sec+'s linear';requestAnimationFrame(function(){bar.style.width='100%';});}
-  var t=sec, btn=document.getElementById('ad-btn'), iv=setInterval(function(){t--;if(t>0){if(btn)btn.textContent='광고 시청 중… '+t+'초';return;}clearInterval(iv);done();},1000);
+  var rem=sec, btn=document.getElementById('ad-btn'), iv=setInterval(function(){rem--;if(rem>0){if(btn)btn.textContent=t('adWatching',{n:rem});return;}clearInterval(iv);done();},1000);
   function shut(){clearInterval(iv);if(ov.parentNode)ov.parentNode.removeChild(ov);}
-  function done(){if(btn)btn.textContent='✅ 보상 적용';setTimeout(function(){shut();opts.onReward&&opts.onReward();},350);}
-  var sk=document.getElementById('ad-skip'); if(sk)sk.onclick=function(){shut();toast('끝까지 봐야 보상을 받아요');};
+  function done(){if(btn)btn.textContent=t('adRewarded');setTimeout(function(){shut();opts.onReward&&opts.onReward();},350);}
+  var sk=document.getElementById('ad-skip'); if(sk)sk.onclick=function(){shut();toast(t('adNeedFull'));};
 }
 
 /* ── 종료 + 결과 ── */
@@ -581,9 +794,13 @@ function endBattle(){
   if(!B||B.ended)return; B.ended=true;
   cancelAnimationFrame(B.raf); clearInterval(B.tick);
   var bt=B.bt, side=B.side, me=B.me, foe=B.foe, date=B.date;
-  var contrib=Math.floor(B.tapsF), myShare=side==='a'?B.aShare:100-B.aShare;
+  var round=Math.floor(B.tapsF), myShare=side==='a'?B.aShare:100-B.aShare;
+  // 재참전=최고점수 적용(사용자 결정): 오늘 최고 대비 증가분만 집단 집계에 반영. dayBest는 단일 슬롯(날짜+값).
+  var sameDay=(F.dayBest&&F.dayBest.d===date), prevBest=sameDay?(F.dayBest.v||0):0, first=!sameDay;
+  var contrib=Math.max(prevBest,round), aggDelta=Math.max(0,contrib-prevBest);
+  F.dayBest={d:date,v:contrib};
   var newBest=contrib>(F.best||0); if(newBest)F.best=contrib; persist();
-  var verdict=myShare>=53?{t:'우리 편이 전국을 먹었다 🎉',c:'win'}:myShare<=47?{t:'오늘은 밀렸다…<br>내일 설욕 🔥',c:'lose'}:{t:'초접전 무승부 ⚔️',c:'tie'};
+  var verdict=myShare>=53?{t:t('verdictWin'),c:'win'}:myShare<=47?{t:t('verdictLose'),c:'lose'}:{t:t('verdictTie'),c:'tie'};
   R={bt:bt,me:me,foe:foe,side:side,date:date,contrib:contrib,myShare:myShare,maxStreak:B.maxStreak,
      title:titleForTaps(contrib),rank:(netOn()?null:rankEstimate(contrib)),rankState:(netOn()?'pending':'estimate'),total:0,
      verdict:verdict,newBest:newBest,streak:F.streak,x2:false};
@@ -591,10 +808,12 @@ function endBattle(){
   if(newBest){chord([523,659,784,1047]);buzz([20,40,20]);}
   if(verdict.c==='win'||newBest){skyConfetti([me.emoji,'✨'],[me.color,'#ffffff','#ffd76a']);}
   B=null;
+  document.body.classList.remove('playing');  // 결과화면 진입 → 스크롤 잠금 해제
   renderResult();
   if(netOn()){
     var rr=R;
-    GCNet.submit(date,side,contrib,F.region,nickOf()).then(function(res){
+    // Phase 2: 내 국가(MY)로 나라대전 집계 + 배지·멘트. 재참전: aggDelta(증가분)·first만 집계 반영(net.js).
+    GCNet.submit(date,side,contrib,F.region,nickOf(),MY,{badge:effectiveBadge(),comment:F.comment,aggDelta:aggDelta,first:first}).then(function(res){
       if(rr!==R)return;
       var bl=blendRank(res,date,R.contrib);
       if(bl){R.rank=bl.rank;R.total=bl.total;R.rankState='real';}
@@ -617,7 +836,7 @@ function applyDouble(){
       updateRankDOM();
     });
   }else{ R.rank=rankEstimate(R.contrib); R.rankState='estimate'; renderResult(); }
-  chord([659,784,988,1318]); buzz([15,30,15]); toast('⚡ 기여 2배 적용 — 더 크게 자랑하기!');
+  chord([659,784,988,1318]); buzz([15,30,15]); toast(t('adApplied'));
 }
 function renderResult(){
   var r=R, me=r.me, foe=r.foe, bt=r.bt, rs=Math.round(r.myShare);
@@ -625,132 +844,936 @@ function renderResult(){
   app.innerHTML=
     '<div class="screen" style="--team-a:'+bt.a.color+';--team-b:'+bt.b.color+';--me:'+me.color+';--foe:'+foe.color+';--tapink:'+ink(me.color)+'">'+
       '<div class="acc" style="background:'+acc+'"></div>'+
-      '<div class="hdr"><span class="brand">⚡ 광클대전</span><span class="mono">RESULT · '+mdShort(todayStr())+'</span></div>'+
+      '<div class="hdr"><span class="brand">'+t('brand')+'</span><span class="mono">'+t('resultTag')+' · '+mdShort(todayStr())+'</span></div>'+
       '<h2 class="verdict">'+r.verdict.t+'</h2>'+
       '<div class="rcard">'+
         '<div class="frow"><span class="em">'+me.emoji+'</span><span class="nm">'+me.name+'</span><span class="rq">'+bt.q+'</span></div>'+
-        '<div class="rlbl">칭호</div><div class="title">'+r.title+'</div>'+
-        '<div style="margin-top:16px"><div class="brow"><span style="color:var(--me)">최종 '+rs+'%</span><span style="color:var(--foe)">'+(100-rs)+'%</span></div>'+
+        '<div class="rlbl">'+t('titleLbl')+'</div><div class="title">'+r.title+'</div>'+
+        '<div style="margin-top:16px"><div class="brow"><span style="color:var(--me)">'+t('finalShare',{n:rs})+'</span><span style="color:var(--foe)">'+(100-rs)+'%</span></div>'+
           '<div class="gauge tall" style="margin-top:7px"><i style="width:'+r.myShare.toFixed(1)+'%;background:var(--me)"></i>'+
             '<i style="width:'+(100-r.myShare).toFixed(1)+'%;background:var(--foe)"></i></div></div>'+
       '</div>'+
-      '<div class="stats"><div><div class="k">내 기여</div><div class="v">'+comma(r.contrib)+(r.x2?' <span class="x2b">⚡2X</span>':'')+'</div></div>'+
-        '<div><div class="k">최고 콤보</div><div class="v">×'+comboMult(r.maxStreak).toFixed(1)+'</div></div>'+
+      '<div class="stats"><div><div class="k">'+t('myContribution')+'</div><div class="v">'+comma(r.contrib)+(r.x2?' <span class="x2b">⚡2X</span>':'')+'</div></div>'+
+        '<div><div class="k">'+t('maxCombo')+'</div><div class="v">×'+comboMult(r.maxStreak).toFixed(1)+'</div></div>'+
         '<div><div class="k" id="r-ranklbl">'+rankLabel(r)+'</div><div class="v" id="r-rankval">'+rankValue(r)+'</div></div></div>'+
-      '<div class="tags"><span>#광클대전</span><span>#'+bt.tag+'</span></div>'+
-      (r.newBest?'<div class="newbest">🏆 내 최고 기여 갱신 · '+comma(r.contrib)+'</div>':'')+
-      (r.streak>1?'<div class="streak-chip">🔥 '+r.streak+'일 연속 참전 중</div>':'')+
+      '<div id="r-contribrank">'+contribRankHTML(r)+'</div>'+
+      '<div class="tags"><span>'+t('hashApp')+'</span><span>#'+bt.tag+'</span></div>'+
+      (r.newBest?'<div class="newbest">'+t('newBest',{n:comma(r.contrib)})+'</div>':'')+
+      (r.streak>1?'<div class="streak-chip">🔥 '+t('streakDaysOn',{n:r.streak})+'</div>':'')+
+      '<div class="globe-hero" style="margin-top:12px">'+
+        '<div class="globe-cap mono">'+t('globeTitle')+'</div>'+
+        '<div id="gl-slot" class="gl-slot" style="height:200px"></div>'+
+      '</div>'+
       '<div class="actions">'+
-        (r.x2?'<div class="x2done">✅ 광고 보상 적용 — 자랑 카드가 2배로 커졌어요</div>'
-             :'<button class="btn btn-reward" onclick="watch2x()">📺 광고 보고 기여 <b>2배</b>로 자랑 ⚡2X</button>')+
-        '<button class="btn btn-primary" style="color:'+ink(me.color)+'" onclick="SHARE()">📣 결과 자랑 + 친구 소환</button>'+
-        '<button class="btn btn-ghost" onclick="GO(\''+r.side+'\')">🔁 한 판 더</button>'+
+        '<button class="btn btn-primary" style="color:'+ink(me.color)+'" onclick="SHARE()">'+t('shareBtn')+'</button>'+
+        '<button class="btn btn-ghost" onclick="GO(\''+r.side+'\')">'+t('againBtn')+'</button>'+
         '<div style="display:flex;gap:8px">'+
-          '<button class="btn btn-ghost" style="flex:1" onclick="rankBoard()">🏆 전국 랭킹</button>'+
-          '<button class="btn btn-ghost" style="flex:1" onclick="intro()">⚡ 오늘의 대전</button>'+
+          '<button class="btn btn-ghost" style="flex:1" onclick="rankBoard()">'+t('rankBtn')+'</button>'+
+          '<button class="btn btn-ghost" style="flex:1" onclick="openLocker()">'+t('lockerBtn')+'</button>'+
         '</div>'+
+        '<button class="btn btn-ghost" onclick="intro()">'+t('todayBattle')+'</button>'+
+        // 홈 허브 유도(ddukkit.com) — 웹 전용. 토스 안에선 숨김(외부 유도 금지·D6). 같은 사이트라 동일 탭 이동.
+        (isToss()?'':'<a class="btn btn-ghost" href="https://ddukkit.com/" style="text-decoration:none;text-align:center">'+t('moreApps')+'</a>')+
       '</div>'+
     '</div>';
+  mountGlobe(); // 결과 화면 슬롯으로 지구본 이동(실시간 유지)
 }
-function rankLabel(r){return r.rankState==='real'?'전국 순위':'예상 전국';}
+function rankLabel(r){return r.rankState==='real'?t('rankNation'):t('rankEst');}
 function rankValue(r){
-  if(r.rank==null||r.rankState==='pending')return '<small>집계 중…</small>';
-  return comma(r.rank)+'<small>위</small>'+(r.rankState==='real'&&r.total?' <small style="opacity:.55">/'+comma(r.total)+'명</small>':'');
+  if(r.rank==null||r.rankState==='pending')return '<small>'+t('counting')+'</small>';
+  var unit=t('rankUnit'); // ko:"위" / en:"" (숫자만)
+  return comma(r.rank)+(unit?'<small>'+unit+'</small>':'')+(r.rankState==='real'&&r.total?' <small style="opacity:.55">/'+t('rankOf',{n:comma(r.total)})+'</small>':'');
 }
-function updateRankDOM(){var lb=el('r-ranklbl'),v=el('r-rankval');if(lb)lb.textContent=rankLabel(R);if(v)v.innerHTML=rankValue(R);}
+/* 기여도 순위 강조(Phase 2): "내 기여 N · 전국/세계 M위" + 순위권 진입 시 배지·멘트 프리뷰.
+ * scope 라벨은 기존 랭킹 타일 언어와 일치(ko:전국 / en:global). pending이면 빈 문자열(깜빡임 방지). */
+var RANK_BADGE_TOP=20; // 리더보드 표시 크기와 동일 — 이 안에 들면 '순위권'.
+function contribRankHTML(r){
+  if(r.rank==null||r.rankState==='pending')return '';
+  var scope=LANG==='ko'?t('scopeNation'):t('scopeWorld');
+  var key=r.rankState==='real'?'contribRankLine':'contribRankLineEst';
+  var line=t(key,{contrib:comma(r.contrib),scope:scope,rank:comma(r.rank)});
+  var h='<div class="streak-chip" style="margin-top:10px">📊 '+line+'</div>';
+  // 순위권(real & top N) 진입 — 내 배지·멘트가 리더보드에 이렇게 노출된다고 미리보기(사용자입력 → esc).
+  if(r.rankState==='real'&&r.rank<=RANK_BADGE_TOP){
+    h+='<div class="newbest" style="margin-top:8px">'+t('youRanked',{scope:scope,rank:comma(r.rank)})+'</div>';
+    var badge=esc(effectiveBadge()), comment=esc(F.comment||'');
+    if(badge||comment){
+      h+='<div class="rcard" style="margin-top:8px;padding:11px 13px">'+
+        '<div style="display:flex;align-items:center;gap:8px;font-size:14px">'+(MYINFO.code?MYINFO.flag+' ':'')+
+          '<b'+myNameColorStyle()+'>'+esc(nickOf())+'</b>'+(badge?' '+badge:'')+'</div>'+
+        (comment?'<div style="margin-top:4px;font-size:12px;color:var(--ink-2)">“'+comment+'”</div>':'')+'</div>';
+    }
+  }
+  return h;
+}
+function updateRankDOM(){var lb=el('r-ranklbl'),v=el('r-rankval'),cr=el('r-contribrank');
+  if(lb)lb.textContent=rankLabel(R);if(v)v.innerHTML=rankValue(R);if(cr)cr.innerHTML=contribRankHTML(R);}
 
 /* ── 자랑/소환 ── */
 var LAST=null;
 function SHARE(){
   if(!LAST)return;
   var link=location.href.split('?')[0];
-  var rankPart=(LAST.rank!=null)?(' · '+(LAST.rankState==='real'?'전국':'예상')+' '+comma(LAST.rank)+'위'):'';
-  var text='⚡광클대전⚡ 나는 '+LAST.me.name+'!\n'+LAST.bt.q+' → '+LAST.title+'\n내 기여 '+comma(LAST.contrib)+(LAST.x2?' ⚡2X':'')+rankPart+'\n너는 어느 편? 참전해라 👉';
-  if(navigator.share){navigator.share({title:'광클대전',text:text,url:link}).catch(function(){});return;}
+  var rankPart=(LAST.rank!=null)?t(LAST.rankState==='real'?'shareRankReal':'shareRankEst',{n:comma(LAST.rank)}):'';
+  var text=t('shareText',{name:LAST.me.name,q:LAST.bt.q,title:LAST.title,contrib:comma(LAST.contrib),x2:(LAST.x2?' ⚡2X':''),rank:rankPart});
+  if(navigator.share){navigator.share({title:t('appName'),text:text,url:link}).catch(function(){});return;}
   if(navigator.clipboard&&navigator.clipboard.writeText){
-    navigator.clipboard.writeText(text+' '+link).then(function(){toast('링크 복사 완료 — 단톡방에 뿌리기 📣');},function(){toast('스크린샷 해서 자랑해보세요 📸');});
-  }else{toast('스크린샷 해서 자랑해보세요 📸');}
+    navigator.clipboard.writeText(text+' '+link).then(function(){toast(t('shareCopied'));},function(){toast(t('shareScreenshot'));});
+  }else{toast(t('shareScreenshot'));}
 }
 
-function cleanup(){if(B){cancelAnimationFrame(B.raf);clearInterval(B.tick);B=null;}FX.list.length=0;}
+function cleanup(){if(B){cancelAnimationFrame(B.raf);clearInterval(B.tick);B=null;}FX.list.length=0;document.body.classList.remove('playing');/*배틀 종료 시 스크롤 잠금 해제. 지구본은 부수지 않음(D13)*/}
 
 /* ── 전국 랭킹 + 지역 점령 화면 ── */
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return c==='&'?'&amp;':c==='<'?'&lt;':c==='>'?'&gt;':'&quot;';});}
 function rankBoard(){
   cleanup();
-  var date=todayStr(), bt=battleOfDay(date);
+  var date=todayStr(), bt=GCTopics.localize(battleOfDay(date),LANG);
   app.innerHTML=
     '<div class="screen" style="--team-a:'+bt.a.color+';--team-b:'+bt.b.color+';--me:'+bt.a.color+';--foe:'+bt.b.color+'">'+
-      '<div class="hdr"><span class="brand">🏆 전국 랭킹</span><span class="mono">'+mdShort(date)+'</span></div>'+
+      '<div class="hdr"><span class="brand">'+t('rankTitle')+'</span><span class="mono">'+mdShort(date)+'</span></div>'+
       '<div class="rule"></div>'+
       '<div class="kicker">'+bt.q+'</div>'+
+      '<div id="rb-country"></div>'+
       '<div id="rb-region"></div>'+
-      '<div class="gauge-head" style="margin-top:8px"><span class="mono">오늘의 광클 TOP</span>'+
-        (netOn()?'<span class="chip-soft"><span class="dot">●</span> 실시간</span>':'<span class="chip-soft">데모</span>')+'</div>'+
-      '<div id="rb-list" class="hint" style="text-align:left">불러오는 중…</div>'+
+      '<div class="gauge-head" style="margin-top:8px"><span class="mono">'+t('topToday')+'</span>'+
+        (netOn()?'<span class="chip-soft"><span class="dot">●</span> '+t('realtime')+'</span>':'<span class="chip-soft">'+t('demo')+'</span>')+'</div>'+
+      '<div id="rb-list" class="hint" style="text-align:left">'+t('loading')+'</div>'+
+      '<div class="globe-hero" style="margin-top:12px">'+
+        '<div class="globe-cap mono">'+t('globeTitle')+'</div>'+
+        '<div id="gl-slot" class="gl-slot" style="height:210px"></div>'+
+      '</div>'+
       '<div class="actions" style="margin-top:14px">'+
-        '<button class="btn btn-ghost" onclick="rankBoard()">🔄 새로고침</button>'+
-        '<button class="btn btn-ghost" onclick="intro()">⚡ 오늘의 대전</button>'+
+        '<div style="display:flex;gap:8px">'+
+          '<button class="btn btn-ghost" style="flex:1" onclick="rankBoard()">'+t('refreshBtn')+'</button>'+
+          '<button class="btn btn-ghost" style="flex:1" onclick="intro()">'+t('todayBattle')+'</button>'+
+        '</div>'+
       '</div>'+
     '</div>';
-  if(!netOn()){el('rb-list').textContent='데모 모드예요 — fb-config.js에 Firebase 설정을 넣으면 실제 전국 랭킹·지역 점령전이 켜집니다.';return;}
+  mountGlobe(); // 랭킹 화면 슬롯으로 지구본 이동(실시간 유지)
+  if(!netOn()){el('rb-list').textContent=t('boardDemo');return;}
   GCNet.leaderboard(date,20).then(function(rows){renderBoard(bt,blendRows(rows,date,20));});
-  GCNet.peek(date).then(function(t){renderRegion(bt,blendTot(t,date));});
+  // 단일 peek 1회로 나라대전(countries)·지역 점령(regions) 둘 다 렌더 — 추가 읽기 없음(D5).
+  GCNet.peek(date).then(function(tot){tot=blendTot(tot,date);renderCountries(bt,tot);renderRegion(bt,tot);});
 }
 function renderBoard(bt,rows){
   var box=el('rb-list'); if(!box)return;
-  if(!rows){box.textContent='랭킹을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.';return;}
-  if(!rows.length){box.textContent='아직 오늘 참전자가 없어요 — 첫 광클의 주인공이 되어보세요!';return;}
+  if(!rows){box.textContent=t('boardErr');return;}
+  if(!rows.length){box.textContent=t('boardEmpty');return;}
   var h='';
-  for(var i=0;i<rows.length;i++){var r=rows[i],t=bt[r.side]||bt.a,medal=i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1)+'';
-    h+='<div style="display:flex;align-items:center;gap:10px;padding:9px 2px;border-bottom:1px solid var(--line)'+(r.me?';background:rgba(255,255,255,.05);border-radius:8px':'')+'">'+
-      '<span class="mono" style="width:24px;text-align:center">'+medal+'</span>'+
-      '<span style="font-size:18px">'+t.emoji+'</span>'+
-      '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px">'+
-        (r.me?'<b>':'')+esc(r.nick)+(r.me?' (나)</b>':'')+
-        (r.region?'<span class="mono" style="margin-left:7px;color:var(--ink-3)">'+regionName(r.region)+'</span>':'')+'</span>'+
-      '<b class="tnum" style="color:'+t.color+'">'+comma(r.taps)+'</b></div>';
+  for(var i=0;i<rows.length;i++){var r=rows[i],tm=bt[r.side]||bt.a,medal=i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1)+'';
+    // 배지·멘트는 사용자입력 → 항상 esc(보안 #1). 빈값이면 아무것도 안 나옴(graceful). 국기는 감지 국가만.
+    var badge=esc(r.badge||''), comment=esc(r.comment||''), flag=r.country?GCGeo.flagOf(r.country)+' ':'';
+    h+='<div style="padding:9px 2px;border-bottom:1px solid var(--line)'+(r.me?';background:rgba(255,255,255,.05);border-radius:8px':'')+'">'+
+      '<div style="display:flex;align-items:center;gap:10px">'+
+        '<span class="mono" style="width:24px;text-align:center">'+medal+'</span>'+
+        '<span style="font-size:18px">'+tm.emoji+'</span>'+
+        '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px">'+
+          flag+(r.me?'<b'+myNameColorStyle()+'>':'')+esc(r.nick)+(badge?' '+badge:'')+(r.me?' '+t('me')+'</b>':'')+
+          (r.region?'<span class="mono" style="margin-left:7px;color:var(--ink-3)">'+regionName(r.region)+'</span>':'')+'</span>'+
+        '<b class="tnum" style="color:'+tm.color+'">'+comma(r.taps)+'</b></div>'+
+      (comment?'<div style="margin:3px 0 0 58px;font-size:12px;color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">“'+comment+'”</div>':'')+
+    '</div>';
   }
   box.className=''; box.innerHTML=h;
 }
-function renderRegion(bt,t){
-  var box=el('rb-region'); if(!box)return; if(!t){box.innerHTML='';return;}
-  var rs=t.regions||{}, arr=[],k;
+/* ── 나라대전: 내 나라 vs 세계 + 국가 순위 (Phase 2) ──
+ * 데이터는 rankBoard의 단일 peek(tot.countries)에서 옴 — 추가 구독·읽기 0(D5).
+ * 국기·국가명은 GCGeo.countryInfo(무료 감지), 진영 식별 이모지는 bt[lead]. */
+function countryNameLocal(code){var info=GCGeo.countryInfo(code);return LANG==='ko'?info.nameKo:info.nameEn;}
+function renderCountries(bt,tot){
+  var box=el('rb-country'); if(!box)return; if(!tot){box.innerHTML='';return;}
+  var cs=GCUtil.countryStandings(tot.countries,8);
+  if(!cs.length){box.innerHTML='';return;}
+  var h='';
+  // (1) 내 나라 vs 세계 — 내 국가가 감지됐고 참여 데이터가 있을 때만.
+  var mvw=GCUtil.myCountryVsWorld(tot.countries,MY);
+  if(mvw){
+    var info=MYINFO, mineA=Math.round(mvw.mine.aShare), worldA=Math.round(mvw.world.aShare);
+    h+='<div class="gauge-head" style="margin-top:4px"><span class="mono">'+t('myCountryVsWorld')+'</span></div>'+
+      '<div style="display:flex;flex-direction:column;gap:7px;margin:7px 0 4px">'+
+        vsRow((info.code?info.flag+' ':'')+esc(t('myCountry')),mineA)+
+        vsRow('🌐 '+esc(t('world')),worldA)+
+      '</div>';
+  }
+  // (2) 국가 순위 칩 — 우세 진영 이모지 + 국기/국가명 + 우세 %.
+  h+='<div class="gauge-head" style="margin-top:8px"><span class="mono">'+t('countryTitle')+'</span></div>'+
+    '<div style="display:flex;flex-wrap:wrap;gap:6px;margin:7px 0 2px">';
+  for(var i=0;i<cs.length;i++){var c=cs[i],lt=bt[c.lead]||bt.a,nm=countryNameLocal(c.code),fl=GCGeo.flagOf(c.code);
+    h+='<span class="chip-soft" style="border-color:'+lt.color+'55">'+fl+' '+esc(nm)+' '+lt.emoji+' '+c.share+'%</span>';}
+  box.innerHTML=h+'</div>';
+}
+/* 한 진영(A) 비율 게이지 한 줄 — 라벨 + A%/B% 막대. label은 호출부에서 esc 완료. */
+function vsRow(label,aShare){
+  return '<div><div class="brow" style="font-size:10px"><span style="color:var(--team-a)">'+label+' '+aShare+'%</span>'+
+    '<span style="color:var(--team-b)">'+(100-aShare)+'%</span></div>'+
+    '<div class="gauge" style="margin-top:4px"><i style="width:'+aShare+'%;background:var(--team-a)"></i>'+
+      '<i style="width:'+(100-aShare)+'%;background:var(--team-b)"></i></div></div>';
+}
+function renderRegion(bt,tot){
+  var box=el('rb-region'); if(!box)return; if(!tot){box.innerHTML='';return;}
+  var rs=tot.regions||{}, arr=[],k;
   for(k in rs){if(!Object.prototype.hasOwnProperty.call(rs,k))continue;
-    var a=(rs[k].a)||0,b=(rs[k].b)||0,tot=a+b; if(tot<=0)continue;
-    arr.push({k:k,lead:a>=b?'a':'b',share:Math.round((a>=b?a:b)/tot*100),tot:tot});}
+    var a=(rs[k].a)||0,b=(rs[k].b)||0,sum=a+b; if(sum<=0)continue;
+    arr.push({k:k,lead:a>=b?'a':'b',share:Math.round((a>=b?a:b)/sum*100),tot:sum});}
   if(!arr.length){box.innerHTML='';return;}
   arr.sort(function(x,y){return y.tot-x.tot;}); arr=arr.slice(0,8);
-  var h='<div class="gauge-head" style="margin-top:4px"><span class="mono">지역 점령 현황</span></div>'+
+  var h='<div class="gauge-head" style="margin-top:4px"><span class="mono">'+t('regionTitle')+'</span></div>'+
     '<div style="display:flex;flex-wrap:wrap;gap:6px;margin:7px 0 2px">';
   for(var i=0;i<arr.length;i++){var r=arr[i],lt=bt[r.lead]||bt.a;
     h+='<span class="chip-soft" style="border-color:'+lt.color+'55">'+lt.emoji+' '+regionName(r.k)+' '+r.share+'%</span>';}
   box.innerHTML=h+'</div>';
 }
-/* ── 설정: 내 지역 + 랭킹 닉네임 ── */
+/* ── 설정: 내 지역 + 랭킹 닉네임 + 순위권 배지·멘트(Phase 2) ── */
+var SET_BADGE=''; // 설정창 임시 선택 배지(저장 전까지 보관)
+function badgeChips(sel){
+  var arr=(GCUtil&&GCUtil.BADGE_PRESET)||['','🔥','👑','⚡'], h='';
+  for(var i=0;i<arr.length;i++){var b=arr[i],on=b===sel,
+    lbl=b===''?(LANG==='ko'?'없음':'None'):b; // 빈 배지는 '없음/None' 칩
+    h+='<button type="button" class="chip-soft set-badge-chip" data-badge="'+esc(b)+'" '+
+      'style="font-size:'+(b?'16px':'12px')+';padding:6px 10px;'+(on?'border-color:var(--me);color:var(--me)':'')+'">'+esc(lbl)+'</button>';}
+  return h;
+}
 function openSettings(){
   var ov=document.createElement('div'); ov.className='ad-ov';
-  var opts=''; for(var i=0;i<REGIONS.length;i++)opts+='<option value="'+REGIONS[i].k+'"'+(REGIONS[i].k===F.region?' selected':'')+'>'+REGIONS[i].n+'</option>';
+  SET_BADGE=F.badge||'';
+  // 지역 옵션: 빈 키('')는 언어 인식 라벨(전국/Global·국가명), 한국 지역명은 Phase 2까지 한글 유지.
+  var opts=''; for(var i=0;i<REGIONS.length;i++){var rn=REGIONS[i].k?REGIONS[i].n:regionDefault();
+    opts+='<option value="'+REGIONS[i].k+'"'+(REGIONS[i].k===F.region?' selected':'')+'>'+esc(rn)+'</option>';}
   var fld='width:100%;padding:11px;border-radius:11px;background:var(--bg-3);color:var(--ink);border:1px solid var(--line-2);font-family:inherit;font-size:15px';
-  ov.innerHTML='<div class="ad-box"><div class="ad-top"><span class="mono">설정</span><button class="ad-skip" id="set-x">✕ 닫기</button></div>'+
+  ov.innerHTML='<div class="ad-box"><div class="ad-top"><span class="mono">'+t('setTitle')+'</span><button class="ad-skip" id="set-x">'+t('closeBtn')+'</button></div>'+
     '<div class="ad-body" style="display:block;text-align:left">'+
-      '<label class="mono" style="display:block;margin:2px 0 6px">내 지역 · 지역 점령전</label>'+
+      '<label class="mono" style="display:block;margin:2px 0 6px">'+t('setRegionLbl')+'</label>'+
       '<select id="set-region" style="'+fld+'">'+opts+'</select>'+
-      '<label class="mono" style="display:block;margin:15px 0 6px">랭킹 닉네임</label>'+
-      '<input id="set-nick" maxlength="16" placeholder="익명광클러" value="'+esc(F.nick)+'" style="'+fld+'"/>'+
-      '<p class="hint" style="text-align:left;margin-top:11px">'+(netOn()?'실제 전국 집계에 참여 중 — 닉네임은 랭킹에만 표시돼요.':'백엔드 미연결(데모). fb-config.js 연결 시 실제 대전이 켜집니다.')+'</p>'+
+      '<label class="mono" style="display:block;margin:15px 0 6px">'+t('setNickLbl')+'</label>'+
+      '<input id="set-nick" maxlength="16" placeholder="'+t('anon')+'" value="'+esc(F.nick)+'" style="'+fld+'"/>'+
+      '<label class="mono" style="display:block;margin:15px 0 6px">'+t('setBadgeLbl')+'</label>'+
+      '<div id="set-badges" style="display:flex;flex-wrap:wrap;gap:6px">'+badgeChips(SET_BADGE)+'</div>'+
+      '<label class="mono" style="display:block;margin:15px 0 6px">'+t('setCommentLbl')+'</label>'+
+      '<input id="set-comment" maxlength="'+(GCUtil?GCUtil.COMMENT_MAX:24)+'" placeholder="'+esc(t('setCommentPh'))+'" value="'+esc(F.comment)+'" style="'+fld+'"/>'+
+      '<p class="hint" style="text-align:left;margin-top:9px">'+t('setBadgeHint')+'</p>'+
+      '<p class="hint" style="text-align:left;margin-top:6px">'+(netOn()?t('setHintOn'):t('setHintOff'))+'</p>'+
     '</div>'+
-    '<button class="btn btn-primary" id="set-save" style="color:#04130f">저장</button></div>';
+    '<button class="btn btn-primary" id="set-save" style="color:#04130f">'+t('saveBtn')+'</button></div>';
   (document.body||document.documentElement).appendChild(ov);
   function shut(){if(ov.parentNode)ov.parentNode.removeChild(ov);}
   el('set-x').onclick=shut;
-  el('set-save').onclick=function(){var rg=el('set-region'),nk=el('set-nick');
-    F.region=rg?rg.value:''; F.nick=nk?nk.value.trim().slice(0,16):''; persist(); shut(); intro();};
+  // 배지 칩 선택(위임): 클릭 시 SET_BADGE 갱신 + 활성 표시 다시 그림.
+  var badges=el('set-badges');
+  if(badges)badges.onclick=function(e){var b=e.target&&e.target.closest?e.target.closest('.set-badge-chip'):null;
+    if(!b)return; SET_BADGE=GCUtil.sanitizeBadge(b.getAttribute('data-badge')||''); badges.innerHTML=badgeChips(SET_BADGE);};
+  el('set-save').onclick=function(){var rg=el('set-region'),nk=el('set-nick'),cm=el('set-comment');
+    F.region=rg?rg.value:''; F.nick=nk?nk.value.trim().slice(0,16):'';
+    // 배지·멘트는 저장 시점에 정제(보안 #1: 어떤 입력경로든 캡·제어문자 제거).
+    F.badge=GCUtil.sanitizeBadge(SET_BADGE); F.comment=cm?GCUtil.sanitizeComment(cm.value):'';
+    persist(); shut(); intro();};
+}
+
+/* ── 꾸미기 보관함(Phase 3) ──
+ * 카탈로그를 kind별로 묶어 표시. 잠김/해금 + 장착 토글 + 해금 버튼(📺광고 / 📣초대).
+ * 기존 .ad-ov 모달 패턴·.btn/.chip-soft 스타일 재사용. 모든 사용자영향 값은 esc()(보안 #1).
+ * 해금=로컬(F.unlocked), 광고는 기존 adRewarded 재사용, 초대는 공유→로컬 해금(비용 0). */
+var LOCKER_KINDS=[{kind:'tapFx',label:'catTapFx'},{kind:'nameColor',label:'catNameColor'},{kind:'badge',label:'catBadge'}];
+function cosLabel(it){return it&&it.label?(it.label[LANG]||it.label.ko||it.id):'';}
+function lockerItemHTML(it){
+  var unlocked=GCCos.isUnlocked(F,it.id), isFree=it.unlock==='free';
+  // 장착 상태: tapFx/nameColor는 F.cosmetics, badge는 F.badgeId.
+  var equipped=(it.kind==='badge')?(F.badgeId===it.id):(F.cosmetics&&F.cosmetics[it.kind]===it.id);
+  // 미리보기 칩: tapFx=색 점, nameColor=색 글자, badge=이모지.
+  var prev='';
+  if(it.kind==='tapFx'){var cols=Array.isArray(it.colors)?it.colors:['var(--ink-2)'];
+    prev='<span style="display:inline-flex;gap:3px;vertical-align:middle">'+cols.slice(0,3).map(function(c){return '<i style="width:9px;height:9px;border-radius:50%;display:inline-block;background:'+esc(c)+'"></i>';}).join('')+'</span>';}
+  else if(it.kind==='nameColor'){prev='<b style="font-size:14px'+(it.color?';color:'+esc(it.color):'')+'">Aa</b>';}
+  else if(it.kind==='badge'){prev='<span style="font-size:18px">'+esc(it.badge||'')+'</span>';}
+  var tag=isFree?'<span class="mono">'+t('freeTag')+'</span>':(unlocked?'':'<span class="mono" style="color:var(--ink-3)">'+t('lockedTag')+'</span>');
+  var right;
+  if(!unlocked){
+    // 해금 버튼 — unlock 종류에 따라 광고/초대 하나만.
+    var ub=it.unlock==='ad'?t('unlockAd'):t('unlockInvite');
+    right='<button class="chip-soft cos-unlock" data-id="'+esc(it.id)+'" style="border-color:var(--me);color:var(--me)">'+ub+'</button>';
+  }else if(equipped){
+    right='<button class="chip-soft cos-equip" data-id="'+esc(it.id)+'" data-on="1" style="border-color:var(--me);color:var(--me)">'+t('equipped')+'</button>';
+  }else{
+    right='<button class="chip-soft cos-equip" data-id="'+esc(it.id)+'" data-on="0">'+t('equip')+'</button>';
+  }
+  return '<div class="cos-row" style="display:flex;align-items:center;gap:10px;padding:9px 2px;border-bottom:1px solid var(--line)">'+
+    '<span style="width:30px;text-align:center">'+prev+'</span>'+
+    '<span style="flex:1;min-width:0;font-size:13.5px"><b>'+esc(cosLabel(it))+'</b> '+tag+'</span>'+
+    right+'</div>';
+}
+function lockerBodyHTML(){
+  var h='';
+  for(var g=0;g<LOCKER_KINDS.length;g++){var grp=LOCKER_KINDS[g];
+    h+='<div class="mono" style="margin:'+(g?'14px':'2px')+' 0 4px">'+t(grp.label)+'</div>';
+    for(var i=0;i<GCCos.CATALOG.length;i++){var it=GCCos.CATALOG[i];if(it.kind!==grp.kind)continue;h+=lockerItemHTML(it);}
+    if(grp.kind==='badge')h+='<p class="hint" style="text-align:left;margin-top:7px">'+t('badgeEquipHint')+'</p>';
+  }
+  return h;
+}
+function openLocker(){
+  var ov=document.createElement('div'); ov.className='ad-ov';
+  ov.innerHTML='<div class="ad-box"><div class="ad-top"><span class="mono">'+t('lockerTitle')+'</span><button class="ad-skip" id="lk-x">'+t('closeBtn')+'</button></div>'+
+    '<div class="ad-body" style="display:block;text-align:left;max-height:62vh;overflow:auto">'+
+      '<p class="hint" style="text-align:left;margin-bottom:6px">'+t('lockerIntro')+'</p>'+
+      '<div id="lk-list">'+lockerBodyHTML()+'</div>'+
+    '</div>'+
+    '<button class="btn btn-ghost" id="lk-done">'+t('closeBtn')+'</button></div>';
+  (document.body||document.documentElement).appendChild(ov);
+  function shut(){if(ov.parentNode)ov.parentNode.removeChild(ov);}
+  function repaint(){var l=el('lk-list');if(l)l.innerHTML=lockerBodyHTML();}
+  el('lk-x').onclick=shut; el('lk-done').onclick=shut;
+  // 클릭 위임: 해금/장착 버튼. (잠긴 항목 장착 시도는 GCCos.equip/normState가 차단 → 안전.)
+  el('lk-list').onclick=function(e){
+    var unb=e.target&&e.target.closest?e.target.closest('.cos-unlock'):null;
+    var eqb=e.target&&e.target.closest?e.target.closest('.cos-equip'):null;
+    if(unb){cosTryUnlock(unb.getAttribute('data-id'),repaint);return;}
+    if(eqb){cosToggleEquip(eqb.getAttribute('data-id'),eqb.getAttribute('data-on')==='1');repaint();return;}
+  };
+}
+/* 해금: 광고 항목은 기존 adRewarded(수익 경로) 완주 시 해금 / 초대 항목은 공유 후 로컬 해금(성장 경로·비용 0). */
+function cosTryUnlock(id,after){
+  var it=GCCos.itemById(id); if(!it||GCCos.isUnlocked(F,id))return;
+  if(it.unlock==='ad'){
+    adRewarded({onReward:function(){cosDoUnlock(id);toast(t('unlocked',{name:cosLabel(it)}));after&&after();}});
+  }else{ // invite: 초대 링크 공유 → 공유 액션 자체로 해금(백엔드 없음·MVP).
+    cosInviteShare(function(){cosDoUnlock(id);toast(t('inviteUnlocked',{name:cosLabel(it)}));after&&after();});
+  }
+}
+function cosDoUnlock(id){F.unlocked=GCCos.unlock(F.unlocked,id);persist();}
+/* 초대 공유: 내 ?ref= 링크를 네이티브 공유/클립보드로. 성공·취소 무관하게 onShared(해금은 사용자의 초대 행동에 대한 보상). */
+function cosInviteShare(onShared){
+  var code=myRefCode(), link=location.href.split('?')[0]+'?ref='+encodeURIComponent(code);
+  var text=t('inviteShareText',{code:code});
+  if(navigator.share){navigator.share({title:t('appName'),text:text,url:link}).then(function(){onShared&&onShared();},function(){onShared&&onShared();});return;}
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text+' '+link).then(function(){toast(t('inviteCopied'));onShared&&onShared();},function(){onShared&&onShared();});
+  }else{toast(t('inviteCopied'));onShared&&onShared();}
+}
+/* 장착 토글: tapFx/nameColor는 GCCos.equip(미해금/미상/kind불일치 자동 차단), badge는 화이트리스트 경로. */
+function cosToggleEquip(id,isOn){
+  var it=GCCos.itemById(id); if(!it)return;
+  if(it.kind==='badge'){
+    if(isOn){F.badgeId='';toast(t('badgeCleared'));}                       // 해제 → 무료 배지로 복귀
+    else if(GCCos.isUnlocked(F,id)){F.badgeId=id;toast(t('premiumBadgeOn',{b:it.badge}));} // 장착(해금된 것만)
+    persist();return;
+  }
+  if(isOn){ // 해제 → free 기본으로
+    F.cosmetics=GCCos.equip(F.cosmetics,it.kind,GCCos.defaultIdFor(it.kind),F.unlocked);
+    toast(t('unequippedToast'));
+  }else{
+    var before=(F.cosmetics&&F.cosmetics[it.kind]);
+    F.cosmetics=GCCos.equip(F.cosmetics,it.kind,id,F.unlocked); // 미해금이면 변경 없음(안전)
+    if(F.cosmetics[it.kind]===id&&before!==id)toast(t('equippedToast',{name:cosLabel(it)}));
+  }
+  persist();
+}
+
+/* ── 떡밥 투표소(UGC · D8~D12) ────────────────────────────────────────────────────────
+ * "플레이어가 다음 떡밥을 만들고 투표 → 좋아요 모이면 등판 대기"(사용자 결정).
+ * 순수 로직(검증·금칙어·추첨·상태·로컬경제)은 gc-proposals.js(GCProp, 테스트됨). 여기는 모달/배선만.
+ * 격리(D12): 신규 컬렉션 gc_proposals — 기존 대전 집계/수치와 완전 무관(경계 #3).
+ * 경제(D9/D10): 포인트/투척권은 로컬(F). 도배 백스톱은 '일일 제출 한도'(포인트 파밍해도 하루 N개 상한). */
+var PP = { ov:null, rows:[] }; // 모달 ref + 마지막 목록(부분 리페인트용)
+function propWalletHTML(){ return t('propWallet',{p:F.points,t:F.tickets}); }
+function propWalletRepaint(){ var w=el('pp-wallet'); if(w)w.innerHTML=propWalletHTML(); }
+function openProposals(){
+  var demo=!netOn();
+  var D=GCProp.DEFAULTS;
+  var ov=document.createElement('div'); ov.className='ad-ov'; PP.ov=ov;
+  ov.innerHTML='<div class="ad-box"><div class="ad-top"><span class="mono">'+t('propTitle')+'</span><button class="ad-skip" id="pp-x">'+t('closeBtn')+'</button></div>'+
+    '<div class="ad-body" style="display:block;text-align:left;max-height:66vh;overflow:auto">'+
+      '<p class="hint" style="text-align:left;margin:0 0 8px">'+t('propIntro',{n:D.likeThreshold})+'</p>'+
+      '<div id="pp-wallet" class="mono" style="font-size:.84rem;margin-bottom:8px">'+propWalletHTML()+'</div>'+
+      '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">'+
+        '<button class="btn btn-ghost" id="pp-ad" style="flex:1;min-width:110px;font-size:.8rem">'+t('propEarnAd',{n:D.adPoints})+'</button>'+
+        '<button class="btn btn-ghost" id="pp-inv" style="flex:1;min-width:110px;font-size:.8rem">'+t('propEarnInvite',{n:D.invitePoints})+'</button>'+
+        '<button class="btn btn-ghost" id="pp-buy" style="flex:1;min-width:110px;font-size:.8rem">'+t('propBuy',{n:D.ticketCost})+'</button>'+
+      '</div>'+
+      '<div style="display:grid;gap:6px;margin-bottom:4px">'+
+        '<input id="pp-q" maxlength="40" placeholder="'+esc(t('propQph'))+'" class="pp-in"/>'+
+        '<div style="display:flex;gap:6px">'+
+          '<input id="pp-a" maxlength="14" placeholder="'+esc(t('propAph'))+'" class="pp-in"/>'+
+          '<input id="pp-b" maxlength="14" placeholder="'+esc(t('propBph'))+'" class="pp-in"/>'+
+        '</div>'+
+        '<button class="btn" id="pp-sub">'+t('propSubmit')+'</button>'+
+      '</div>'+
+      '<div id="pp-feed" style="margin-top:12px">'+(demo?'<p class="hint">'+t('propDemo')+'</p>':'<p class="hint">'+t('globeLoading')+'</p>')+'</div>'+
+    '</div>'+
+    '<button class="btn btn-ghost" id="pp-done">'+t('closeBtn')+'</button></div>';
+  (document.body||document.documentElement).appendChild(ov);
+  function shut(){ if(ov.parentNode)ov.parentNode.removeChild(ov); PP.ov=null; }
+  el('pp-x').onclick=shut; el('pp-done').onclick=shut;
+  el('pp-ad').onclick=function(){ propEarn('ad'); };
+  el('pp-inv').onclick=function(){ propEarn('invite'); };
+  el('pp-buy').onclick=propBuyTicket;
+  el('pp-sub').onclick=propDoSubmit;
+  // 피드 클릭 위임: 좋아요/신고.
+  el('pp-feed').onclick=function(e){
+    var lb=e.target&&e.target.closest?e.target.closest('.pp-like'):null;
+    var rb=e.target&&e.target.closest?e.target.closest('.pp-report'):null;
+    if(lb){ propVote(lb.getAttribute('data-id'),'like'); return; }
+    if(rb){ propVote(rb.getAttribute('data-id'),'report'); return; }
+  };
+  if(!demo)propRefresh();
+}
+/* 목록 새로고침 → 추첨 피드 리페인트. (네트워크 결과는 불신 #1: null 폴백) */
+function propRefresh(){
+  if(!netOn())return;
+  GCNet.listProposals(60).then(function(rows){ PP.rows=rows||[]; propFeedRepaint(); });
+}
+function propFeedRepaint(){
+  var f=el('pp-feed'); if(!f)return;
+  var feed=GCProp.pickFeed(PP.rows,20); // 숨김(신고임계) 제외 + 셔플(신규 노출 기회)
+  f.innerHTML=feed.length?feed.map(propRowHTML).join(''):'<p class="hint">'+t('propEmpty')+'</p>';
+}
+function propRowHTML(p){
+  var st=GCProp.statusOf(p), togo=GCProp.likesToGo(p);
+  var liked=GCProp.hasVoted(F.voted,'like',p.id), reported=GCProp.hasVoted(F.voted,'report',p.id);
+  var badge = st==='live' ? '<span class="pp-live">'+t('propLive')+'</span>'
+    : (togo!=null ? '<span class="hint" style="font-size:.72rem;margin-left:auto">'+t('propToGo',{n:togo})+'</span>' : '');
+  return '<div class="pp-card">'+
+    '<div class="pp-q">'+esc(p.q)+'</div>'+
+    '<div class="pp-sides mono">'+esc(p.aName)+' <span class="hint">'+t('vs')+'</span> '+esc(p.bName)+'</div>'+
+    '<div class="pp-act">'+
+      '<button class="pp-like btn btn-ghost" data-id="'+esc(p.id)+'"'+(liked?' disabled':'')+'>'+(liked?t('propVoted')+' ':'')+t('propLike',{n:p.likes})+'</button>'+
+      '<button class="pp-report btn btn-ghost" data-id="'+esc(p.id)+'"'+(reported?' disabled':'')+'>'+t('propReport')+'</button>'+
+      badge+
+    '</div></div>';
+}
+/* 좋아요/신고 — 기기당 1회(GCProp 로컬셋). 낙관적 반영 후 서버 증가(가벼운 소셜 액션·실패 무시). */
+function propVote(id,kind){
+  if(!id||GCProp.hasVoted(F.voted,kind,id))return;          // 이미 투표 → 무시(멱등)
+  if(!netOn()){ toast(t('propDemo')); return; }
+  F.voted=GCProp.addVoted(F.voted,kind,id); persist();
+  for(var i=0;i<PP.rows.length;i++){ if(PP.rows[i].id===id){ PP.rows[i][kind==='report'?'reports':'likes']++; break; } }
+  propFeedRepaint();
+  toast(kind==='report'?t('propReported'):t('propLiked'));
+  GCNet.voteProposal(id,kind); // 서버 increment(실패해도 로컬 유지)
+}
+/* 제출 — 검증(GCProp) → 일일한도 → 투척권 1장 소모 → addDoc. 실패 시 투척권 환불(가역성 #4). */
+function propDoSubmit(){
+  var v=GCProp.validateProposal({q:el('pp-q').value,aName:el('pp-a').value,bName:el('pp-b').value});
+  if(!v.ok){
+    var c=v.errors[0];
+    toast(c==='tooLong'?t('propErrLong'):c==='sameSides'?t('propErrSame'):c==='banned'?t('propErrBanned'):t('propErrEmpty'));
+    return;
+  }
+  if(!netOn()){ toast(t('propDemo')); return; }
+  var today=todayStr();
+  if(F.propDay!==today){ F.propDay=today; F.propCount=0; }                 // 날짜 바뀌면 카운트 리셋
+  if(F.propCount>=GCProp.DEFAULTS.dailyCap){ toast(t('propDailyCap',{n:GCProp.DEFAULTS.dailyCap})); return; }
+  var sp=GCProp.spendTicket({points:F.points,tickets:F.tickets,freeDay:F.propFree});
+  if(!sp.ok){ toast(t('propNeedTicket')); return; }
+  F.tickets=sp.econ.tickets; persist(); propWalletRepaint();
+  var btn=el('pp-sub'); if(btn)btn.disabled=true;
+  GCNet.submitProposal(v.value).then(function(res){
+    if(btn)btn.disabled=false;
+    if(res&&res.ok){
+      F.propCount++; persist();
+      el('pp-q').value=''; el('pp-a').value=''; el('pp-b').value='';
+      toast(t('propSubmitted')); propRefresh();
+    }else{
+      F.tickets++; persist(); propWalletRepaint();                        // 환불
+      toast(t('propSubmitFail'));
+    }
+  });
+}
+/* 투척권 구매(포인트 차감) — GCProp.buyTicket 리듀서로 원자적 처리. */
+function propBuyTicket(){
+  var r=GCProp.buyTicket({points:F.points,tickets:F.tickets,freeDay:F.propFree});
+  if(!r.ok){ toast(t('propNoPoints')); return; }
+  F.points=r.econ.points; F.tickets=r.econ.tickets; persist(); propWalletRepaint();
+  toast(t('propBought'));
+}
+/* 포인트 적립 — 광고(보상형 기존 경로 재사용) / 초대(공유). 도배 상한은 일일 제출 한도가 백스톱. */
+function propEarn(kind){
+  if(kind==='ad'){
+    adRewarded({onReward:function(){
+      F.points=GCProp.addPoints({points:F.points},GCProp.DEFAULTS.adPoints).points; persist(); propWalletRepaint();
+      toast(t('propEarnedAd',{n:GCProp.DEFAULTS.adPoints}));
+    }});
+  }else{
+    cosInviteShare(function(){
+      F.points=GCProp.addPoints({points:F.points},GCProp.DEFAULTS.invitePoints).points; persist(); propWalletRepaint();
+      toast(t('propEarnedInvite',{n:GCProp.DEFAULTS.invitePoints}));
+    });
+  }
+}
+
+/* ── 실시간 타격 3D 지구본(Phase 4 · D7) ──────────────────────────────────────────────
+ * "풀 3D지만 모바일에 안 버겁게"(사용자 결정). globe.gl 를 *지연로딩*(첫 페인트 비차단),
+ * WebGL 미지원/라이브러리 로드 실패/감속모션/저사양이면 *2D 캔버스 폴백*(절대 안 깨짐, 평면 floor).
+ * 데이터: 기존 countries 집계(GCNet.peek/watch)만 재사용 — 신규 Firestore I/O 0(D5·비용 0).
+ * 순수 로직(점 매핑·색/강도·포커스·고도·폴백판단)은 gc-globe.js(GCGlobe, 테스트됨). 여기는 렌더/생명주기만.
+ * 경계(#3): 게임 수치 불변 · 지구본 실패해도 앱 나머지 무영향(옵트인 추가 뷰). */
+var GLB = {
+  ov: null,        // 오버레이 DOM
+  globe: null,     // globe.gl 인스턴스(3D일 때만)
+  unwatch: null,   // countries 실시간 구독 해지
+  rotate: true,    // 자동회전 on/off(사용자 토글)
+  mode: '',        // '3d' | '2d'
+  raf: 0,          // 2D 폴백 애니메이션 핸들
+  fps2d: 0,        // 2D 폴백 마지막 프레임 시각(FPS 제한)
+  pts: [],         // 현재 점 배열(GCGlobe.countryPoints 결과)
+  bt: null,        // 현재 배틀(팀색/이모지)
+  did: 0,          // 인스턴스 토큰(비동기 경쟁 방어 #1)
+  hidden: null,    // visibilitychange 핸들러(정리용)
+  resize: null,    // resize 핸들러(2D 폴백용)
+  prevC: null,     // 직전 countries 스냅샷(델타 팝콘용 — null=첫 로드 베이스라인)
+  inline: false,   // 로비 인라인 모드(모달 아님) — 화면 전환 시 정지 대상
+  started: false,  // 영속 인스턴스 1회 생성 플래그(D13: 모든 장면 공용·재사용)
+  host: null,      // 영속 호스트 DOM(#gl-stage) — 화면 전환 시 슬롯으로 '이동'(부수지 않음)
+  pulse: 0,        // 핫스팟 주기 팝콘 인터벌(포인트에서 '튀는' 연출 — 데이터 없어도 살아있게)
+  lite: false,     // 경량 모드(배틀 미니): 대륙/링/라벨 생략 → 탭 게임 끊김 방지
+};
+var GLOBE_SRC = './vendor/globe.gl.min.js'; // 로컬 동봉(런타임 CDN 0). sw.js ASSETS 프리캐시엔 없음(최초 사용시 캐시).
+var GLOBE_MAX_PTS = 250;  // 점 상한 — '전체 실시간 다 보이게'(사용자 요구). 거의 전 국가 표시(merge로 경량).
+var GLOBE_LAND_SRC = './vendor/world-110m.geo.json'; // 대륙/바다/국경 폴리곤(로컬 동봉·런타임 CDN 0). sw 프리캐시 제외(최초 사용 시 캐시).
+var _landData = null;     // 지형 GeoJSON 로드 1회 캐시
+var GLOBE_DPR_CAP = 1.5;  // 렌더러 DPR 캡(고해상도 폰 과부하 방지)
+var GLOBE_FPS_2D = 24;    // 2D 폴백 프레임 상한(전력/발열)
+var GLOBE_POP_CAP = 28;   // 동시 팝콘 DOM 상한(모바일 폭주 방지·D7)
+var _globeLoad = null;    // 라이브러리 로드 1회 캐시(idempotent)
+
+/* WebGL 사용 가능 여부(지연 검사 — 컨텍스트 1개만 만들어 즉시 폐기). 실패/예외는 false(폴백). */
+function webglOK(){
+  try{
+    var c=document.createElement('canvas');
+    var gl=c.getContext('webgl')||c.getContext('experimental-webgl');
+    var ok=!!(gl&&gl.getParameter);
+    try{var lose=gl&&gl.getExtension&&gl.getExtension('WEBGL_lose_context');if(lose&&lose.loseContext)lose.loseContext();}catch(e){}
+    return ok;
+  }catch(e){return false;}
+}
+function reducedMotion(){try{return window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;}catch(e){return false;}}
+/* globe.gl 지연주입 — 진입 시 1회만 <script> 삽입. 성공 시 window.Globe. 실패해도 reject로 폴백.
+ * 첫 페인트 비차단(여기서 처음 로드) + sw.js 프리캐시 제외(설치 경량) → 최초 사용 후 SW가 캐시(오프라인 동작). */
+function loadGlobeLib(){
+  if(typeof window.Globe==='function')return Promise.resolve(true);
+  if(_globeLoad)return _globeLoad;
+  _globeLoad=new Promise(function(resolve,reject){
+    try{
+      var s=document.createElement('script'); s.src=GLOBE_SRC; s.async=true;
+      s.onload=function(){ typeof window.Globe==='function'?resolve(true):reject(new Error('Globe missing')); };
+      s.onerror=function(){ _globeLoad=null; reject(new Error('globe.gl load failed')); }; // 재시도 가능하게 캐시 비움
+      (document.head||document.documentElement).appendChild(s);
+    }catch(e){ _globeLoad=null; reject(e); }
+  });
+  return _globeLoad;
+}
+
+/* ── 영속 지구본(D13: 모든 장면에서 실시간·팝콘) ──────────────────────────────────────
+ * 화면마다 부수지 않는다. 단일 인스턴스를 만들어 각 화면의 #gl-slot 으로 '이동'시킨다.
+ * 슬롯 없는 화면이면 gl-park 로 보관 + 렌더 정지(절전). 데이터 구독·팝콘은 끊기지 않음. */
+function ensureGlobe(){
+  if(GLB.started)return;
+  GLB.started=true;
+  var host=document.createElement('div'); host.id='gl-stage'; host.className='globe-stage'; GLB.host=host;
+  host.innerHTML='<div class="gl-clouds" aria-hidden="true"><span></span><span></span><span></span></div>'+ // ☁️ 흐르는 구름(썰렁함 완화)
+    '<div id="gl-msg" class="hint" style="text-align:center;position:relative;z-index:1">'+t(netOn()?'globeLoading':'globeDemo')+'</div>'+
+    '<div id="gl-pop" style="position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:3"></div>';
+  (el('gl-park')||document.body).appendChild(host);
+  GLB.inline=true;
+  GLB.bt=GCTopics.localize(battleOfDay(todayStr()),LANG);
+  var token=(GLB.did=(GLB.did+1));
+  startPulse(); // 포인트에서 🍿 주기적으로 튀게(화면에 떠 있을 때만)
+  if(!netOn()){ setGlobeMsg(t('globeDemo')); return; } // 데모: 빈 지구본(연결 시 자동 표시)
+  bootGlobe(token);
+}
+/* 핫스팟 주기 팝콘 — 새 데이터(델타) 없어도 상위 포인트에서 🍿가 '톡톡' 튀게(사용자 요구).
+ * 화면(슬롯)에 떠 있고 탭 활성·감속모션 아닐 때만(절전·접근성). globe 영속이라 1회만 등록. */
+function startPulse(){
+  if(GLB.pulse)return;
+  GLB.pulse=setInterval(function(){
+    if(document.hidden||prefersReducedMotion()||!GLB.pts.length||GLB.lite)return; // 배틀 중(lite)엔 펄스 정지(성능)
+    var host=GLB.host; if(!host||!host.parentNode||host.parentNode.id==='gl-park')return; // 화면 밖이면 skip
+    var n=Math.min(3,GLB.pts.length);
+    for(var i=0;i<n;i++){ var p=GLB.pts[i]; popcornAt(p.lat,p.lng,1,p.color); }
+  },1100);
+}
+/* 현재 화면의 #gl-slot 으로 지구본을 이동(없으면 park). 매 화면 렌더 끝에서 호출. */
+function mountGlobe(){
+  ensureGlobe();
+  var host=GLB.host; if(!host)return;
+  GLB.bt=GCTopics.localize(battleOfDay(todayStr()),LANG); // 언어 토글 반영
+  var slot=el('gl-slot');
+  if(slot){
+    GLB.lite = !!(slot.classList&&slot.classList.contains('gl-mini')); // 배틀 미니 = 경량(탭 끊김 방지)
+    if(host.parentNode!==slot)slot.appendChild(host);   // 라이브 노드 이동(globe 계속 동작)
+    host.style.display=''; resumeGlobe();
+    applyGlobeDetail();                                  // 경량/풀 디테일(대륙·링·라벨) 전환
+    // 슬롯 크기 반영(레이아웃 후) + 핫스팟으로 카메라 정렬.
+    sizeGlobeNow(); setTimeout(function(){ sizeGlobeNow(); focusGlobe(true); if(GLB.mode==='3d')pushPoints3D(); },0);
+  }else{ parkGlobe(); }
+}
+/* 화면별 디테일 전환 — 대륙은 항상 표시(원형/지형이 보이도록, 정적 지오메트리라 경량).
+ * 배틀 미니(lite)는 링/라벨/자동회전만 끔(반복 파동·텍스트·매프레임 회전이 탭 프레임을 깎으므로). */
+function applyGlobeDetail(){
+  if(GLB.mode!=='3d'||!GLB.globe)return;
+  try{
+    loadLand().then(function(geo){ if(geo&&geo.features&&GLB.globe){ try{GLB.globe.polygonsData(geo.features);}catch(e){} } });
+    if(GLB.lite){ GLB.globe.ringsData([]); if(GLB.globe.labelsData)GLB.globe.labelsData([]); }
+    try{ var c=GLB.globe.controls(); if(c)c.autoRotate=(!GLB.lite && GLB.rotate); }catch(e){}  // 배틀 중 자동회전 OFF(경량·차분)
+  }catch(e){}
+}
+function sizeGlobeNow(){ if(GLB.mode==='3d')sizeGlobe3D(); else if(GLB.mode==='2d')sizeGlobe2D(); }
+function parkGlobe(){ var host=GLB.host,p=el('gl-park'); if(host&&p&&host.parentNode!==p)p.appendChild(host); pauseGlobe(); }
+function pauseGlobe(){ try{ if(GLB.globe&&GLB.globe.pauseAnimation)GLB.globe.pauseAnimation(); }catch(e){} if(GLB.mode==='2d'&&GLB.raf){cancelAnimationFrame(GLB.raf);GLB.raf=0;} }
+function resumeGlobe(){ try{ if(GLB.globe&&GLB.globe.resumeAnimation)GLB.globe.resumeAnimation(); }catch(e){} if(GLB.mode==='2d'&&!GLB.raf){GLB.fps2d=0;GLB.raf=requestAnimationFrame(loop2D);} }
+/* 지형 GeoJSON(대륙/바다/국경) 1회 로드 — 실패해도 지구본은 솔리드 구로 동작(불신 #1). */
+function loadLand(){
+  if(_landData)return _landData;
+  _landData=fetch(GLOBE_LAND_SRC).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;});
+  return _landData;
+}
+/* 폴백 판단(순수) 후 3D 시도 or 2D 폴백 — 모달/인라인 공용 진입점. */
+function bootGlobe(token){
+  var sig={ webgl:webglOK(), reducedMotion:reducedMotion(),
+    deviceMemory:(navigator.deviceMemory), hardwareConcurrency:(navigator.hardwareConcurrency) };
+  if(GCGlobe.shouldFallback(sig)){ startGlobe2D(token); return; }
+  // 3D 시도 — 라이브러리 지연로딩 후 초기화. 실패 시 2D 폴백(절대 안 깨짐).
+  loadGlobeLib().then(function(){ if(token!==GLB.did)return; startGlobe3D(token); })
+    .catch(function(){ if(token!==GLB.did)return; startGlobe2D(token); });
+}
+function setGlobeMsg(msg){ var m=el('gl-msg'); if(m){m.style.display='';m.textContent=msg;} }
+function hideGlobeMsg(){ var m=el('gl-msg'); if(m)m.style.display='none'; }
+function setGlobeNote(msg){ var n=el('gl-note'); if(n)n.textContent=msg||''; }
+function applyRotate(){
+  if(GLB.mode==='3d'&&GLB.globe&&GLB.globe.controls){
+    try{var c=GLB.globe.controls(); c.autoRotate=!!GLB.rotate; c.autoRotateSpeed=GLB.rotate?0.6:0;}catch(e){}
+  }
+}
+
+/* 점 데이터 갱신 — peek/watch에서 온 totals(tot.countries)로 점 배열 재계산(추가 읽기 0).
+ * 빈 데이터면 안내 메시지. 3D/2D 공통 진입점. */
+function refreshGlobeData(tot){
+  var bt=GLB.bt||{a:{},b:{}}, ca=bt.a&&bt.a.color, cb=bt.b&&bt.b.color;
+  var curr=(tot&&tot.countries)||{};
+  GLB.pts=GCGlobe.countryPoints(curr,ca,cb,GLOBE_MAX_PTS);
+  // 델타 팝콘(비용0 실시간): 직전 스냅샷 대비 증가한 나라에 팝콘. 첫 로드(prevC=null)는 베이스라인만(전세계 폭죽 방지).
+  if(GLB.prevC!==null&&!prefersReducedMotion()){
+    var evs=GCGlobe.popEvents(GLB.prevC,curr,ca,cb,{perCap:6,max:12});
+    for(var i=0;i<evs.length;i++)popcornAt(evs[i].lat,evs[i].lng,evs[i].pops,evs[i].color);
+  }
+  GLB.prevC=snapshotCountries(curr);
+  if(GLB.mode==='3d')pushPoints3D();
+  if(!GLB.pts.length){ setGlobeMsg(t('globeEmpty')); }
+  else { hideGlobeMsg(); focusGlobe(); }
+}
+/* countries 집계의 얕은 복사(다음 watch 틱과 델타 비교용 — Firestore 객체 참조 변동 방어, 불신 #1). */
+function snapshotCountries(c){
+  var o={}; if(c&&typeof c==='object'){var k=Object.keys(c);for(var i=0;i<k.length;i++){var v=c[k[i]];if(v&&typeof v==='object')o[k[i]]={a:+v.a||0,b:+v.b||0};}} return o;
+}
+/* 위경도 → gl-stage 내부 화면좌표. 3D는 카메라 뒷면 컬링(getCoords·dot) + 화면투영(getScreenCoords). 2D는 정사영(앞면만). */
+function globeScreenPos(lat,lng){
+  var stage=el('gl-stage'); if(!stage)return null;
+  if(GLB.mode==='3d'&&GLB.globe){
+    try{
+      // 뒷면 컬링: 표면점 벡터·카메라 벡터 내적<=0 이면 지구 반대편 → 생략.
+      if(GLB.globe.getCoords&&GLB.globe.camera){
+        var pw=GLB.globe.getCoords(lat,lng), cam=GLB.globe.camera();
+        if(pw&&cam&&cam.position){ var dot=pw.x*cam.position.x+pw.y*cam.position.y+pw.z*cam.position.z; if(dot<=0)return null; }
+      }
+      if(!GLB.globe.getScreenCoords)return null;
+      var s=GLB.globe.getScreenCoords(lat,lng);
+      if(!s||!isFinite(s.x)||!isFinite(s.y))return null;
+      var w=stage.clientWidth,h=stage.clientHeight;
+      if(s.x<-20||s.y<-20||s.x>w+20||s.y>h+20)return null;
+      return {x:s.x,y:s.y};
+    }catch(e){return null;}
+  }
+  if(GLB.mode==='2d'&&G2D.ctx){
+    var w2=G2D.w||stage.clientWidth,h2=G2D.h||stage.clientHeight, cx=w2/2,cy=h2/2;
+    var R=Math.min(w2,h2)*0.46*(GCGlobe.MAX_ALT/Math.max(GCGlobe.MIN_ALT,G2D.curAlt))*0.62;
+    R=Math.max(20,Math.min(Math.min(w2,h2)*0.46,R));
+    var pr=project2D(lat,lng,cx,cy,R); if(!pr.vis)return null;
+    return {x:pr.x,y:pr.y};
+  }
+  return null;
+}
+/* 🍿 팝콘 튀기기 — 해당 좌표(화면)에 n개 팝콘 스폰 + 진영색 글로우. CSS 애니메이션 후 자동 제거. 동시 상한·감속모션 가드. */
+function popcornAt(lat,lng,n,color){
+  // 배틀 중(lite=미니 지구본)엔 팝콘 전면 정지 — '절단기 불꽃' 잔상·탭 끊김 방지(사용자 피드백·성능).
+  if(GLB.lite)return;
+  var layer=el('gl-pop'); if(!layer||prefersReducedMotion())return;
+  if(layer.childElementCount>GLOBE_POP_CAP)return;            // 동시 폭주 방지
+  var pos=globeScreenPos(lat,lng); if(!pos)return;            // 뒷면/범위밖 생략
+  var cnt=Math.max(1,Math.min(6,n|0));
+  for(var i=0;i<cnt;i++){
+    var s=document.createElement('span'); s.className='gl-corn'; s.textContent='🍿';
+    s.style.left=(pos.x+(Math.random()-0.5)*24)+'px'; s.style.top=(pos.y+(Math.random()-0.5)*10)+'px';
+    s.style.setProperty('--tx',((Math.random()-0.5)*42)+'px');
+    s.style.fontSize=(13+Math.random()*9)+'px';
+    if(color)s.style.textShadow='0 0 9px '+color;            // 우세 진영색 글로우(타격 진영 표시)
+    layer.appendChild(s);
+    (function(node){setTimeout(function(){if(node.parentNode)node.parentNode.removeChild(node);},920);})(s);
+  }
+}
+/* 구독 시작 — 기존 GCNet.watch(today) 재사용(나라순위/리더보드와 동일 집계, 신규 구독 아님 X… 단,
+ * 지구본은 rankBoard와 다른 화면이라 자체 watch 1개를 연다(탭마다 ❌·집계 문서 1개 구독 — D5/D7 범위 내).
+ * peek로 즉시 첫 그림 → watch로 라이브 갱신. closeGlobe에서 반드시 해지(누수 방지). */
+function watchGlobe(token){
+  GLB.lastFocus=null; // 새 뷰 진입 → 첫 데이터에 반드시 포커스(이후엔 핫스팟 바뀔 때만)
+  GLB.prevC=null;     // 새 뷰 진입 → 첫 데이터는 델타 베이스라인(팝콘 X), 이후 증가분만 팝콘
+  var date=todayStr();
+  GCNet.peek(date).then(function(tot){ if(token===GLB.did)refreshGlobeData(blendTot(tot,date)); });
+  GLB.unwatch=GCNet.watch(date,function(tot){ if(token===GLB.did)refreshGlobeData(blendTot(tot,date)); });
+}
+
+/* ── 3D 경로(globe.gl) ── */
+function startGlobe3D(token){
+  var stage=el('gl-stage'); if(!stage){return;}
+  GLB.mode='3d';
+  try{
+    var g=window.Globe()(stage);
+    GLB.globe=g;
+    // 카툰풍·저자극(사용자 피드백: 너무 밝음/초록/구름낌 → 차분하게). 텍스처 0·플랫 음영.
+    g.backgroundColor('rgba(0,0,0,0)')
+     .showGlobe(true).showAtmosphere(true).atmosphereColor('#3b5e86').atmosphereAltitude(0.12)
+     .globeImageUrl(null);                 // 외부 텍스처 0(런타임 CDN 0·경량) → 솔리드 구
+    // 바다 = 구 머티리얼. 카툰: 어둡고 매트(specular 0, 발광 낮게) → 덜 밝고 안정적.
+    try{ var m=g.globeMaterial(); if(m){ m.color&&m.color.set&&m.color.set('#11283f'); m.emissive&&m.emissive.set&&m.emissive.set('#0a1828'); if('emissiveIntensity'in m)m.emissiveIntensity=0.25; if('shininess'in m)m.shininess=0; if(m.specular&&m.specular.set)m.specular.set('#000000'); } }catch(e){}
+    // 대륙/국경(D14) — 카툰: 채도 낮춘 평평한 육지 + 또렷한 가는 국경선. 거의 평면(altitude↓)으로 경량.
+    g.polygonsData([])
+     .polygonCapColor(function(){return 'rgba(108,142,112,0.97)';})    // 또렷한 카툰 육지(덜 어둡게)
+     .polygonSideColor(function(){return 'rgba(40,60,46,0.6)';})
+     .polygonStrokeColor(function(){return 'rgba(180,205,185,0.5)';})  // 국경선(또렷)
+     .polygonAltitude(0.002);                                          // 거의 평면(경량·카툰)
+    loadLand().then(function(geo){
+      if(!geo||!geo.features||!GLB.globe||GLB.mode!=='3d')return;
+      try{ GLB.globe.polygonsData(geo.features); }catch(e){}
+    });
+    // 점(참여 강도) — '굵은 막대' → 가는 선(needle). 반경↓ 크게, 높이는 가중치로.
+    g.pointsData([])
+     .pointLat('lat').pointLng('lng').pointColor('color')
+     .pointAltitude(function(d){return 0.02+0.36*(d.weight||0);})     // 가중치만큼 솟는 '선'
+     .pointRadius(function(d){return 0.03+0.05*(d.weight||0);})       // 아주 가늘게(실선처럼)
+     .pointResolution(3)                   // 더 저폴리(경량)
+     .pointsMerge(true)                     // 전 국가(최대 250) 1지오메트리 병합 → 경량(D15)
+     .pointLabel(function(d){return globePointLabel(d);});
+    // 링(타격 파동) — 상위 핫스팟만 은은하게(개수 적게 — 경량).
+    g.ringsData([])
+     .ringLat('lat').ringLng('lng').ringColor(function(d){return function(){return d.color;};})
+     .ringMaxRadius(function(d){return 2+5*(d.weight||0);}).ringPropagationSpeed(1.4)
+     .ringRepeatPeriod(function(d){return 1100-500*(d.weight||0);});
+    // 라벨(디테일) — 상위 핫스팟에 국기+우세% 표기. 개수 적게(경량). 텍스트는 비신뢰값 아님(집계).
+    g.labelsData([])
+     .labelLat('lat').labelLng('lng').labelText(function(d){return globeLabelText(d);})
+     .labelColor(function(d){return d.color;})
+     .labelSize(function(d){return 0.9+1.1*(d.weight||0);})
+     .labelDotRadius(function(d){return 0.16+0.4*(d.weight||0);})
+     .labelResolution(2).labelAltitude(0.01);
+    // DPR 캡 + 픽셀 경량(고해상도 폰 보호).
+    try{ var r=g.renderer(); if(r&&r.setPixelRatio)r.setPixelRatio(GCGlobe.cappedDpr(window.devicePixelRatio,GLOBE_DPR_CAP)); }catch(e){}
+    sizeGlobe3D();
+    // 자동회전(은은) + 줌 컨트롤.
+    try{ var c=g.controls(); c.autoRotate=GLB.rotate; c.autoRotateSpeed=0.6; c.enableZoom=true; if('minDistance'in c)c.minDistance=101; }catch(e){}
+    g.pointOfView({lat:20,lng:0,altitude:GCGlobe.MAX_ALT},0); // 시작 시점(데이터 오면 focusGlobe가 이동)
+    hideGlobeMsg();
+    bindGlobeLifecycle();   // 탭 숨김 시 렌더 정지 + 리사이즈
+    watchGlobe(token);      // 데이터 구독(기존 집계 재사용)
+  }catch(e){
+    // 3D 초기화 도중 어떤 예외든 → 2D 폴백(절대 안 깨짐).
+    disposeGlobe3D(); startGlobe2D(token);
+  }
+}
+function sizeGlobe3D(){
+  var stage=el('gl-stage'); if(!stage||!GLB.globe)return;
+  var r=stage.getBoundingClientRect();
+  try{ GLB.globe.width(r.width).height(r.height); }catch(e){}
+}
+function pushPoints3D(){
+  if(!GLB.globe)return;
+  try{
+    GLB.globe.pointsData(GLB.pts.slice());   // 전체(최대 250) — 전세계 실시간(D15)
+    if(GLB.lite){ GLB.globe.ringsData([]); if(GLB.globe.labelsData)GLB.globe.labelsData([]); return; } // 배틀: 점만(경량)
+    // 링은 상위 6개 핫스팟만(경량·시각 강조).
+    GLB.globe.ringsData(GLB.pts.slice(0,6));
+    // 라벨은 상위 4개(국기+우세%) — '어디쯤'을 글자로도(D14·경량).
+    if(GLB.globe.labelsData)GLB.globe.labelsData(GLB.pts.slice(0,4));
+  }catch(e){}
+}
+/* 지구본 라벨 텍스트 — 국기 + 우세%. 국기 없으면 코드. (집계 데이터 기반·짧게) */
+function globeLabelText(d){
+  if(!d)return '';
+  var fl=''; try{fl=GCGeo.flagOf(d.code)||'';}catch(e){}
+  return (fl?fl+' ':'')+(d.share!=null?d.share+'%':'');
+}
+function focusGlobe(force){
+  if(!GLB.pts.length)return;
+  var target=GCGlobe.pickFocus(GLB.pts,MY);
+  if(!target)return;
+  if(!force&&GLB.lastFocus===target.code)return; // 같은 핫스팟이면 카메라 미이동(N2: watch 틱마다 흔들림 방지)
+  GLB.lastFocus=target.code;
+  var alt=GCGlobe.focusAltitude(GLB.pts);
+  if(GLB.mode==='3d'&&GLB.globe){
+    try{ GLB.globe.pointOfView({lat:target.lat,lng:target.lng,altitude:alt},1200); }catch(e){}
+  }else if(GLB.mode==='2d'){
+    G2D.tLat=target.lat; G2D.tLng=target.lng; G2D.tAlt=alt; // 2D는 줌(스케일)/중심에 반영
+  }
+}
+function globePointLabel(d){
+  if(!d)return '';
+  var info=GCGeo.countryInfo(d.code), nm=LANG==='ko'?info.nameKo:info.nameEn;
+  var bt=GLB.bt||{a:{},b:{}}, lt=bt[d.lead]||bt.a||{};
+  var mine=(MY&&d.code===MY)?' · '+esc(t('globeMine')):'';
+  return '<div style="font:600 12px system-ui;color:#fff;background:rgba(8,12,20,.82);padding:5px 8px;border-radius:8px">'+
+    (info.code?esc(info.flag)+' ':'')+esc(nm)+' '+esc(lt.emoji||'')+' '+d.share+'%'+
+    '<br><span style="opacity:.75;font-weight:400">'+t('globeTaps',{n:comma(d.tot)})+mine+'</span></div>';
+}
+/* 생명주기: 탭 숨김 시 3D 렌더 일시정지(전력/GPU 절약), 다시 보이면 재개. 리사이즈 시 캔버스 재측정. */
+function bindGlobeLifecycle(){
+  GLB.hidden=function(){
+    if(!GLB.globe)return;
+    try{
+      if(document.hidden){ if(GLB.globe.pauseAnimation)GLB.globe.pauseAnimation(); }
+      else{ if(GLB.globe.resumeAnimation)GLB.globe.resumeAnimation(); }
+    }catch(e){}
+  };
+  document.addEventListener('visibilitychange',GLB.hidden);
+  GLB.resize=function(){ if(GLB.mode==='3d')sizeGlobe3D(); else sizeGlobe2D(); };
+  window.addEventListener('resize',GLB.resize);
+}
+function disposeGlobe3D(){
+  if(!GLB.globe)return;
+  try{
+    if(GLB.globe.pauseAnimation)GLB.globe.pauseAnimation();
+    // WebGL 컨텍스트/메모리 해제(누수 방지) — globe.gl 의 정리 API + 렌더러 dispose + 컨텍스트 강제 해제.
+    try{ GLB.globe._destructor&&GLB.globe._destructor(); }catch(e){}
+    var r=null; try{ r=GLB.globe.renderer&&GLB.globe.renderer(); }catch(e){}
+    if(r){
+      try{ r.dispose&&r.dispose(); }catch(e){}
+      try{ r.forceContextLoss&&r.forceContextLoss(); }catch(e){}
+      try{ if(r.domElement&&r.domElement.parentNode)r.domElement.parentNode.removeChild(r.domElement); }catch(e){}
+    }
+  }catch(e){}
+  GLB.globe=null;
+}
+
+/* ── 2D 폴백 경로(캔버스) — WebGL 없거나/라이브러리 실패/감속모션/저사양 ──
+ * '풀 3D는 못 켜도 절대 안 깨짐'(D7 floor). 회전하는 위경도 구체 + 참여 점/색을 가볍게 그린다.
+ * FPS 제한 + 탭 숨김 시 정지 + 닫을 때 정리. 외부 에셋 0(캔버스만). */
+var G2D={canvas:null,ctx:null,w:0,h:0,dpr:1,rot:0,tLat:20,tLng:0,tAlt:GCGlobe.MAX_ALT,curAlt:GCGlobe.MAX_ALT,curLng:0};
+function startGlobe2D(token){
+  var stage=el('gl-stage'); if(!stage)return;
+  GLB.mode='2d';
+  setGlobeNote(t('globe2dNote'));
+  var c=document.createElement('canvas');
+  if(!c.getContext){ setGlobeMsg(t('globeEmpty')); return; } // 캔버스조차 없으면 메시지만(여전히 안 깨짐)
+  c.style.position='absolute'; c.style.inset='0'; c.style.width='100%'; c.style.height='100%';
+  stage.appendChild(c); G2D.canvas=c; G2D.ctx=c.getContext('2d');
+  sizeGlobe2D();
+  bindGlobeLifecycle();
+  hideGlobeMsg();
+  watchGlobe(token);
+  GLB.fps2d=0; if(!GLB.raf)GLB.raf=requestAnimationFrame(loop2D);
+}
+function sizeGlobe2D(){
+  var stage=el('gl-stage'); if(!stage||!G2D.canvas)return;
+  var r=stage.getBoundingClientRect();
+  G2D.dpr=GCGlobe.cappedDpr(window.devicePixelRatio,GLOBE_DPR_CAP);
+  G2D.w=r.width; G2D.h=r.height;
+  G2D.canvas.width=Math.max(1,Math.round(G2D.w*G2D.dpr)); G2D.canvas.height=Math.max(1,Math.round(G2D.h*G2D.dpr));
+  if(G2D.ctx)G2D.ctx.setTransform(G2D.dpr,0,0,G2D.dpr,0,0);
+}
+/* 위경도 → 2D 화면 좌표(직교 정사영, 뒷면은 숨김). 중심 경도(curLng)만큼 회전. */
+function project2D(lat,lng,cx,cy,R){
+  var la=lat*Math.PI/180, lo=(lng-G2D.curLng)*Math.PI/180;
+  var x=Math.cos(la)*Math.sin(lo), y=Math.sin(la), z=Math.cos(la)*Math.cos(lo);
+  return {x:cx+x*R,y:cy-y*R,vis:z>0,z:z};
+}
+function loop2D(ts){
+  if(GLB.mode!=='2d'||!G2D.ctx){GLB.raf=0;return;}
+  // FPS 제한(전력/발열) + 탭 숨김 시 그리지 않음(정지).
+  if(!document.hidden){
+    var minDt=1000/GLOBE_FPS_2D;
+    if(!GLB.fps2d||ts-GLB.fps2d>=minDt){ GLB.fps2d=ts; draw2D(); }
+  }
+  GLB.raf=requestAnimationFrame(loop2D);
+}
+function draw2D(){
+  var ctx=G2D.ctx,w=G2D.w,h=G2D.h; if(!ctx||w<=0)return;
+  ctx.clearRect(0,0,w,h);
+  var cx=w/2, cy=h/2;
+  // altitude(클수록 멀리/작게) → 반지름. tAlt를 부드럽게 추종(자동 줌 연출).
+  G2D.curAlt+=(G2D.tAlt-G2D.curAlt)*0.06;
+  var R=Math.min(w,h)*0.46*(GCGlobe.MAX_ALT/Math.max(GCGlobe.MIN_ALT,G2D.curAlt))*0.62;
+  R=Math.max(20,Math.min(Math.min(w,h)*0.46,R));
+  // 자동회전: 타깃 경도로 부드럽게 이동 + (회전 on이면) 천천히 자전.
+  if(GLB.rotate)G2D.curLng+=0.25; // 도/프레임(느리게)
+  else { var d=((G2D.tLng-G2D.curLng+540)%360)-180; G2D.curLng+=d*0.06; }
+  // 구체 본체(그라데이션) + 위경도 격자.
+  var grd=ctx.createRadialGradient(cx-R*0.3,cy-R*0.3,R*0.2,cx,cy,R);
+  grd.addColorStop(0,'#1d3a52'); grd.addColorStop(1,'#0a1626');
+  ctx.fillStyle=grd; ctx.beginPath(); ctx.arc(cx,cy,R,0,6.283); ctx.fill();
+  drawGraticule2D(ctx,cx,cy,R);
+  // 참여 점(앞면만) — 색=우세 진영, 크기=가중치. 내 나라는 외곽 강조.
+  for(var i=0;i<GLB.pts.length;i++){
+    var p=GLB.pts[i], pr=project2D(p.lat,p.lng,cx,cy,R);
+    if(!pr.vis)continue;
+    var rad=2.2+5.5*(p.weight||0), a=0.45+0.55*pr.z;
+    ctx.globalAlpha=Math.max(0,Math.min(1,a));
+    ctx.fillStyle=p.color; ctx.beginPath(); ctx.arc(pr.x,pr.y,rad,0,6.283); ctx.fill();
+    if(MY&&p.code===MY){ ctx.globalAlpha=0.9; ctx.strokeStyle='#fff'; ctx.lineWidth=1.6; ctx.beginPath(); ctx.arc(pr.x,pr.y,rad+3,0,6.283); ctx.stroke(); }
+  }
+  ctx.globalAlpha=1;
+}
+function drawGraticule2D(ctx,cx,cy,R){
+  ctx.strokeStyle='rgba(120,160,210,.18)'; ctx.lineWidth=1;
+  var lat,lng,first,pr,k;
+  for(lat=-60;lat<=60;lat+=30){ ctx.beginPath(); first=true;
+    for(lng=-180;lng<=180;lng+=6){ pr=project2D(lat,lng,cx,cy,R); if(!pr.vis){first=true;continue;}
+      if(first){ctx.moveTo(pr.x,pr.y);first=false;}else ctx.lineTo(pr.x,pr.y);} ctx.stroke(); }
+  for(k=0;k<12;k++){ lng=k*30-180; ctx.beginPath(); first=true;
+    for(lat=-90;lat<=90;lat+=6){ pr=project2D(lat,lng,cx,cy,R); if(!pr.vis){first=true;continue;}
+      if(first){ctx.moveTo(pr.x,pr.y);first=false;}else ctx.lineTo(pr.x,pr.y);} ctx.stroke(); }
+}
+
+/* 지구본 닫기 — 구독 해지 + 핸들러 제거 + 3D dispose(WebGL 컨텍스트 해제) + 2D 정지 + DOM 제거.
+ * 어떤 모드/상태에서도 누수 없이 정리(불신 #1). 토큰 증가로 진행중 비동기는 무효화. */
+function closeGlobe(){
+  GLB.did=(GLB.did+1); // 진행중 콜백 무효화
+  if(GLB.unwatch){ try{GLB.unwatch();}catch(e){} GLB.unwatch=null; }
+  if(GLB.hidden){ try{document.removeEventListener('visibilitychange',GLB.hidden);}catch(e){} GLB.hidden=null; }
+  if(GLB.resize){ try{window.removeEventListener('resize',GLB.resize);}catch(e){} GLB.resize=null; }
+  if(GLB.raf){ try{cancelAnimationFrame(GLB.raf);}catch(e){} GLB.raf=0; }
+  disposeGlobe3D();
+  if(G2D.canvas){ try{ if(G2D.canvas.parentNode)G2D.canvas.parentNode.removeChild(G2D.canvas); }catch(e){} }
+  G2D.canvas=null; G2D.ctx=null; G2D.curLng=0; G2D.curAlt=GCGlobe.MAX_ALT; G2D.tAlt=GCGlobe.MAX_ALT;
+  GLB.pts=[]; GLB.mode=''; GLB.prevC=null; GLB.inline=false;
+  if(GLB.ov){ try{ if(GLB.ov.parentNode)GLB.ov.parentNode.removeChild(GLB.ov); }catch(e){} GLB.ov=null; }
 }
 
 /* 전역 노출 (onclick에서 호출) */
+window.openLocker=openLocker; window.openProposals=openProposals;
 window.GO=GO; window.SHARE=SHARE; window.intro=intro; window.watch2x=watch2x;
-window.rankBoard=rankBoard; window.openSettings=openSettings;
+window.rankBoard=rankBoard; window.openSettings=openSettings; window.toggleLang=toggleLang;
+
+/* 모바일 핀치줌 차단(사용자 피드백: 게임 중 화면 확대/축소). 단일터치 스크롤은 그대로 두고
+ * 멀티터치 제스처만 막는다 → iOS는 user-scalable 무시하므로 gesture* + 멀티터치 touchmove 둘 다 차단. */
+['gesturestart','gesturechange','gestureend'].forEach(function(ev){
+  document.addEventListener(ev,function(e){e.preventDefault();},{passive:false});
+});
+document.addEventListener('touchmove',function(e){ if(e.touches&&e.touches.length>1)e.preventDefault(); },{passive:false});
+/* 빠른 더블탭(줌 유발) 차단 — 300ms 내 두 번째 탭의 기본동작 취소(스크롤/탭은 정상). */
+var _lastTouchEnd=0;
+document.addEventListener('touchend',function(e){
+  var n=Date.now(); if(n-_lastTouchEnd<=300)e.preventDefault(); _lastTouchEnd=n;
+},{passive:false});
+
+/* 뒤로가기 이탈 방지(사용자 결정): 배틀(타격) 중에만 가로채 로비로. 그 외 화면은 정상 동작.
+ * SPA(단일 URL)라 GO에서 가드 1개 push → 뒤로가기 시 popstate로 잡아 로비 복귀. 가드를 다시 심어 연속 차단. */
+window.addEventListener('popstate', function(){
+  if(B && !B.ended){
+    try{ history.pushState(null,''); }catch(e){}   // 가드 재설치(다음 back도 배틀이면 또 잡힘)
+    cleanup();                                     // 배틀 정리(스크롤 잠금 해제 포함)
+    intro();                                       // 로비로 복귀(이탈 X)
+  }
+});
+/* 새로고침·탭닫기 경고 — 배틀 중에만(진행 중 기여 날아감 방지). 평소엔 경고 없음. */
+window.addEventListener('beforeunload', function(e){
+  if(B && !B.ended){ e.preventDefault(); e.returnValue=''; return ''; }
+});
 
 /* 시작 */
 intro();

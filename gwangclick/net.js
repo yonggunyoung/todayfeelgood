@@ -8,9 +8,11 @@
  *  - 절대 게임을 막지 않음: 모든 함수는 실패해도 조용히 폴백(throw 없음). config 없으면 available()=false.
  *  - 비용 안전: 광클은 매 탭이 아니라 '라운드 종료 시 1회'만 합산 전송(+ 어뷰징 상한).
  *
- * Firestore 구조
- *  gc_battles/{YYYY-MM-DD}            = { a, b, na, nb, regions:{<region>:{a,b}}, updatedAt }  // 전국 집계(increment)
- *  gc_scores/{YYYY-MM-DD__uid}        = { date, uid, nick, side, taps, region, ts }            // 랭킹/순위 산출
+ * Firestore 구조 (Phase 2: 하위호환 가산 확장 — D4)
+ *  gc_battles/{YYYY-MM-DD}            = { a, b, na, nb, regions:{<region>:{a,b}}, countries:{<ISO2>:{a,b}}, updatedAt }
+ *    └ countries 는 regions 와 동일한 맵 패턴(증가). 기존 a/b/na/nb/regions 는 불변.
+ *  gc_scores/{YYYY-MM-DD__uid}        = { date, uid, nick, side, taps, region, country, badge, comment, ts }
+ *    └ country/badge/comment 가 Phase 2 신규(없으면 ''). 기존 필드 불변.
  *
  * 규칙·색인은 FIREBASE.md 참고.
  */
@@ -57,15 +59,20 @@
 
   function battleRef(date) { return state.fs.doc(state.db, 'gc_battles', date); }
   function scoreRef(date, uid) { return state.fs.doc(state.db, 'gc_scores', date + '__' + uid); }
-  function zero() { return { a: 0, b: 0, na: 0, nb: 0, regions: {} }; }
+  function zero() { return { a: 0, b: 0, na: 0, nb: 0, regions: {}, countries: {} }; }
+  // 집계 문서 1건 → 표준 totals 형태. 옛 문서(countries 없음)는 {}로 폴백(하위호환 D4·불신 #1).
+  function totalsOf(d) {
+    return d
+      ? { a: d.a || 0, b: d.b || 0, na: d.na || 0, nb: d.nb || 0, regions: d.regions || {}, countries: d.countries || {} }
+      : zero();
+  }
 
-  // 오늘 집계 1회 읽기 → {a,b,na,nb,regions}
+  // 오늘 집계 1회 읽기 → {a,b,na,nb,regions,countries}
   async function peek(date) {
     try {
       if (!(await init())) return null;
       var snap = await state.fs.getDoc(battleRef(date));
-      var d = snap.exists() ? snap.data() : null;
-      return d ? { a: d.a || 0, b: d.b || 0, na: d.na || 0, nb: d.nb || 0, regions: d.regions || {} } : zero();
+      return totalsOf(snap.exists() ? snap.data() : null);
     } catch (e) { return null; }
   }
 
@@ -76,28 +83,56 @@
       if (!ok) return;
       try {
         off = state.fs.onSnapshot(battleRef(date), function (snap) {
-          var d = snap.exists() ? snap.data() : null;
-          cb(d ? { a: d.a || 0, b: d.b || 0, na: d.na || 0, nb: d.nb || 0, regions: d.regions || {} } : zero());
+          cb(totalsOf(snap.exists() ? snap.data() : null));
         }, function () { /* 권한/네트워크 오류 — 폴백 유지 */ });
       } catch (e) { /* ignore */ }
     });
     return function () { try { off(); } catch (e) {} };
   }
 
+  // ISO2 국가코드 정규화(집계 키·점수 필드 공용). 2글자 영문만 통과, 그 외 '' (불신 #1).
+  function normCountry(code) {
+    if (typeof code !== 'string') return '';
+    var c = code.trim().toUpperCase();
+    return /^[A-Z]{2}$/.test(c) ? c : '';
+  }
+  // 배지/멘트 정제: GCUtil 있으면 위임(코드포인트 캡), 없으면 보수적 길이 컷(불신 #1).
+  function sanBadge(v) {
+    try { if (typeof GCUtil !== 'undefined' && GCUtil.sanitizeBadge) return GCUtil.sanitizeBadge(v); } catch (e) {}
+    return (typeof v === 'string' ? v : '').replace(/[\x00-\x1f\x7f-\x9f]/g, ' ').trim().slice(0, 4);
+  }
+  function sanComment(v) {
+    try { if (typeof GCUtil !== 'undefined' && GCUtil.sanitizeComment) return GCUtil.sanitizeComment(v); } catch (e) {}
+    return (typeof v === 'string' ? v : '').replace(/[\x00-\x1f\x7f-\x9f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 24);
+  }
+
   // 라운드 종료 합산 전송: 진영 집계 increment + 내 점수 기록. 반환 {rank,total} (실패 시 null).
-  async function submit(date, side, taps, region, nick) {
+  // Phase 2(D4/D5): country 가 있으면 countries.<ISO2>.<진영> 를 regions 와 똑같이 1회 증가(탭마다 ❌).
+  //   opts.badge / opts.comment 는 점수문서에 함께 저장(타 사용자 노출 → 정제). 하위호환: 옛 호출(5인자)도 동작.
+  async function submit(date, side, taps, region, nick, country, opts) {
     try {
       if (!(await init())) return null;
-      taps = Math.max(0, Math.min(TAP_CAP, Math.floor(taps || 0)));
+      opts = opts || {};
+      taps = Math.max(0, Math.min(TAP_CAP, Math.floor(taps || 0)));      // 기록 점수(=오늘 최고)
+      // 재참전 형평성(사용자 결정): 집단 집계엔 '최고점수의 증가분(delta)'만 반영, 참가자수(na/nb)는 첫 참전만 +1.
+      //   opts.aggDelta(집계 가산량)·opts.first(첫 참전 여부) 없으면 옛 동작(taps 전량·+1)로 폴백(하위호환).
+      var amt = (opts.aggDelta != null) ? Math.max(0, Math.min(TAP_CAP, Math.floor(opts.aggDelta))) : taps;
+      var first = (opts.first != null) ? !!opts.first : true;
       var inc = state.fs.increment, side2 = side === 'a' ? 'a' : 'b';
-      var agg = { updatedAt: Date.now() };
-      agg[side2] = inc(taps); agg[side2 === 'a' ? 'na' : 'nb'] = inc(1);
-      // 중첩 객체 + merge:true 라야 regions.<지역>.<진영> 가 올바르게 증가 (점 표기 키는 setDoc에서 미동작)
-      if (region) { var rg = {}; rg[side2] = inc(taps); agg.regions = {}; agg.regions[region] = rg; }
-      await state.fs.setDoc(battleRef(date), agg, { merge: true });
+      var cc = normCountry(country);
+      if (amt > 0 || first) {                          // 더할 게 있을 때만 집계 문서 쓰기(불필요 쓰기 절감)
+        var agg = { updatedAt: Date.now() };
+        if (amt > 0) agg[side2] = inc(amt);
+        if (first) agg[side2 === 'a' ? 'na' : 'nb'] = inc(1);
+        // 중첩 객체 + merge:true 라야 regions.<지역>.<진영>/countries.<ISO2>.<진영> 가 올바르게 증가.
+        if (amt > 0 && region) { var rg = {}; rg[side2] = inc(amt); agg.regions = {}; agg.regions[region] = rg; }
+        if (amt > 0 && cc) { var cg = {}; cg[side2] = inc(amt); agg.countries = {}; agg.countries[cc] = cg; }
+        await state.fs.setDoc(battleRef(date), agg, { merge: true });
+      }
       await state.fs.setDoc(scoreRef(date, state.uid), {
         date: date, uid: state.uid, nick: (nick || '익명광클러').slice(0, 16),
-        side: side2, taps: taps, region: region || '', ts: Date.now(),
+        side: side2, taps: taps, region: region || '', country: cc,
+        badge: sanBadge(opts.badge), comment: sanComment(opts.comment), ts: Date.now(),
       });
       return await rankOf(date, taps);
     } catch (e) { return null; }
@@ -116,7 +151,8 @@
     } catch (e) { return null; }
   }
 
-  // 오늘 전국 랭킹 TOP — [{nick,side,taps,region,me}]
+  // 오늘 전국 랭킹 TOP — [{nick,side,taps,region,country,badge,comment,me}]
+  // Phase 2: country/badge/comment 가산(옛 문서엔 ''). 기존 필드(nick/side/taps/region/me) 불변.
   async function leaderboard(date, max, myUid) {
     try {
       if (!(await init())) return null;
@@ -127,15 +163,73 @@
       var rows = [];
       snap.forEach(function (d) {
         var v = d.data();
-        rows.push({ nick: v.nick || '익명광클러', side: v.side, taps: v.taps || 0, region: v.region || '', me: v.uid === (myUid || state.uid) });
+        rows.push({
+          nick: v.nick || '익명광클러', side: v.side, taps: v.taps || 0, region: v.region || '',
+          country: v.country || '', badge: v.badge || '', comment: v.comment || '',
+          me: v.uid === (myUid || state.uid),
+        });
       });
       return rows;
+    } catch (e) { return null; }
+  }
+
+  // ── 떡밥 투표소(UGC, D8~D12) — 신규 컬렉션 gc_proposals(격리·기존 집계 무관). ──
+  // 제출 전 GCProp.validateProposal로 정제(없으면 보수적 폴백). 서버 규칙이 최종 가드(필드검증·증가통제).
+  function sanProposal(p) {
+    try { if (typeof GCProp !== 'undefined' && GCProp.validateProposal) { var r = GCProp.validateProposal(p); return r.ok ? r.value : null; } } catch (e) {}
+    var q = ((p && p.q) || '').toString().replace(/[\x00-\x1f\x7f-\x9f]/g, ' ').trim().slice(0, 40);
+    var a = ((p && p.aName) || '').toString().replace(/[\x00-\x1f\x7f-\x9f]/g, ' ').trim().slice(0, 14);
+    var b = ((p && p.bName) || '').toString().replace(/[\x00-\x1f\x7f-\x9f]/g, ' ').trim().slice(0, 14);
+    if (!q || !a || !b || a.toLowerCase() === b.toLowerCase()) return null;
+    return { q: q, aName: a, bName: b };
+  }
+  // 떡밥 제출 → addDoc. 반환 {ok,id} (검증/네트워크 실패 시 null). likes/reports는 0으로 생성(규칙이 강제).
+  async function submitProposal(p) {
+    try {
+      if (!(await init())) return null;
+      var v = sanProposal(p); if (!v) return null;
+      var col = state.fs.collection(state.db, 'gc_proposals');
+      var ref = await state.fs.addDoc(col, {
+        q: v.q, aName: v.aName, bName: v.bName, uid: state.uid,
+        likes: 0, reports: 0, createdAt: Date.now(),
+      });
+      return { ok: true, id: ref.id };
+    } catch (e) { return null; }
+  }
+  // 최신 떡밥 목록 → [{id,q,aName,bName,likes,reports,mine}]. 추첨/숨김판정은 클라(GCProp.pickFeed/statusOf).
+  async function listProposals(max) {
+    try {
+      if (!(await init())) return null;
+      var col = state.fs.collection(state.db, 'gc_proposals');
+      var q = state.fs.query(col, state.fs.orderBy('createdAt', 'desc'), state.fs.limit(max || 60));
+      var snap = await state.fs.getDocs(q);
+      var rows = [];
+      snap.forEach(function (d) {
+        var v = d.data();
+        rows.push({
+          id: d.id, q: v.q || '', aName: v.aName || '', bName: v.bName || '',
+          likes: v.likes || 0, reports: v.reports || 0, mine: v.uid === state.uid,
+        });
+      });
+      return rows;
+    } catch (e) { return null; }
+  }
+  // 좋아요/신고 1회 증가(멱등성은 클라 로컬셋 GCProp.hasVoted로 보강). 반환 {ok} 또는 null.
+  async function voteProposal(id, kind) {
+    try {
+      if (!id || typeof id !== 'string' || !(await init())) return null;
+      var field = kind === 'report' ? 'reports' : 'likes';
+      var ref = state.fs.doc(state.db, 'gc_proposals', id);
+      var patch = {}; patch[field] = state.fs.increment(1);
+      await state.fs.updateDoc(ref, patch);
+      return { ok: true };
     } catch (e) { return null; }
   }
 
   window.GCNet = {
     available: available, init: init, peek: peek, watch: watch,
     submit: submit, rankOf: rankOf, leaderboard: leaderboard,
+    submitProposal: submitProposal, listProposals: listProposals, voteProposal: voteProposal,
     uid: function () { return state.uid; },
     on: function () { return state.on; },
     err: function () { return state.err; },

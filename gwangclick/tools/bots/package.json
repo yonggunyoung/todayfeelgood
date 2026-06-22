@@ -1,0 +1,15 @@
+{
+  "name": "gwangclick-bots",
+  "private": true,
+  "type": "module",
+  "description": "광클대전 봇 시더(관리자 전용). 실제 플레이어 형태로 심고 추후 회수.",
+  "scripts": {
+    "dry": "node seed.mjs --dry",
+    "seed": "node seed.mjs",
+    "purge": "node purge.mjs",
+    "purge:all": "node purge.mjs --all"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.7.0"
+  }
+}

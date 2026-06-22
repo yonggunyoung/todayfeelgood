@@ -348,8 +348,8 @@ function renderHome() {
       <p>${mode.emoji} ${mode.label} 모드 — ${esc(mode.desc || '')}</p>
     </div>
     <div class="action-strip">
-      <button class="btn btn-primary" onclick="UI.openScan()"><b>📷 AI 입고 스캔</b><small>영수증·장본 사진 한 장</small></button>
-      <button class="btn" onclick="UI.openQuickAdd()"><b>➕ 빠른 추가</b><small>검색해서 2탭 등록</small></button>
+      <button class="btn btn-primary" onclick="UI.openScan()"><b>📷 AI 스캔</b><small>영수증 한 장이면 끝</small></button>
+      <button class="btn" onclick="UI.openQuickAdd()"><b>➕ 직접 담기</b><small>검색 후 탭</small></button>
     </div>
     ${empty ? `
       <div class="empty" style="margin-top:18px">

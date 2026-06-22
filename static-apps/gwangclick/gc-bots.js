@@ -183,7 +183,7 @@
   }
 
   var api = {
-    enabled: false,          // ← 기본 OFF: DB-시드 방식(tools/bots)이 단일 출처. true면 클라 표시용 합성(이중집계 주의)
+    enabled: true,           // 라이브 ON: 초반 가상 플레이어(표시전용·실유저 차면 자동소멸). 끄려면 false
     FLOOR: FLOOR, PEAK: PEAK, FADE: FADE,
     leanOf: leanOf, participants: participants, totals: totals,
     blend: blend, rows: rows, mergeRows: mergeRows, blendRank: blendRank, fade: fade,

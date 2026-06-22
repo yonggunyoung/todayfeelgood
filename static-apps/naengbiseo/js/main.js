@@ -277,6 +277,19 @@ function foodShape(name, cat) {
   if (has('새우')) return '<path d="M22 11 Q11 11 10 19 Q10 25 17 25 Q14 21 16 18 Q19 14 22 15 Z" fill="#FF9E8E"/><path d="M22 11 q3 -1 3 2" stroke="#E07A68" stroke-width="1.3" fill="none" stroke-linecap="round"/>';
   if (has('고등어', '연어', '생선', '동태', '명태', '갈치', '조기')) return '<ellipse cx="15" cy="18" rx="9" ry="6.5" fill="#8FCFEC"/><path d="M23 12.5 l4 -2 v15 l-4 -2 z" fill="#6FB8DA"/>';
   if (has('소고기', '소불고기', '한우') || /(^|[^들])소$/.test(f)) return '<rect x="7" y="12" width="18" height="13" rx="5.5" fill="#C75D63"/><path d="M11 16 q5 -2 10 0" stroke="#fff" stroke-width="1.4" fill="none" opacity=".55"/>';
+  // ── 추가 재료 (둥글고 가운데 정렬 — 공통 얼굴이 얹히도록) ──
+  if (has('무', '단무지')) return '<path d="M16 27 Q9 24 9.5 16 Q10 11 16 11 Q22 11 22.5 16 Q23 24 16 27 Z" fill="#FBFBF6" stroke="#E6E9E1" stroke-width="1"/><path d="M14 11 l-1 -3.5 M16 11 l0 -4 M18 11 l1 -3.5" stroke="#7BC25A" stroke-width="1.6" stroke-linecap="round"/>';
+  if (has('고추', '청양') || /(^|[^마])고추/.test(f)) return '<path d="M14 9 Q22 11 21 19 Q20 26 15 26 Q11 26 11 21 Q11 14 14 9 Z" fill="#E14B36"/><path d="M14 9 q1 -3 4 -2" stroke="#5BB85C" stroke-width="1.8" fill="none" stroke-linecap="round"/>';
+  if (has('파프리카', '피망')) return '<path d="M9 15 Q9 11 12 11 Q13.5 12.5 16 12.5 Q18.5 12.5 20 11 Q23 11 23 15 Q23 26 16 26 Q9 26 9 15 Z" fill="#F5A623"/><rect x="14.7" y="7.5" width="2.6" height="5" rx="1.3" fill="#5BB85C"/>';
+  if (has('딸기')) return '<path d="M16 27 Q8 22 9 15 Q10.5 11.5 16 12 Q21.5 11.5 23 15 Q24 22 16 27 Z" fill="#F0445A"/><path d="M11 8.5 Q16 12 21 8.5 Q18 13 16 12.5 Q14 13 11 8.5 Z" fill="#5BB85C"/><circle cx="13" cy="17" r=".7" fill="#FFE3A8"/><circle cx="18" cy="16.5" r=".7" fill="#FFE3A8"/><circle cx="16" cy="20" r=".7" fill="#FFE3A8"/>';
+  if (has('포도', '청포도', '머루')) return '<path d="M16 9 v3" stroke="#6B4E2E" stroke-width="1.4" stroke-linecap="round"/><circle cx="13" cy="15" r="2.6" fill="#8E5BC2"/><circle cx="19" cy="15" r="2.6" fill="#8E5BC2"/><circle cx="16" cy="18.5" r="2.7" fill="#9D6BD0"/><circle cx="12.5" cy="20" r="2.5" fill="#8E5BC2"/><circle cx="19.5" cy="20" r="2.5" fill="#8E5BC2"/><circle cx="16" cy="23.5" r="2.5" fill="#7E4FB0"/>';
+  if (has('귤', '오렌지', '한라봉', '천혜향', '감귤')) return '<circle cx="16" cy="18.5" r="9" fill="#FF9F2E"/><circle cx="12.5" cy="15" r="2" fill="#fff" opacity=".22"/><path d="M16 9.5 q2 -1.5 3.5 -.5 q-1 2.4 -3.5 2 z" fill="#5BB85C"/>';
+  if (has('레몬')) return '<ellipse cx="16" cy="18.5" rx="10" ry="8" fill="#F6D33C"/><circle cx="6.5" cy="18.5" r="1.4" fill="#E0B72A"/><circle cx="25.5" cy="18.5" r="1.4" fill="#E0B72A"/><ellipse cx="12.5" cy="15" rx="2" ry="1.5" fill="#fff" opacity=".3"/>';
+  if (has('수박')) return '<path d="M6 17 L26 17 Q24 26 16 26 Q8 26 6 17 Z" fill="#E14B5A"/><path d="M6 17 L26 17 Q26 18.5 25.4 19.6 L6.6 19.6 Q6 18.5 6 17 Z" fill="#7BC25A"/><circle cx="12" cy="21" r=".8" fill="#2b2b2b"/><circle cx="18" cy="22" r=".8" fill="#2b2b2b"/><circle cx="15" cy="20" r=".8" fill="#2b2b2b"/>';
+  if (has('소시지', '비엔나')) return '<rect x="8" y="13" width="16" height="10" rx="5" fill="#E98AA0"/><rect x="8" y="16.5" width="16" height="2.4" fill="#fff" opacity=".4"/><path d="M8 18 l-2.5 0 M24 18 l2.5 0" stroke="#C96A82" stroke-width="1.6" stroke-linecap="round"/>';
+  if (has('햄')) return '<path d="M7 22 L7 14 Q16 11 25 14 L25 22 Q16 25 7 22 Z" fill="#F2A0B0"/><ellipse cx="16" cy="18" rx="3" ry="4" fill="#D96B82"/>';
+  if (has('베이컨', '삼겹살구이')) return '<path d="M7 14 Q11 13 16 14 Q21 15 25 14 L25 22 Q21 21 16 22 Q11 23 7 22 Z" fill="#E07A88"/><path d="M7 17 Q11 16 16 17 Q21 18 25 17" stroke="#F6E3D2" stroke-width="2" fill="none"/>';
+  if (has('시금치', '상추', '청경채', '나물', '깻잎')) return '<path d="M16 26 Q9 22 9 14 Q12 12 16 14 Q20 12 23 14 Q23 22 16 26 Z" fill="#56A23E"/><path d="M16 14 L16 25 M12 16 Q14 18 16 18 M20 16 Q18 18 16 18" stroke="#7BC25A" stroke-width="1.2" fill="none" stroke-linecap="round"/>';
   return catShape(cat);
 }
 // 카테고리 폴백 — 이름 매칭 실패 시 재료 분류로 일관된 아이콘 (얼굴은 공통으로 덧그림)
@@ -328,6 +341,56 @@ function cookedGlyph(l, { expiring = false, size = 44 } = {}) {
   if (l.photo) return '<img src="' + l.photo + '" alt="" />';
   return svgChar(cookedShape(l.name, l.kind), expiring, size);
 }
+
+/* ── 꾸미기 데칼(캐릭터 스티커/마그넷) ── 이모지 대신 귀여운 SVG 캐릭터.
+   food:<재료명> → foodIcon 재사용 / cook:<key> → 조리도구 캐릭터(svgChar 규격, 공통 눈·표정)
+   deco:<key> → 시안 그대로의 장식(하트·해·별·냉장고 마스코트). 픽커용 순서 유지. */
+const DECAL_FOOD = ['토마토', '양배추', '우유', '달걀', '양파', '당근', '닭', '치즈', '브로콜리', '밥', '만두', '두부', '돼지', '애호박', '대파', '바나나'];
+const DECAL_COOK = ['pot', 'pan', 'chef', 'bowl', 'spoonfork', 'kettle', 'riceball'];
+const DECAL_DECO = ['heart', 'sun', 'star', 'fridge'];
+const DECALS = [
+  ...DECAL_FOOD.map((n) => 'food:' + n),
+  ...DECAL_COOK.map((k) => 'cook:' + k),
+  ...DECAL_DECO.map((k) => 'deco:' + k),
+];
+// 조리도구 캐릭터 모양 — svgChar(0 0 32 32) 규격. 본체를 가운데(눈 y16.5·입 y20) 둘레로 배치.
+function cookShape(key) {
+  switch (key) {
+    case 'pot': return '<path d="M6 14 L26 14 L24.5 24 Q24 26 22 26 L10 26 Q8 26 7.5 24 Z" fill="#9AA6B2"/><rect x="6" y="12.5" width="20" height="2.6" rx="1.3" fill="#C2CBD4"/><rect x="3.4" y="12.6" width="3.2" height="2.4" rx="1.2" fill="#7E8A96"/><rect x="25.4" y="12.6" width="3.2" height="2.4" rx="1.2" fill="#7E8A96"/>';
+    case 'pan': return '<circle cx="14" cy="19" r="9" fill="#4A4E55"/><circle cx="14" cy="19" r="6.6" fill="#6B7079"/><rect x="22" y="17.6" width="9" height="3" rx="1.5" fill="#8a5a32" transform="rotate(-14 22 19)"/>';
+    case 'chef': return '<path d="M9 20 L23 20 L23 25 Q23 26 22 26 L10 26 Q9 26 9 25 Z" fill="#F0F2F5"/><path d="M9 21 L23 21" stroke="#D8DCE2" stroke-width="1"/><path d="M9 20 Q6 20 6.5 16.5 Q5 13 8.5 12.5 Q9 9 13 9.5 Q15 7.5 18 9 Q22 8.5 23 12 Q27 13 25.5 16.5 Q26 20 23 20 Z" fill="#fff"/>';
+    case 'bowl': return '<path d="M5 14.5 L27 14.5 Q25 25.5 16 25.5 Q7 25.5 5 14.5 Z" fill="#EFE6D2"/><ellipse cx="16" cy="14.5" rx="11" ry="2.4" fill="#fff"/><path d="M2.5 15 Q5 14 5.4 15.6 M29.5 15 Q27 14 26.6 15.6" stroke="#D8C49A" stroke-width="1.6" fill="none" stroke-linecap="round"/>';
+    case 'spoonfork': return '<ellipse cx="11" cy="11.5" rx="3.2" ry="4.2" fill="#C2CBD4"/><rect x="9.8" y="14" width="2.4" height="13" rx="1.2" fill="#C2CBD4"/><rect x="20" y="8" width="2.2" height="19" rx="1.1" fill="#9AA6B2"/><path d="M18.5 8 v5 M21 8 v5 M23.5 8 v5" stroke="#9AA6B2" stroke-width="1.6" stroke-linecap="round"/>';
+    case 'kettle': return '<path d="M8 16 Q8 12 16 12 Q24 12 24 16 L24 24 Q24 26 22 26 L10 26 Q8 26 8 24 Z" fill="#7FB5E6"/><path d="M24 16 q4 0 4 4" stroke="#5E93C4" stroke-width="2.2" fill="none" stroke-linecap="round"/><rect x="12" y="8.4" width="8" height="2.4" rx="1.2" fill="#5E93C4"/><circle cx="16" cy="9.6" r="1.4" fill="#EAF3FA"/>';
+    case 'riceball': return '<path d="M16 9 L26 25.5 Q16 27.5 6 25.5 Z" fill="#FDFCF6" stroke="#E7DCC4" stroke-width="1"/><rect x="11" y="20" width="10" height="6.5" rx="1.2" fill="#3a4654"/>';
+    default: return '<circle cx="16" cy="18" r="9" fill="#C2CBD4"/>';
+  }
+}
+// 장식 데칼 — 시안(#Ub0c9...html L212-216) SVG 그대로. size로 스케일.
+function decoSvg(key, size) {
+  const w = size || '';
+  const wh = size ? `width="${size}" height="${size}" ` : '';
+  switch (key) {
+    case 'heart': return `<svg ${wh}viewBox="0 0 24 24" fill="#FF5E6C" style="display:block;overflow:visible" aria-hidden="true"><path d="M12 21C5 15.5 3 11.5 5 8.3 6.4 6.2 9 6.6 12 9.6 15 6.6 17.6 6.2 19 8.3 21 11.5 19 15.5 12 21z"/></svg>`;
+    case 'sun': return `<svg ${wh}viewBox="0 0 24 24" style="display:block;overflow:visible" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="#FFD45E"></circle><circle cx="9" cy="10.5" r="1.4" fill="#3a2e10"></circle><circle cx="15" cy="10.5" r="1.4" fill="#3a2e10"></circle><path d="M8.4 14.4 Q12 17.6 15.6 14.4" stroke="#3a2e10" stroke-width="1.5" fill="none" stroke-linecap="round"></path></svg>`;
+    case 'star': return `<svg ${wh}viewBox="0 0 24 24" fill="#FF9F45" style="display:block;overflow:visible" aria-hidden="true"><path d="M12 2l2.7 6.3 6.8.5-5.2 4.4 1.7 6.6L12 16.7 6 20.3l1.7-6.6L2.5 8.8l6.8-.5z"></path></svg>`;
+    case 'fridge': return `<svg ${wh}viewBox="0 0 100 120" style="display:block;overflow:visible" aria-hidden="true"><rect x="22" y="14" width="56" height="94" rx="15" fill="#fff"/><rect x="66" y="28" width="4" height="13" rx="2" fill="#0E8E4E"/><rect x="66" y="62" width="4" height="26" rx="2" fill="#0E8E4E"/><circle cx="42" cy="72" r="4.4" fill="#173B28"/><circle cx="58" cy="72" r="4.4" fill="#173B28"/><ellipse cx="36" cy="80" rx="3" ry="2" fill="#FFB39B"/><ellipse cx="64" cy="80" rx="3" ry="2" fill="#FFB39B"/><path d="M44 81 Q50 87 56 81" stroke="#173B28" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg>`;
+    default: return `<svg ${wh}viewBox="0 0 24 24" fill="#FF9F45" style="display:block" aria-hidden="true"><circle cx="12" cy="12" r="9"/></svg>`;
+  }
+}
+// 데칼 id → SVG 문자열. size 미지정/0이면 CSS로 크기 지정(width/height 생략).
+function decalSvg(id, size = 0) {
+  const sz = size || ''; // 0 → CSS-sized
+  const s = String(id || '');
+  if (s.startsWith('food:')) return foodIcon(s.slice(5), { size: sz });
+  if (s.startsWith('cook:')) return svgChar(cookShape(s.slice(5)), false, sz);
+  if (s.startsWith('deco:')) return decoSvg(s.slice(5), sz);
+  return foodIcon('', { size: sz });
+}
+const DECAL_LABEL = (id) => {
+  if (id.startsWith('food:')) return id.slice(5);
+  return ({ pot: '냄비', pan: '팬', chef: '셰프', bowl: '국그릇', spoonfork: '수저', kettle: '주전자', riceball: '주먹밥', heart: '하트', sun: '해', star: '별', fridge: '냉장고' })[id.split(':')[1]] || '';
+};
 
 // 유튜브 링크 → 영상 ID
 function ytId(url) {
@@ -633,7 +696,8 @@ function decorItemHtml(it) {
     return `<div class="fd-mag fd-note-i" data-deco="${it.id}" style="${pos};--paper:${it.hue ?? 48}" ${tap}><span class="fd-pin"></span><span class="fd-note-tx">${esc(it.text || '')}</span></div>`;
   }
   if (it.kind === 'magnet') {
-    return `<div class="fd-mag fd-magnet" data-deco="${it.id}" style="${pos}" ${tap}>${note}<span>${it.emoji || '🧲'}</span></div>`;
+    const inner = it.decal ? decalSvg(it.decal, 0) : `<span>${it.emoji || '🧲'}</span>`;
+    return `<div class="fd-mag fd-magnet" data-deco="${it.id}" style="${pos}" ${tap}>${note}${inner}</div>`;
   }
   if (it.kind === 'recipe') {
     const r = allRecipes(S).find((q) => q.id === it.recipeId);
@@ -642,7 +706,8 @@ function decorItemHtml(it) {
   if (it.kind === 'draw') {
     return `<div class="fd-mag fd-draw" data-deco="${it.id}" style="${pos}" ${tap}><img src="${it.img}" alt="그림" draggable="false" /></div>`;
   }
-  return `<div class="fd-mag fd-sticker" data-deco="${it.id}" style="${pos}" ${tap}>${note}${it.emoji || '✨'}</div>`;
+  const sInner = it.decal ? decalSvg(it.decal, 0) : (it.emoji || '✨');
+  return `<div class="fd-mag fd-sticker" data-deco="${it.id}" style="${pos}" ${tap}>${note}${sInner}</div>`;
 }
 
 function fridgeHtml(all) {
@@ -694,6 +759,7 @@ function fridgeHtml(all) {
           <button onclick="UI.addDecor('note')">📝<small>메모</small></button>
           <button onclick="UI.addDecor('sticker')">✨<small>스티커</small></button>
           <button onclick="UI.addDecor('magnet')">🧲<small>마그넷</small></button>
+          <button onclick="UI.addDecal()">🍱<small>캐릭터</small></button>
           <button onclick="UI.openDraw('')">✏️<small>그리기</small></button>
           <button onclick="UI.pinRecipePicker()">📌<small>레시피</small></button>
         </div>
@@ -800,6 +866,24 @@ UI.placeDecor = (kind, emoji) => {
   decorEditing = true; UI.closeSheet(); render();
   toast(kind === 'magnet' ? '🧲 마그넷을 붙였어요 — 끌어 옮기거나 탭해서 확대' : '✨ 스티커를 붙였어요 — 끌어 옮기거나 탭해서 확대');
 };
+// 캐릭터 데칼 고르기 — 식품/요리/장식 그룹별 그리드. 탭하면 문에 붙음.
+UI.addDecal = () => {
+  const group = (label, ids) => `
+    <div class="decal-h">${label}</div>
+    <div class="decal-grid">${ids.map((id) =>
+      `<button class="decal-cell" onclick="UI.pickDecal('${id}')" aria-label="${esc(DECAL_LABEL(id))}">${decalSvg(id, 0)}</button>`).join('')}</div>`;
+  openSheet(`
+    <h2>🍱 캐릭터 붙이기</h2>
+    <p class="sub">귀여운 음식·요리 캐릭터를 냉장고 문에 붙여요. 붙인 뒤 끌어 옮기거나 탭해서 확대할 수 있어요.</p>
+    ${group('식품', DECAL_FOOD.map((n) => 'food:' + n))}
+    ${group('요리', DECAL_COOK.map((k) => 'cook:' + k))}
+    ${group('장식', DECAL_DECO.map((k) => 'deco:' + k))}`);
+};
+UI.pickDecal = (id) => {
+  pushDecor({ id: uid(), kind: 'sticker', decal: id, ...placeNew() });
+  decorEditing = true; save(); UI.closeSheet(); render();
+  toast('붙였어요 — 끌어 옮기거나 탭해서 확대');
+};
 
 /* ── 꾸미기 항목 확대 상세 — 축소판을 탭하면 항목에서 자라나는 모션으로 확대, 내용 작성·확인 ── */
 let decorZoomEl = null, dzDraft = null;
@@ -827,8 +911,9 @@ function decorDetailBody(it, isNew) {
       <div class="dz-draw"><img src="${it.img}" alt="그림" /></div>
       <button class="btn btn-soft btn-block" style="margin-top:12px" onclick="UI.dzRedraw('${it.id}')">✏️ 다시 그리기</button>`;
   }
+  const dzInner = it.decal ? `<span class="dz-decal">${decalSvg(it.decal)}</span>` : (it.emoji || '✨');
   return `
-    <div class="dz-emoji ${it.kind === 'magnet' ? 'is-mag' : ''}">${it.emoji || '✨'}</div>
+    <div class="dz-emoji ${it.kind === 'magnet' ? 'is-mag' : ''}">${dzInner}</div>
     <div class="field" style="margin-top:12px"><textarea id="dz-text" rows="2" maxlength="120" placeholder="여기에 메모를 적어둘 수 있어요 (선택)">${esc(it.note || '')}</textarea></div>`;
 }
 function openDecorDetail(id, newKind) {

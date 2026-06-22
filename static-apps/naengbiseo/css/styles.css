@@ -1346,6 +1346,12 @@ input:focus, select:focus, textarea:focus { outline: none; box-shadow: 0 0 0 3px
 .fd-draw img { display: block; width: 74px; height: 56px; object-fit: contain; }
 .dz-draw { background: #fff; border-radius: 12px; padding: 6px; box-shadow: inset 0 0 0 1px rgba(0,0,0,.06); }
 .dz-draw img { display: block; width: 100%; height: auto; border-radius: 8px; }
+/* 캐릭터 데칼 — 문에 붙은 스티커/마그넷 SVG 크기(이모지와 비슷한 비중). 세로형(냉장고)도 비율 유지 */
+.fd-sticker svg { display: block; width: auto; height: 32px; max-width: 38px; }
+.fd-magnet svg { display: block; width: auto; height: 36px; max-width: 42px; }
+/* 확대 상세의 데칼 */
+.dz-emoji .dz-decal { display: inline-block; line-height: 0; }
+.dz-emoji svg { display: block; width: auto; height: 90px; max-width: 120px; margin: 0 auto; }
 /* 그리기 시트 — 캔버스 + 도구 */
 .draw-wrap { border-radius: 14px; overflow: hidden; background: #fff; box-shadow: inset 0 0 0 1px var(--line, #e7e0d2); touch-action: none; }
 #draw-canvas { display: block; width: 100%; height: auto; background: #fff; touch-action: none; cursor: crosshair; }
@@ -1414,6 +1420,18 @@ input:focus, select:focus, textarea:focus { outline: none; box-shadow: 0 0 0 3px
 .emoji-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin-top: 6px; }
 .emoji-grid button { aspect-ratio: 1; border: 1px solid var(--line, #e7e0d2); border-radius: 13px; background: var(--card-2, #fff); font-size: 1.6rem; cursor: pointer; }
 .emoji-grid button:active { transform: scale(.92); }
+/* 캐릭터 데칼 고르기 — 식품/요리/장식 그룹별 그리드(시작화면 카드 스타일) */
+.decal-h { font-family: 'Jua', sans-serif; font-size: .82rem; color: var(--label-2, #8a8270); margin: 14px 2px 7px; }
+.decal-h:first-of-type { margin-top: 8px; }
+.decal-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.decal-cell {
+  aspect-ratio: 1; display: grid; place-items: center; padding: 6px; cursor: pointer;
+  border: 1px solid var(--line, #e7e0d2); border-radius: 14px;
+  background: var(--card-2, #fff); transition: transform .1s;
+}
+.decal-cell:active { transform: scale(.92); }
+.decal-cell svg { display: block; width: auto; height: 38px; max-width: 100%; }
+@media (max-width: 360px) { .decal-grid { grid-template-columns: repeat(4, 1fr); } }
 .hue-row { display: flex; gap: 10px; }
 .hue-dot { width: 34px; height: 34px; border-radius: 50%; border: 2px solid rgba(0,0,0,.1); cursor: pointer; }
 .hue-dot.on { outline: 3px solid var(--blue, #3b82f6); outline-offset: 2px; }

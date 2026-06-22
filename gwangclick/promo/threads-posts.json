@@ -1,0 +1,109 @@
+{
+  "app": "광클대전 (Gwangclick Battle)",
+  "link": "https://ddukkit.com/gwangclick",
+  "note": "스레드 자동 업로드용. 'full'은 본문(텍스트+링크+해시태그) 그대로 복붙용. 'image'는 함께 첨부할 카드. lang으로 국내/해외 분기.",
+  "hashtag_pool": {
+    "ko": [
+      "#광클대전",
+      "#민초vs반민초",
+      "#부먹찍먹",
+      "#밈게임",
+      "#광클",
+      "#캐주얼게임",
+      "#심심풀이"
+    ],
+    "en": [
+      "#TapBattle",
+      "#PineappleOnPizza",
+      "#CatsVsDogs",
+      "#casualgame",
+      "#webgame",
+      "#minigame",
+      "#timekiller"
+    ]
+  },
+  "posts": [
+    {
+      "id": "ko-1",
+      "lang": "ko",
+      "text": "민초 vs 반민초, 너는 어느 편? 🌿\n\n오늘의 떡밥 고르고 60초 동안 미친듯이 광클하면 끝.\n내 탭 하나하나가 전국 집계에 실시간으로 들어가서, 더 많이 두드린 쪽이 오늘의 승리 진영 ⚡\n\n매일 떡밥 바뀜. 출퇴근 60초 순삭용.",
+      "hashtags": [
+        "#광클대전",
+        "#민초vs반민초",
+        "#밈게임",
+        "#광클"
+      ],
+      "image": "promo/cards/ko-1.png",
+      "full": "민초 vs 반민초, 너는 어느 편? 🌿\n\n오늘의 떡밥 고르고 60초 동안 미친듯이 광클하면 끝.\n내 탭 하나하나가 전국 집계에 실시간으로 들어가서, 더 많이 두드린 쪽이 오늘의 승리 진영 ⚡\n\n매일 떡밥 바뀜. 출퇴근 60초 순삭용.\n\n👉 https://ddukkit.com/gwangclick\n\n#광클대전 #민초vs반민초 #밈게임 #광클"
+    },
+    {
+      "id": "ko-2",
+      "lang": "ko",
+      "text": "부먹 ㅇㅈ? 찍먹 ㅇㅈ? 🍤\n\n말로 싸우지 말고 손가락으로 증명하자.\n60초 광클로 우리 편 점유율 올리는 게임 만들었음 ㅋㅋ\n지금 어느 편이 이기고 있는지 보러 와.",
+      "hashtags": [
+        "#광클대전",
+        "#부먹찍먹",
+        "#밈게임",
+        "#캐주얼게임"
+      ],
+      "image": "promo/cards/ko-2.png",
+      "full": "부먹 ㅇㅈ? 찍먹 ㅇㅈ? 🍤\n\n말로 싸우지 말고 손가락으로 증명하자.\n60초 광클로 우리 편 점유율 올리는 게임 만들었음 ㅋㅋ\n지금 어느 편이 이기고 있는지 보러 와.\n\n👉 https://ddukkit.com/gwangclick\n\n#광클대전 #부먹찍먹 #밈게임 #캐주얼게임"
+    },
+    {
+      "id": "ko-3",
+      "lang": "ko",
+      "text": "60초. 떡밥 하나. 내 손가락.\n전국이 둘로 갈려서 광클 중 ⚡\n\n로그인 없음. 들어와서 두드리면 끝.",
+      "hashtags": [
+        "#광클대전",
+        "#광클",
+        "#밈게임",
+        "#심심풀이"
+      ],
+      "image": "promo/cards/ko-3.png",
+      "full": "60초. 떡밥 하나. 내 손가락.\n전국이 둘로 갈려서 광클 중 ⚡\n\n로그인 없음. 들어와서 두드리면 끝.\n\n👉 https://ddukkit.com/gwangclick\n\n#광클대전 #광클 #밈게임 #심심풀이"
+    },
+    {
+      "id": "en-1",
+      "lang": "en",
+      "text": "Pineapple on pizza? Pick a side. 🍍🍕\n\nTap like crazy for 60 seconds — every tap counts toward a live nationwide score, and the side that taps more wins the day. ⚡\n\nNew debate every day. No login. Just tap.",
+      "hashtags": [
+        "#TapBattle",
+        "#PineappleOnPizza",
+        "#casualgame",
+        "#webgame"
+      ],
+      "image": "promo/cards/en-1.png",
+      "full": "Pineapple on pizza? Pick a side. 🍍🍕\n\nTap like crazy for 60 seconds — every tap counts toward a live nationwide score, and the side that taps more wins the day. ⚡\n\nNew debate every day. No login. Just tap.\n\n👉 https://ddukkit.com/gwangclick\n\n#TapBattle #PineappleOnPizza #casualgame #webgame"
+    },
+    {
+      "id": "en-2",
+      "lang": "en",
+      "text": "Cats vs Dogs 🐱🐶 — settle it with your thumb.\n\nA fresh debate drops daily. Pick your side and tap for 60s to tip the whole country your way. ⚡",
+      "hashtags": [
+        "#TapBattle",
+        "#CatsVsDogs",
+        "#minigame",
+        "#casualgame"
+      ],
+      "image": "promo/cards/en-2.png",
+      "full": "Cats vs Dogs 🐱🐶 — settle it with your thumb.\n\nA fresh debate drops daily. Pick your side and tap for 60s to tip the whole country your way. ⚡\n\n👉 https://ddukkit.com/gwangclick\n\n#TapBattle #CatsVsDogs #minigame #casualgame"
+    },
+    {
+      "id": "en-3",
+      "lang": "en",
+      "text": "60 seconds. One debate. Your thumb.\nThe whole country, split in two. ⚡\n\nNo sign-up. Open and tap.",
+      "hashtags": [
+        "#TapBattle",
+        "#webgame",
+        "#timekiller",
+        "#minigame"
+      ],
+      "image": "promo/cards/en-3.png",
+      "full": "60 seconds. One debate. Your thumb.\nThe whole country, split in two. ⚡\n\nNo sign-up. Open and tap.\n\n👉 https://ddukkit.com/gwangclick\n\n#TapBattle #webgame #timekiller #minigame"
+    }
+  ],
+  "daily_template": {
+    "ko": "오늘의 떡밥: {A} vs {B} ⚡\n너는 어느 편? 60초 광클로 우리 편 1등 만들자.\n\n👉 https://ddukkit.com/gwangclick\n\n#광클대전 #밈게임 #광클",
+    "en": "Today's debate: {A} vs {B} ⚡\nPick a side. Tap 60s. Tip the nation.\n\n👉 https://ddukkit.com/gwangclick\n\n#TapBattle #casualgame #webgame"
+  }
+}

@@ -1429,7 +1429,7 @@ function startPulse(){
       if(i>0&&Math.random()>(0.18+0.82*w))continue;       // 1위(핫스팟)는 항상, 그 외는 가중치로 간헐
       var n=w<0.25?2:(2+Math.round(w*5));                 // 2 ~ 7 (다수일수록 다발=쇳물)
       if(n>budget)n=budget;
-      sparkBurst(p.lat,p.lng,n,p.color,w);
+      emitSpark(p.lat,p.lng,n,p.color,w);
       budget-=n;
     }
   },320);
@@ -1561,8 +1561,71 @@ function sparkBurst(lat,lng,n,color,intensity){
     (function(node){setTimeout(function(){if(node.parentNode)node.parentNode.removeChild(node);},1000);})(s);
   }
 }
-/* 델타(누가 라운드 끝냄)→스파크 버스트. gain 클수록 강하게. (기존 호출부 호환) */
-function popcornAt(lat,lng,n,color){ sparkBurst(lat,lng,n,color,Math.min(1,(n||1)/6)); }
+/* 델타(누가 라운드 끝냄)→불꽃. gain 클수록 강하게. (기존 호출부 호환) */
+function popcornAt(lat,lng,n,color){ emitSpark(lat,lng,n,color,Math.min(1,(n||1)/6)); }
+/* 불꽃 방출 라우터: 3D 입자 가능하면 그쪽, 아니면 DOM 폴백(2D 등). */
+function emitSpark(lat,lng,n,color,it){ if(GLB.mode==='3d'&&SPK.pts){ emitSpark3D(lat,lng,n,color,it); } else { sparkBurst(lat,lng,n,color,it); } }
+
+/* ── 지구본 3D 입자 불꽃(점들이 사방으로 튀는 연출). window.THREE + globe.scene() 사용. ──
+ * 풀(고정 버퍼) 재사용 → GC/할당 0. 가산블렌딩 발광. 기기등급으로 풀 크기 조절(부담↓).
+ * 죽은 입자는 색(0,0,0)=가산블렌딩에서 투명 → 위치 갱신만(분기 최소). */
+var SPK={ pts:null, geo:null, mat:null, pos:null, base:null, col:null, vel:null, life:null, max:0, span:0.85, head:0, raf:0, last:0 };
+function initSparks3D(){
+  try{
+    if(SPK.pts||!GLB.globe||!window.THREE)return;
+    var T=window.THREE, sc=GLB.globe.scene&&GLB.globe.scene(); if(!sc)return;
+    var max=Math.round(60+110*deviceTier());            // 풀 크기: 저사양~60, 데스크탑~170
+    SPK.max=max; SPK.pos=new Float32Array(max*3); SPK.base=new Float32Array(max*3);
+    SPK.col=new Float32Array(max*3); SPK.vel=new Float32Array(max*3); SPK.life=new Float32Array(max);
+    for(var i=0;i<max*3;i++)SPK.pos[i]=99999;           // 초기엔 멀리(안 보이게)
+    SPK.geo=new T.BufferGeometry();
+    SPK.geo.setAttribute('position',new T.BufferAttribute(SPK.pos,3));
+    SPK.geo.setAttribute('color',new T.BufferAttribute(SPK.col,3));
+    SPK.mat=new T.PointsMaterial({size:2.2,vertexColors:true,transparent:true,depthWrite:false,sizeAttenuation:true});
+    try{ SPK.mat.blending=T.AdditiveBlending; }catch(e){}
+    SPK.pts=new T.Points(SPK.geo,SPK.mat); SPK.pts.frustumCulled=false; sc.add(SPK.pts);
+    SPK.last=0; if(!SPK.raf)SPK.raf=requestAnimationFrame(sparkLoop);
+  }catch(e){ SPK.pts=null; }
+}
+function hexRGB(hex){ hex=String(hex||'#ffd76a').replace('#',''); if(hex.length===3)hex=hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2];
+  return [ (parseInt(hex.slice(0,2),16)||255)/255, (parseInt(hex.slice(2,4),16)||215)/255, (parseInt(hex.slice(4,6),16)||100)/255 ]; }
+function emitSpark3D(lat,lng,n,color,it){
+  if(!SPK.pts||!GLB.globe||!GLB.globe.getCoords)return;
+  it=Math.max(0,Math.min(1,it||0)); var cnt=Math.max(1,Math.min(8,n|0));
+  var c=GLB.globe.getCoords(lat,lng,0.012); if(!c)return;
+  var len=Math.sqrt(c.x*c.x+c.y*c.y+c.z*c.z)||1, ux=c.x/len,uy=c.y/len,uz=c.z/len; // 바깥 방향(법선)
+  var rgb=hexRGB(color), white=it>0.5?(it-0.5)*0.8:0;                                // 핫스팟=흰쇳물 끼
+  for(var k=0;k<cnt;k++){
+    var i=SPK.head; SPK.head=(SPK.head+1)%SPK.max; var b=i*3;
+    SPK.pos[b]=c.x; SPK.pos[b+1]=c.y; SPK.pos[b+2]=c.z;
+    var sp=2.5+it*9+Math.random()*3, tang=2.2;                                       // 솟구치는 속도 + 옆튐
+    SPK.vel[b]=ux*sp+(Math.random()-0.5)*tang; SPK.vel[b+1]=uy*sp+(Math.random()-0.5)*tang; SPK.vel[b+2]=uz*sp+(Math.random()-0.5)*tang;
+    SPK.base[b]=Math.min(1,rgb[0]+white); SPK.base[b+1]=Math.min(1,rgb[1]+white); SPK.base[b+2]=Math.min(1,rgb[2]+white);
+    SPK.life[i]=1;
+  }
+}
+function sparkLoop(ts){
+  if(!SPK.pts){SPK.raf=0;return;}
+  var dt=Math.min(0.05,(ts-(SPK.last||ts))/1000); SPK.last=ts;
+  var pos=SPK.pos,col=SPK.col,base=SPK.base,vel=SPK.vel,life=SPK.life,n=SPK.max,alive=0;
+  for(var i=0;i<n;i++){
+    var l=life[i]; var b=i*3;
+    if(l<=0){ col[b]=col[b+1]=col[b+2]=0; continue; }
+    alive++; l-=dt/SPK.span; life[i]=l;
+    if(l<=0){ col[b]=col[b+1]=col[b+2]=0; pos[b]=99999; continue; }
+    vel[b]*=0.95; vel[b+1]*=0.95; vel[b+2]*=0.95;                 // 감속(드래그)
+    pos[b]+=vel[b]*dt; pos[b+1]+=vel[b+1]*dt; pos[b+2]+=vel[b+2]*dt;
+    var f=l*l;                                                     // 밝기 페이드(가산블렌딩=색0이면 투명)
+    col[b]=base[b]*f; col[b+1]=base[b+1]*f; col[b+2]=base[b+2]*f;
+  }
+  SPK.geo.attributes.position.needsUpdate=true; SPK.geo.attributes.color.needsUpdate=true;
+  SPK.raf=(document.hidden)?0:requestAnimationFrame(sparkLoop);   // 숨김 시 정지(절전)
+}
+function disposeSparks3D(){
+  try{ if(SPK.raf)cancelAnimationFrame(SPK.raf); }catch(e){}
+  try{ if(SPK.pts&&SPK.pts.parent)SPK.pts.parent.remove(SPK.pts); if(SPK.geo)SPK.geo.dispose(); if(SPK.mat)SPK.mat.dispose(); }catch(e){}
+  SPK.pts=null; SPK.geo=null; SPK.mat=null; SPK.raf=0;
+}
 /* 구독 시작 — 기존 GCNet.watch(today) 재사용(나라순위/리더보드와 동일 집계, 신규 구독 아님 X… 단,
  * 지구본은 rankBoard와 다른 화면이라 자체 watch 1개를 연다(탭마다 ❌·집계 문서 1개 구독 — D5/D7 범위 내).
  * peek로 즉시 첫 그림 → watch로 라이브 갱신. closeGlobe에서 반드시 해지(누수 방지). */
@@ -1583,15 +1646,15 @@ function startGlobe3D(token){
     GLB.globe=g;
     // 카툰풍·저자극(사용자 피드백: 너무 밝음/초록/구름낌 → 차분하게). 텍스처 0·플랫 음영.
     g.backgroundColor('rgba(0,0,0,0)')
-     .showGlobe(true).showAtmosphere(true).atmosphereColor('#3b5e86').atmosphereAltitude(0.12)
+     .showGlobe(true).showAtmosphere(true).atmosphereColor('#4a8fe0').atmosphereAltitude(0.13)
      .globeImageUrl(null);                 // 외부 텍스처 0(런타임 CDN 0·경량) → 솔리드 구
     // 바다 = 구 머티리얼. 카툰: 어둡고 매트(specular 0, 발광 낮게) → 덜 밝고 안정적.
-    try{ var m=g.globeMaterial(); if(m){ m.color&&m.color.set&&m.color.set('#11283f'); m.emissive&&m.emissive.set&&m.emissive.set('#0a1828'); if('emissiveIntensity'in m)m.emissiveIntensity=0.25; if('shininess'in m)m.shininess=0; if(m.specular&&m.specular.set)m.specular.set('#000000'); } }catch(e){}
+    try{ var m=g.globeMaterial(); if(m){ m.color&&m.color.set&&m.color.set('#0f54b8'); m.emissive&&m.emissive.set&&m.emissive.set('#0a3a86'); if('emissiveIntensity'in m)m.emissiveIntensity=0.4; if('shininess'in m)m.shininess=0; if(m.specular&&m.specular.set)m.specular.set('#000000'); } }catch(e){}  // 바다=선명한 파랑
     // 대륙/국경(D14) — 카툰: 채도 낮춘 평평한 육지 + 또렷한 가는 국경선. 거의 평면(altitude↓)으로 경량.
     g.polygonsData([])
-     .polygonCapColor(function(){return 'rgba(108,142,112,0.97)';})    // 또렷한 카툰 육지(덜 어둡게)
-     .polygonSideColor(function(){return 'rgba(40,60,46,0.6)';})
-     .polygonStrokeColor(function(){return 'rgba(180,205,185,0.5)';})  // 국경선(또렷)
+     .polygonCapColor(function(){return 'rgba(56,176,96,0.98)';})      // 선명한 초록 육지
+     .polygonSideColor(function(){return 'rgba(26,96,52,0.65)';})
+     .polygonStrokeColor(function(){return 'rgba(200,240,205,0.55)';})  // 국경선(또렷)
      .polygonAltitude(0.002);                                          // 거의 평면(경량·카툰)
     loadLand().then(function(geo){
       if(!geo||!geo.features||!GLB.globe||GLB.mode!=='3d')return;
@@ -1633,6 +1696,7 @@ function startGlobe3D(token){
     g.pointOfView({lat:20,lng:0,altitude:GCGlobe.MAX_ALT},0); // 시작 시점(데이터 오면 focusGlobe가 이동)
     hideGlobeMsg();
     bindGlobeLifecycle();   // 탭 숨김 시 렌더 정지 + 리사이즈
+    initSparks3D();         // 3D 입자 불꽃 풀 준비
     watchGlobe(token);      // 데이터 구독(기존 집계 재사용)
   }catch(e){
     // 3D 초기화 도중 어떤 예외든 → 2D 폴백(절대 안 깨짐).
@@ -1715,7 +1779,7 @@ function bindGlobeLifecycle(){
     if(!GLB.globe)return;
     try{
       if(document.hidden){ if(GLB.globe.pauseAnimation)GLB.globe.pauseAnimation(); }
-      else{ if(GLB.globe.resumeAnimation)GLB.globe.resumeAnimation(); }
+      else{ if(GLB.globe.resumeAnimation)GLB.globe.resumeAnimation(); if(SPK.pts&&!SPK.raf){SPK.last=0;SPK.raf=requestAnimationFrame(sparkLoop);} } // 복귀 시 불꽃 루프 재가동
     }catch(e){}
   };
   document.addEventListener('visibilitychange',GLB.hidden);
@@ -1825,6 +1889,7 @@ function closeGlobe(){
   if(GLB.hidden){ try{document.removeEventListener('visibilitychange',GLB.hidden);}catch(e){} GLB.hidden=null; }
   if(GLB.resize){ try{window.removeEventListener('resize',GLB.resize);}catch(e){} GLB.resize=null; }
   if(GLB.raf){ try{cancelAnimationFrame(GLB.raf);}catch(e){} GLB.raf=0; }
+  disposeSparks3D();
   disposeGlobe3D();
   if(G2D.canvas){ try{ if(G2D.canvas.parentNode)G2D.canvas.parentNode.removeChild(G2D.canvas); }catch(e){} }
   G2D.canvas=null; G2D.ctx=null; G2D.curLng=0; G2D.curAlt=GCGlobe.MAX_ALT; G2D.tAlt=GCGlobe.MAX_ALT;

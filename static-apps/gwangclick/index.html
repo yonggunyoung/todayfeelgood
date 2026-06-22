@@ -1623,8 +1623,9 @@ function pushPoints3D(){
 /* 지구본 라벨 텍스트 — 국기 + 우세%. 국기 없으면 코드. (집계 데이터 기반·짧게) */
 function globeLabelText(d){
   if(!d)return '';
-  var fl=''; try{fl=GCGeo.flagOf(d.code)||'';}catch(e){}
-  return (fl?fl+' ':'')+(d.share!=null?d.share+'%':'');
+  // 국기 이모지는 윈도우에서 ??로 깨짐 → 나라 이름(언어별)으로. (3D 라벨은 텍스트라 국기 이미지 불가)
+  var nm=''; try{nm=countryNameLocal(d.code)||d.code||'';}catch(e){nm=d.code||'';}
+  return (nm?nm+' ':'')+(d.share!=null?d.share+'%':'');
 }
 function focusGlobe(force){
   if(!GLB.pts.length)return;
@@ -1644,8 +1645,9 @@ function globePointLabel(d){
   var info=GCGeo.countryInfo(d.code), nm=LANG==='ko'?info.nameKo:info.nameEn;
   var bt=GLB.bt||{a:{},b:{}}, lt=bt[d.lead]||bt.a||{};
   var mine=(MY&&d.code===MY)?' · '+esc(t('globeMine')):'';
+  // 국기 이모지는 윈도우에서 깨져(??) 나라 이름으로 식별. (원하면 국기 이미지 옵션 추가 가능)
   return '<div style="font:600 12px system-ui;color:#fff;background:rgba(8,12,20,.82);padding:5px 8px;border-radius:8px">'+
-    (info.code?esc(info.flag)+' ':'')+esc(nm)+' '+esc(lt.emoji||'')+' '+d.share+'%'+
+    esc(nm)+' '+esc(lt.emoji||'')+' '+d.share+'%'+
     '<br><span style="opacity:.75;font-weight:400">'+t('globeTaps',{n:comma(d.tot)})+mine+'</span></div>';
 }
 /* 생명주기: 탭 숨김 시 3D 렌더 일시정지(전력/GPU 절약), 다시 보이면 재개. 리사이즈 시 캔버스 재측정. */

@@ -1081,8 +1081,8 @@ a { color: var(--blue); text-decoration: none; }
    (마크업 변경 없이 기존 표면을 격상 · 게임 .gx 테마는 미영향)
    ══════════════════════════════════════════════ */
 :root {
-  --grad-green: linear-gradient(145deg, #34c46b, #1f9a4f);
-  --grad-warm: linear-gradient(145deg, #ffb24d, #ff7a3d);
+  --grad-green: linear-gradient(145deg, #17a95c, #0b7240);
+  --grad-warm: linear-gradient(145deg, #ffa64d, #f6791f);
   --shadow-card: 0 1px 1px rgba(20,24,33,.04), 0 4px 14px rgba(20,24,33,.05), 0 12px 32px rgba(20,24,33,.04);
   --shadow-soft: 0 2px 10px rgba(20,24,33,.05);
 }

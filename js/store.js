@@ -9,6 +9,7 @@ const DEFAULT = () => ({
     ytKey: '', // 유튜브 검색용 Data API 키 (선택 · 이 기기에만)
     adminPin: '', // 관리자 잠금 PIN (이 기기에만 — 동기화 제외)
     spaceCode: '', firebaseConfig: '',
+    startScreen: 'home', // 앱을 열면 처음 뜨는 화면(온보딩/설정에서 선택) — home|pantry|pantry-open|recipes|recipes-mine|recipes-fav|shopping|games
     customModes: [], // {key, label, emoji, desc, protein, expiring, zeroExtra, prefTags:[], exclude:[]}
   },
   pantry: [],     // {id, name, emoji, photo?, qtyType, unit, qty, level, location, expiresAt, price}
@@ -28,6 +29,7 @@ const DEFAULT = () => ({
   aiUse: { month: '', used: 0, credits: 0 }, // AI 사용 한도(클라 집계) — 월 무료 + 충전권. 프리미엄은 무제한
   onboarded: false,
   tutorialDone: false, // 첫 사용자 가이드 완료 여부
+  purposeAsked: false, // 첫 실행 "사용 목적" 물음(시작 화면 고정) 노출 여부
 });
 
 function load() {
@@ -74,7 +76,7 @@ export function replaceState(remote) {
   const keepCode = S.settings.spaceCode;
   const keepPin = S.settings.adminPin;
   for (const k of ['meta', 'settings', 'pantry', 'leftovers', 'shopping', 'myRecipes', 'favs', 'ratings', 'ledger',
-    'decor', 'referral', 'plan', 'points', 'games', 'adFreeUntil', 'planTrialUntil', 'onboarded', 'tutorialDone']) {
+    'decor', 'referral', 'plan', 'points', 'games', 'adFreeUntil', 'planTrialUntil', 'onboarded', 'tutorialDone', 'purposeAsked']) {
     if (remote[k] !== undefined) S[k] = remote[k];
   }
   S.settings.aiKey = keepKey;

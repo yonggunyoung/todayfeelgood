@@ -40,6 +40,26 @@ const LOC_LABEL = { fridge: '냉장', freezer: '냉동', room: '실온' };
 const LEVELS = [['full', '가득'], ['half', '절반'], ['low', '조금'], ['empty', '없음']];
 const TAGS = ['반찬', '고단백', '운동', '자취', '초간단', '국물', '집밥', '도시락', '다이어트', '순한맛', '매콤', '아침'];
 
+// 시작 화면 — 앱을 열면 처음 뜨는 화면. 탭 + 세부 상태(냉장고 문 열림·레시피 하위탭)를 한 키로 묶는다.
+const START_SCREENS = {
+  home:           { tab: 'home',     icon: '🏠', label: '홈', desc: '오늘의 추천' },
+  pantry:         { tab: 'pantry',   icon: '🧊', label: '냉장고', desc: '문 닫힘(꾸미기)' },
+  'pantry-open':  { tab: 'pantry',   icon: '🧊', label: '냉장고 안', desc: '문 열린 내부', fridge: true },
+  recipes:        { tab: 'recipes',  icon: '🍳', label: '레시피', desc: '오늘의 추천', rtab: 'reco' },
+  'recipes-mine': { tab: 'recipes',  icon: '📒', label: '내 레시피', desc: '내가 저장한 것', rtab: 'mine' },
+  'recipes-fav':  { tab: 'recipes',  icon: '❤️', label: '찜', desc: '찜한 레시피', rtab: 'fav' },
+  shopping:       { tab: 'shopping', icon: '🧺', label: '장보기', desc: '살 것 메모' },
+  games:          { tab: 'home',     icon: '🎮', label: '게임', desc: '열면 바로 게임', games: true },
+};
+// 시작 화면 키를 실제 라우팅 상태(tab·rTab·fridgeOpen)로 적용. 렌더는 호출부가 담당.
+function applyStartTab(key) {
+  const sc = START_SCREENS[key] || START_SCREENS.home;
+  tab = sc.tab;
+  if (sc.rtab) rTab = sc.rtab;
+  if (sc.fridge) { pantryView = 'shelf'; fridgeOpen = true; } else if (sc.tab === 'pantry') { fridgeOpen = false; }
+  return sc;
+}
+
 window.UI = {};
 
 // 관리자 모드 — AI 설정은 운영자만 만진다 (이 기기에서만 해제 상태 유지)
@@ -2064,6 +2084,48 @@ UI.endTutorial = () => {
   if (!S.tutorialDone) { S.tutorialDone = true; save({ silent: true }); }
 };
 
+/* ── 첫 실행: 사용 목적 → 시작 화면 고정 ──
+   "주로 뭐 하러 오셨어요?"를 한 번 물어, 고른 기능을 앱 첫 화면으로 박아둔다.
+   언제든 설정 > "시작 화면"에서 세부 상태(내 레시피·냉장고 안·장보기 등)까지 바꿀 수 있다. */
+UI.openPurpose = () => {
+  // 여는 순간 '물어봄' 처리 — 닫더라도(홈 기본) 다시 조르지 않음
+  if (!S.purposeAsked) { S.purposeAsked = true; save({ silent: true }); }
+  const opt = (k) => { const s = START_SCREENS[k]; return `
+    <button class="purpose-card" onclick="UI.pickPurpose('${k}')">
+      <span class="pc-emoji">${s.icon}</span><b>${s.label}</b><small>${s.desc}</small></button>`; };
+  openSheet(`
+    <h2>🧊 냉비서, 어떻게 쓰실 거예요?</h2>
+    <p class="sub">고른 기능이 <b>앱 첫 화면</b>으로 고정돼요. 나중에 <b>설정 &gt; 시작 화면</b>에서 바꿀 수 있어요.</p>
+    <div class="purpose-grid">
+      ${opt('recipes')}${opt('pantry')}${opt('shopping')}${opt('games')}
+    </div>
+    <button class="btn btn-soft btn-block" style="margin-top:11px" onclick="UI.pickPurpose('home')">🏠 그냥 둘러볼게요 (홈 화면)</button>
+  `);
+};
+UI.pickPurpose = (key) => {
+  S.settings.startScreen = key;
+  S.purposeAsked = true;
+  save({ silent: true });
+  UI.closeSheet();
+  const sc = applyStartTab(key);
+  render(); trackScreen(tab);
+  track('pick_purpose', { start: key });
+  if (sc.games) {
+    // 게임을 고른 사람에게 냉장고 튜토리얼은 안 어울림 — 가이드는 건너뛰고(설정에서 다시 보기 가능) 바로 게임
+    if (!S.tutorialDone) { S.tutorialDone = true; save({ silent: true }); }
+    setTimeout(() => { if (!document.querySelector('#modal-root .sheet')) UI.openGames(); }, 250);
+  } else if (!S.tutorialDone) {
+    setTimeout(() => UI.startTutorial(), 350); // 가이드는 이어서 한 번
+  }
+};
+// 설정 > 시작 화면에서 즉시 변경 (세부 상태 포함 전체 목록)
+UI.setStartScreen = (key) => {
+  S.settings.startScreen = START_SCREENS[key] ? key : 'home';
+  save();
+  toast(`시작 화면을 "${START_SCREENS[S.settings.startScreen].icon} ${START_SCREENS[S.settings.startScreen].label}"(으)로 설정했어요`);
+  renderSettings();
+};
+
 /* ── 주방 타이머 — 떠있는 위젯(드래그로 빈 공간 어디든 이동). ── */
 let ktTimer = null;
 let ktTick = null;
@@ -2991,6 +3053,12 @@ function renderSettings() {
     <div class="section-title"><h2>🔔 임박 알림</h2><small>상하기 전에 알려줘요</small></div>
     <div class="card flat">${pushSettingHtml()}</div>
     <button class="btn btn-soft btn-block" style="margin-top:8px" onclick="UI.openFeedback()">💬 의견·건의 보내기 (개선에 큰 힘이 돼요)</button>
+    <div class="section-title"><h2>🚪 시작 화면</h2><small>앱을 열면 바로 뜨는 곳</small></div>
+    <div class="start-grid">
+      ${Object.entries(START_SCREENS).map(([k, s]) => `
+        <button class="start-card ${st.startScreen === k ? 'on' : ''}" onclick="UI.setStartScreen('${k}')">
+          <span class="sc-emoji">${s.icon}</span><b>${s.label}</b><small>${s.desc}</small></button>`).join('')}
+    </div>
     <div class="section-title"><h2>🍽️ 추천 모드</h2><small>나에게 맞게</small></div>
     <div class="mode-grid">
       ${modes.map((m) => `
@@ -3295,6 +3363,8 @@ if (AI_ENDPOINT) {
 migratePantryUnits(); // 무게·부피 재고를 g·ml 기준으로 일괄 정렬(구버전 데이터 보정)
 // 커뮤니티 평점 — 캐시 즉시 적용 후 서버에서 갱신(실패해도 앱은 그대로 동작)
 try { applyCommunityStats(JSON.parse(localStorage.getItem('nb_cstats') || '{}')); } catch { /* noop */ }
+// 시작 화면 — 사용자가 고른 기본 화면으로 진입(첫 실행은 목적 질문 전이라 home 기본)
+const bootStart = applyStartTab(S.settings.startScreen);
 render();
 initSync(() => { renderTop(); if (tab === 'settings') renderSettings(); });
 fetchRecipeStats().then((m) => {
@@ -3338,8 +3408,14 @@ const shared = new URLSearchParams(location.search).get('share');
 if (shared) {
   history.replaceState(null, '', location.pathname);
   handleShareCode(shared);
+} else if (!S.purposeAsked && !S.tutorialDone) {
+  // 첫 실행(가이드도 아직)일 때만 목적 질문 → 시작 화면 고정 → 이어서 튜토리얼.
+  // 기존 사용자(이미 튜토리얼 완료)는 방해하지 않음 — 설정 > 시작 화면에서 직접 바꿀 수 있음.
+  setTimeout(() => UI.openPurpose(), 500);
 } else if (!S.tutorialDone) {
   setTimeout(() => UI.startTutorial(), 700); // 첫 사용자 가이드
+} else if (bootStart.games && !document.querySelector('#modal-root .sheet')) {
+  setTimeout(() => { if (!document.querySelector('#modal-root .sheet')) UI.openGames(); }, 350); // 시작 화면=게임이면 열자마자 게임
 }
 
 /* ── 앱 설치 유도 (PWA) — 완전 자동 설치는 브라우저가 막음(보안). 안드로이드/크롬은 1탭 설치, 아이폰 사파리는 안내. ── */

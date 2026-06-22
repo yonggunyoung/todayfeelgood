@@ -183,10 +183,13 @@
   }
 
   var api = {
-    enabled: true,           // ← 킬 스위치: 충분히 성장하면 false
+    enabled: false,          // ← 기본 OFF: DB-시드 방식(tools/bots)이 단일 출처. true면 클라 표시용 합성(이중집계 주의)
     FLOOR: FLOOR, PEAK: PEAK, FADE: FADE,
     leanOf: leanOf, participants: participants, totals: totals,
     blend: blend, rows: rows, mergeRows: mergeRows, blendRank: blendRank, fade: fade,
+    // ── tools/bots(서버 시더)가 재사용하는 결정적 부품(DRY) ──
+    _hash: hash, _rng: rng, _clamp: clamp, _curveAt: curveAt,
+    NICKS: NICKS, BADGES: BADGES, COMMENTS: COMMENTS, RW: RW, CW: CW,
   };
   return api;
 });

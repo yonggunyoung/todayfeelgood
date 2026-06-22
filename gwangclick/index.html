@@ -16,6 +16,8 @@
 <!-- 실제 전국 대전 백엔드(선택) — fb-config.js 비우면 자동으로 폰 단독 시뮬레이션 폴백 -->
 <script src="./fb-config.js"></script>
 <script src="./net.js"></script>
+<!-- 초반 콜드스타트용 가상 플레이어(화면 표시 전용). gc-bots.js의 enabled=false로 OFF -->
+<script src="./gc-bots.js"></script>
 <link rel="stylesheet" as="style" crossorigin
       href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
 <style>
@@ -261,13 +263,19 @@ function nickOf(){return (F.nick||'').trim()||'익명광클러';}
 function netOn(){try{return !!(window.GCNet&&GCNet.available());}catch(e){return false;}}
 var LIVE={date:'',tot:null,unwatch:null};
 function shareFromTot(tot,seed){return (tot&&(tot.a+tot.b)>0)?clamp(tot.a/(tot.a+tot.b)*100,5,95):seed;}
+/* 가상 플레이어 합성(표시 전용). GCBots 없거나 OFF면 원본 그대로 — 항상 안전. */
+function botsOn(){try{return !!(window.GCBots&&GCBots.enabled);}catch(e){return false;}}
+function blendTot(t,date){try{return botsOn()?GCBots.blend(t,date):t;}catch(e){return t;}}
+function blendRows(rows,date,max){try{return botsOn()?GCBots.mergeRows(rows,date,max):rows;}catch(e){return rows;}}
+function blendRank(res,date,taps){try{return botsOn()?(GCBots.blendRank(res,date,taps)||res):res;}catch(e){return res;}}
 function startWatch(date){
   if(!netOn())return;
   if(LIVE.unwatch&&LIVE.date===date)return;
   if(LIVE.unwatch){try{LIVE.unwatch();}catch(e){}LIVE.unwatch=null;}
   LIVE.date=date; LIVE.tot=null;
-  GCNet.peek(date).then(function(t){if(t&&LIVE.date===date){LIVE.tot=t;onLive();}});
-  LIVE.unwatch=GCNet.watch(date,function(t){if(LIVE.date===date){LIVE.tot=t;onLive();}});
+  if(botsOn()){LIVE.tot=blendTot(null,date);onLive();} // 서버 응답 전에도 즉시 살아있게
+  GCNet.peek(date).then(function(t){if(LIVE.date===date){LIVE.tot=blendTot(t,date);onLive();}});
+  LIVE.unwatch=GCNet.watch(date,function(t){if(LIVE.date===date){LIVE.tot=blendTot(t,date);onLive();}});
 }
 function stopWatch(){if(LIVE.unwatch){try{LIVE.unwatch();}catch(e){}}LIVE.unwatch=null;LIVE.tot=null;LIVE.date='';}
 /* 라이브 집계 도착 시: 인트로면 게이지 즉시 갱신(배틀은 frame 루프가 직접 읽음) */
@@ -588,7 +596,8 @@ function endBattle(){
     var rr=R;
     GCNet.submit(date,side,contrib,F.region,nickOf()).then(function(res){
       if(rr!==R)return;
-      if(res){R.rank=res.rank;R.total=res.total;R.rankState='real';}
+      var bl=blendRank(res,date,R.contrib);
+      if(bl){R.rank=bl.rank;R.total=bl.total;R.rankState='real';}
       else{R.rank=rankEstimate(R.contrib);R.rankState='estimate';}
       updateRankDOM();
     });
@@ -603,7 +612,8 @@ function applyDouble(){
     var rr=R;
     GCNet.rankOf(R.date,R.contrib).then(function(res){
       if(rr!==R)return;
-      if(res){R.rank=res.rank;R.total=res.total;R.rankState='real';}else{R.rank=rankEstimate(R.contrib);R.rankState='estimate';}
+      var bl=blendRank(res,R.date,R.contrib);
+      if(bl){R.rank=bl.rank;R.total=bl.total;R.rankState='real';}else{R.rank=rankEstimate(R.contrib);R.rankState='estimate';}
       updateRankDOM();
     });
   }else{ R.rank=rankEstimate(R.contrib); R.rankState='estimate'; renderResult(); }
@@ -684,8 +694,8 @@ function rankBoard(){
       '</div>'+
     '</div>';
   if(!netOn()){el('rb-list').textContent='데모 모드예요 — fb-config.js에 Firebase 설정을 넣으면 실제 전국 랭킹·지역 점령전이 켜집니다.';return;}
-  GCNet.leaderboard(date,20).then(function(rows){renderBoard(bt,rows);});
-  GCNet.peek(date).then(function(t){renderRegion(bt,t);});
+  GCNet.leaderboard(date,20).then(function(rows){renderBoard(bt,blendRows(rows,date,20));});
+  GCNet.peek(date).then(function(t){renderRegion(bt,blendTot(t,date));});
 }
 function renderBoard(bt,rows){
   var box=el('rb-list'); if(!box)return;

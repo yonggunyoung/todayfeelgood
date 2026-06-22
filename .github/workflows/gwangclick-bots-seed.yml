@@ -1,0 +1,67 @@
+# ── 광클대전 초반 봇 시드(자동) ──
+# 실제 플레이어 형태로 Firestore에 봇을 심고 시간대에 맞춰 성장시킨다. 초반에만 켜두고, 끝나면
+# 이 워크플로를 비활성(Actions 탭에서 Disable)하거나 schedule 줄을 지운 뒤 purge 워크플로로 회수한다.
+#
+# 준비(1회): 레포 → Settings → Secrets and variables → Actions → New repository secret
+#   이름: GCP_SERVICE_ACCOUNT
+#   값 : Firebase 콘솔 → 프로젝트 설정 → 서비스 계정 → 새 비공개 키 생성 → 받은 JSON '전체 내용' 붙여넣기
+# 시크릿이 없으면 잡은 안전하게 스킵된다.
+name: gwangclick-bots-seed
+
+on:
+  workflow_dispatch:        # 수동 실행(아무 때나 버튼). 시각 재현용 입력 옵션.
+    inputs:
+      date:
+        description: "날짜 YYYY-MM-DD (비우면 오늘/KST)"
+        required: false
+      at:
+        description: "시각 ISO (비우면 현재). 예: 2026-06-22T21:00:00"
+        required: false
+  schedule:
+    # GitHub cron은 UTC. 아래는 KST 9·12·15·18·21·23시에 실행(= UTC 0·3·6·9·12·14).
+    - cron: "0 0,3,6,9,12,14 * * *"
+
+# 동시 실행 방지(겹쳐 돌면 원장 경합)
+concurrency:
+  group: gwangclick-bots
+  cancel-in-progress: false
+
+jobs:
+  seed:
+    runs-on: ubuntu-latest
+    env:
+      TZ: Asia/Seoul          # 시간대 곡선·날짜를 KST 기준으로 계산
+    defaults:
+      run:
+        working-directory: static-apps/gwangclick/tools/bots
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Guard — 시크릿 확인
+        id: guard
+        run: |
+          if [ -z "${{ secrets.GCP_SERVICE_ACCOUNT }}" ]; then
+            echo "::warning::GCP_SERVICE_ACCOUNT 미설정 — 시드 스킵. (이 파일 상단 주석 참고)"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/setup-node@v4
+        if: steps.guard.outputs.skip != 'true'
+        with:
+          node-version: "20"
+
+      - name: 서비스 계정 키 작성
+        if: steps.guard.outputs.skip != 'true'
+        run: printf '%s' '${{ secrets.GCP_SERVICE_ACCOUNT }}' > service-account.json
+
+      - name: 의존성 설치
+        if: steps.guard.outputs.skip != 'true'
+        run: npm install --no-audit --no-fund
+
+      - name: 봇 시드 실행
+        if: steps.guard.outputs.skip != 'true'
+        run: node seed.mjs ${{ github.event.inputs.date && format('--date {0}', github.event.inputs.date) || '' }} ${{ github.event.inputs.at && format('--at {0}', github.event.inputs.at) || '' }}
+
+      - name: 키 삭제(흔적 제거)
+        if: always()
+        run: rm -f service-account.json

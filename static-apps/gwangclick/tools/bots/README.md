@@ -7,6 +7,24 @@
 > ⚠️ 이건 클라이언트가 아니라 **관리자 PC/서버**에서 서비스 계정으로 실행한다.
 > 클라이언트 표시용 합성(`gc-bots.js`의 `enabled`)은 **OFF**가 기본 — 이 시더가 단일 출처다(이중가산 방지).
 
+## 🏃 어디서 실행하나? (두 가지)
+**방법 1 — GitHub Actions (권장·로컬 불필요).** 클라우드에서 자동 실행.
+1. 레포 → **Settings → Secrets and variables → Actions → New repository secret**
+   - 이름 `GCP_SERVICE_ACCOUNT`, 값 = 서비스 계정 JSON 전체(아래 "서비스 계정 키" 참고)
+2. 끝. `.github/workflows/gwangclick-bots-seed.yml`이 **KST 9·12·15·18·21·23시 자동 시드**.
+   수동으로 돌리려면 **Actions 탭 → gwangclick-bots-seed → Run workflow**.
+3. 회수: **Actions 탭 → gwangclick-bots-purge → Run workflow** (scope=all).
+   초반 끝나면 seed 워크플로를 **Disable** 하면 멈춤.
+
+**방법 2 — 내 PC 터미널.** (Mac: `터미널`, Windows: `PowerShell`)
+레포를 받은 폴더에서:
+```bash
+cd static-apps/gwangclick/tools/bots
+npm install
+node seed.mjs           # 또는 node purge.mjs --all
+```
+→ 내 PC는 켜져 있을 때만 도니까 "자동 성장"은 방법 1을 추천.
+
 ## 동작 원리 (구분 불가 + 회수 가능)
 - **심기**: `gc_scores/{date}__bot__NNNN` 개별 문서(실제와 같은 필드: nick/side/taps/region/country/badge/comment)
   + `gc_battles/{date}` 집계 증가. 회수용으로 서버에만 `bot:true` 태그(클라는 읽지/노출하지 않음).

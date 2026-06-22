@@ -296,14 +296,16 @@ function catShape(cat) {
 function cookedShape(name, kind) {
   const f = String(name || '');
   const has = (...a) => a.some((x) => f.includes(x));
-  if (has('국', '탕', '찌개', '전골', '스프', '죽', '카레')) return '<path d="M6 17 L26 17 Q24.5 26 16 26 Q7.5 26 6 17 Z" fill="#E8A24C"/><ellipse cx="16" cy="17" rx="10" ry="2.3" fill="#F3BD72"/>';
-  if (has('볶음밥', '덮밥', '비빔밥', '밥', '리조또')) return '<path d="M6.5 18 L25.5 18 Q24 26 16 26 Q8 26 6.5 18 Z" fill="#EADFC9"/><path d="M8 18 Q16 12.5 24 18 Z" fill="#fff"/>';
-  if (has('면', '국수', '라면', '우동', '파스타', '짜장', '짬뽕', '쌀국수')) return '<path d="M6 17 L26 17 Q24.5 26 16 26 Q7.5 26 6 17 Z" fill="#E7B25A"/><path d="M9 17 q1 -4 3 -1 M14 17 q1 -4 3 -1 M19 17 q1 -4 3 -1" stroke="#F3DCA0" stroke-width="1.3" fill="none" stroke-linecap="round"/>';
-  if (has('도시락')) return '<rect x="7" y="13" width="18" height="13" rx="3" fill="#EFE2C2" stroke="#D8C49A" stroke-width="1"/><line x1="16" y1="13" x2="16" y2="26" stroke="#D8C49A" stroke-width="1"/>';
-  if (has('빵', '케이크', '과자', '디저트', '쿠키', '파이', '토스트')) return '<path d="M8 20 Q8 12 16 12 Q24 12 24 20 Z" fill="#E7B978"/><rect x="7" y="19" width="18" height="6" rx="2.5" fill="#D49A57"/>';
-  if (kind === 'delivery') return '<path d="M8 13 L24 13 L22.4 26 L9.6 26 Z" fill="#F0E2C0"/><path d="M8 13 L24 13 L23.2 15.5 L8.8 15.5 Z" fill="#D9C49A"/><rect x="14.5" y="9.5" width="3" height="4" fill="#c9b07f"/>';
-  if (has('반찬', '볶음', '무침', '조림', '나물', '전', '구이', '튀김', '찜', '김치') || kind === 'banchan') return '<ellipse cx="16" cy="22" rx="11" ry="3" fill="#E6E9ED"/><path d="M9 20 q7 -6 14 0 Z" fill="#C98A4A"/>';
-  return '<path d="M6 17 L26 17 Q24.5 26 16 26 Q7.5 26 6 17 Z" fill="#E8A24C"/><ellipse cx="16" cy="17" rx="10" ry="2.3" fill="#F3BD72"/>';
+  // 통일된 그릇 실루엣(테두리 y13.5) — 얼굴(눈 16.5)이 음식 위에 앉도록. 종류는 색으로 구분.
+  const bowl = (fill, top) => `<path d="M5 13.5 L27 13.5 Q25 25.5 16 25.5 Q7 25.5 5 13.5 Z" fill="${fill}"/><ellipse cx="16" cy="13.5" rx="11" ry="2.5" fill="${top}"/>`;
+  if (has('국', '탕', '찌개', '전골', '스프', '죽', '카레')) return bowl('#E59A48', '#F3BD72');
+  if (has('볶음밥', '덮밥', '비빔밥', '밥', '리조또')) return `<path d="M5 13.5 L27 13.5 Q25 25.5 16 25.5 Q7 25.5 5 13.5 Z" fill="#FDFCF6" stroke="#E7DCC4" stroke-width="1"/><ellipse cx="16" cy="13.5" rx="11" ry="2.5" fill="#fff"/>`;
+  if (has('면', '국수', '라면', '우동', '파스타', '짜장', '짬뽕', '쌀국수')) return bowl('#EBD49A', '#F5E6B8');
+  if (has('도시락')) return '<rect x="6" y="12" width="20" height="14" rx="3.5" fill="#EFE2C2" stroke="#D8C49A" stroke-width="1"/><line x1="16" y1="12" x2="16" y2="26" stroke="#D8C49A" stroke-width="1"/>';
+  if (has('빵', '케이크', '과자', '디저트', '쿠키', '파이', '토스트')) return '<path d="M7 21 Q7 11.5 16 11.5 Q25 11.5 25 21 Z" fill="#E7B978"/><rect x="6" y="20" width="20" height="6" rx="3" fill="#D49A57"/>';
+  if (kind === 'delivery') return '<path d="M7.5 12.5 L24.5 12.5 L22.8 26 L9.2 26 Z" fill="#F0E2C0"/><path d="M7.5 12.5 L24.5 12.5 L23.9 15.5 L8.1 15.5 Z" fill="#D9C49A"/><rect x="14.5" y="9" width="3" height="4" fill="#c9b07f"/>';
+  if (has('반찬', '볶음', '무침', '조림', '나물', '전', '구이', '튀김', '찜', '김치') || kind === 'banchan') return '<ellipse cx="16" cy="23" rx="11.5" ry="3.2" fill="#E6E9ED"/><path d="M7.5 20.5 Q16 12 24.5 20.5 Z" fill="#C98A4A"/><path d="M10 19 q6 -3 12 0" stroke="#E0AE78" stroke-width="1.2" fill="none" stroke-linecap="round"/>';
+  return bowl('#E59A48', '#F3BD72');
 }
 // SVG 캐릭터 조립 (재료/조리음식 공용) — 표정만 신선/임박 분기 (시안 FoodIcon 규격)
 function svgChar(shape, expiring, size) {
@@ -480,7 +482,7 @@ function renderHome() {
 
   const mascot = `<svg width="68" height="78" viewBox="0 0 100 120" style="flex:none;margin-bottom:2px;animation:nb-bob 3.4s ease-in-out infinite;" aria-hidden="true"><ellipse cx="50" cy="114" rx="25" ry="4" fill="#0a7a44" opacity=".1"/><path d="M50 16 C50 6 56 1 64 2 C63 11 57 16 50 16 Z" fill="#9BE3BC"/><rect x="22" y="16" width="56" height="94" rx="15" fill="#fff" stroke="#E4EEE7" stroke-width="2"/><rect x="27" y="55" width="46" height="3" rx="1.5" fill="#DCEFE4"/><rect x="66" y="29" width="4" height="14" rx="2" fill="#0E8E4E"/><rect x="66" y="62" width="4" height="28" rx="2" fill="#0E8E4E"/><path d="M50 39 L41 34 L41 44 Z" fill="#0E8E4E"/><path d="M50 39 L59 34 L59 44 Z" fill="#0E8E4E"/><circle cx="50" cy="39" r="3" fill="#0E8E4E"/><circle cx="42" cy="74" r="4.2" fill="#173B28"/><circle cx="58" cy="74" r="4.2" fill="#173B28"/><circle cx="43.4" cy="72.6" r="1.3" fill="#fff"/><circle cx="59.4" cy="72.6" r="1.3" fill="#fff"/><ellipse cx="35" cy="83" rx="4" ry="2.5" fill="#FFB39B"/><ellipse cx="65" cy="83" rx="4" ry="2.5" fill="#FFB39B"/><path d="M44 83 Q50 89 56 83" stroke="#173B28" stroke-width="2.2" fill="none" stroke-linecap="round"/></svg>`;
 
-  const gbtn = (on, ic, label) => `<button onclick="${on}" style="flex:1;background:var(--tint-etc);border:none;border-radius:14px;padding:11px 4px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;"><span style="font-size:18px;">${ic}</span><span style="font-size:10.5px;font-weight:800;color:#5f5d55;">${label}</span></button>`;
+  const gbtn = (on, ic, label, bg, fg, sub) => `<button onclick="${on}" style="flex:1;position:relative;background:${bg};border:none;border-radius:14px;padding:11px 4px 10px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;box-shadow:var(--shadow-card);">${sub ? `<span style="position:absolute;top:5px;right:6px;font-size:7.5px;font-weight:900;color:${fg};background:rgba(255,255,255,.62);padding:0 3px;border-radius:5px;line-height:1.5;">${sub}</span>` : ''}<span style="font-size:20px;line-height:1;">${ic}</span><span style="font-size:10.5px;font-weight:800;color:${fg};">${label}</span></button>`;
 
   $('#view').innerHTML = `
     <div style="padding:6px 0 0;">
@@ -523,7 +525,7 @@ function renderHome() {
         </div>
       </div>
       <div style="display:flex;gap:8px;margin-top:13px;">
-        ${gbtn('UI.openGames()', '🎮', '게임')}${gbtn('UI.waitAd()', '⏱️', '짬시간')}${gbtn('UI.openRanks()', '🏆', '랭킹')}${gbtn('UI.openPoints()', '🎁', '포인트샵')}
+        ${gbtn('UI.openGames()', '🎮', '게임하기', 'linear-gradient(150deg,#9b7bf2,#7a52e6)', '#fff', '＋P')}${gbtn('UI.waitAd()', '⏱️', '짬시간', 'linear-gradient(150deg,#ffd152,#f6a623)', '#5a3d00', '＋P')}${gbtn('UI.openRanks()', '🏆', '랭킹', 'var(--blue-bg)', 'var(--blue)')}${gbtn('UI.openPoints()', '🎁', '포인트샵', 'var(--green-bg)', 'var(--green-deep)')}
       </div>
     </div>
     <div onclick="UI.openInvite()" style="margin:12px 0 0;background:linear-gradient(135deg,#FFFFFF,#FBF5E9);border:1px solid var(--hairline);border-radius:18px;padding:14px;display:flex;align-items:center;gap:12px;cursor:pointer;box-shadow:var(--shadow-card);">

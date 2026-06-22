@@ -202,8 +202,8 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .gl-flash{position:absolute;width:16px;height:16px;border-radius:50%;background:radial-gradient(circle,#fff 0%,var(--c,#ffd76a) 40%,transparent 70%);pointer-events:none;will-change:transform,opacity;animation:gl-flash .5s ease-out forwards}
 @media (prefers-reduced-motion: reduce){.gl-spark,.gl-flash{display:none}}
 .winner-banner{margin:8px 0 2px;padding:8px 12px;border-radius:12px;font-size:.86rem;font-weight:700;text-align:center;background:linear-gradient(90deg,rgba(255,215,106,.16),rgba(255,255,255,.05));border:1px solid rgba(255,215,106,.35)}
-.gl-flagchip{display:flex;align-items:center;gap:5px;font:700 11px system-ui;color:#fff;white-space:nowrap;pointer-events:none;transform:translate(-50%,-130%);text-shadow:0 1px 3px rgba(0,0,0,.9)}
-.gl-flagchip img{border-radius:2px;box-shadow:0 0 0 1px rgba(255,255,255,.3)}
+.gl-flagchip{pointer-events:none;transform:translate(-50%,-130%)}
+.gl-flagchip img{border-radius:2px;display:block}
 .globe-hero{margin-top:14px}
 .globe-cap{display:flex;align-items:center;gap:6px;font-size:.82rem;opacity:.85;margin-bottom:7px;letter-spacing:.2px}
 .gl-slot{position:relative;width:100%}
@@ -321,10 +321,16 @@ function roundTick(){ var cd=el('ig-cd'); if(!cd)return; var r=roundNow(); if(IN
 /* 직전 라운드 승자 배너(승자 발표). 봇 시드로 늘 결과 있음. */
 function renderRoundWinner(){
   var box=el('ig-winner'); if(!box)return; var pr=roundPrev(); if(!pr){box.innerHTML='';return;}
-  GCNet.peek(pr.key).then(function(tot){ if(!el('ig-winner'))return; tot=blendTot(tot,pr.key);
-    var pbt=GCTopics.localize(pr.topic,LANG), a=(tot&&tot.a)||0, b=(tot&&tot.b)||0, sum=a+b; if(sum<=0){box.innerHTML='';return;}
+  var pbt=GCTopics.localize(pr.topic,LANG);
+  Promise.all([GCNet.peek(pr.key),GCNet.leaderboard(pr.key,1)]).then(function(res){
+    if(!el('ig-winner'))return;
+    var tot=blendTot(res[0],pr.key), rows=blendRows(res[1],pr.key,1);
+    var a=(tot&&tot.a)||0, b=(tot&&tot.b)||0, sum=a+b; if(sum<=0){box.innerHTML='';return;}
     var win=a>=b?pbt.a:pbt.b, share=Math.round(Math.max(a,b)/sum*100);
-    box.innerHTML='<div class="winner-banner">🏆 '+(LANG==='ko'?'지난 판 승자':'Last round')+' · '+esc(pbt.tag)+': <b style="color:'+win.color+'">'+win.emoji+' '+esc(win.name)+'</b> '+share+'%</div>';
+    var mvp=(rows&&rows[0])?rows[0]:null;
+    var fl=(mvp&&mvp.country)?'<img src="https://flagcdn.com/16x12/'+String(mvp.country).toLowerCase()+'.png" width="16" height="12" style="vertical-align:-1px;border-radius:2px;margin-right:3px" onerror="this.remove()">':'';
+    var mvpHtml=mvp?'<div style="font-weight:500;font-size:.78rem;opacity:.9;margin-top:3px">👑 '+(LANG==='ko'?'1등':'MVP')+' '+fl+esc(mvp.nick)+' · '+comma(mvp.taps)+(LANG==='ko'?'탭':'')+'</div>':'';
+    box.innerHTML='<div class="winner-banner">🏆 '+(LANG==='ko'?'지난 판':'Last round')+' · '+esc(pbt.tag)+' — <b style="color:'+win.color+'">'+win.emoji+' '+esc(win.name)+'</b> '+share+'%'+mvpHtml+'</div>';
   });
 }
 function dailyBias(d,bt){return (fnv1a(d+'|'+(bt?bt.id:''))%1201)/100-6;}
@@ -1739,15 +1745,12 @@ function globeLabelText(d){
   var nm=''; try{nm=countryNameLocal(d.code)||d.code||'';}catch(e){nm=d.code||'';}
   return (nm?nm+' ':'')+(d.share!=null?d.share+'%':'');
 }
-/* 지구본 막대 옆 국기칩(HTML) — 실제 국기 이미지(flagcdn) + 나라명 + 우세%. 이모지 ?? 깨짐 회피.
- * 이미지 로드 실패(차단 등)면 onerror로 국기만 숨김 → 글자는 남음(graceful). */
+/* 지구본 막대 옆 국기칩(HTML) — 국기 이미지만(나라명 표기 X). 테두리색=우세 진영.
+ * 이미지 로드 실패(차단 등)면 onerror로 제거(graceful). */
 function globeFlagChip(d){
-  var box=document.createElement('div'); box.className='gl-flagchip';
-  if(!d)return box;
-  var code=String(d.code||'').toLowerCase(), nm=''; try{nm=countryNameLocal(d.code)||d.code||'';}catch(e){nm=d.code||'';}
-  var sh=(d.share!=null?' '+d.share+'%':''), col=d.color||'#fff';
-  box.innerHTML=(/^[a-z]{2}$/.test(code)?'<img src="https://flagcdn.com/20x15/'+code+'.png" width="20" height="15" loading="lazy" alt="" onerror="this.remove()">':'')+
-    '<span style="border-bottom:2px solid '+col+'">'+esc(nm)+sh+'</span>';
+  var box=document.createElement('div'); box.className='gl-flagchip'; if(!d)return box;
+  var code=String(d.code||'').toLowerCase(), col=d.color||'#fff';
+  if(/^[a-z]{2}$/.test(code)) box.innerHTML='<img src="https://flagcdn.com/24x18/'+code+'.png" width="24" height="18" loading="lazy" alt="" style="box-shadow:0 0 0 2px '+col+',0 1px 4px rgba(0,0,0,.8)" onerror="this.remove()">';
   return box;
 }
 function focusGlobe(force){

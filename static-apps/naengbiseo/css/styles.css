@@ -1113,8 +1113,8 @@ a { color: var(--blue); text-decoration: none; }
   --shadow-soft: 0 2px 10px rgba(20,24,33,.05);
 }
 
-/* 본문 살짝 따뜻한 프리미엄 배경 그라데이션 */
-body { background: linear-gradient(180deg, #f3f5f9 0%, #eef0f5 100%); background-attachment: fixed; }
+/* 본문 살짝 따뜻한 프리미엄 배경 그라데이션 (시안 크림톤) */
+body { background: linear-gradient(180deg, #f5f3ec 0%, #efe8da 100%); background-attachment: fixed; }
 
 /* 브랜드 마크 — 젤리 광택 + 미세 호흡 */
 .brand-mark { background: var(--grad-green); position: relative; overflow: hidden; animation: brandBreath 4s ease-in-out infinite; }
@@ -1156,11 +1156,32 @@ body { background: linear-gradient(180deg, #f3f5f9 0%, #eef0f5 100%); background
 .action-strip .btn.btn-primary { border: none; }
 
 /* 레시피 카드 — 이미지 포워드(풀블리드 썸네일) + 그라데이션 오버레이 */
-.recipe-card { padding: 0; overflow: hidden; }
+.recipe-card { padding: 0; overflow: hidden; border: 1px solid var(--hairline); }
 .recipe-card .r-photo { width: 100%; height: 150px; object-fit: cover; display: block; }
 .recipe-card .r-body { padding: 13px 15px 15px; }
 .recipe-card .ready-flag, .recipe-card .yt-flag { box-shadow: 0 2px 8px rgba(0,0,0,.18); backdrop-filter: blur(4px); }
-.recipe-card h3 { letter-spacing:-.02em; }
+.recipe-card h3 { letter-spacing:-.02em; font-size: 1.04rem; }
+/* 시안 규격 — 둥근 이모지 타일(54·라운드14·연그린 배경) · 정렬 위로 */
+.recipe-card .r-head { align-items: flex-start; }
+.recipe-card .r-emoji { width: 54px; height: 54px; font-size: 1.85rem; border-radius: 14px; background: #f1f4f1; }
+.recipe-card .meta { gap: 9px; margin-top: 5px; font-size: .74rem; font-weight: 700; }
+.recipe-card .meta .m-prot { color: var(--label); font-weight: 800; }
+.recipe-card .meta .m-prot b { color: var(--label); }
+.recipe-card .heart { align-self: flex-start; }
+/* 매칭 배지 + 부족 재료 칩 (시안: 골드/레드/그린 · 부족은 +이름) */
+.r-match { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 11px; }
+.match-badge {
+  font-size: .69rem; font-weight: 800; padding: 4px 9px; border-radius: 99px; white-space: nowrap;
+  background: rgba(118,118,128,.1); color: var(--label-2); letter-spacing: .01em;
+}
+.match-badge.full { background: var(--green-bg); color: var(--green); }
+.match-badge.part { background: var(--amber-bg); color: var(--amber); }
+.match-badge.low { background: var(--red-bg); color: var(--red); }
+.miss-chip {
+  font-size: .69rem; font-weight: 700; padding: 4px 9px; border-radius: 99px; white-space: nowrap;
+  background: var(--orange-bg); color: #d97a33; cursor: pointer; transition: transform .1s;
+}
+.miss-chip:active { transform: scale(.94); }
 
 /* 입력 포커스 — 부드러운 그린 글로우 */
 input:focus, select:focus, textarea:focus { outline: none; box-shadow: 0 0 0 3px rgba(47,174,95,.18); background: var(--card); }
@@ -1182,7 +1203,7 @@ input:focus, select:focus, textarea:focus { outline: none; box-shadow: 0 0 0 3px
   box-shadow: inset 0 1px 0 rgba(255,255,255,.08), inset 0 0 18px rgba(90,180,255,.12), 0 2px 6px rgba(0,0,0,.3);
   font-variant-numeric: tabular-nums;
 }
-.f-display .fd-temp { color: #8fd6ff; font-weight: 800; font-size: .82rem; letter-spacing: .02em; text-shadow: 0 0 10px rgba(120,200,255,.5); }
+.f-display .fd-temp { color: #5bd98a; font-family: var(--display); font-weight: 400; font-size: .86rem; letter-spacing: .06em; text-shadow: 0 0 10px rgba(91,217,138,.45); white-space: nowrap; }
 .f-display .fd-stat { color: #cfe3f2; font-size: .74rem; font-weight: 600; }
 .f-display .fd-stat b { color: #fff; font-weight: 800; }
 .f-display .fd-stat em { color: #ffb14d; font-style: normal; font-weight: 800; }
@@ -1597,6 +1618,28 @@ input[type=number]::-webkit-outer-spin-button, input[type=number]::-webkit-inner
 .shop-tag.s-out { background: rgba(255,77,106,.14); color: var(--red); }
 .shop-tag.s-manual { background: rgba(91,118,216,.16); color: #5b76d8; }
 .shop-legend { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 2px; }
+
+/* 장보기 아이템 — 시안 규격: 둥근 사각 체크박스 · 산 것은 그린 채움 */
+.shop-item { border: 1px solid var(--hairline); box-shadow: none; }
+.shop-item .grow { cursor: pointer; }
+.shop-item.is-done .name { text-decoration: line-through; color: var(--label-3); }
+.shop-check {
+  width: 23px; height: 23px; flex: none; border-radius: 8px; border: 2px solid #dadad3;
+  background: #fff; display: grid; place-items: center;
+  color: #fff; font-size: .82rem; font-weight: 900; line-height: 1; transition: all .14s;
+}
+.shop-check.on { border-color: var(--green); background: var(--green); }
+.shop-del { color: var(--label-3); font-size: 1.05rem; flex: none; padding: 4px; }
+
+/* 장보기 프리미엄 안내(시안 하단 AD 카드) */
+.shop-promo {
+  display: flex; align-items: center; gap: 12px; margin: 16px 0 0;
+  background: var(--card); border: 1px solid var(--hairline); border-radius: var(--r-md); padding: 14px;
+}
+.shop-promo .sp-star { font-size: 1.5rem; flex: none; }
+.shop-promo b { font-size: .82rem; font-weight: 800; }
+.shop-promo small { display: block; font-size: .69rem; color: var(--label-2); margin-top: 2px; }
+.shop-promo .sp-ad { font-size: .56rem; font-weight: 800; color: #fff; background: #c9c6bd; padding: 2px 6px; border-radius: 5px; flex: none; }
 
 /* 위트 한마디 — 잠시 떴다 공중으로 사라짐 (버리면 따끔 / 아끼면 흐뭇) */
 .proverb {

@@ -487,7 +487,8 @@ function onLive(){
   if(iga){paintIntroGauge(shareFromTot(LIVE.tot,iga._seed||50));
     var pop=el('ig-pop');
     if(pop&&LIVE.tot){var n=LIVE.tot.na+LIVE.tot.nb;
-      pop.textContent=n>0?t('liveCount',{n:comma(n)}):t('firstJoin');}
+      if(ROOM){ pop.textContent=n>0?('👥 '+(LANG==='ko'?'이 방 '+comma(n)+'명 참여 중':comma(n)+' in this room')):(LANG==='ko'?'👋 첫 참가자가 되어보세요':'👋 Be the first to join'); }
+      else pop.textContent=n>0?t('liveCount',{n:comma(n)}):t('firstJoin');}
   }
 }
 /* 배틀 중 실제 게이지 목표 = (서버 집계 + 내 실시간 기여) 기준 A 비율. 라이브 아니면 null → 시뮬 폴백 */
@@ -964,6 +965,7 @@ function renderResult(){
       '</div>'+
       '<div class="actions">'+
         '<button class="btn btn-primary" style="color:'+ink(me.color)+'" onclick="SHARE()">'+t('shareBtn')+'</button>'+
+        '<button class="btn btn-ghost" onclick="shareResultCard()">📸 '+(LANG==='ko'?'결과 이미지 공유':'Share image')+'</button>'+
         '<button class="btn btn-ghost" onclick="GO(\''+r.side+'\')">'+t('againBtn')+'</button>'+
         '<div style="display:flex;gap:8px">'+
           '<button class="btn btn-ghost" style="flex:1" onclick="rankBoard()">'+t('rankBtn')+'</button>'+
@@ -975,6 +977,35 @@ function renderResult(){
       '</div>'+
     '</div>';
   mountGlobe(); // 결과 화면 슬롯으로 지구본 이동(실시간 유지)
+}
+/* 결과 공유 카드 이미지 — 캔버스로 그려 PNG 공유(파일 공유 지원 시)/저장. 한글은 기기 폰트로 정상 렌더. */
+function cardWrap(x,text,cx,y,maxw,lh){ text=String(text||''); var line='',nn=0,i,t; for(i=0;i<text.length;i++){ t=line+text[i]; if(x.measureText(t).width>maxw&&line){ x.fillText(line,cx,y+nn*lh); line=text[i]; nn++; } else line=t; } if(line)x.fillText(line,cx,y+nn*lh); return nn; }
+function shareResultCard(){
+  var r=R; if(!r){return;} var me=r.me,foe=r.foe,bt=r.bt,share=Math.round(r.myShare);
+  try{
+    var W=1080, c=document.createElement('canvas'); c.width=W; c.height=W; var x=c.getContext('2d');
+    x.fillStyle=me.color; x.fillRect(0,0,W,W);
+    x.fillStyle=foe.color; x.beginPath(); x.moveTo(W*0.62,0); x.lineTo(W,0); x.lineTo(W,W); x.lineTo(W*0.42,W); x.closePath(); x.fill();
+    x.fillStyle='rgba(8,10,16,0.55)'; x.fillRect(0,0,W,W);
+    x.textAlign='center'; x.fillStyle='#fff';
+    x.font='700 40px system-ui,sans-serif'; x.fillText('⚡ '+(LANG==='ko'?'광클대전':'GWANGCLICK')+(ROOM?(LANG==='ko'?' · 친구방':' · ROOM'):''),W/2,92);
+    x.font='600 46px system-ui,sans-serif'; cardWrap(x,bt.q,W/2,170,W-150,56);
+    x.font='800 130px system-ui,sans-serif'; x.fillText(r.verdict.t,W/2,470);
+    x.font='700 58px system-ui,sans-serif'; x.fillText(me.emoji+' '+me.name,W/2,545);
+    x.font='800 210px system-ui,sans-serif'; x.fillStyle='#ffd76a'; x.fillText(share+'%',W/2,760);
+    x.font='500 42px system-ui,sans-serif'; x.fillStyle='#fff';
+    x.fillText((LANG==='ko'?'내 기여 ':'My taps ')+comma(r.contrib)+(r.x2?' ⚡2X':'')+'  ·  '+r.title,W/2,840);
+    x.font='600 38px system-ui,sans-serif'; x.fillStyle='rgba(255,255,255,.92)';
+    x.fillText('ddukkit.com/gwangclick',W/2,W-64);
+    c.toBlob(function(blob){
+      if(!blob){ toast(LANG==='ko'?'이미지 생성 실패':'Image failed'); return; }
+      var file=new File([blob],'gwangclick.png',{type:'image/png'});
+      try{ if(navigator.canShare&&navigator.canShare({files:[file]})){ navigator.share({files:[file],text:bt.q,title:(LANG==='ko'?'광클대전':'Gwangclick')}).catch(function(){}); return; } }catch(e){}
+      var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='gwangclick.png'; document.body.appendChild(a); a.click();
+      setTimeout(function(){ if(a.parentNode)a.parentNode.removeChild(a); URL.revokeObjectURL(a.href); },2000);
+      toast(LANG==='ko'?'이미지를 저장했어요':'Image saved');
+    },'image/png');
+  }catch(e){ toast(LANG==='ko'?'이 브라우저는 이미지 공유 미지원':'Image share not supported'); }
 }
 function rankLabel(r){return r.rankState==='real'?t('rankNation'):t('rankEst');}
 function rankValue(r){

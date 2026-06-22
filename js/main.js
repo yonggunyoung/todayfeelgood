@@ -242,6 +242,91 @@ function qtyLabel(p) {
 
 const catClass = (name) => `t-${findIng(name)?.cat || '기타'}`;
 
+/* ── 재료 아이콘 (디자인 시안 FoodIcon) — 재료를 귀여운 플랫 SVG 캐릭터로.
+   임박(d<=1)하면 우는 표정(눈물 애니), 그 외엔 웃는 표정. 매칭 안 되는 재료는
+   기존 이모지로 폴백(특이 재료·조리음식까지 커버 유지). 사진이 있으면 사진 우선. */
+function foodShape(name, cat) {
+  const f = String(name || '');
+  const has = (...a) => a.some((x) => f.includes(x));
+  if (has('토마토', '방울토마토')) return '<circle cx="16" cy="18" r="9.5" fill="#FF6B5E"/><circle cx="12.5" cy="14.5" r="2.4" fill="#fff" opacity=".18"/><path d="M16 9 l2.4 -3 M16 9 l-2.4 -3 M16 9 l0 -3.6" stroke="#3FA45A" stroke-width="1.7" stroke-linecap="round"/>';
+  if (has('양배추', '배추')) return '<circle cx="16" cy="18" r="9.5" fill="#76C24F"/><path d="M9 17 Q16 11.5 23 17 M10 21 Q16 16.5 22 21" stroke="#A7DD80" stroke-width="1.4" fill="none" stroke-linecap="round"/>';
+  if (has('우유', '두유')) return '<path d="M10 12 L16 7 L22 12 Z" fill="#EAF3FA"/><rect x="10" y="12" width="12" height="16" rx="2" fill="#fff" stroke="#DCE6EE" stroke-width="1"/><rect x="10" y="18" width="12" height="3.4" fill="#7FB5E6"/>';
+  if (has('달걀', '계란')) return '<ellipse cx="16" cy="19" rx="8.5" ry="10.5" fill="#fff" stroke="#F0E9D8" stroke-width="1"/><ellipse cx="12.5" cy="14" rx="2.2" ry="3" fill="#fff" opacity=".7"/>';
+  if (has('양파')) return '<circle cx="16" cy="18" r="9.5" fill="#E7C9E2"/><path d="M16 9 v-3 M14 9 l-1 -2.5 M18 9 l1 -2.5" stroke="#B98FB0" stroke-width="1.4" stroke-linecap="round"/><path d="M11 18 Q16 27 21 18" stroke="#CFA6C8" stroke-width="1.2" fill="none"/>';
+  if (has('당근')) return '<path d="M16 28 L9.5 12 Q16 9.5 22.5 12 Z" fill="#F59331"/><path d="M16 9.5 l0 -4 M13 9.5 l-2 -3.6 M19 9.5 l2 -3.6" stroke="#5BB85C" stroke-width="1.9" stroke-linecap="round"/>';
+  if (has('닭')) return '<ellipse cx="16" cy="18" rx="9.5" ry="8.4" fill="#F4C9B8"/><ellipse cx="12.5" cy="14.5" rx="2.2" ry="1.8" fill="#fff" opacity=".4"/>';
+  if (has('치즈', '버터')) return '<path d="M7 24 L7 16 L25 12 L25 24 Z" fill="#FFCE4A"/><circle cx="12" cy="20" r="1.3" fill="#F0B400"/><circle cx="18.5" cy="19" r="1.5" fill="#F0B400"/>';
+  if (has('브로콜리')) return '<rect x="14.5" y="18" width="3" height="9" rx="1.5" fill="#BFD89A"/><circle cx="12" cy="15" r="5" fill="#4FB36B"/><circle cx="20" cy="15" r="5" fill="#4FB36B"/><circle cx="16" cy="11.5" r="5.2" fill="#5CC078"/>';
+  if (has('밥', '쌀')) return '<path d="M7.5 18 Q16 11.5 24.5 18 Z" fill="#fff"/><path d="M6.5 18 L25.5 18 Q24 26 16 26 Q8 26 6.5 18 Z" fill="#EDEFF1" stroke="#DDE2E6" stroke-width="1"/>';
+  if (has('만두')) return '<path d="M7 22 Q7 13 16 13 Q25 13 25 22 Z" fill="#EFE2C2"/><path d="M10 16 l1.4 4 M14 14.5 l1 5 M18 14.5 l-1 5 M22 16 l-1.4 4" stroke="#D8C49A" stroke-width="1" stroke-linecap="round"/>';
+  if (has('두부')) return '<rect x="7" y="11" width="18" height="15" rx="3.5" fill="#FFFDF6" stroke="#ECE7D6" stroke-width="1"/>';
+  if (has('돼지', '삼겹')) return '<rect x="7" y="12" width="18" height="13" rx="5.5" fill="#F3B6BE"/><rect x="7" y="18" width="18" height="3" fill="#fff" opacity=".5"/>';
+  if (has('애호박', '호박')) return '<rect x="8" y="13" width="16" height="10" rx="5" fill="#6FB84A" transform="rotate(-12 16 18)"/>';
+  if (has('대파', '쪽파')) return '<rect x="14" y="8" width="4" height="20" rx="2" fill="#8CC63F"/><rect x="14" y="20" width="4" height="8" rx="2" fill="#EFEAD0"/>';
+  if (has('바나나')) return '<path d="M9 11 Q11 24 23 23 Q15 21 13 11 Z" fill="#F6D33C"/>';
+  if (has('오이')) return '<rect x="10" y="9" width="12" height="20" rx="6" fill="#5FA63F"/><rect x="12.5" y="12" width="2.4" height="14" rx="1.2" fill="#84C566" opacity=".8"/>';
+  if (has('감자')) return '<ellipse cx="16" cy="18.5" rx="9.5" ry="8.2" fill="#D7B377"/><circle cx="12" cy="16" r=".9" fill="#A9854C"/><circle cx="19" cy="20" r=".9" fill="#A9854C"/>';
+  if (has('고구마')) return '<path d="M8 22 Q9 12 17 11 Q25 12 23 20 Q20 27 13 26 Q9 25.5 8 22 Z" fill="#C76B8E"/>';
+  if (has('마늘')) return '<path d="M16 9 Q22 13 21 21 Q21 27 16 27 Q11 27 11 21 Q10 13 16 9 Z" fill="#F4EFE6" stroke="#E4DCC9" stroke-width="1"/><path d="M16 10 L16 26" stroke="#E4DCC9" stroke-width="1"/>';
+  if (has('버섯')) return '<rect x="13.5" y="18" width="5" height="9" rx="2.5" fill="#EDE2CE"/><path d="M7 18 Q7 10 16 10 Q25 10 25 18 Z" fill="#B07A4E"/>';
+  if (has('사과')) return '<circle cx="16" cy="19" r="9" fill="#EF5350"/><path d="M16 10 l0 -3 q3 -1 4 1" stroke="#6B4E2E" stroke-width="1.6" fill="none" stroke-linecap="round"/><circle cx="12.5" cy="15.5" r="2" fill="#fff" opacity=".25"/>';
+  if (has('옥수수')) return '<path d="M16 8 Q23 12 23 20 Q23 28 16 28 Q9 28 9 20 Q9 12 16 8 Z" fill="#F6CE43"/><path d="M12 14 L12 25 M16 13 L16 28 M20 14 L20 25" stroke="#E0A92A" stroke-width="1"/>';
+  if (has('가지')) return '<path d="M11 27 Q7 21 11 16 Q15 11 21 13 Q26 16 22 22 Q18 28 11 27 Z" fill="#7E57C2"/><path d="M19 13 l3 -3" stroke="#5BA84F" stroke-width="2" stroke-linecap="round"/>';
+  if (has('김치')) return '<path d="M7 17 L25 17 Q23.5 26 16 26 Q8.5 26 7 17 Z" fill="#E14B36"/><path d="M10 19 Q16 16 22 19" stroke="#F2A28F" stroke-width="1.3" fill="none"/>';
+  if (has('식빵', '빵', '토스트')) return '<path d="M8 20 Q8 11 16 11 Q24 11 24 20 Z" fill="#E7B978"/><rect x="7" y="19" width="18" height="6" rx="2.5" fill="#D49A57"/>';
+  if (has('새우')) return '<path d="M22 11 Q11 11 10 19 Q10 25 17 25 Q14 21 16 18 Q19 14 22 15 Z" fill="#FF9E8E"/><path d="M22 11 q3 -1 3 2" stroke="#E07A68" stroke-width="1.3" fill="none" stroke-linecap="round"/>';
+  if (has('고등어', '연어', '생선', '동태', '명태', '갈치', '조기')) return '<ellipse cx="15" cy="18" rx="9" ry="6.5" fill="#8FCFEC"/><path d="M23 12.5 l4 -2 v15 l-4 -2 z" fill="#6FB8DA"/>';
+  if (has('소고기', '소불고기', '한우') || /(^|[^들])소$/.test(f)) return '<rect x="7" y="12" width="18" height="13" rx="5.5" fill="#C75D63"/><path d="M11 16 q5 -2 10 0" stroke="#fff" stroke-width="1.4" fill="none" opacity=".55"/>';
+  return catShape(cat);
+}
+// 카테고리 폴백 — 이름 매칭 실패 시 재료 분류로 일관된 아이콘 (얼굴은 공통으로 덧그림)
+function catShape(cat) {
+  switch (cat) {
+    case '채소': case '신선': return '<circle cx="16" cy="18.5" r="9" fill="#7BC25A"/><path d="M16 10 q3.5 -2.5 6 -1 q-1.2 4 -6 3.4 z" fill="#56A23E"/>';
+    case '과일': return '<circle cx="16" cy="18.5" r="9" fill="#FF8A5B"/><path d="M16 10 q2.5 -3 5 -2 q-1 3.6 -5 3.4 z" fill="#5BB85C"/><circle cx="12.7" cy="15" r="2" fill="#fff" opacity=".22"/>';
+    case '육류': return '<rect x="7" y="12" width="18" height="13" rx="5.5" fill="#EF8E99"/><rect x="7" y="18.6" width="18" height="2.6" fill="#fff" opacity=".5"/>';
+    case '수산': return '<ellipse cx="15" cy="18" rx="9" ry="6.8" fill="#8FCFEC"/><path d="M23 12.5 l4 -2 v15 l-4 -2 z" fill="#6FB8DA"/>';
+    case '유제품': return '<path d="M11.5 11 L20.5 11 L19.6 26 a1.5 1.5 0 0 1 -1.5 1.4 L13.9 27.4 A1.5 1.5 0 0 1 12.4 26 Z" fill="#fff" stroke="#E2E7EC" stroke-width="1"/><rect x="12" y="14.5" width="8" height="3.2" fill="#9CCBEA"/>';
+    case '양념': return '<rect x="12" y="12" width="8" height="15" rx="2.5" fill="#E07B4A"/><rect x="13.4" y="8.4" width="5.2" height="4" rx="1.5" fill="#9a5a32"/><rect x="13" y="16" width="6" height="6.5" rx="1" fill="#fff" opacity=".5"/>';
+    case '주식': case '가공': return '<path d="M7.5 17 Q16 11 24.5 17 Z" fill="#fff"/><path d="M6.5 17 L25.5 17 Q24 25.5 16 25.5 Q8 25.5 6.5 17 Z" fill="#EDEFF1" stroke="#DDE2E6" stroke-width="1"/>';
+    default: return '<circle cx="16" cy="18" r="9.5" fill="#9FCB7A"/>';
+  }
+}
+// 조리음식 모양 — 이름(찌개·밥·면·반찬…) 우선, 없으면 종류(kind)로
+function cookedShape(name, kind) {
+  const f = String(name || '');
+  const has = (...a) => a.some((x) => f.includes(x));
+  if (has('국', '탕', '찌개', '전골', '스프', '죽', '카레')) return '<path d="M6 17 L26 17 Q24.5 26 16 26 Q7.5 26 6 17 Z" fill="#E8A24C"/><ellipse cx="16" cy="17" rx="10" ry="2.3" fill="#F3BD72"/>';
+  if (has('볶음밥', '덮밥', '비빔밥', '밥', '리조또')) return '<path d="M6.5 18 L25.5 18 Q24 26 16 26 Q8 26 6.5 18 Z" fill="#EADFC9"/><path d="M8 18 Q16 12.5 24 18 Z" fill="#fff"/>';
+  if (has('면', '국수', '라면', '우동', '파스타', '짜장', '짬뽕', '쌀국수')) return '<path d="M6 17 L26 17 Q24.5 26 16 26 Q7.5 26 6 17 Z" fill="#E7B25A"/><path d="M9 17 q1 -4 3 -1 M14 17 q1 -4 3 -1 M19 17 q1 -4 3 -1" stroke="#F3DCA0" stroke-width="1.3" fill="none" stroke-linecap="round"/>';
+  if (has('도시락')) return '<rect x="7" y="13" width="18" height="13" rx="3" fill="#EFE2C2" stroke="#D8C49A" stroke-width="1"/><line x1="16" y1="13" x2="16" y2="26" stroke="#D8C49A" stroke-width="1"/>';
+  if (has('빵', '케이크', '과자', '디저트', '쿠키', '파이', '토스트')) return '<path d="M8 20 Q8 12 16 12 Q24 12 24 20 Z" fill="#E7B978"/><rect x="7" y="19" width="18" height="6" rx="2.5" fill="#D49A57"/>';
+  if (kind === 'delivery') return '<path d="M8 13 L24 13 L22.4 26 L9.6 26 Z" fill="#F0E2C0"/><path d="M8 13 L24 13 L23.2 15.5 L8.8 15.5 Z" fill="#D9C49A"/><rect x="14.5" y="9.5" width="3" height="4" fill="#c9b07f"/>';
+  if (has('반찬', '볶음', '무침', '조림', '나물', '전', '구이', '튀김', '찜', '김치') || kind === 'banchan') return '<ellipse cx="16" cy="22" rx="11" ry="3" fill="#E6E9ED"/><path d="M9 20 q7 -6 14 0 Z" fill="#C98A4A"/>';
+  return '<path d="M6 17 L26 17 Q24.5 26 16 26 Q7.5 26 6 17 Z" fill="#E8A24C"/><ellipse cx="16" cy="17" rx="10" ry="2.3" fill="#F3BD72"/>';
+}
+// SVG 캐릭터 조립 (재료/조리음식 공용) — 표정만 신선/임박 분기 (시안 FoodIcon 규격)
+function svgChar(shape, expiring, size) {
+  const face = expiring
+    ? '<path d="M13.8 21.6 Q16 19.2 18.2 21.6" stroke="#2b2b2b" stroke-width="1.3" fill="none" stroke-linecap="round"/><path d="M20.4 18.6 Q22 21.2 22 22.4 a1.4 1.4 0 0 1 -2.8 0 Q19 21.2 20.4 18.6 Z" fill="#69B7F0" class="nb-tear"/>'
+    : '<ellipse cx="9.6" cy="19.4" rx="1.8" ry="1.1" fill="#FF9E8E" opacity=".75"/><ellipse cx="22.4" cy="19.4" rx="1.8" ry="1.1" fill="#FF9E8E" opacity=".75"/><path d="M14 20 Q16 22.4 18 20" stroke="#2b2b2b" stroke-width="1.3" fill="none" stroke-linecap="round"/>';
+  return '<svg class="food-ic" viewBox="0 0 32 32" width="' + size + '" height="' + size + '" style="display:block;overflow:visible" aria-hidden="true"><ellipse cx="16" cy="29.5" rx="8" ry="1.6" fill="#000" opacity=".07"/>' + shape + '<circle cx="12.5" cy="16.5" r="1.7" fill="#2b2b2b"/><circle cx="19.5" cy="16.5" r="1.7" fill="#2b2b2b"/><circle cx="11.9" cy="15.9" r=".5" fill="#fff"/><circle cx="18.9" cy="15.9" r=".5" fill="#fff"/>' + face + '</svg>';
+}
+// 재료 아이콘 — 이름→특정, 없으면 카테고리 폴백. 항상 SVG 반환.
+function foodIcon(name, { expiring = false, size = 44, cat = '' } = {}) {
+  return svgChar(foodShape(name, cat || (findIng(name) && findIng(name).cat) || ''), expiring, size);
+}
+// 재료 글리프: 사진 > FoodIcon SVG
+function ingGlyph(name, emoji, { photo = '', expiring = false, size = 44 } = {}) {
+  if (photo) return '<img src="' + photo + '" alt="" />';
+  return foodIcon(name, { expiring, size });
+}
+// 조리음식 글리프: 사진 > 조리 SVG
+function cookedGlyph(l, { expiring = false, size = 44 } = {}) {
+  if (l.photo) return '<img src="' + l.photo + '" alt="" />';
+  return svgChar(cookedShape(l.name, l.kind), expiring, size);
+}
+
 // 유튜브 링크 → 영상 ID
 function ytId(url) {
   if (!url) return null;
@@ -339,7 +424,7 @@ function renderHome() {
     firstEat = `<div class="section-title"><h2>🔥 먼저 먹어요</h2><small>잔반과 임박 재료</small></div>` +
       leftovers.map((l) => `
         <div class="item ${daysLeft(l.expiresAt) <= 1 ? 'danger' : ''}">
-          <span class="emoji t-가공" onclick="UI.openFood('${l.id}')">${l.photo ? `<img src="${l.photo}" alt="" />` : foodKind(l).emoji}</span>
+          <span class="emoji t-가공" onclick="UI.openFood('${l.id}')">${cookedGlyph(l, { expiring: daysLeft(l.expiresAt) <= 1, size: 36 })}</span>
           <div class="grow" onclick="UI.openFood('${l.id}')"><div class="name">${esc(l.name)}</div>
             <div class="sub">${foodKind(l).label} · ${LOC_LABEL[l.location]} ${stampFor(daysLeft(l.expiresAt))}</div></div>
           <button class="btn btn-sm btn-primary" onclick="UI.leftoverDone('${l.id}','eaten')">먹었어요</button>
@@ -347,7 +432,7 @@ function renderHome() {
         </div>`).join('') +
       expiring.map((p) => `
         <div class="item">
-          <span class="emoji ${catClass(p.name)}">${p.photo ? `<img src="${p.photo}" alt="" />` : p.emoji}</span>
+          <span class="emoji ${catClass(p.name)}">${ingGlyph(p.name, p.emoji, { photo: p.photo, expiring: daysLeft(p.expiresAt) <= 1, size: 36 })}</span>
           <div class="grow" onclick="UI.editPantry('${p.id}')"><div class="name">${esc(p.name)}</div><div class="sub">${qtyLabel(p)} · ${LOC_LABEL[p.location]}</div></div>
           ${stampFor(daysLeft(p.expiresAt))}
           <button class="btn btn-sm btn-tint" onclick="UI.useIdeas('${esc(p.name)}')">활용 →</button>
@@ -355,46 +440,98 @@ function renderHome() {
         </div>`).join('');
   }
 
-  const recoHtml = empty ? '' :
-    `<div class="section-title"><h2>${mode.emoji} 오늘의 추천</h2>
-       <small onclick="UI.go('recipes')" style="cursor:pointer">전체 보기 →</small></div>` +
-    (recos.every((r) => r.have === 0)
-      ? `<div class="empty"><span class="e-emoji">🫥</span><b>매칭할 재료가 아직 부족해요</b><small>재료 몇 가지만 담으면 추천이 켜져요</small></div>`
-      : recos.map(recipeCard).join(''));
+  const hh = new Date().getHours();
+  const heroPill = hh < 10 ? { i: '☀️', t: '오늘 아침 추천' } : hh < 15 ? { i: '🍱', t: '오늘 점심 추천' } : hh < 21 ? { i: '🌙', t: '오늘 저녁 추천' } : { i: '🌙', t: '야식 추천' };
+  const top = recos.find((a) => a.have > 0) || recos[0];
+  const rest = recos.filter((a) => a !== top);
+  const heroCard = empty
+    ? `<div style="margin:18px 0 0;background:#fff;border:1px solid var(--hairline);border-radius:24px;padding:28px 20px;text-align:center;box-shadow:var(--shadow-card);">
+        <div style="font-size:48px;">🧊</div>
+        <div style="font-family:var(--display);font-size:18px;margin-top:10px;color:var(--green-ink);">냉장고가 텅… 메아리가 들려요</div>
+        <div style="font-size:12.5px;color:var(--label-2);line-height:1.6;margin-top:6px;">지금 집에 있는 재료를 등록하면<br>오늘 해먹을 요리를 바로 추천해 드려요</div>
+        <button onclick="UI.starterPack()" style="width:100%;margin-top:18px;background:var(--grad-warm);color:#fff;font-family:var(--display);font-size:15px;border:none;border-radius:15px;padding:15px;cursor:pointer;box-shadow:0 8px 18px rgba(246,121,31,.3);">🧺 기본 재료 한번에 담기</button>
+      </div>`
+    : (top && top.have > 0)
+    ? `<div onclick="UI.openRecipe('${top.recipe.id}')" style="position:relative;overflow:hidden;margin:18px 0 0;background:linear-gradient(150deg,#15A05B 0%,#0A6238 100%);border-radius:26px;padding:20px;color:#fff;box-shadow:0 16px 34px rgba(10,98,56,.28);cursor:pointer;">
+        <div style="position:absolute;right:-34px;bottom:-46px;width:170px;height:170px;border-radius:50%;background:rgba(255,255,255,.06);"></div>
+        <div style="display:flex;align-items:center;gap:8px;position:relative;">
+          <span style="background:rgba(255,255,255,.2);font-size:11px;font-weight:800;padding:5px 11px;border-radius:999px;white-space:nowrap;">🍳 오늘의 추천</span>
+          <span style="font-size:11px;font-weight:700;opacity:.88;">${top.cookable ? '지금 바로 가능' : '거의 다 있어요'}</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:15px;position:relative;">
+          <div style="flex:1;min-width:0;">
+            <div style="font-family:var(--display);font-size:27px;line-height:1.1;">${esc(top.recipe.title)}</div>
+            <div style="display:flex;gap:7px;margin-top:11px;flex-wrap:wrap;">
+              ${top.recipe.time ? `<span style="background:rgba(255,255,255,.16);font-size:11px;font-weight:700;padding:5px 10px;border-radius:999px;white-space:nowrap;">⏱ ${top.recipe.time}분</span>` : ''}
+              ${top.recipe.protein ? `<span style="background:rgba(255,255,255,.16);font-size:11px;font-weight:700;padding:5px 10px;border-radius:999px;white-space:nowrap;">💪 단백질 ${top.recipe.protein}g</span>` : ''}
+            </div>
+          </div>
+          <div style="width:84px;height:84px;border-radius:24px;background:linear-gradient(160deg,rgba(255,255,255,.34),rgba(255,255,255,.1));display:flex;align-items:center;justify-content:center;font-size:44px;flex:none;box-shadow:inset 0 1px 0 rgba(255,255,255,.45);">${top.recipe.emoji || '🍳'}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:17px;position:relative;">
+          <div style="flex:1;background:#fff;color:#0A6238;font-family:var(--display);font-size:15px;border-radius:14px;padding:12px;text-align:center;">레시피 보기</div>
+          <div style="background:rgba(255,255,255,.16);border-radius:14px;padding:12px 15px;font-size:12.5px;font-weight:800;white-space:nowrap;">재료 ${top.have}/${top.total}</div>
+        </div>
+      </div>`
+    : `<div class="empty" style="margin-top:18px"><span class="e-emoji">🫥</span><b>매칭할 재료가 아직 부족해요</b><small>재료 몇 가지만 담으면 추천이 켜져요</small></div>`;
+  const restCards = (!empty && rest.length)
+    ? `<div class="section-title"><h2>더 추천</h2><small onclick="UI.go('recipes')" style="cursor:pointer">전체 보기 →</small></div>${rest.map(recipeCard).join('')}`
+    : '';
+
+  const mascot = `<svg width="68" height="78" viewBox="0 0 100 120" style="flex:none;margin-bottom:2px;animation:nb-bob 3.4s ease-in-out infinite;" aria-hidden="true"><ellipse cx="50" cy="114" rx="25" ry="4" fill="#0a7a44" opacity=".1"/><path d="M50 16 C50 6 56 1 64 2 C63 11 57 16 50 16 Z" fill="#9BE3BC"/><rect x="22" y="16" width="56" height="94" rx="15" fill="#fff" stroke="#E4EEE7" stroke-width="2"/><rect x="27" y="55" width="46" height="3" rx="1.5" fill="#DCEFE4"/><rect x="66" y="29" width="4" height="14" rx="2" fill="#0E8E4E"/><rect x="66" y="62" width="4" height="28" rx="2" fill="#0E8E4E"/><path d="M50 39 L41 34 L41 44 Z" fill="#0E8E4E"/><path d="M50 39 L59 34 L59 44 Z" fill="#0E8E4E"/><circle cx="50" cy="39" r="3" fill="#0E8E4E"/><circle cx="42" cy="74" r="4.2" fill="#173B28"/><circle cx="58" cy="74" r="4.2" fill="#173B28"/><circle cx="43.4" cy="72.6" r="1.3" fill="#fff"/><circle cx="59.4" cy="72.6" r="1.3" fill="#fff"/><ellipse cx="35" cy="83" rx="4" ry="2.5" fill="#FFB39B"/><ellipse cx="65" cy="83" rx="4" ry="2.5" fill="#FFB39B"/><path d="M44 83 Q50 89 56 83" stroke="#173B28" stroke-width="2.2" fill="none" stroke-linecap="round"/></svg>`;
+
+  const gbtn = (on, ic, label) => `<button onclick="${on}" style="flex:1;background:var(--tint-etc);border:none;border-radius:14px;padding:11px 4px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;"><span style="font-size:18px;">${ic}</span><span style="font-size:10.5px;font-weight:800;color:#5f5d55;">${label}</span></button>`;
 
   $('#view').innerHTML = `
-    <div class="hero">
-      <h1>${greeting()}<br><em>오늘 뭐 해먹지?</em></h1>
-      <p>${mode.emoji} ${mode.label} 모드 — ${esc(mode.desc || '')}</p>
+    <div style="padding:6px 0 0;">
+      <span style="display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid var(--hairline);border-radius:999px;padding:6px 12px;box-shadow:0 1px 2px rgba(28,40,30,.05);"><span style="font-size:12px;">${heroPill.i}</span><span style="font-size:11.5px;font-weight:800;color:#A07D2E;white-space:nowrap;">${heroPill.t}</span></span>
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:8px;margin-top:13px;">
+        <div style="font-family:var(--display);font-size:33px;color:var(--green-ink);line-height:1.08;letter-spacing:-.5px;">오늘 뭐<br><span style="color:var(--green-deep);">해먹지?</span></div>
+        ${mascot}
+      </div>
+      <div style="font-size:12.5px;color:var(--label-2);font-weight:600;margin-top:7px;">${mode.emoji} ${esc(mode.label)} 모드 · ${esc(mode.desc || '')}</div>
     </div>
-    <div class="action-strip">
-      <button class="btn btn-primary" onclick="UI.openScan()"><b>📷 AI 스캔</b><small>영수증 한 장이면 끝</small></button>
-      <button class="btn" onclick="UI.openQuickAdd()"><b>➕ 직접 담기</b><small>검색 후 탭</small></button>
+    <div style="display:flex;gap:11px;margin-top:16px;">
+      <button onclick="UI.openScan()" style="flex:1.25;position:relative;overflow:hidden;background:linear-gradient(145deg,#17A95C,#0B7240);border:none;border-radius:20px;padding:16px;text-align:left;cursor:pointer;color:#fff;box-shadow:0 10px 22px rgba(11,114,64,.26);">
+        <div style="position:absolute;right:-14px;top:-14px;width:64px;height:64px;border-radius:50%;background:rgba(255,255,255,.1);"></div>
+        <div style="font-size:19px;position:relative;">📷</div>
+        <div style="font-size:14.5px;font-weight:800;margin-top:7px;position:relative;">AI 입고 스캔</div>
+        <div style="font-size:11px;opacity:.92;margin-top:2px;position:relative;">영수증·장본 사진 한 장</div>
+      </button>
+      <button onclick="UI.openQuickAdd()" style="flex:1;background:#fff;border:1px solid var(--hairline);border-radius:20px;padding:16px;text-align:left;cursor:pointer;box-shadow:var(--shadow-card);">
+        <div style="font-size:19px;color:var(--green-deep);font-weight:800;">＋</div>
+        <div style="font-size:14.5px;font-weight:800;margin-top:7px;color:var(--green-ink);">빠른 추가</div>
+        <div style="font-size:11px;color:var(--label-2);margin-top:2px;">검색해서 2탭 등록</div>
+      </button>
     </div>
-    ${empty ? `
-      <div class="empty" style="margin-top:18px">
-        <span class="e-emoji">🧊</span><b>냉장고가 텅… 메아리가 들려요</b>
-        <small>지금 집에 있는 재료를 등록하면<br>오늘 해먹을 요리를 바로 추천해 드려요</small>
-        <div class="btn-row" style="margin-top:14px">
-          <button class="btn btn-accent btn-block" onclick="UI.starterPack()">🧺 기본 재료 한번에 담기</button>
-        </div>
-      </div>` : ''}
+    ${heroCard}
+    ${restCards}
     ${firstEat}
-    ${recoHtml}
-    <div class="section-title"><h2>🧾 절약 &amp; 포인트</h2>
-      <small style="cursor:pointer" onclick="UI.explainLedger()">계산법 ⓘ</small></div>
-    <div class="stat-row">
-      <div class="stat-card save" onclick="UI.explainLedger()"><small>아낀 돈</small><b>${won(S.ledger.saved)}</b></div>
-      <div class="stat-card waste" onclick="UI.explainLedger()"><small>버린 돈</small><b>${won(S.ledger.wasted)}</b></div>
-      <div class="stat-card point" onclick="UI.openPoints()"><small>🅿 포인트</small><b>${(S.points?.bal || 0).toLocaleString()}P</b></div>
+    <div style="margin:22px 0 0;background:#fff;border:1px solid var(--hairline);border-radius:24px;padding:18px;box-shadow:var(--shadow-card);">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-family:var(--display);font-size:15px;color:var(--green-ink);">절약 &amp; 포인트</span>
+        <button onclick="UI.explainLedger()" style="margin-left:auto;background:none;border:none;color:var(--label-3);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">계산법 ⓘ</button>
+      </div>
+      <div style="display:flex;align-items:stretch;gap:11px;margin-top:14px;">
+        <div onclick="UI.openPoints()" style="flex:1.15;background:linear-gradient(150deg,#FFF7E1,#FFEEC2);border-radius:18px;padding:14px;cursor:pointer;">
+          <div style="font-size:11px;font-weight:800;color:#B07D12;">🅿 내 포인트</div>
+          <div style="font-family:var(--display);font-size:29px;color:#946400;margin-top:3px;">${(S.points?.bal || 0).toLocaleString()}</div>
+        </div>
+        <div style="flex:1;display:flex;flex-direction:column;gap:8px;">
+          <div onclick="UI.explainLedger()" style="flex:1;background:#F1FAF4;border-radius:14px;padding:9px 12px;display:flex;flex-direction:column;justify-content:center;cursor:pointer;"><div style="font-size:10.5px;color:#7a9a86;font-weight:700;">아낀 돈</div><div style="font-family:var(--display);font-size:15px;color:var(--green-deep);white-space:nowrap;">${won(S.ledger.saved)}</div></div>
+          <div onclick="UI.explainLedger()" style="flex:1;background:#FCF1F0;border-radius:14px;padding:9px 12px;display:flex;flex-direction:column;justify-content:center;cursor:pointer;"><div style="font-size:10.5px;color:#bb8a84;font-weight:700;">버린 돈</div><div style="font-family:var(--display);font-size:15px;color:var(--red);white-space:nowrap;">${won(S.ledger.wasted)}</div></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:13px;">
+        ${gbtn('UI.openGames()', '🎮', '게임')}${gbtn('UI.waitAd()', '⏱️', '짬시간')}${gbtn('UI.openRanks()', '🏆', '랭킹')}${gbtn('UI.openPoints()', '🎁', '포인트샵')}
+      </div>
     </div>
-    <div class="home-games four">
-      <button onclick="UI.openGames()">🎮 게임</button>
-      <button class="ad" onclick="UI.waitAd()">🕒 짬시간 포인트</button>
-      <button onclick="UI.openRanks()">🏆 랭킹</button>
-      <button onclick="UI.openPoints()">🎁 포인트샵</button>
+    <div onclick="UI.openInvite()" style="margin:12px 0 0;background:linear-gradient(135deg,#FFFFFF,#FBF5E9);border:1px solid var(--hairline);border-radius:18px;padding:14px;display:flex;align-items:center;gap:12px;cursor:pointer;box-shadow:var(--shadow-card);">
+      <div style="width:42px;height:42px;border-radius:12px;background:#FFF0D4;display:flex;align-items:center;justify-content:center;font-size:22px;flex:none;">👨‍👩‍👧</div>
+      <div style="flex:1;min-width:0;"><div style="font-size:13.5px;font-weight:800;color:var(--green-ink);">가족과 같이 쓰기</div><div style="font-size:11px;color:var(--label-2);margin-top:2px;">코드 하나로 온 가족이 한 냉장고를 봐요</div></div>
+      <span style="font-size:14px;color:#cfc7b6;">›</span>
     </div>
-    ${adBanner('home')}`;
+    <div style="margin-top:16px">${adBanner('home')}</div>`;
 }
 
 UI.starterPack = () => {
@@ -432,11 +569,14 @@ function chrBits(d, key) {
 function fItem(p) {
   const d = daysLeft(p.expiresAt);
   const c = chrBits(d, 'p:' + p.id);
+  // 시안 FoodIcon이 매칭되면 그 자체가 표정 캐릭터 → 별도 눈/눈물 오버레이는 생략(중복 방지).
+  // 매칭 안 되는 재료는 기존 이모지 + 눈 오버레이 유지(특이재료 커버 + 위트 보존).
+  const useSvg = !p.photo && !!foodShape(p.name);
   return `
     <button class="f-item${c.cls}" data-move="p:${p.id}" onclick="UI.editPantry('${p.id}')">
-      ${c.bubble}${c.hand}
+      ${c.bubble}${useSvg ? '' : c.hand}
       ${d <= 3 ? `<span class="fi-dot ${d <= 1 ? 'dot-red' : 'dot-amber'}"></span>` : ''}
-      <span class="fi-face">${p.photo ? `<img src="${p.photo}" alt="" />` : p.emoji}</span>
+      <span class="fi-face">${ingGlyph(p.name, p.emoji, { photo: p.photo, expiring: d <= 1, size: 44 })}</span>
       <span class="fi-name">${esc(p.name)}</span>
     </button>`;
 }
@@ -452,11 +592,12 @@ const shelfRows = (items, loc) => {
 function foodTile(l) {
   const d = daysLeft(l.expiresAt);
   const c = chrBits(d, 'f:' + l.id);
+  const useSvg = !l.photo; // 조리음식도 표정 캐릭터 → 사진 없을 때만, 눈 오버레이는 생략
   return `
     <button class="f-item${c.cls}" data-move="f:${l.id}" onclick="UI.openFood('${l.id}')">
-      ${c.bubble}${c.hand}
+      ${c.bubble}${useSvg ? '' : c.hand}
       ${d <= 3 ? `<span class="fi-dot ${d <= 1 ? 'dot-red' : 'dot-amber'}"></span>` : ''}
-      <span class="fi-face">${l.photo ? `<img src="${l.photo}" alt="" />` : foodKind(l).emoji}</span>
+      <span class="fi-face">${cookedGlyph(l, { expiring: d <= 1, size: 44 })}</span>
       <span class="fi-name">${esc(l.name)}</span>
     </button>`;
 }
@@ -611,13 +752,13 @@ function renderPantry() {
         ${['all', 'fridge', 'freezer', 'room'].map((l) =>
           `<button class="${pantryLoc === l ? 'on' : ''}" onclick="UI.setLoc('${l}')">${l === 'all' ? '전체' : LOC_LABEL[l]}</button>`).join('')}
       </div>` +
-      (list.length ? list.map((p) => `
-        <div class="item" onclick="UI.editPantry('${p.id}')">
-          <span class="emoji ${catClass(p.name)}">${p.photo ? `<img src="${p.photo}" alt="" />` : p.emoji}</span>
-          <div class="grow"><div class="name">${esc(p.name)}</div>
-            <div class="sub">${qtyLabel(p)} · ${LOC_LABEL[p.location]} · ~${p.expiresAt || '기한 없음'}</div></div>
-          ${stampFor(daysLeft(p.expiresAt))}
-        </div>`).join('')
+      (list.length ? `<div class="ing-grid">${list.map((p) => `
+        <button class="ing-card" onclick="UI.editPantry('${p.id}')">
+          <span class="ing-card-badge">${stampFor(daysLeft(p.expiresAt))}</span>
+          <span class="ing-card-ic ${catClass(p.name)}">${ingGlyph(p.name, p.emoji, { photo: p.photo, expiring: daysLeft(p.expiresAt) <= 1, size: 40 })}</span>
+          <span class="ing-card-name">${esc(p.name)}</span>
+          <span class="ing-card-sub">${qtyLabel(p)} · ${LOC_LABEL[p.location]}</span>
+        </button>`).join('')}</div>`
       : `<div class="empty"><span class="e-emoji">🕳️</span><b>여긴 비어 있네요</b><small>위의 버튼으로 재료를 담아보세요</small></div>`);
   }
 

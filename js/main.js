@@ -661,7 +661,7 @@ function fridgeHtml(all) {
   const expN = all.filter((p) => daysLeft(p.expiresAt) <= 3).length;
 
   const display = `<div class="f-display">
-        <span class="fd-temp">❄ 3°C</span>
+        <span class="fd-temp">❄ −18° / 3°</span>
         <span class="fd-stat"><b>${all.length}</b>개 보관${expN ? ` · <em>임박 ${expN}</em>` : ' · 신선'}</span>
         <span class="fd-on">●&#xfe0e; ON</span>
       </div>`;
@@ -1836,6 +1836,8 @@ function recipeCard(a) {
   const r = a.recipe;
   const pct = Math.round((a.have / Math.max(1, a.total)) * 100);
   const visual = recipeVisual(r);
+  // 매칭 정도에 따라 배지 색 — 다 있으면 그린, 거의 있으면 골드, 모자라면 레드(시안 규격)
+  const matchCls = a.cookable ? 'full' : (pct >= 50 ? 'part' : 'low');
   return `
     <div class="card recipe-card ${selMode && cookSel.has(r.id) ? 'selected' : ''}" onclick="UI.cardTap('${r.id}')">
       ${selMode ? `<div class="sel-badge ${cookSel.has(r.id) ? 'on' : ''}">${cookSel.has(r.id) ? '✓' : '＋'}</div>` : ''}
@@ -1849,7 +1851,7 @@ function recipeCard(a) {
             <h3>${esc(r.title)}</h3>
             <div class="meta">
               ${r.time ? `<span>⏱ ${r.time}분</span>` : ''}${r.kcal ? `<span>🔥 ${r.kcal}kcal</span>` : ''}
-              ${r.protein ? `<span>단백질 <b>${r.protein}g</b></span>` : ''}
+              ${r.protein ? `<span class="m-prot">단백질 <b>${r.protein}g</b></span>` : ''}
               ${a.rating ? `<span class="rstars" title="내 별점 ${a.rating}">${'★'.repeat(a.rating)}</span>` : ''}
               ${a.community ? `<span class="rcomm">★${a.community.avg} <small>(${a.community.count})</small></span>` : ''}
               ${a.usesExpiring ? '<span style="color:var(--red)">임박재료 소진</span>' : ''}
@@ -1858,13 +1860,13 @@ function recipeCard(a) {
           <button class="heart ${a.fav ? 'on' : ''}" onclick="event.stopPropagation();UI.toggleFav('${r.id}')">❤️</button>
         </div>
         <div class="match-bar"><i style="width:${pct}%"></i></div>
-        <div style="margin-top:9px">
+        <div class="r-match">
           ${a.total === 0
             ? '<span class="chip">🎬 영상만 저장됨 — 탭해서 재료 채우기</span>'
-            : `<span class="chip have">재료 ${a.have}/${a.total}</span>
+            : `<span class="match-badge ${matchCls}">재료 ${a.have}/${a.total}</span>
           ${a.missing.slice(0, 3).map((m) =>
-            `<span class="chip miss" onclick="event.stopPropagation();UI.addShopping('${esc(m)}', false, '', 'recipe')">＋ ${esc(m)}</span>`).join('')}
-          ${a.missing.length > 3 ? `<span class="chip">외 ${a.missing.length - 3}</span>` : ''}`}
+            `<span class="miss-chip" onclick="event.stopPropagation();UI.addShopping('${esc(m)}', false, '', 'recipe')">＋ ${esc(m)}</span>`).join('')}
+          ${a.missing.length > 3 ? `<span class="match-badge">외 ${a.missing.length - 3}</span>` : ''}`}
         </div>
       </div>
     </div>`;
@@ -3005,12 +3007,12 @@ function shopGroupsHtml(open) {
   return SHOP_CAT_ORDER.filter((c) => groups[c]).map((c) => `
     <div class="section-title" style="margin:14px 4px 8px"><h2 style="font-size:.86rem">${SHOP_CAT_EMOJI[c]} ${c} 코너</h2><small>${groups[c].length}개</small></div>
     ${groups[c].map((x) => `
-      <div class="item">
-        <button style="font-size:1.25rem" onclick="UI.shopToggle('${x.id}')">⚪</button>
-        <div class="grow"><div class="name">${esc(x.name)}</div>
+      <div class="item shop-item">
+        <button class="shop-check" onclick="UI.shopToggle('${x.id}')" aria-label="샀어요로 표시"></button>
+        <div class="grow" onclick="UI.shopToggle('${x.id}')"><div class="name">${esc(x.name)}</div>
           <div class="sub"><span class="shop-tag ${SHOP_SRC[shopSrcOf(x)].cls}">${SHOP_SRC[shopSrcOf(x)].label}</span></div></div>
-        <a class="btn btn-sm btn-accent" href="${coupangUrl(x.name)}" target="_blank" rel="noreferrer">쿠팡 🛒</a>
-        <button style="color:var(--label-3)" onclick="UI.shopRemove('${x.id}')">✕</button>
+        <a class="btn btn-sm btn-accent" href="${coupangUrl(x.name)}" target="_blank" rel="noreferrer" onclick="event.stopPropagation()">쿠팡 🛒</a>
+        <button class="shop-del" onclick="UI.shopRemove('${x.id}')">✕</button>
       </div>`).join('')}`).join('');
 }
 
@@ -3040,12 +3042,17 @@ function renderShopping() {
     ${done.length ? `
       <div class="section-title"><h2>✓ 샀어요 (${done.length})</h2><small>입고하면 냉장고로 들어가요</small></div>
       ${done.map((x) => `
-        <div class="item" style="opacity:.6">
-          <button style="font-size:1.25rem" onclick="UI.shopToggle('${x.id}')">✅</button>
-          <div class="grow"><div class="name" style="text-decoration:line-through">${esc(x.name)}</div></div>
-          <button style="color:var(--label-3)" onclick="UI.shopRemove('${x.id}')">✕</button>
+        <div class="item shop-item is-done">
+          <button class="shop-check on" onclick="UI.shopToggle('${x.id}')" aria-label="다시 담기">✓</button>
+          <div class="grow" onclick="UI.shopToggle('${x.id}')"><div class="name">${esc(x.name)}</div></div>
+          <button class="shop-del" onclick="UI.shopRemove('${x.id}')">✕</button>
         </div>`).join('')}
-      <button class="btn btn-primary btn-block" onclick="UI.shopCommit()">🧊 산 것들 냉장고로 입고 (${done.length})</button>` : ''}
+      <button class="btn btn-primary btn-block" onclick="UI.shopCommit()">✅ 구매한 ${done.length}개 냉장고로 옮기기</button>` : ''}
+    <div class="shop-promo">
+      <span class="sp-star">⭐</span>
+      <div class="grow"><b>냉비서 프리미엄</b><small>AI 무제한 · 광고 없음 · 월 3,900원 (준비 중)</small></div>
+      <span class="sp-ad">AD</span>
+    </div>
     ${adBanner('shopping')}`;
 }
 // 부족·임박 재료를 미리 메모로 제안 (장보기 전 한눈에)

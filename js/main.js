@@ -342,6 +342,53 @@ function cookedGlyph(l, { expiring = false, size = 44 } = {}) {
   return svgChar(cookedShape(l.name, l.kind), expiring, size);
 }
 
+/* ── 레시피(요리별) 플랫 아이콘 — 레시피 카드 썸네일용. svgChar 규격(viewBox 0 0 32 32,
+   바닥 그림자 타원)이지만 얼굴/눈은 없음(깔끔한 음식 썸네일). 요리 이름을 키워드 매칭해
+   색·형태로 구분되는 모양 문자열을 돌려준다. 매칭 실패 시 null → 호출부가 이모지로 폴백. */
+function dishShape(name) {
+  const f = String(name || '');
+  const has = (...a) => a.some((x) => f.includes(x));
+  // 공용 그릇 실루엣 — broth(국물 색) 위에 살짝 어두운 테두리 타원
+  const bowl = (broth, rim) => `<path d="M5 14 L27 14 Q25 25.5 16 25.5 Q7 25.5 5 14 Z" fill="${broth}"/><ellipse cx="16" cy="14" rx="11" ry="2.4" fill="${rim}"/>`;
+  // 흰 밥그릇 — 토핑을 얹는 베이스
+  const riceBowl = `<path d="M5 14 L27 14 Q25 25.5 16 25.5 Q7 25.5 5 14 Z" fill="#FDFCF6" stroke="#E7DCC4" stroke-width="1"/><ellipse cx="16" cy="14" rx="11" ry="2.4" fill="#fff"/>`;
+  // 동그란 접시
+  const plate = `<ellipse cx="16" cy="20" rx="12" ry="6" fill="#EEF1F4"/><ellipse cx="16" cy="19" rx="10" ry="4.6" fill="#fff"/>`;
+
+  if (has('김치찌개', '김치전골', '김치찜')) return bowl('#C0341F', '#9E2817') + '<ellipse cx="13" cy="19" rx="2.4" ry="1.4" fill="#E4633F"/><ellipse cx="19" cy="20" rx="2" ry="1.2" fill="#E4633F"/><rect x="15" y="17.5" width="4" height="1.4" rx="0.7" fill="#F2A074"/>';
+  if (has('된장찌개', '된장국', '된장', '청국장', '강된장')) return bowl('#A6864B', '#86692F') + '<circle cx="13" cy="19" r="1.5" fill="#CFB279"/><circle cx="19.5" cy="20" r="1.3" fill="#CFB279"/><rect x="14.5" y="17.5" width="3.5" height="1.3" rx="0.6" fill="#7FA85B"/>';
+  if (has('미역국', '곰탕', '설렁탕', '사골', '육개장') || /(^|[^찌])(국|탕)/.test(f)) return bowl('#F2EAD7', '#E2D6BB') + '<path d="M11 18 Q13 21 11 22 M15 17.5 Q17 20.5 15 21.5 M19 18 Q21 21 19 22" stroke="#5C8C4A" stroke-width="1.2" fill="none" stroke-linecap="round" opacity=".8"/>';
+  if (has('비빔밥')) return riceBowl + '<circle cx="11.5" cy="19" r="1.6" fill="#D6402A"/><circle cx="20.5" cy="19" r="1.6" fill="#5AA64A"/><circle cx="16" cy="17.5" r="1.6" fill="#F2A030"/><circle cx="13.5" cy="21.5" r="1.5" fill="#F2CE3A"/><circle cx="18.5" cy="21.5" r="1.5" fill="#7A4FB0"/>';
+  if (has('볶음밥', '덮밥', '오므라이스', '주먹밥')) return riceBowl + '<circle cx="12.5" cy="19" r="0.9" fill="#E8923A"/><circle cx="17" cy="18" r="0.9" fill="#5AA64A"/><circle cx="19.5" cy="20.5" r="0.9" fill="#D6402A"/><circle cx="14.5" cy="21" r="0.8" fill="#F2CE3A"/>';
+  if (has('김밥')) return '<ellipse cx="16" cy="22.5" rx="11" ry="2.4" fill="#000" opacity=".05"/><circle cx="9" cy="18" r="4.6" fill="#2B2B2B"/><circle cx="9" cy="18" r="3.5" fill="#FBF7EC"/><circle cx="9" cy="18" r="1.4" fill="#E8923A"/><circle cx="16" cy="18" r="4.6" fill="#2B2B2B"/><circle cx="16" cy="18" r="3.5" fill="#FBF7EC"/><circle cx="16" cy="18" r="1.4" fill="#5AA64A"/><circle cx="23" cy="18" r="4.6" fill="#2B2B2B"/><circle cx="23" cy="18" r="3.5" fill="#FBF7EC"/><circle cx="23" cy="18" r="1.4" fill="#D6402A"/>';
+  if (has('라면', '우동', '국수', '쌀국수', '잔치국수', '칼국수', '냉면', '소바')) return bowl('#EBD9A6', '#D8C07F') + '<path d="M10 16.5 Q16 13.5 22 16.5" stroke="#F4E6BE" stroke-width="1.4" fill="none" stroke-linecap="round"/><ellipse cx="12.5" cy="19" rx="3" ry="2.4" fill="#fff"/><circle cx="12.5" cy="19" r="1.3" fill="#F2B83A"/><rect x="18" y="17.5" width="4.5" height="1.4" rx="0.7" fill="#5AA64A"/>';
+  if (has('떡볶이')) return bowl('#D43B20', '#AE2D15') + '<rect x="11" y="17" width="2.6" height="5" rx="1.3" fill="#FBF4E6"/><rect x="15" y="16.5" width="2.6" height="5.5" rx="1.3" fill="#FBF4E6"/><rect x="19" y="17.5" width="2.6" height="4.5" rx="1.3" fill="#FBF4E6"/>';
+  if (has('불고기', '제육볶음', '제육', '고기볶음', '잡채', '갈비', '주꾸미볶음', '오징어볶음')) return plate + '<rect x="9" y="17.5" width="9" height="2" rx="1" fill="#9C5A33" transform="rotate(-12 13.5 18.5)"/><rect x="13" y="18.5" width="9" height="2" rx="1" fill="#B06A3C" transform="rotate(10 17.5 19.5)"/><rect x="11" y="20" width="8" height="2" rx="1" fill="#8A4E2C" transform="rotate(-4 15 21)"/>';
+  if (has('계란말이', '달걀말이')) return plate + '<rect x="8.5" y="16" width="4.5" height="6" rx="2.2" fill="#F6CB3E"/><rect x="13.5" y="16" width="4.5" height="6" rx="2.2" fill="#F2C232"/><rect x="18.5" y="16" width="4.5" height="6" rx="2.2" fill="#F6CB3E"/><path d="M10.7 16 V22 M15.7 16 V22 M20.7 16 V22" stroke="#E0A92A" stroke-width="0.8"/>';
+  if (has('계란찜', '달걀찜')) return bowl('#F7D24A', '#E0B62E') + '<ellipse cx="16" cy="16" rx="9" ry="2.6" fill="#FBDE6A"/><ellipse cx="13" cy="15.6" rx="2.4" ry="1" fill="#fff" opacity=".4"/>';
+  if (has('계란후라이', '달걀프라이', '계란프라이', '프라이', '서니사이드')) return plate + '<ellipse cx="16" cy="19" rx="8" ry="5.5" fill="#FFFDF6" stroke="#F0E9D8" stroke-width="1"/><circle cx="16" cy="19" r="3.2" fill="#F8C53A"/><circle cx="14.7" cy="17.8" r="1" fill="#FBDE6A"/>';
+  if (has('샐러드', '샐러드볼')) return bowl('#FBFBF6', '#E7DCC4') + '<path d="M9 18 Q12 14 15 18 Q12 19 9 18 Z" fill="#5AA64A"/><path d="M16 17 Q19 13.5 22.5 17 Q19 18.5 16 17 Z" fill="#6FB84A"/><path d="M11 20 Q14 17 17 20 Q14 21.5 11 20 Z" fill="#4F9E3E"/><circle cx="20" cy="20" r="1.8" fill="#E4452F"/>';
+  if (has('파스타', '스파게티', '봉골레', '까르보나라', '알리오')) return plate + '<path d="M9 19 Q11 14 16 15 Q21 16 22 20 Q20 16.5 16 16.5 Q11 17 11 20 Q11 16.5 9 19 Z" fill="#F2D98A"/><circle cx="13.5" cy="18" r="1.4" fill="#D6402A"/><circle cx="18.5" cy="19.5" r="1.4" fill="#C8381F"/><circle cx="16" cy="20.5" r="1.2" fill="#D6402A"/>';
+  if (has('카레', '커리', '카레라이스')) return plate + '<path d="M16 14 Q24.5 14.5 24.5 19 Q24.5 23.5 16 24 Z" fill="#E8A22E"/><path d="M16 14 Q7.5 14.5 7.5 19 Q7.5 23.5 16 24 Z" fill="#FBFCF7"/><circle cx="20.5" cy="18" r="1.2" fill="#C77F1E"/><circle cx="19" cy="21" r="1.1" fill="#C77F1E"/>';
+  if (has('부침개', '파전', '지짐', '빈대떡', '전') || /^전/.test(f)) return '<ellipse cx="16" cy="22.5" rx="11" ry="2.4" fill="#000" opacity=".05"/><circle cx="16" cy="18" r="9.5" fill="#E8B85C"/><circle cx="16" cy="18" r="9.5" fill="none" stroke="#D49A40" stroke-width="1"/><rect x="10" y="15" width="5" height="1.4" rx="0.7" fill="#5AA64A" transform="rotate(20 12.5 15.7)"/><circle cx="19" cy="16" r="1.1" fill="#D6402A"/><circle cx="13" cy="20" r="1" fill="#C77F1E"/><circle cx="20" cy="20.5" r="1" fill="#5AA64A"/>';
+  if (has('생선구이', '스테이크', '구이', '갈비구이', '장어구이') || /구이/.test(f)) return plate + '<rect x="9" y="15.5" width="14" height="7" rx="2.5" fill="#8A5230"/><path d="M11 17 L21 17 M11 19 L21 19 M11 21 L21 21" stroke="#5E3620" stroke-width="1" stroke-linecap="round" opacity=".7"/>';
+  if (has('치킨', '닭강정', '튀김', '돈까스', '돈가스', '까스', '가스', '너겟', '탕수육', '강정')) return plate + '<path d="M10 16 Q13 13 14.5 17 Q15 20 11.5 21 Q9 20.5 10 16 Z" fill="#E0962E"/><path d="M16 15.5 Q19.5 13 21 17 Q22 20.5 18 22 Q15 21 16 15.5 Z" fill="#D9883C"/><circle cx="12" cy="18" r="0.7" fill="#B5701F"/><circle cx="19" cy="18.5" r="0.7" fill="#B5701F"/>';
+  if (has('샌드위치', '토스트', '샌드')) return '<ellipse cx="16" cy="24" rx="10" ry="2" fill="#000" opacity=".05"/><path d="M8 22 L16 8 L24 22 Z" fill="#F0CE84"/><path d="M10 18.5 L16 12 L22 18.5 Z" fill="#FBF6E6"/><path d="M11 19.5 L21 19.5" stroke="#5AA64A" stroke-width="1.4" stroke-linecap="round"/><path d="M12 21 L20 21" stroke="#E4452F" stroke-width="1.4" stroke-linecap="round"/>';
+  if (has('피자')) return '<ellipse cx="16" cy="24" rx="10" ry="2" fill="#000" opacity=".05"/><path d="M16 7 L25 22 L7 22 Z" fill="#F2C24E"/><path d="M16 9.5 L23 21.5 L9 21.5 Z" fill="#E47A3A"/><circle cx="16" cy="15" r="1.6" fill="#C8381F"/><circle cx="13" cy="19" r="1.5" fill="#C8381F"/><circle cx="19" cy="19" r="1.5" fill="#C8381F"/>';
+  if (has('햄버거', '버거')) return '<ellipse cx="16" cy="25" rx="10" ry="2" fill="#000" opacity=".05"/><path d="M7 14 Q7 9 16 9 Q25 9 25 14 Z" fill="#E8A84E"/><circle cx="12" cy="11.5" r="0.6" fill="#F4E0B0"/><circle cx="18" cy="11" r="0.6" fill="#F4E0B0"/><rect x="7" y="14" width="18" height="2.4" rx="1" fill="#5AA64A"/><rect x="7" y="16.4" width="18" height="3.4" rx="1.4" fill="#8A5230"/><path d="M6.5 19.8 Q16 23 25.5 19.8 L25.5 21.5 Q16 24.5 6.5 21.5 Z" fill="#E8A84E"/>';
+  if (has('초밥', '스시', '회', '사시미', '연어덮밥', '광어')) return '<ellipse cx="16" cy="23.5" rx="9" ry="2" fill="#000" opacity=".05"/><ellipse cx="16" cy="20" rx="9.5" ry="4.5" fill="#FBF7EC" stroke="#EBE2CE" stroke-width="1"/><path d="M7 16.5 Q16 12.5 25 16.5 Q16 19 7 16.5 Z" fill="#F0884E"/><path d="M9 15.5 Q16 13 23 15.5" stroke="#fff" stroke-width="0.9" fill="none" opacity=".6"/><rect x="14.5" y="15" width="3" height="6" rx="0.6" fill="#2B6B3A" opacity=".85"/>';
+  if (has('리조또', '스프', '수프', '죽', '포리지', '미음')) return bowl('#F4EEDD', '#E2D9C0') + '<ellipse cx="16" cy="15.5" rx="9" ry="2.4" fill="#FBF7EA"/><circle cx="13" cy="18.5" r="0.7" fill="#D8C79A"/><circle cx="19" cy="19" r="0.7" fill="#D8C79A"/>';
+
+  return null;
+}
+// 레시피 아이콘 — dishShape 매칭 시 얼굴 없는 깔끔 SVG, 아니면 null(호출부가 이모지 폴백).
+function dishIcon(name, size) {
+  const shape = dishShape(name);
+  if (!shape) return null;
+  const dim = size ? ' width="' + size + '" height="' + size + '"' : '';
+  return '<svg class="dish-ic" viewBox="0 0 32 32"' + dim + ' style="display:block;overflow:visible" aria-hidden="true"><ellipse cx="16" cy="29.5" rx="8" ry="1.6" fill="#000" opacity=".07"/>' + shape + '</svg>';
+}
+
 /* ── 꾸미기 데칼(캐릭터 스티커/마그넷) ── 이모지 대신 귀여운 SVG 캐릭터.
    food:<재료명> → foodIcon 재사용 / cook:<key> → 조리도구 캐릭터(svgChar 규격, 공통 눈·표정)
    deco:<key> → 시안 그대로의 장식(하트·해·별·냉장고 마스코트). 픽커용 순서 유지. */
@@ -531,7 +578,7 @@ function renderHome() {
               ${top.recipe.protein ? `<span style="background:rgba(255,255,255,.16);font-size:11px;font-weight:700;padding:5px 10px;border-radius:999px;white-space:nowrap;">💪 단백질 ${top.recipe.protein}g</span>` : ''}
             </div>
           </div>
-          <div style="width:84px;height:84px;border-radius:24px;background:linear-gradient(160deg,rgba(255,255,255,.34),rgba(255,255,255,.1));display:flex;align-items:center;justify-content:center;font-size:44px;flex:none;box-shadow:inset 0 1px 0 rgba(255,255,255,.45);">${top.recipe.emoji || '🍳'}</div>
+          <div class="rec-hero-emoji" style="width:84px;height:84px;border-radius:24px;background:linear-gradient(160deg,rgba(255,255,255,.34),rgba(255,255,255,.1));display:flex;align-items:center;justify-content:center;font-size:44px;flex:none;box-shadow:inset 0 1px 0 rgba(255,255,255,.45);">${dishIcon(top.recipe.title) || (top.recipe.emoji || '🍳')}</div>
         </div>
         <div style="display:flex;align-items:center;gap:10px;margin-top:17px;position:relative;">
           <div style="flex:1;background:#fff;color:#0A6238;font-family:var(--display);font-size:15px;border-radius:14px;padding:12px;text-align:center;">레시피 보기</div>
@@ -1933,7 +1980,7 @@ function recipeCard(a) {
       ${visual}
       <div class="r-body">
         <div class="r-head">
-          ${visual ? '' : `<div class="r-emoji ${a.usesExpiring ? 't-meat' : ''}">${r.emoji || '🍳'}</div>`}
+          ${visual ? '' : `<div class="r-emoji ${a.usesExpiring ? 't-meat' : ''}">${dishIcon(r.title) || (r.emoji || '🍳')}</div>`}
           <div class="grow">
             <h3>${esc(r.title)}</h3>
             <div class="meta">

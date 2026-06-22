@@ -23,6 +23,8 @@
 <!-- 실제 전국 대전 백엔드(선택) — fb-config.js 비우면 자동으로 폰 단독 시뮬레이션 폴백 -->
 <script src="./fb-config.js"></script>
 <script src="./net.js"></script>
+<!-- 초반 콜드스타트용 가상 플레이어(표시 전용·DB 무기록·실데이터 차면 자동소멸). GCBots.enabled=false로 OFF -->
+<script src="./gc-bots.js"></script>
 <!-- 글로벌 기반(Phase 1): 언어/국가감지/양어 떡밥 — 메인 스크립트보다 먼저 로드 -->
 <script src="./i18n.js"></script>
 <script src="./geo.js"></script>
@@ -374,13 +376,19 @@ function effectiveBadge(){var pb=GCCos.badgeOf(F,F.badgeId);return pb||F.badge||
 function netOn(){try{return !!(window.GCNet&&GCNet.available());}catch(e){return false;}}
 var LIVE={date:'',tot:null,unwatch:null};
 function shareFromTot(tot,seed){return (tot&&(tot.a+tot.b)>0)?clamp(tot.a/(tot.a+tot.b)*100,5,95):seed;}
+/* 가상 플레이어 합성 헬퍼(표시 전용). GCBots 없거나 OFF면 원본 그대로 — 항상 안전(불신#1). */
+function botsOn(){try{return !!(window.GCBots&&GCBots.enabled);}catch(e){return false;}}
+function blendTot(t,date){try{return botsOn()?GCBots.blend(t,date):t;}catch(e){return t;}}
+function blendRows(rows,date,max){try{return botsOn()?GCBots.mergeRows(rows,date,max):rows;}catch(e){return rows;}}
+function blendRank(res,date,taps){try{return botsOn()?(GCBots.blendRank(res,date,taps)||res):res;}catch(e){return res;}}
 function startWatch(date){
   if(!netOn())return;
   if(LIVE.unwatch&&LIVE.date===date)return;
   if(LIVE.unwatch){try{LIVE.unwatch();}catch(e){}LIVE.unwatch=null;}
   LIVE.date=date; LIVE.tot=null;
-  GCNet.peek(date).then(function(t){if(t&&LIVE.date===date){LIVE.tot=t;onLive();}});
-  LIVE.unwatch=GCNet.watch(date,function(t){if(LIVE.date===date){LIVE.tot=t;onLive();}});
+  if(botsOn()){LIVE.tot=blendTot(null,date);onLive();} // 서버 응답 전에도 즉시 살아있게
+  GCNet.peek(date).then(function(t){if(LIVE.date===date){LIVE.tot=blendTot(t,date);onLive();}});
+  LIVE.unwatch=GCNet.watch(date,function(t){if(LIVE.date===date){LIVE.tot=blendTot(t,date);onLive();}});
 }
 function stopWatch(){if(LIVE.unwatch){try{LIVE.unwatch();}catch(e){}}LIVE.unwatch=null;LIVE.tot=null;LIVE.date='';}
 /* 라이브 집계 도착 시: 인트로면 게이지 즉시 갱신(배틀은 frame 루프가 직접 읽음) */
@@ -807,7 +815,8 @@ function endBattle(){
     // Phase 2: 내 국가(MY)로 나라대전 집계 + 배지·멘트. 재참전: aggDelta(증가분)·first만 집계 반영(net.js).
     GCNet.submit(date,side,contrib,F.region,nickOf(),MY,{badge:effectiveBadge(),comment:F.comment,aggDelta:aggDelta,first:first}).then(function(res){
       if(rr!==R)return;
-      if(res){R.rank=res.rank;R.total=res.total;R.rankState='real';}
+      var bl=blendRank(res,date,R.contrib);
+      if(bl){R.rank=bl.rank;R.total=bl.total;R.rankState='real';}
       else{R.rank=rankEstimate(R.contrib);R.rankState='estimate';}
       updateRankDOM();
     });
@@ -822,7 +831,8 @@ function applyDouble(){
     var rr=R;
     GCNet.rankOf(R.date,R.contrib).then(function(res){
       if(rr!==R)return;
-      if(res){R.rank=res.rank;R.total=res.total;R.rankState='real';}else{R.rank=rankEstimate(R.contrib);R.rankState='estimate';}
+      var bl=blendRank(res,R.date,R.contrib);
+      if(bl){R.rank=bl.rank;R.total=bl.total;R.rankState='real';}else{R.rank=rankEstimate(R.contrib);R.rankState='estimate';}
       updateRankDOM();
     });
   }else{ R.rank=rankEstimate(R.contrib); R.rankState='estimate'; renderResult(); }
@@ -942,9 +952,9 @@ function rankBoard(){
     '</div>';
   mountGlobe(); // 랭킹 화면 슬롯으로 지구본 이동(실시간 유지)
   if(!netOn()){el('rb-list').textContent=t('boardDemo');return;}
-  GCNet.leaderboard(date,20).then(function(rows){renderBoard(bt,rows);});
+  GCNet.leaderboard(date,20).then(function(rows){renderBoard(bt,blendRows(rows,date,20));});
   // 단일 peek 1회로 나라대전(countries)·지역 점령(regions) 둘 다 렌더 — 추가 읽기 없음(D5).
-  GCNet.peek(date).then(function(tot){renderCountries(bt,tot);renderRegion(bt,tot);});
+  GCNet.peek(date).then(function(tot){tot=blendTot(tot,date);renderCountries(bt,tot);renderRegion(bt,tot);});
 }
 function renderBoard(bt,rows){
   var box=el('rb-list'); if(!box)return;
@@ -1506,8 +1516,8 @@ function watchGlobe(token){
   GLB.lastFocus=null; // 새 뷰 진입 → 첫 데이터에 반드시 포커스(이후엔 핫스팟 바뀔 때만)
   GLB.prevC=null;     // 새 뷰 진입 → 첫 데이터는 델타 베이스라인(팝콘 X), 이후 증가분만 팝콘
   var date=todayStr();
-  GCNet.peek(date).then(function(tot){ if(token===GLB.did)refreshGlobeData(tot); });
-  GLB.unwatch=GCNet.watch(date,function(tot){ if(token===GLB.did)refreshGlobeData(tot); });
+  GCNet.peek(date).then(function(tot){ if(token===GLB.did)refreshGlobeData(blendTot(tot,date)); });
+  GLB.unwatch=GCNet.watch(date,function(tot){ if(token===GLB.did)refreshGlobeData(blendTot(tot,date)); });
 }
 
 /* ── 3D 경로(globe.gl) ── */

@@ -193,6 +193,12 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 @keyframes gl-corn{0%{opacity:0;transform:translate(-50%,-50%) scale(.4)}18%{opacity:1;transform:translate(calc(-50% + var(--tx,0px)*.3),-115%) scale(1.15)}100%{opacity:0;transform:translate(calc(-50% + var(--tx,0px)),-235%) scale(.95)}}
 .gl-corn{position:absolute;transform:translate(-50%,-50%);line-height:1;pointer-events:none;will-change:transform,opacity;animation:gl-corn .9s ease-out forwards}
 @media (prefers-reduced-motion: reduce){.gl-corn{display:none}}
+/* ⚡ 타격 불꽃/쇳물 스파크 — 이모지보다 가벼운 발광 입자(작은 div). 소수=작은 불씨, 다수=쇳물 분출. */
+@keyframes gl-spark{0%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(calc(-50% + var(--tx,0px)),calc(-50% + var(--ty,0px))) scale(.25)}}
+.gl-spark{position:absolute;width:var(--sz,4px);height:var(--sz,4px);border-radius:50%;background:radial-gradient(circle,#fff 0%,var(--c,#ffd76a) 50%,transparent 72%);box-shadow:0 0 8px var(--c,#ffd76a);pointer-events:none;will-change:transform,opacity;animation:gl-spark var(--dur,.7s) cubic-bezier(.12,.6,.35,1) forwards}
+@keyframes gl-flash{0%{opacity:0;transform:translate(-50%,-50%) scale(.3)}25%{opacity:.6}100%{opacity:0;transform:translate(-50%,-50%) scale(2.4)}}
+.gl-flash{position:absolute;width:16px;height:16px;border-radius:50%;background:radial-gradient(circle,#fff 0%,var(--c,#ffd76a) 40%,transparent 70%);pointer-events:none;will-change:transform,opacity;animation:gl-flash .5s ease-out forwards}
+@media (prefers-reduced-motion: reduce){.gl-spark,.gl-flash{display:none}}
 .globe-hero{margin-top:14px}
 .globe-cap{display:flex;align-items:center;gap:6px;font-size:.82rem;opacity:.85;margin-bottom:7px;letter-spacing:.2px}
 .gl-slot{position:relative;width:100%}
@@ -1332,7 +1338,7 @@ var GLOBE_LAND_SRC = './vendor/world-110m.geo.json'; // 대륙/바다/국경 폴
 var _landData = null;     // 지형 GeoJSON 로드 1회 캐시
 var GLOBE_DPR_CAP = 1.5;  // 렌더러 DPR 캡(고해상도 폰 과부하 방지)
 var GLOBE_FPS_2D = 24;    // 2D 폴백 프레임 상한(전력/발열)
-var GLOBE_POP_CAP = 28;   // 동시 팝콘 DOM 상한(모바일 폭주 방지·D7)
+var GLOBE_POP_CAP = 40;   // 동시 스파크 DOM 상한(모바일 폭주 방지·D7 — 기기등급으로 방출량 추가 스케일)
 var _globeLoad = null;    // 라이브러리 로드 1회 캐시(idempotent)
 
 /* WebGL 사용 가능 여부(지연 검사 — 컨텍스트 1개만 만들어 즉시 폐기). 실패/예외는 false(폴백). */
@@ -1380,16 +1386,26 @@ function ensureGlobe(){
   if(!netOn()){ setGlobeMsg(t('globeDemo')); return; } // 데모: 빈 지구본(연결 시 자동 표시)
   bootGlobe(token);
 }
-/* 핫스팟 주기 팝콘 — 새 데이터(델타) 없어도 상위 포인트에서 🍿가 '톡톡' 튀게(사용자 요구).
- * 화면(슬롯)에 떠 있고 탭 활성·감속모션 아닐 때만(절전·접근성). globe 영속이라 1회만 등록. */
+/* 타격 불꽃 emitter — "지금 누가 여기서 광클 중"을 볼륨 비례로 표현(사용자 요구).
+ *  - 소수 지역(낮은 weight)=간헐적 작은 불씨 1개 / 다수 지역(높은 weight)=매 틱 여러 개 '쇳물 분출'.
+ *  - 최적화: 틱당 예산(기기등급 비례)·동시 상한(GLOBE_POP_CAP)·상위 10국만·화면밖/배틀(lite)/감속모션/숨김 시 정지. */
 function startPulse(){
   if(GLB.pulse)return;
   GLB.pulse=setInterval(function(){
-    if(document.hidden||prefersReducedMotion()||!GLB.pts.length||GLB.lite)return; // 배틀 중(lite)엔 펄스 정지(성능)
+    if(document.hidden||prefersReducedMotion()||!GLB.pts.length||GLB.lite)return; // 배틀 중(lite)엔 정지(성능)
     var host=GLB.host; if(!host||!host.parentNode||host.parentNode.id==='gl-park')return; // 화면 밖이면 skip
-    var n=Math.min(3,GLB.pts.length);
-    for(var i=0;i<n;i++){ var p=GLB.pts[i]; popcornAt(p.lat,p.lng,1,p.color); }
-  },1100);
+    var layer=el('gl-pop'); if(layer&&layer.childElementCount>GLOBE_POP_CAP)return;        // 이미 가득 → skip
+    var budget=Math.round(5+12*deviceTier());            // 이번 틱 총 불꽃 예산(저사양↓)
+    var maxShow=Math.min(GLB.pts.length,10);
+    for(var i=0;i<maxShow&&budget>0;i++){
+      var p=GLB.pts[i], w=Math.max(0,Math.min(1,p.weight||0));
+      if(Math.random()>(0.12+0.88*w))continue;            // 낮을수록 자주 건너뜀 → 간헐적 불씨
+      var n=w<0.25?1:(1+Math.round(w*4));                 // 1 ~ 5 (다수일수록 다발)
+      if(n>budget)n=budget;
+      sparkBurst(p.lat,p.lng,n,p.color,w);
+      budget-=n;
+    }
+  },320);
 }
 /* 현재 화면의 #gl-slot 으로 지구본을 이동(없으면 park). 매 화면 렌더 끝에서 호출. */
 function mountGlobe(){
@@ -1491,24 +1507,35 @@ function globeScreenPos(lat,lng){
   }
   return null;
 }
-/* 🍿 팝콘 튀기기 — 해당 좌표(화면)에 n개 팝콘 스폰 + 진영색 글로우. CSS 애니메이션 후 자동 제거. 동시 상한·감속모션 가드. */
-function popcornAt(lat,lng,n,color){
-  // 배틀 중(lite=미니 지구본)엔 팝콘 전면 정지 — '절단기 불꽃' 잔상·탭 끊김 방지(사용자 피드백·성능).
-  if(GLB.lite)return;
+/* 타격 불꽃/쇳물 스파크 — 해당 좌표에 발광 입자 n개 사방으로 튀김. intensity(0~1)로 크기·비거리·밝기 스케일.
+ *  - intensity 높음(다수)=크고 멀리 + 중심 플래시(쇳물). 낮음(소수)=작은 불씨. CSS 애니메이션 후 자동 제거. */
+function sparkBurst(lat,lng,n,color,intensity){
+  if(GLB.lite)return;                                        // 배틀 미니에선 정지(탭 끊김 방지)
   var layer=el('gl-pop'); if(!layer||prefersReducedMotion())return;
-  if(layer.childElementCount>GLOBE_POP_CAP)return;            // 동시 폭주 방지
-  var pos=globeScreenPos(lat,lng); if(!pos)return;            // 뒷면/범위밖 생략
-  var cnt=Math.max(1,Math.min(6,n|0));
+  if(layer.childElementCount>GLOBE_POP_CAP)return;           // 동시 폭주 방지
+  var pos=globeScreenPos(lat,lng); if(!pos)return;           // 뒷면/범위밖 생략
+  var it=Math.max(0,Math.min(1,intensity||0)), c=color||'#ffd76a';
+  var cnt=Math.max(1,Math.min(8,n|0));
+  if(it>0.6&&Math.random()<0.5){                            // 쇳물: 중심 섬광
+    var f=document.createElement('i'); f.className='gl-flash';
+    f.style.left=pos.x+'px'; f.style.top=pos.y+'px'; f.style.setProperty('--c',c);
+    layer.appendChild(f); (function(x){setTimeout(function(){x.parentNode&&x.parentNode.removeChild(x);},520);})(f);
+  }
   for(var i=0;i<cnt;i++){
-    var s=document.createElement('span'); s.className='gl-corn'; s.textContent='🍿';
-    s.style.left=(pos.x+(Math.random()-0.5)*24)+'px'; s.style.top=(pos.y+(Math.random()-0.5)*10)+'px';
-    s.style.setProperty('--tx',((Math.random()-0.5)*42)+'px');
-    s.style.fontSize=(13+Math.random()*9)+'px';
-    if(color)s.style.textShadow='0 0 9px '+color;            // 우세 진영색 글로우(타격 진영 표시)
+    var s=document.createElement('i'); s.className='gl-spark';
+    var ang=Math.random()*6.2832, dist=(9+it*46)*(0.5+Math.random());
+    s.style.left=pos.x+'px'; s.style.top=pos.y+'px';
+    s.style.setProperty('--tx',(Math.cos(ang)*dist).toFixed(1)+'px');
+    s.style.setProperty('--ty',(Math.sin(ang)*dist-6).toFixed(1)+'px'); // 살짝 위로 솟구침
+    s.style.setProperty('--sz',(2.5+it*4+Math.random()*1.5).toFixed(1)+'px');
+    s.style.setProperty('--c',c);
+    s.style.setProperty('--dur',(0.45+Math.random()*0.4).toFixed(2)+'s');
     layer.appendChild(s);
-    (function(node){setTimeout(function(){if(node.parentNode)node.parentNode.removeChild(node);},920);})(s);
+    (function(node){setTimeout(function(){if(node.parentNode)node.parentNode.removeChild(node);},900);})(s);
   }
 }
+/* 델타(누가 라운드 끝냄)→스파크 버스트. gain 클수록 강하게. (기존 호출부 호환) */
+function popcornAt(lat,lng,n,color){ sparkBurst(lat,lng,n,color,Math.min(1,(n||1)/6)); }
 /* 구독 시작 — 기존 GCNet.watch(today) 재사용(나라순위/리더보드와 동일 집계, 신규 구독 아님 X… 단,
  * 지구본은 rankBoard와 다른 화면이라 자체 watch 1개를 연다(탭마다 ❌·집계 문서 1개 구독 — D5/D7 범위 내).
  * peek로 즉시 첫 그림 → watch로 라이브 갱신. closeGlobe에서 반드시 해지(누수 방지). */

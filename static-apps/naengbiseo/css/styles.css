@@ -1164,6 +1164,9 @@ body { background: linear-gradient(180deg, #f5f3ec 0%, #efe8da 100%); background
 /* 시안 규격 — 둥근 이모지 타일(54·라운드14·연그린 배경) · 정렬 위로 */
 .recipe-card .r-head { align-items: flex-start; }
 .recipe-card .r-emoji { width: 54px; height: 54px; font-size: 1.85rem; border-radius: 14px; background: #f1f4f1; }
+/* 요리별 플랫 아이콘 — 레시피 카드 썸네일(38px) / 홈 추천 히어로 타일(타일 채움) */
+.r-emoji svg.dish-ic { width: 38px; height: 38px; display: block; }
+.rec-hero-emoji svg.dish-ic { width: 72%; height: 72%; display: block; }
 .recipe-card .meta { gap: 9px; margin-top: 5px; font-size: .74rem; font-weight: 700; }
 .recipe-card .meta .m-prot { color: var(--label); font-weight: 800; }
 .recipe-card .meta .m-prot b { color: var(--label); }

@@ -695,7 +695,9 @@ function intro(){
         '<button class="btn btn-ghost" style="flex:1" onclick="openLocker()">'+t('lockerBtn')+'</button>'+
         '<button class="btn btn-ghost" style="flex:1" onclick="openProposals()">'+t('propBtn')+'</button>'+
       '</div>'+
-      (ROOM?'':'<div style="display:flex;gap:8px"><button class="btn btn-ghost" style="flex:1" onclick="openRoomCreate()">🔒 '+(LANG==='ko'?'친구끼리 방 만들기':'Create private room')+'</button></div>')+
+      (ROOM
+        ?'<div style="display:flex;gap:8px"><button class="btn btn-ghost" style="flex:1" onclick="openProfile()">👤 '+(LANG==='ko'?'내 프로필':'Profile')+'</button></div>'
+        :'<div style="display:flex;gap:8px"><button class="btn btn-ghost" style="flex:1" onclick="openProfile()">👤 '+(LANG==='ko'?'내 프로필':'Profile')+'</button><button class="btn btn-ghost" style="flex:1" onclick="openRoomCreate()">🔒 '+(LANG==='ko'?'친구 방 만들기':'Create room')+'</button></div>')+
       // 로비 지구본 — 전 세계 실시간 + 🍿 팝콘(영속 인스턴스를 이 슬롯으로 이동·D13).
       '<div class="globe-hero">'+
         '<div class="globe-cap mono">'+t('globeTitle')+'</div>'+
@@ -900,6 +902,10 @@ function endBattle(){
   F.dayBest={d:date,v:contrib};
   var newBest=contrib>(F.best||0); if(newBest)F.best=contrib; persist();
   var verdict=myShare>=53?{t:t('verdictWin'),c:'win'}:myShare<=47?{t:t('verdictLose'),c:'lose'}:{t:t('verdictTie'),c:'tie'};
+  // 누적 전적(로컬 집계) — 프로필 화면 표시. 판수·총 광클·승/무/패.
+  F.stats=F.stats||{games:0,taps:0,win:0,lose:0,tie:0};
+  F.stats.games++; F.stats.taps+=Math.max(0,round);
+  F.stats[verdict.c]=(F.stats[verdict.c]||0)+1; persist();
   R={bt:bt,me:me,foe:foe,side:side,date:date,contrib:contrib,myShare:myShare,maxStreak:B.maxStreak,
      title:titleForTaps(contrib),rank:(netOn()?null:rankEstimate(contrib)),rankState:(netOn()?'pending':'estimate'),total:0,
      verdict:verdict,newBest:newBest,streak:F.streak,x2:false};
@@ -1162,6 +1168,39 @@ function badgeChips(sel){
     h+='<button type="button" class="chip-soft set-badge-chip" data-badge="'+esc(b)+'" '+
       'style="font-size:'+(b?'16px':'12px')+';padding:6px 10px;'+(on?'border-color:var(--me);color:var(--me)':'')+'">'+esc(lbl)+'</button>';}
   return h;
+}
+/* ── 내 프로필 + 누적 전적(로컬 집계) ── */
+function openProfile(){
+  cleanup();
+  var s=F.stats||{games:0,taps:0,win:0,lose:0,tie:0};
+  var decided=(s.win||0)+(s.lose||0), wr=decided?Math.round((s.win||0)/decided*100):0;
+  var info=null; try{ info=window.GCNet&&GCNet.userInfo&&GCNet.userInfo(); }catch(e){}
+  var name=(info&&!info.anon&&info.name)?info.name:((F.nick||'').trim()||t('anon'));
+  var photo=(info&&info.photo)?'<img src="'+esc(info.photo)+'" width="56" height="56" style="border-radius:50%" referrerpolicy="no-referrer" onerror="this.remove()">':'<div style="width:56px;height:56px;border-radius:50%;background:var(--bg-3);display:flex;align-items:center;justify-content:center;font-size:28px">👤</div>';
+  var cell=function(k,v){ return '<div style="background:var(--bg-3);border:1px solid var(--line);border-radius:12px;padding:12px;text-align:center"><div style="font-size:.72rem;opacity:.7">'+k+'</div><div style="font-size:1.3rem;font-weight:800;margin-top:3px">'+v+'</div></div>'; };
+  app.innerHTML='<div class="screen">'+
+    '<div class="hdr"><span class="brand">'+(LANG==='ko'?'내 프로필':'My profile')+'</span><button class="chip-soft" onclick="intro()">'+t('closeBtn')+'</button></div>'+
+    '<div class="rule"></div>'+
+    '<div style="display:flex;align-items:center;gap:12px;margin:10px 0 4px">'+photo+
+      '<div><div style="font-size:1.25rem;font-weight:800">'+esc(name)+'</div>'+
+      '<div class="hint" style="text-align:left">'+(info&&!info.anon?'🔵 '+(LANG==='ko'?'구글 로그인':'Google'):(LANG==='ko'?'게스트':'Guest'))+' · '+(LANG==='ko'?'칭호 ':'Title ')+titleForTaps(F.best||0)+'</div></div></div>'+
+    '<div id="set-login" style="margin:8px 0 4px">'+loginRowHTML()+'</div>'+
+    '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px">'+
+      cell(LANG==='ko'?'판수':'Games',comma(s.games||0))+
+      cell(LANG==='ko'?'총 광클':'Total taps',comma(s.taps||0))+
+      cell(LANG==='ko'?'승률':'Win %',wr+'%')+
+      cell('🏆 '+(LANG==='ko'?'승':'Win'),comma(s.win||0))+
+      cell('🤝 '+(LANG==='ko'?'무':'Tie'),comma(s.tie||0))+
+      cell('😵 '+(LANG==='ko'?'패':'Lose'),comma(s.lose||0))+
+      cell(LANG==='ko'?'최고기록':'Best',comma(F.best||0))+
+      cell(LANG==='ko'?'연속출석':'Streak',comma(F.streak||0)+(LANG==='ko'?'일':'d'))+
+      cell(LANG==='ko'?'포인트':'Points',comma(F.points||0))+
+    '</div>'+
+    '<div class="actions" style="margin-top:14px">'+
+      '<button class="btn btn-ghost" onclick="openSettings()">⚙️ '+(LANG==='ko'?'이름·지역·배지 설정':'Settings')+'</button>'+
+      '<div style="display:flex;gap:8px"><button class="btn btn-ghost" style="flex:1" onclick="rankBoard()">'+t('rankBtn')+'</button>'+
+        '<button class="btn btn-ghost" style="flex:1" onclick="intro()">'+t('todayBattle')+'</button></div>'+
+    '</div></div>';
 }
 /* ── 구글 로그인(선택) — '이름 알리기'·기기 간 동일 신원. 콘솔에서 Google 로그인 활성화 필요. ── */
 function loginRowHTML(){

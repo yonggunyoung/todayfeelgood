@@ -317,7 +317,10 @@ function roundPrev(){ try{ return GCRound.previousRound(GCTopics.BATTLES,ROUND_O
 function roundClock(ms){ ms=Math.max(0,ms|0); var s=Math.floor(ms/1000),h=Math.floor(s/3600),m=Math.floor((s%3600)/60),x=s%60; var p=function(n){return (n<10?'0':'')+n;}; return (h>0?h+':':'')+p(m)+':'+p(x); }
 var INTRO_KEY='';
 function startRoundTimer(){ if(window._roundT)return; window._roundT=setInterval(roundTick,1000); }
-function roundTick(){ var cd=el('ig-cd'); if(!cd)return; var r=roundNow(); if(INTRO_KEY&&r.key!==INTRO_KEY){ intro(); return; } cd.textContent=(LANG==='ko'?'⏳ 다음 떡밥까지 ':'⏳ Next topic in ')+roundClock(r.endMs-Date.now()); }
+function roundTick(){ var cd=el('ig-cd'); if(!cd)return;
+  if(ROOM){ var rem=ROOM.t0+ROOM.dur*1000-Date.now(); cd.textContent=rem>0?((LANG==='ko'?'⏳ 종료까지 ':'⏳ Ends in ')+roundClock(rem)):(LANG==='ko'?'🏁 종료됨':'🏁 Ended'); return; }
+  var r=roundNow(); if(INTRO_KEY&&r.key!==INTRO_KEY){ intro(); return; }
+  cd.textContent=(LANG==='ko'?'⏳ 다음 떡밥까지 ':'⏳ Next topic in ')+roundClock(r.endMs-Date.now()); }
 /* 직전 라운드 승자 배너(승자 발표). 봇 시드로 늘 결과 있음. */
 function renderRoundWinner(){
   var box=el('ig-winner'); if(!box)return; var pr=roundPrev(); if(!pr){box.innerHTML='';return;}
@@ -332,6 +335,57 @@ function renderRoundWinner(){
     var mvpHtml=mvp?'<div style="font-weight:500;font-size:.78rem;opacity:.9;margin-top:3px">👑 '+(LANG==='ko'?'1등':'MVP')+' '+fl+esc(mvp.nick)+' · '+comma(mvp.taps)+(LANG==='ko'?'탭':'')+'</div>':'';
     box.innerHTML='<div class="winner-banner">🏆 '+(LANG==='ko'?'지난 판':'Last round')+' · '+esc(pbt.tag)+' — <b style="color:'+win.color+'">'+win.emoji+' '+esc(win.name)+'</b> '+share+'%'+mvpHtml+'</div>';
   });
+}
+/* ── 🔒 프라이빗 방(코드/링크 공유) — 가족·친구·학교 대항 단발성. 콘솔/가입 불필요. ──
+ * 방 설정을 링크에 담고, 집계는 기존 gc_battles/gc_scores 에 'room_<id>' 키로 저장(새 컬렉션·규칙 0).
+ * 봇 미적용(실사용자만). 익명+닉네임. */
+var ROOM=null;
+function gameKey(){ return ROOM?ROOM.key:roundNow().key; }
+function gameBt(){ return ROOM?ROOM.bt:GCTopics.localize(roundNow().topic,LANG); }
+function roomBt(c){
+  return { id:c.id, tag:(LANG==='ko'?'친구 방':'Private'), q:c.q,
+    a:{ key:'a', emoji:'🟩', color:'#12b39a', name:c.a, slogan:'' },
+    b:{ key:'b', emoji:'🟪', color:'#7b6ef0', name:c.b, slogan:'' }, taunts:[] };
+}
+function roomDecode(s){ try{ var c=JSON.parse(decodeURIComponent(s)); if(c&&c.id&&c.q&&c.a&&c.b&&c.dur&&c.t0)return c; }catch(e){} return null; }
+function roomLink(c){ return location.origin+location.pathname+'?r='+encodeURIComponent(JSON.stringify({id:c.id,q:c.q,a:c.a,b:c.b,dur:c.dur,t0:c.t0})); }
+function roomEnded(){ return !!(ROOM&&Date.now()>=ROOM.t0+ROOM.dur*1000); }
+function roomRid(){ var s='ABCDEFGHJKLMNPQRSTUVWXYZ23456789',o=''; for(var i=0;i<6;i++)o+=s.charAt(Math.floor(Math.random()*s.length)); return o; }
+function enterRoom(c){ ROOM=c; ROOM.key='room_'+c.id; ROOM.bt=roomBt(c); try{history.replaceState(null,'',roomLink(c));}catch(e){} intro(); }
+function exitRoom(){ ROOM=null; try{history.replaceState(null,'',location.origin+location.pathname);}catch(e){} intro(); }
+function shareRoom(){ if(!ROOM)return; var url=roomLink(ROOM);
+  try{ if(navigator.share){ navigator.share({title:(LANG==='ko'?'친구 방 광클대전':'Gwangclick room'),text:ROOM.q,url:url}); return; } }catch(e){}
+  try{ navigator.clipboard.writeText(url).then(function(){toast(LANG==='ko'?'링크 복사됨! 친구에게 붙여넣기':'Link copied!');}); }catch(e){ toast(url); }
+}
+/* 방 만들기 화면 */
+function openRoomCreate(){
+  cleanup();
+  var durOpts=[[600,LANG==='ko'?'10분':'10 min'],[1800,LANG==='ko'?'30분':'30 min'],[3600,LANG==='ko'?'1시간':'1 hour'],[86400,LANG==='ko'?'하루':'1 day']];
+  var ds=''; for(var i=0;i<durOpts.length;i++)ds+='<option value="'+durOpts[i][0]+'"'+(durOpts[i][0]===3600?' selected':'')+'>'+durOpts[i][1]+'</option>';
+  app.innerHTML='<div class="screen">'+
+    '<div class="hdr"><span class="brand">'+(LANG==='ko'?'🔒 친구 방 만들기':'🔒 Create room')+'</span>'+
+      '<button class="chip-soft" onclick="intro()">'+(LANG==='ko'?'닫기':'Close')+'</button></div>'+
+    '<div class="rule"></div>'+
+    '<p class="hint" style="text-align:left">'+(LANG==='ko'?'주제와 두 편을 정하고 링크를 공유하세요. 받은 사람만 이 방에서 같이 광클해요. (가입 불필요)':'Set a topic and share the link. Only people with it join.')+'</p>'+
+    '<div style="display:grid;gap:10px;margin-top:10px">'+
+      '<label class="hint" style="text-align:left">'+(LANG==='ko'?'질문/주제':'Question')+'<input id="rm-q" maxlength="40" placeholder="'+(LANG==='ko'?'예) 우리 반 급식 1순위는?':'e.g. Best topic?')+'" style="width:100%;margin-top:4px;padding:11px;border-radius:10px;border:1px solid var(--line-2);background:var(--bg-3);color:var(--ink)"></label>'+
+      '<div style="display:flex;gap:8px">'+
+        '<input id="rm-a" maxlength="14" placeholder="'+(LANG==='ko'?'A 편 이름':'Side A')+'" style="flex:1;padding:11px;border-radius:10px;border:1px solid var(--team-a);background:var(--bg-3);color:var(--ink)">'+
+        '<input id="rm-b" maxlength="14" placeholder="'+(LANG==='ko'?'B 편 이름':'Side B')+'" style="flex:1;padding:11px;border-radius:10px;border:1px solid var(--team-b);background:var(--bg-3);color:var(--ink)">'+
+      '</div>'+
+      '<label class="hint" style="text-align:left">'+(LANG==='ko'?'진행 시간':'Duration')+'<select id="rm-dur" style="width:100%;margin-top:4px;padding:11px;border-radius:10px;border:1px solid var(--line-2);background:var(--bg-3);color:var(--ink)">'+ds+'</select></label>'+
+    '</div>'+
+    '<div class="actions" style="margin-top:14px"><button class="btn" style="background:var(--team-a);color:'+ink('#12b39a')+'" onclick="createRoom()">'+(LANG==='ko'?'🔗 방 만들고 링크 받기':'🔗 Create & get link')+'</button></div>'+
+    '</div>';
+}
+function createRoom(){
+  var q=(el('rm-q')&&el('rm-q').value||'').trim(), a=(el('rm-a')&&el('rm-a').value||'').trim(), b=(el('rm-b')&&el('rm-b').value||'').trim();
+  var dur=parseInt(el('rm-dur')&&el('rm-dur').value||'3600',10)||3600;
+  var v=null; try{ if(typeof GCProp!=='undefined'&&GCProp.validateProposal){var r=GCProp.validateProposal({q:q,aName:a,bName:b}); if(r&&r.ok)v=r.value;} }catch(e){}
+  if(v){q=v.q;a=v.aName;b=v.bName;}
+  if(!q||!a||!b||a.toLowerCase()===b.toLowerCase()){ toast(LANG==='ko'?'질문과 서로 다른 두 편 이름을 채워주세요':'Fill question and two different sides'); return; }
+  enterRoom({ id:roomRid(), q:q.slice(0,40), a:a.slice(0,14), b:b.slice(0,14), dur:dur, t0:Date.now() });
+  setTimeout(shareRoom,300); // 만들자마자 공유 시트/복사
 }
 function dailyBias(d,bt){return (fnv1a(d+'|'+(bt?bt.id:''))%1201)/100-6;}
 function comboMult(streak){return Math.min(3,1+Math.max(0,streak)*0.04);}
@@ -413,9 +467,10 @@ var LIVE={date:'',tot:null,unwatch:null};
 function shareFromTot(tot,seed){return (tot&&(tot.a+tot.b)>0)?clamp(tot.a/(tot.a+tot.b)*100,5,95):seed;}
 /* 가상 플레이어 합성 헬퍼(표시 전용). GCBots 없거나 OFF면 원본 그대로 — 항상 안전(불신#1). */
 function botsOn(){try{return !!(window.GCBots&&GCBots.enabled);}catch(e){return false;}}
-function blendTot(t,date){try{return botsOn()?GCBots.blend(t,date):t;}catch(e){return t;}}
-function blendRows(rows,date,max){try{return botsOn()?GCBots.mergeRows(rows,date,max):rows;}catch(e){return rows;}}
-function blendRank(res,date,taps){try{return botsOn()?(GCBots.blendRank(res,date,taps)||res):res;}catch(e){return res;}}
+function roomKeyP(k){return /^room_/.test(String(k||''));}  // 프라이빗 방 키엔 봇 미적용(진짜 사람만)
+function blendTot(t,date){try{return (botsOn()&&!roomKeyP(date))?GCBots.blend(t,date):t;}catch(e){return t;}}
+function blendRows(rows,date,max){try{return (botsOn()&&!roomKeyP(date))?GCBots.mergeRows(rows,date,max):rows;}catch(e){return rows;}}
+function blendRank(res,date,taps){try{return (botsOn()&&!roomKeyP(date))?(GCBots.blendRank(res,date,taps)||res):res;}catch(e){return res;}}
 function startWatch(date){
   if(!netOn())return;
   if(LIVE.unwatch&&LIVE.date===date)return;
@@ -601,7 +656,7 @@ function paintIntroGauge(aShare){
 function joinLabel(team){return LANG==='ko'?(withEuro(team.name)+' 참전'):t('join',{name:team.name});}
 function intro(){
   cleanup();
-  var R0=roundNow(), date=R0.key, bt=GCTopics.localize(R0.topic,LANG), base=clamp(50+dailyBias(date,bt),12,88), ra=Math.round(base);
+  var date=gameKey(), bt=gameBt(), base=clamp(50+dailyBias(date,bt),12,88), ra=Math.round(base);
   var liveBadge=netOn()?t('liveBadge'):t('demoBadge');
   app.innerHTML=
     '<div class="screen" style="--team-a:'+bt.a.color+';--team-b:'+bt.b.color+';--me:'+bt.a.color+';--foe:'+bt.b.color+'">'+
@@ -610,8 +665,10 @@ function intro(){
           '<button class="chip-soft" onclick="toggleLang()" aria-label="language">'+t('langToggle')+'</button>'+
           '<span class="live"><span class="dot">●</span>'+liveBadge+'</span></span></div>'+
       '<div class="rule"></div>'+
-      '<div class="kicker">'+t('appName')+' · '+mdLabel(todayStr())+' · '+(MYINFO.code?MYINFO.flag+' ':'')+regionName(F.region)+'</div>'+
-      '<div id="ig-winner"></div>'+
+      '<div class="kicker">'+(ROOM?('🔒 '+(LANG==='ko'?'친구 방 — 코드 공유 대전':'Private room')):(t('appName')+' · '+mdLabel(todayStr())+' · '+(MYINFO.code?MYINFO.flag+' ':'')+regionName(F.region)))+'</div>'+
+      (ROOM?('<div class="winner-banner" style="display:flex;gap:8px;justify-content:center;align-items:center;flex-wrap:wrap">'+
+          '<button class="chip-soft" onclick="shareRoom()">🔗 '+(LANG==='ko'?'링크 공유':'Share link')+'</button>'+
+          '<button class="chip-soft" onclick="exitRoom()">🚪 '+(LANG==='ko'?'방 나가기':'Leave')+'</button></div>'):'<div id="ig-winner"></div>')+
       '<h1 class="q">'+introQ(bt.q)+'</h1>'+
       '<div class="teams">'+teamCard(bt.a,'A')+teamCard(bt.b,'B')+'</div>'+
       '<div>'+
@@ -637,6 +694,7 @@ function intro(){
         '<button class="btn btn-ghost" style="flex:1" onclick="openLocker()">'+t('lockerBtn')+'</button>'+
         '<button class="btn btn-ghost" style="flex:1" onclick="openProposals()">'+t('propBtn')+'</button>'+
       '</div>'+
+      (ROOM?'':'<div style="display:flex;gap:8px"><button class="btn btn-ghost" style="flex:1" onclick="openRoomCreate()">🔒 '+(LANG==='ko'?'친구끼리 방 만들기':'Create private room')+'</button></div>')+
       // 로비 지구본 — 전 세계 실시간 + 🍿 팝콘(영속 인스턴스를 이 슬롯으로 이동·D13).
       '<div class="globe-hero">'+
         '<div class="globe-cap mono">'+t('globeTitle')+'</div>'+
@@ -646,18 +704,19 @@ function intro(){
       '<p class="hint">'+t('tapHint')+'</p>'+
     '</div>';
   var iga=el('ig-a'); if(iga)iga._seed=base;
-  INTRO_KEY=date; startRoundTimer(); roundTick(); renderRoundWinner();
+  INTRO_KEY=date; startRoundTimer(); roundTick(); if(!ROOM)renderRoundWinner();
   startWatch(date);
   if(netOn()&&LIVE.date===date&&LIVE.tot)onLive();
-  mountGlobe(); // 로비 슬롯으로 지구본 이동
+  mountGlobe(); // 로비 슬롯으로 지구본 이동(방에서도 그 방 집계만 표시)
 }
 
 /* ── 배틀 ── */
 var B=null, DURATION=60;
 function GO(side){
+  if(ROOM&&roomEnded()){ toast(LANG==='ko'?'이 방은 종료됐어요':'This room has ended'); return; }
   cleanup();
   // 배틀 시작 시 1회 localize → B.bt에 평탄 저장. 이후 frame/ticker/result는 B.bt를 그대로 사용.
-  var R0=roundNow(), date=R0.key, bt=GCTopics.localize(R0.topic,LANG), me=bt[side], foe=bt[side==='a'?'b':'a'];
+  var date=gameKey(), bt=gameBt(), me=bt[side], foe=bt[side==='a'?'b':'a'];
   var today=todayStr();
   startWatch(date);
   var base=clamp(50+dailyBias(date,bt),12,88);
@@ -967,7 +1026,7 @@ function cleanup(){if(B){cancelAnimationFrame(B.raf);clearInterval(B.tick);B=nul
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return c==='&'?'&amp;':c==='<'?'&lt;':c==='>'?'&gt;':'&quot;';});}
 function rankBoard(){
   cleanup();
-  var R0=roundNow(), date=R0.key, bt=GCTopics.localize(R0.topic,LANG);
+  var date=gameKey(), bt=gameBt();
   app.innerHTML=
     '<div class="screen" style="--team-a:'+bt.a.color+';--team-b:'+bt.b.color+';--me:'+bt.a.color+';--foe:'+bt.b.color+'">'+
       '<div class="hdr"><span class="brand">'+t('rankTitle')+'</span><span class="mono">'+mdShort(todayStr())+'</span></div>'+
@@ -1931,8 +1990,11 @@ window.addEventListener('beforeunload', function(e){
   if(B && !B.ended){ e.preventDefault(); e.returnValue=''; return ''; }
 });
 
-/* 시작 */
-intro();
+/* 시작 — 공유 링크(?r=)면 프라이빗 방으로, 아니면 일반 로비. */
+(function boot(){
+  try{ var m=location.search.match(/[?&]r=([^&]+)/); if(m){ var c=roomDecode(m[1]); if(c){ ROOM=c; ROOM.key='room_'+c.id; ROOM.bt=roomBt(c); } } }catch(e){}
+  intro();
+})();
 
 /* 오프라인 설치(PWA) — 실패해도 게임엔 영향 없음 */
 if('serviceWorker' in navigator && location.protocol.indexOf('http')===0){

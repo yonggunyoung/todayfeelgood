@@ -5,6 +5,7 @@ import { store, recordMood, todayKey } from './store.js';
 import { mascotSVG } from './mascot.js';
 import { openShareCard } from './share.js';
 import { weatherHTML, collectionHTML } from './views.js';
+import { openQuiz } from './quiz.js';
 
 let state = store.load();
 const $ = (s, r = document) => r.querySelector(s);
@@ -139,7 +140,7 @@ function renderMore() {
     list.appendChild(el);
   };
   item('<path d="M12 3v12M8 11l4 4 4-4M5 21h14"/>', '내 데이터 내보내기', '기록은 내 것 · JSON으로 저장', exportData);
-  item('<path d="M9 18V5l10-2v13"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/>', '음악 성향 테스트', '곧 열려요 · 나의 구름이 타입', () => toast('음악 성향 테스트는 곧 열려요'));
+  item('<path d="M9 18V5l10-2v13"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/>', '음악 성향 테스트', '5문항이면 끝 · 나의 구름이 타입', openQuiz);
   item('<path d="M12 3a9 9 0 1 0 9 9 9 9 0 0 0-9-9zM12 8v4M12 16h.01"/>', '마음이 많이 힘들 땐', '자살예방상담 1393 (24시간)', null, 'tel:1393');
   item('<rect x="4" y="4" width="16" height="16" rx="3"/><path d="M9 9h6M9 13h6M9 17h3"/>', '개인정보처리방침', '내 기분은 내 폰에 · 익명 집계', null, './privacy.html');
   item('<path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/>', '데이터 초기화', '모든 기록 삭제', resetData);

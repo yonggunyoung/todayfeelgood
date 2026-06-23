@@ -1,6 +1,6 @@
 // 오늘 기분 — 앱 셸 오프라인 캐시 (단독 PWA, 의존성 없음).
 // 파일 추가 시 ASSETS와 캐시 버전(C)을 같이 올린다.
-const C = 'oneulgibun-v10';
+const C = 'oneulgibun-v11';
 const ASSETS = [
   './', './index.html', './privacy.html', './admin.html',
   './css/styles.css',
@@ -25,6 +25,11 @@ self.addEventListener('fetch', (e) => {
       const cp = resp.clone();
       caches.open(C).then((c) => c.put(e.request, cp));
       return resp;
-    }).catch(() => caches.match('./index.html')))
+    }).catch(() => {
+      // 오프라인 폴백은 '페이지 이동'에만. 폰트/이미지/스크립트 실패에 HTML을 돌려주면
+      // 엉뚱한 리소스가 되고 CSP 위반을 부른다 → 그대로 실패시킨다.
+      if (e.request.mode === 'navigate') return caches.match('./index.html');
+      return Response.error();
+    }))
   );
 });

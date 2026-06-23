@@ -143,6 +143,19 @@ body{background:var(--paper-2);color:var(--ink);font-family:var(--ui);font-weigh
 .col-num{position:absolute;bottom:3px;right:5px;font-size:10px;font-weight:700;color:var(--ink-soft)}
 .col-empty-msg{text-align:center;color:var(--ink-soft);font-size:var(--fs-cap);margin-top:var(--sp-4)}
 
+/* 이번 주 구름이 플리 */
+.pl-h{display:flex;align-items:baseline;gap:8px;margin:var(--sp-5) 0 var(--sp-2);flex-wrap:wrap}
+.pl-h span{font-family:var(--disp);font-size:var(--fs-h3)}
+.pl-h small{color:var(--ink-soft);font-size:var(--fs-cap);font-weight:600}
+.pl{padding:2px 14px}
+.pl-row{display:flex;align-items:center;gap:12px;padding:11px 0;text-decoration:none;color:var(--ink)}
+.pl-row+.pl-row{border-top:1px solid var(--line)}
+.pl-row .gi{flex:none}
+.pl-meta{flex:1;min-width:0}
+.pl-meta b{display:block;font-weight:700;font-size:var(--fs-sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pl-meta small{display:block;color:var(--ink-soft);font-size:var(--fs-cap);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pl-go{color:var(--cmi);flex:none}
+
 /* 더보기/설정 */
 .set-list{display:flex;flex-direction:column;gap:10px;margin-top:var(--sp-4)}
 .set-item{display:flex;align-items:center;gap:12px;padding:16px;border-radius:var(--r-md);background:#fff;border:1px solid var(--line);box-shadow:var(--el-1);text-decoration:none;color:var(--ink);font-weight:600;font-size:var(--fs-body);cursor:pointer;width:100%;text-align:left}

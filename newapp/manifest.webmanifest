@@ -1,0 +1,15 @@
+{
+  "name": "새 앱 (이름을 바꾸세요)",
+  "short_name": "새 앱",
+  "description": "독립 PWA 스타터 — 여기에 기능을 하나씩 채워나가세요.",
+  "lang": "ko",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f8fafc",
+  "theme_color": "#4f46e5",
+  "icons": [
+    { "src": "./icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

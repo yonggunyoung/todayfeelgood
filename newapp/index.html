@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>새 앱</title>
+  <meta name="description" content="독립 PWA 스타터 — 여기에 기능을 하나씩 채워나가세요." />
+  <meta name="theme-color" content="#4f46e5" />
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="icon" href="./icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="./icon.svg" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <link rel="stylesheet" href="./css/styles.css" />
+</head>
+<body>
+  <main class="app">
+    <header class="app__head">
+      <div class="logo" aria-hidden="true">+</div>
+      <h1 class="app__title">새 앱</h1>
+      <p class="app__sub">독립 PWA 스타터 · 여기에 하나씩 채워나가세요</p>
+    </header>
+
+    <!-- 👇 여기부터 화면을 만들어 나가세요 (아래 카드는 동작 확인용 데모) -->
+    <section class="card" id="home">
+      <p class="muted">앱 셸이 정상 동작 중이에요. 아래는 패턴 예시입니다.</p>
+      <button class="btn" id="tapBtn">탭 카운트: <span id="tapCount">0</span></button>
+      <p class="hint">이 버튼은 localStorage 저장 패턴 데모예요. 마음껏 지우고 시작하세요.</p>
+    </section>
+
+    <button class="btn btn--ghost" id="installBtn" hidden>📲 홈 화면에 설치</button>
+
+    <footer class="app__foot">
+      <span id="swState" class="dot">오프라인 캐시 준비 중…</span>
+    </footer>
+  </main>
+
+  <script src="./js/app.js"></script>
+</body>
+</html>

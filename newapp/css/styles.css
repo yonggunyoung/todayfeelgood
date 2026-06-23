@@ -1,0 +1,72 @@
+/* 새 앱 — 디자인 시스템 스타터.
+   색·모서리·그림자는 :root 변수만 바꾸면 전체에 반영됩니다. */
+:root {
+  --bg: #f8fafc;
+  --surface: #ffffff;
+  --ink: #0f172a;
+  --muted: #64748b;
+  --accent: #4f46e5;
+  --accent-ink: #ffffff;
+  --line: #e2e8f0;
+  --radius: 16px;
+  --shadow: 0 8px 30px rgba(15, 23, 42, .08);
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100dvh;
+}
+
+.app {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: max(24px, env(safe-area-inset-top)) 20px 32px;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.app__head { text-align: center; margin-top: 8px; }
+.logo {
+  width: 64px; height: 64px; margin: 0 auto 14px;
+  display: grid; place-items: center;
+  background: var(--accent); color: var(--accent-ink);
+  border-radius: 20px; font-size: 36px; font-weight: 700; line-height: 1;
+  box-shadow: var(--shadow);
+}
+.app__title { margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -.02em; }
+.app__sub { margin: 6px 0 0; color: var(--muted); font-size: 14px; }
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 22px;
+  display: flex; flex-direction: column; gap: 14px;
+}
+
+.muted { color: var(--muted); margin: 0; font-size: 14px; }
+.hint { color: var(--muted); margin: 0; font-size: 12px; }
+
+.btn {
+  appearance: none; border: 0; cursor: pointer;
+  background: var(--accent); color: var(--accent-ink);
+  font: inherit; font-weight: 700; font-size: 15px;
+  padding: 13px 16px; border-radius: 12px;
+  transition: transform .05s ease, opacity .2s ease;
+}
+.btn:active { transform: translateY(1px); }
+.btn--ghost {
+  background: transparent; color: var(--accent);
+  border: 1.5px solid var(--accent);
+}
+
+.app__foot { margin-top: auto; text-align: center; }
+.dot { color: var(--muted); font-size: 12px; }

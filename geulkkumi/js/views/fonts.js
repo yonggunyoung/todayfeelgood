@@ -9,6 +9,7 @@ import { isFavorite, toggleFavorite, setSetting, settings } from "../store.js";
 import { convertAll, zalgo } from "../engine/unicode-fonts.js";
 import { decompose, chosung, deco, circledHangul, parenHangul } from "../engine/hangul.js";
 import { applyFrame } from "../engine/decorate.js";
+import { openPreview } from "../preview.js";
 
 const SAMPLE = "글꾸미 Aa1";
 let taRef = null;
@@ -46,7 +47,11 @@ function resultRow(name, value, kind, risk) {
     type: "button", title: "탭하면 복사",
     onclick: () => { copy(value, kind || "font"); if ((kind || "font") === "font") bumpRecent(name); },
   }, value);
-  return el("div.fout" + (risk ? ".risky" : ""), null, [nameCell, val, star]);
+  const pv = el("button.fout-pv", {
+    type: "button", title: "미리보기", "aria-label": "붙여넣기 미리보기",
+    onclick: (e) => { e.stopPropagation(); openPreview(value); },
+  }, "👁");
+  return el("div.fout" + (risk ? ".risky" : ""), null, [nameCell, val, pv, star]);
 }
 
 function renderKorean(out, text) {

@@ -9,6 +9,7 @@ import { KAOMOJI, allKaomoji } from "../data/kaomoji.js";
 import { FRAMES, DECO_LINES, BLOCKS, renderTemplate } from "../data/templates.js";
 import { STYLES, convert } from "../engine/unicode-fonts.js";
 import { mix } from "../engine/decorate.js";
+import { openPreview } from "../preview.js";
 
 const SEGMENTS = [
   { id: "symbols", name: "특수문자" },
@@ -107,6 +108,7 @@ function mixSection() {
 
   const actions = el("div.toolbar", null, [
     el("button.tbtn.primary", { type: "button", onclick: () => copy(compute(), "mix") }, "📋 복사"),
+    el("button.tbtn", { type: "button", onclick: () => openPreview(compute()) }, "👁 미리보기"),
     el("button.tbtn", { type: "button", onclick: () => share(compute()) }, "🔗 공유"),
   ]);
 

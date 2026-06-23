@@ -100,3 +100,22 @@ export function copyChip(text, opts) {
 export function debounce(fn, ms) {
   let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); };
 }
+
+// 바텀시트 모달(#modal-root 필요). 배경/✕/Esc로 닫힘. close 함수 반환.
+export function openSheet(node, title) {
+  const root = document.getElementById("modal-root");
+  if (!root) return () => {};
+  clear(root);
+  const onKey = (e) => { if (e.key === "Escape") close(); };
+  function close() { document.removeEventListener("keydown", onKey); document.body.style.overflow = ""; back.classList.remove("show"); setTimeout(() => clear(root), 220); }
+  const back = el("div.sheet-back", { onclick: (e) => { if (e.target === back) close(); } });
+  const sheet = el("div.sheet", { role: "dialog", "aria-modal": "true", "aria-label": title || "" });
+  sheet.append(
+    el("div.sheet-hd", null, [el("strong", null, title || ""), el("button.sheet-x", { type: "button", "aria-label": "닫기", onclick: close }, "✕")]),
+    el("div.sheet-body", null, [node]),
+  );
+  back.append(sheet); root.append(back);
+  document.addEventListener("keydown", onKey); document.body.style.overflow = "hidden";
+  requestAnimationFrame(() => back.classList.add("show"));
+  return close;
+}

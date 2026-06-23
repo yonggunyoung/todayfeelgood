@@ -6,7 +6,7 @@
 
 import { el, clear, copy, debounce, toast } from "../ui.js";
 import { isFavorite, toggleFavorite, setSetting, settings } from "../store.js";
-import { convertAll, zalgo } from "../engine/unicode-fonts.js";
+import { convertAll, convert, zalgo } from "../engine/unicode-fonts.js";
 import { decompose, chosung, deco, circledHangul, parenHangul } from "../engine/hangul.js";
 import { applyFrame } from "../engine/decorate.js";
 import { openPreview } from "../preview.js";
@@ -84,6 +84,32 @@ function renderEnglish(out, text, dim) {
   out.append(el("div.sec-title", null, ["⚠️ 개성 스타일", el("span.sec-sub", null, "인스타 이름칸·일부 안드로이드에서 깨질 수 있어요")]), l2);
 }
 
+// 무AI 맥락 추천 — 입력 특징(한글/영문/숫자/이모지/ㅋㅠ)에 어울리는 한 탭 결과.
+function recommend(text) {
+  const out = [];
+  const ko = /[가-힣]/.test(text), en = /[A-Za-z]/.test(text), num = /\d/.test(text);
+  const emo = /[\u{1F300}-\u{1FAFF}☀-➿]/u.test(text), laugh = /[ㅋㅎㅠㅜ]/.test(text);
+  if (ko) { out.push(["한글 데코", applyFrame("˚ʚ {} ɞ˚", text)], ["별가루", applyFrame("⋆｡°✩ {} ✩°｡⋆", text)]); }
+  if (en) { out.push(["볼드", convert(text, "bold")], ["필기체", convert(text, "boldscript")]); }
+  if (num && !ko) out.push(["전각", convert(text, "fullwidth")]);
+  if (laugh) out.push(["하트", applyFrame("♡ {} ♡", text)]);
+  if (emo) out.push(["반짝 프레임", applyFrame("✧･ﾟ {} ﾟ･✧", text)]);
+  out.push(["와이드", convert(text, "wide")]);
+  const seen = new Set(), uniq = [];
+  for (const [n, v] of out) if (v && !seen.has(v)) { seen.add(v); uniq.push([n, v]); }
+  return uniq.slice(0, 5);
+}
+
+function renderRecommend(out, text) {
+  const recs = recommend(text);
+  if (!recs.length) return;
+  const row = el("div.rec-row");
+  recs.forEach(([name, value]) => row.append(el("button.rec-chip", {
+    type: "button", title: "탭하면 복사", onclick: () => copy(value, "font"),
+  }, [el("span.rec-name", null, name), el("span.rec-val", null, value)])));
+  out.append(el("div.sec-title", null, ["⭐ 추천", el("span.sec-sub", null, "입력에 어울리는 — 탭 복사")]), row);
+}
+
 function counterText(raw) {
   const n = [...raw].length;
   if (!n) return "";
@@ -106,6 +132,7 @@ function render(out, ta, counter) {
   clear(out);
   const hasKo = /[가-힣]/.test(text);
   const hasLatin = /[A-Za-z0-9]/.test(text);
+  if (!dim) renderRecommend(out, text); // 실제 입력 시에만 추천
   if (hasKo) renderKorean(out, text);
   // 순수 한글 입력이면 영문 30줄(원본 그대로)은 생략 — 중복 노이즈 제거.
   if (hasLatin || !hasKo) renderEnglish(out, text, dim);

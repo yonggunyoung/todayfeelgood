@@ -185,6 +185,16 @@ details.adv > summary::before { content: "⚙ "; }
 .fout-star { border: none; background: transparent; font-size: 18px; color: var(--pink-ink); width: 32px; min-height: 44px; transition: transform .2s cubic-bezier(.34,1.56,.64,1); }
 .fout-pv { border: none; background: transparent; font-size: 15px; width: 28px; min-height: 44px; opacity: .55; }
 .fout-pv:active { opacity: 1; transform: scale(.9); }
+
+/* 맥락 추천 행(가로 스크롤) */
+.rec-row { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; -webkit-overflow-scrolling: touch; }
+.rec-row::-webkit-scrollbar { height: 0; }
+.rec-chip { flex: 0 0 auto; max-width: 200px; display: flex; flex-direction: column; align-items: flex-start; gap: 1px; border: 1.5px solid var(--line-2); background: var(--surface); border-radius: var(--r-md); padding: 8px 12px; box-shadow: var(--shadow-sm), var(--ring-hi); }
+.rec-chip:active { transform: scale(.95); border-color: var(--brand); }
+.rec-name { font-size: 10px; font-weight: 700; color: var(--pink-ink); }
+.rec-val { font-size: 15px; max-width: 176px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* 슬롯 카테고리 라벨 */
+.slot-cat { flex: 0 0 auto; font-size: 10px; font-weight: 700; color: var(--violet-ink); background: var(--violet-soft); border-radius: var(--r-pill); padding: 4px 8px; align-self: center; }
 .fout-star[aria-pressed="true"] { animation: starpop .34s cubic-bezier(.34,1.56,.64,1); }
 .fout.risky .fout-name { color: var(--warn); }
 

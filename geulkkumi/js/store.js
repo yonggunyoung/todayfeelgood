@@ -4,10 +4,15 @@
 const KEY = "geulkkumi.v1";
 const MAX_HISTORY = 60;
 const MAX_FAV = 300;
+const MAX_SLOTS = 120;
+
+// 용도별 슬롯 — 완성한 닉/바이오를 여기 모아두고 원탭 복사.
+export const SLOT_CATS = ["인스타 바이오", "카톡 닉", "디코 닉", "게임 닉", "프로필"];
 
 const DEFAULTS = {
   favorites: [],   // [{ text, kind, ts }]
   history: [],     // [{ text, kind, ts }]
+  slots: [],       // [{ id, cat, text, ts }]
   settings: { theme: "auto", lastStyle: "bold", artMode: "braille", artWidth: 80 },
 };
 
@@ -19,6 +24,7 @@ function load() {
     return {
       favorites: Array.isArray(obj.favorites) ? obj.favorites : [],
       history: Array.isArray(obj.history) ? obj.history : [],
+      slots: Array.isArray(obj.slots) ? obj.slots : [],
       settings: Object.assign({}, DEFAULTS.settings, obj.settings || {}),
     };
   } catch { return structuredClone(DEFAULTS); }
@@ -69,3 +75,14 @@ export function removeFavorite(text) {
   persist();
 }
 export function clearHistory() { state.history = []; persist(); }
+
+// ── 슬롯 ──
+export function getSlots() { return state.slots || (state.slots = []); }
+export function addSlot(cat, text) {
+  if (!text) return;
+  const id = "s" + Date.now().toString(36) + Math.floor(Math.random() * 1e6).toString(36);
+  getSlots().unshift({ id, cat: cat || "기타", text, ts: Date.now() });
+  if (state.slots.length > MAX_SLOTS) state.slots.length = MAX_SLOTS;
+  persist();
+}
+export function removeSlot(id) { state.slots = getSlots().filter((s) => s.id !== id); persist(); }

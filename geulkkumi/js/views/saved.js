@@ -2,7 +2,7 @@
 "use strict";
 
 import { el, clear, copy, share, toast } from "../ui.js";
-import { getState, subscribe, removeFavorite, clearHistory, toggleFavorite, isFavorite } from "../store.js";
+import { getState, subscribe, removeFavorite, clearHistory, toggleFavorite, isFavorite, getSlots, removeSlot } from "../store.js";
 
 function row(item, { onRemove, removable }) {
   const text = item.text;
@@ -25,12 +25,25 @@ function mount(root) {
   const segRow = el("div.segmented");
   const body = el("div.saved-body", { "aria-live": "polite" });
 
+  function slotRow(slot) {
+    const val = el("button.saved-val", { type: "button", title: "탭하면 복사", onclick: () => copy(slot.text, "slot") }, slot.text);
+    const acts = el("div.saved-acts", null, [
+      el("button.saved-act", { type: "button", title: "공유", text: "🔗", onclick: () => share(slot.text) }),
+      el("button.saved-act", { type: "button", title: "삭제", text: "✕", onclick: () => removeSlot(slot.id) }),
+    ]);
+    return el("div.saved-row", null, [el("span.slot-cat", null, slot.cat), val, acts]);
+  }
+
   function renderBody() {
     const s = getState();
     clear(body);
     if (seg === "fav") {
       if (!s.favorites.length) { body.append(empty("아직 즐겨찾기가 없어요", "마음에 드는 글씨·기호의 ☆ 를 눌러 담아보세요")); return; }
       s.favorites.forEach((it) => body.append(row(it, { removable: true, onRemove: () => removeFavorite(it.text) })));
+    } else if (seg === "slots") {
+      const slots = getSlots();
+      if (!slots.length) { body.append(empty("슬롯이 비었어요", "미리보기(👁) 화면에서 ‘💾 슬롯에 담기’로 닉·바이오를 저장하세요")); return; }
+      slots.forEach((sl) => body.append(slotRow(sl)));
     } else {
       if (!s.history.length) { body.append(empty("최근 기록이 없어요", "복사하면 여기에 쌓여요")); return; }
       body.append(el("div.toolbar", null, [
@@ -46,7 +59,7 @@ function mount(root) {
     ]);
   }
 
-  [["fav", "즐겨찾기 ★"], ["recent", "최근"]].forEach(([id, name]) => {
+  [["fav", "즐겨찾기 ★"], ["slots", "슬롯 💾"], ["recent", "최근"]].forEach(([id, name]) => {
     const b = el("button.seg" + (id === seg ? ".on" : ""), { type: "button" }, name);
     b.onclick = () => { seg = id; segRow.querySelectorAll(".seg").forEach((x) => x.classList.toggle("on", x === b)); renderBody(); };
     segRow.append(b);

@@ -3,7 +3,8 @@
  * "내 인스타 바이오/카톡 닉에서 어떻게 보이는지"를 복사 전에 확인(이 앱의 최대 차별점).
  */
 "use strict";
-import { el, openSheet, copy } from "./ui.js";
+import { el, openSheet, copy, toast } from "./ui.js";
+import { addSlot, SLOT_CATS } from "./store.js";
 
 // 결합문자/astral 감지로 호환성 한 줄 코멘트.
 function compatNote(text) {
@@ -82,6 +83,9 @@ export function buildPreview(text) {
     el("div.toolbar", null, [
       el("button.tbtn.primary", { type: "button", onclick: () => copy(text, "preview") }, "📋 이 글씨 복사"),
     ]),
+    el("div.opt-title", null, "💾 슬롯에 담아두기 (보관함에서 꺼내 쓰기)"),
+    el("div.chips", null, SLOT_CATS.map((cat) =>
+      el("button.chip-opt", { type: "button", onclick: () => { addSlot(cat, text); toast("‘" + cat + "’ 슬롯에 담음 💾"); } }, cat))),
   );
   return wrap;
 }

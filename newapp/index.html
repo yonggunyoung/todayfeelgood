@@ -5,31 +5,54 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>오늘 기분</title>
   <meta name="description" content="하루 한 번 기분을 탭하면 오늘의 노래를 받는 앱." />
-  <meta name="theme-color" content="#FF6F50" />
+  <meta name="theme-color" content="#FBF6EE" />
   <link rel="manifest" href="./manifest.webmanifest" />
   <link rel="icon" href="./icon.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="./icon.svg" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" />
+  <style>@font-face{font-family:'Cafe24Ssurround';src:url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_seven@1.1/Cafe24Ssurround.woff') format('woff');font-weight:700;font-display:swap;}</style>
   <link rel="stylesheet" href="./css/styles.css" />
 </head>
 <body>
-  <!-- ⚠️ 임시 기능 셸. 디자인 시안(preview.html) 도착 시 이 마크업·스타일을 교체한다.
-       로직은 js/store.js · js/recommend.js · js/data/* 에 분리되어 그대로 재사용된다. -->
   <main class="app">
-    <header class="app__head">
-      <p class="app__sub" id="dateline">—</p>
-      <h1 class="app__title">오늘 기분 어때요?</h1>
-    </header>
+    <div class="halo" id="halo"></div>
 
-    <section class="card" id="moodPicker" aria-label="기분 선택"></section>
-    <section class="card" id="result" hidden></section>
+    <div class="bar">
+      <div class="bar__date" id="dateline">—</div>
+      <div class="streak" id="streak" hidden>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 3c2 3 4 4.5 4 8a4 4 0 1 1-8 0c0-1.5.6-2.6 1.4-3.6.3 1.2 1 1.8 1.8 1.8C12 9 11 6.5 12 3Z" fill="var(--coral)"/></svg>
+        <span id="streakN">0</span>일째
+      </div>
+    </div>
 
-    <button class="btn btn--ghost" id="installBtn" hidden>📲 홈 화면에 설치</button>
+    <div class="head">
+      <div class="title" id="title">오늘 기분 어때요?</div>
+      <div class="sub" id="sub">하루 한 번, 가볍게 한 번 톡.</div>
+    </div>
 
-    <footer class="app__foot">
-      <span id="swState" class="dot">오프라인 캐시 준비 중…</span>
-    </footer>
+    <div class="hero"><div class="hero__m" id="hero"></div></div>
+
+    <div class="picker" id="moodPicker"></div>
+
+    <!-- 전국 게이지: 증분4(Firebase) 전까지 정적 예시 -->
+    <div class="card gauge" id="gauge">
+      <div class="gauge__top">
+        <div class="gauge__lab">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="5" fill="var(--happy)"/><g stroke="var(--happy)" stroke-width="1.6" stroke-linecap="round"><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></g></svg>
+          <span>오늘 대한민국</span>
+        </div>
+        <span class="gauge__pct">행복 64%</span>
+      </div>
+      <div class="gauge__bar"><div class="gauge__fill" style="width:64%"></div></div>
+    </div>
+
+    <div class="card result" id="result" hidden></div>
+
+    <button class="share" id="installBtn" hidden style="background:transparent;color:var(--coral);border:1.5px solid var(--coral);box-shadow:none">📲 홈 화면에 설치</button>
+
+    <div class="foot"><span class="dot" id="swState">오프라인 캐시 준비 중…</span></div>
   </main>
 
   <script type="module" src="./js/app.js"></script>

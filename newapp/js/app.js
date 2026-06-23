@@ -6,6 +6,7 @@ import { mascotSVG } from './mascot.js';
 import { openShareCard } from './share.js';
 import { weatherHTML, collectionHTML } from './views.js';
 import { openQuiz } from './quiz.js';
+import { loadCatalog } from './catalog.js';
 
 let state = store.load();
 const $ = (s, r = document) => r.querySelector(s);
@@ -84,39 +85,63 @@ function pick(moodId) {
   renderHome();
 }
 
+function ytEmbed(id) {
+  const box = document.createElement('div'); box.className = 'ytlite';
+  box.setAttribute('role', 'button'); box.tabIndex = 0; box.setAttribute('aria-label', '유튜브에서 재생');
+  box.innerHTML = `<img class="ytlite__thumb" src="https://i.ytimg.com/vi/${id}/hqdefault.jpg" alt="" loading="lazy"><span class="ytlite__btn"><svg width="30" height="30" viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></span>`;
+  const go = () => { box.classList.add('on'); box.innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen title="유튜브 재생"></iframe>`; };
+  box.addEventListener('click', go);
+  box.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } });
+  return box;
+}
+
 function renderResult(moodId, key) {
   const result = document.getElementById('result');
-  const mo = moodById(moodId), song = recommendSong(moodId, { dateKey: key });
+  const mo = moodById(moodId), song = recommendSong(moodId, { dateKey: key, catalog: loadCatalog() });
   result.hidden = false; result.dataset.mood = moodId; result.innerHTML = '';
 
   const head = document.createElement('div'); head.className = 'result__head';
   head.innerHTML = `<div class="lab">오늘 구름이가 읽은 마음</div><div class="result__mood">${mo ? mo.ko : moodId}</div>`;
   result.appendChild(head);
 
-  if (song.source === 'none') {
-    const p = document.createElement('p'); p.className = 'gauge__sub'; p.style.textAlign = 'center';
-    p.textContent = '오늘은 구름이도 조용히 쉬는 날'; result.appendChild(p);
-  } else {
-    const a = document.createElement('a'); a.className = 'song'; a.href = song.url; a.target = '_blank'; a.rel = 'noopener';
-    a.setAttribute('aria-label', `${song.title} ${song.artist} 유튜브 뮤직에서 듣기`);
-    a.innerHTML = `<div class="song__art"><svg width="26" height="26" viewBox="0 0 24 24" fill="var(--coral)" aria-hidden="true"><path d="M9 18V5l10-2v13"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/></svg></div>
-      <div class="song__meta"><div class="song__lab">구름이가 골라준 한 곡</div><div class="song__title"></div><div class="song__artist"></div></div>
-      <div class="song__play"><svg width="18" height="18" viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></div>`;
-    $('.song__title', a).textContent = song.title; $('.song__artist', a).textContent = song.artist;
-    result.appendChild(a);
+  const addReasons = () => {
     if (mo && mo.reasons) {
       const w = document.createElement('div'); w.className = 'reasons';
       w.innerHTML = '<div class="why">구름이가 고른 이유</div>' + mo.reasons.map((r) => `<span class="chip">${r}</span>`).join('');
       result.appendChild(w);
     }
+  };
+  let listenUrl = '';
+
+  if (song.source === 'none') {
+    const p = document.createElement('p'); p.className = 'gauge__sub'; p.style.textAlign = 'center';
+    p.textContent = '오늘은 구름이도 조용히 쉬는 날'; result.appendChild(p);
+  } else if (song.youtubeId) {
+    const lab = document.createElement('div'); lab.className = 'song__lab';
+    lab.style.cssText = 'text-align:center;margin-bottom:10px;color:var(--cmi)';
+    lab.textContent = '구름이가 골라준 한 곡'; result.appendChild(lab);
+    result.appendChild(ytEmbed(song.youtubeId));
+    const line = document.createElement('div'); line.className = 'song-line';
+    line.innerHTML = '<span class="song-line__t"></span><span class="song-line__a"></span>';
+    $('.song-line__t', line).textContent = song.title; $('.song-line__a', line).textContent = song.artist;
+    result.appendChild(line); addReasons();
+  } else {
+    listenUrl = song.url || '';
+    const a = document.createElement('a'); a.className = 'song'; a.href = listenUrl; a.target = '_blank'; a.rel = 'noopener';
+    a.setAttribute('aria-label', `${song.title} ${song.artist} 유튜브 뮤직에서 듣기`);
+    a.innerHTML = `<div class="song__art"><svg width="26" height="26" viewBox="0 0 24 24" fill="var(--coral)" aria-hidden="true"><path d="M9 18V5l10-2v13"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/></svg></div><div class="song__meta"><div class="song__lab">구름이가 골라준 한 곡</div><div class="song__title"></div><div class="song__artist"></div></div><div class="song__play"><svg width="18" height="18" viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></div>`;
+    $('.song__title', a).textContent = song.title; $('.song__artist', a).textContent = song.artist;
+    result.appendChild(a); addReasons();
   }
 
-  const listen = document.createElement('button'); listen.type = 'button'; listen.className = 'btn btn--primary';
-  listen.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>YouTube Music에서 듣기';
-  if (song.source !== 'none') listen.addEventListener('click', () => window.open(song.url, '_blank', 'noopener'));
-  result.appendChild(listen);
-
-  const share = document.createElement('button'); share.type = 'button'; share.className = 'btn btn--ghost'; share.dataset.act = 'share';
+  if (listenUrl) {
+    const listen = document.createElement('button'); listen.type = 'button'; listen.className = 'btn btn--primary';
+    listen.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>YouTube Music에서 듣기';
+    listen.addEventListener('click', () => window.open(listenUrl, '_blank', 'noopener'));
+    result.appendChild(listen);
+  }
+  const share = document.createElement('button'); share.type = 'button'; share.dataset.act = 'share';
+  share.className = 'btn ' + (listenUrl ? 'btn--ghost' : 'btn--primary');
   share.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M12 15V3M8 7l4-4 4 4"/></svg>오늘 기분 카드 공유하기';
   share.addEventListener('click', () => openShareCard(moodId, key));
   result.appendChild(share);
@@ -143,6 +168,7 @@ function renderMore() {
   item('<path d="M9 18V5l10-2v13"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/>', '음악 성향 테스트', '5문항이면 끝 · 나의 구름이 타입', openQuiz);
   item('<path d="M12 3a9 9 0 1 0 9 9 9 9 0 0 0-9-9zM12 8v4M12 16h.01"/>', '마음이 많이 힘들 땐', '자살예방상담 1393 (24시간)', null, 'tel:1393');
   item('<rect x="4" y="4" width="16" height="16" rx="3"/><path d="M9 9h6M9 13h6M9 17h3"/>', '개인정보처리방침', '내 기분은 내 폰에 · 익명 집계', null, './privacy.html');
+  item('<circle cx="12" cy="12" r="3.2"/><path d="M12 4v2M12 18v2M4 12h2M18 12h2M6.3 6.3l1.4 1.4M16.3 16.3l1.4 1.4M17.7 6.3l-1.4 1.4M7.7 16.3l-1.4 1.4"/>', '음악 관리 (관리자)', '곡 카탈로그 · 유튜브 임베드 관리', null, './admin.html');
   item('<path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/>', '데이터 초기화', '모든 기록 삭제', resetData);
 }
 function exportData() {

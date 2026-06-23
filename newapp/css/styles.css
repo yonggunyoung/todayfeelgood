@@ -158,6 +158,18 @@ body{background:var(--paper-2);color:var(--ink);font-family:var(--ui);font-weigh
 .onb__dots i.on{background:var(--coral);width:22px;border-radius:5px}
 .onb__btn{margin-top:8px;width:100%;max-width:300px}
 
+/* 유튜브 라이트 임베드 */
+.ytlite{position:relative;aspect-ratio:16/9;border-radius:var(--r-md);overflow:hidden;cursor:pointer;background:#000;box-shadow:var(--el-2)}
+.ytlite__thumb{width:100%;height:100%;object-fit:cover;display:block}
+.ytlite__btn{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
+.ytlite__btn::before{content:"";position:absolute;width:64px;height:46px;background:var(--coral);border-radius:14px;box-shadow:0 6px 16px -6px rgba(0,0,0,.5)}
+.ytlite__btn svg{position:relative;z-index:1}
+.ytlite.on{cursor:default}
+.ytlite iframe{width:100%;height:100%;border:0;display:block}
+.song-line{text-align:center;margin-top:10px}
+.song-line__t{font-family:var(--disp);font-size:var(--fs-h3);display:block}
+.song-line__a{font-size:var(--fs-cap);color:var(--ink-soft)}
+
 /* 음악 성향 테스트 */
 .quiz{position:fixed;inset:0;z-index:65;background:var(--paper);max-width:430px;margin:0 auto;display:flex;flex-direction:column;padding:max(52px,env(safe-area-inset-top)) 24px 28px;overflow-y:auto}
 .quiz__bar{display:flex;align-items:center;gap:12px}

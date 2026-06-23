@@ -1,11 +1,11 @@
-// 기분 정의 (디자인 독립 데이터).
-// color는 잠정값 — 최종 색은 디자인 토큰(preview.html)이 정한다. 여기선 매핑/식별만.
+// 기분 정의 (디자인 독립 데이터). 색은 css/styles.css(--mood-*)가 단일 출처(D13).
+// reasons = "구름이가 고른 이유" 칩 문구(기분별).
 export const MOODS = [
-  { id: 'happy',   ko: '행복', color: '#FFC95C' },
-  { id: 'flutter', ko: '설렘', color: '#FF9A8B' },
-  { id: 'calm',    ko: '평온', color: '#9CC3A6' },
-  { id: 'blue',    ko: '우울', color: '#8AA0C9' },
-  { id: 'angry',   ko: '화남', color: '#E2725B' },
+  { id: 'happy',   ko: '행복', reasons: ['신나는 하루엔', '기분 좋게', '구름이도 방방'] },
+  { id: 'flutter', ko: '설렘', reasons: ['두근거릴 땐', '설레는 마음에', '오늘 같은 날엔'] },
+  { id: 'calm',    ko: '평온', reasons: ['한 박자 쉬어가라고', '포근하게', '잔잔한 오후엔'] },
+  { id: 'blue',    ko: '우울', reasons: ['혼자가 아니야', '토닥토닥', '비 오는 마음에'] },
+  { id: 'angry',   ko: '화남', reasons: ['후- 식히게', '속이 뻥 뚫리게', '오늘은 좀 세게'] },
 ];
 
 export const MOOD_IDS = new Set(MOODS.map((m) => m.id));

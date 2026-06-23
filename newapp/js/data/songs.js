@@ -1,8 +1,7 @@
-// 오늘의 노래 시드 카탈로그 — Tier A(가수곡 = 링크아웃). D2/D3/D8.
-// ⚠️ SEED: 실제 큐레이션으로 교체 예정. 무드 매핑도 임시.
-// 원칙1(불신): 깨질 수 있는 youtubeId를 지어내지 않는다 → '검색 링크'로 연결(항상 유효).
-//   추후 정확한 임베드 ID로 승급(D2).
-const yt = (q) => `https://www.youtube.com/results?search_query=${encodeURIComponent(q)}`;
+// 오늘의 노래 시드 카탈로그 — Tier A(가수곡 = 링크아웃). D2/D8/D15.
+// ⚠️ SEED: 실제 큐레이션으로 교체 예정.
+// 원칙1(불신): 깨질 수 있는 영상ID를 지어내지 않는다 → YouTube Music '검색' 딥링크로 연결(항상 유효, 결과 페이지보다 정확).
+const yt = (q) => `https://music.youtube.com/search?q=${encodeURIComponent(q)}`;
 const s = (title, artist) => ({ title, artist, source: 'link', url: yt(`${artist} ${title}`) });
 
 export const SONGS = {

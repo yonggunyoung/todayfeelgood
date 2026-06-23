@@ -45,7 +45,10 @@ export function openQuiz() {
     let type = 'happy', best = -1;
     for (const k of Object.keys(TYPES)) if ((score[k] || 0) > best) { best = score[k] || 0; type = k; }
     const t = TYPES[type];
-    const recs = (SONGS[type] || []).map((s) => `<span class="chip">${s.title}</span>`).join('');
+    const recs = (SONGS[type] || []).slice(0, 4).map((s) => {
+      const t = s.title.length > 14 ? s.title.slice(0, 13) + '…' : s.title;
+      return `<span class="chip">${t}</span>`;
+    }).join('');
     ov.dataset.mood = type;
     ov.innerHTML = `<div class="quiz__bar"><button class="quiz__x" type="button" aria-label="닫기">${X_ICON}</button><div class="quiz__prog"><i style="width:100%"></i></div><span class="quiz__step">결과</span></div>
       <div class="quiz__m" style="width:170px;height:170px">${mascotSVG(type, false)}</div>

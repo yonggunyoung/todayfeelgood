@@ -6,7 +6,7 @@
 
 import { el, clear, copy, debounce, toast } from "../ui.js";
 import { isFavorite, toggleFavorite, setSetting, settings } from "../store.js";
-import { convertAll } from "../engine/unicode-fonts.js";
+import { convertAll, zalgo } from "../engine/unicode-fonts.js";
 import { decompose, chosung, deco, circledHangul, parenHangul } from "../engine/hangul.js";
 import { applyFrame } from "../engine/decorate.js";
 
@@ -53,6 +53,8 @@ function renderKorean(out, text) {
   const list = el("div.fout-list");
   KO_PRESETS.forEach((tpl) => list.append(resultRow("꾸민 한글", applyFrame(tpl, text), "hangul")));
   KO_SEPS.forEach((s) => list.append(resultRow("사이 " + s, deco(text, s), "hangul")));
+  list.append(resultRow("팔다리체", zalgo(text, 1, 0, 1), "hangul", true));
+  list.append(resultRow("뚫는 한글", zalgo(text, 2, 0, 2), "hangul", true));
   const ch = circledHangul(text); if (ch !== text) list.append(resultRow("원문자 한글", ch, "hangul"));
   const ph = parenHangul(text); if (ph !== text) list.append(resultRow("괄호 한글", ph, "hangul"));
   list.append(resultRow("자모 분해", decompose(text), "hangul"));
@@ -62,13 +64,19 @@ function renderKorean(out, text) {
 
 function renderEnglish(out, text, dim) {
   const recent = settings().recentStyles || [];
-  const rows = convertAll(text).slice().sort((a, b) => {
+  const all = convertAll(text);
+  // Tier 1(안전): 자주 쓰는 순으로 위에
+  const safe = all.filter((s) => s.tier === 1).sort((a, b) => {
     const ra = recent.indexOf(a.name), rb = recent.indexOf(b.name);
     return (ra < 0 ? 999 : ra) - (rb < 0 ? 999 : rb);
   });
-  const list = el("div.fout-list" + (dim ? ".dim" : ""));
-  rows.forEach((s) => list.append(resultRow(s.name, s.result, "font", s.risk)));
-  out.append(el("div.sec-title", null, ["✨ 영문·숫자 멋글씨", el("span.sec-sub", null, "자주 쓰는 순 · 탭 복사")]), list);
+  const risky = all.filter((s) => s.tier >= 2); // Tier 2~3: 주의
+  const l1 = el("div.fout-list" + (dim ? ".dim" : ""));
+  safe.forEach((s) => l1.append(resultRow(s.name, s.result, "font", false)));
+  out.append(el("div.sec-title", null, ["✨ 영문·숫자 멋글씨", el("span.sec-sub", null, "안전 · 자주 쓰는 순 · 탭 복사")]), l1);
+  const l2 = el("div.fout-list" + (dim ? ".dim" : ""));
+  risky.forEach((s) => l2.append(resultRow(s.name, s.result, "font", true)));
+  out.append(el("div.sec-title", null, ["⚠️ 개성 스타일", el("span.sec-sub", null, "인스타 이름칸·일부 안드로이드에서 깨질 수 있어요")]), l2);
 }
 
 function counterText(raw) {

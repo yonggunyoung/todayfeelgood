@@ -1,7 +1,7 @@
 // 글꾸미 — unicode-fonts 변환 코어 경계 테스트 (정상/예외표/미매핑/변조).
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { convert, convertAll, STYLES, styleName } from "../js/engine/unicode-fonts.js";
+import { convert, convertAll, STYLES, styleName, styleTier, zalgo } from "../js/engine/unicode-fonts.js";
 
 test("수학 알파벳 범위 매핑(볼드/더블스트럭/전각)", () => {
   assert.equal(convert("A", "bold"), String.fromCodePoint(0x1D400));
@@ -57,4 +57,19 @@ test("호환성 플래그(risk) + 전각 공백(U+3000)", () => {
   assert.equal(all.find((s) => s.id === "fraktur").risk, true);
   assert.equal(all.find((s) => s.id === "bold").risk, false);
   assert.equal(convert("A B", "fullwidth"), "Ａ　Ｂ"); // 전각 A + 전각 공백 + 전각 B
+});
+
+test("Tier 등급 + 신규 스타일(wide·zalgo)", () => {
+  assert.equal(styleTier("fullwidth"), 1);
+  assert.equal(styleTier("zalgo"), 2);
+  assert.equal(styleTier("regional"), 3);
+  // 와이드: 글자 사이 공백(한글도)
+  assert.equal(convert("ab", "wide"), "a b");
+  assert.equal(convert("한글", "wide"), "한 글");
+  // 지옥체: 결정론적·원문 유지하며 결합기호 부착, 공백엔 미부착
+  const z = convert("A", "zalgo");
+  assert.equal([...z][0], "A");
+  assert.ok([...z].length > 3);
+  assert.equal(convert("A", "zalgo"), convert("A", "zalgo")); // 결정론적
+  assert.equal(zalgo(" ", 3, 1, 3), " "); // 공백엔 마크 안 붙음
 });

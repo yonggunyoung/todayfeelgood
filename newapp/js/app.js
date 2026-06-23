@@ -4,6 +4,7 @@ import { MOODS, moodById } from './data/moods.js';
 import { recommendSong } from './recommend.js';
 import { store, recordMood, todayKey } from './store.js';
 import { mascotSVG } from './mascot.js';
+import { openShareCard } from './share.js';
 
 let state = store.load();
 const $ = (id) => document.getElementById(id);
@@ -99,9 +100,11 @@ function renderResult(moodId, key) {
   if (song.source !== 'none') listen.addEventListener('click', () => window.open(song.url, '_blank', 'noopener'));
   result.appendChild(listen);
 
-  const save = document.createElement('button'); save.type = 'button'; save.className = 'btn btn--ghost';
-  save.textContent = '컬렉션에 담기';
-  result.appendChild(save);   // 증분: 컬렉션
+  const share = document.createElement('button'); share.type = 'button'; share.className = 'btn btn--ghost'; share.dataset.act = 'share';
+  share.appendChild(svgEl('<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M12 15V3M8 7l4-4 4 4"/></svg>'));
+  share.append('오늘 기분 카드 공유하기');
+  share.addEventListener('click', () => openShareCard(moodId, key));
+  result.appendChild(share);
 }
 
 // ── PWA 설치 ──

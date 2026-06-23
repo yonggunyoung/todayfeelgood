@@ -131,3 +131,10 @@ body{background:var(--paper-2);color:var(--ink);font-family:var(--ui);font-weigh
 .install{margin-top:var(--sp-4)}
 .foot{margin-top:var(--sp-4);text-align:center;position:relative;z-index:1}
 .dot{display:inline-flex;align-items:center;gap:5px;color:var(--ink-faint);font-size:var(--fs-cap)}
+
+/* 공유 카드 미리보기 시트 */
+.sheet{position:fixed;inset:0;background:rgba(42,37,32,.5);display:flex;align-items:center;justify-content:center;z-index:50;padding:24px;animation:pop .25s var(--spring)}
+.sheet__box{background:var(--paper);border-radius:var(--r-lg);padding:16px;max-width:340px;width:100%;box-shadow:var(--sh-lg)}
+.sheet__img{width:100%;border-radius:var(--r-md);display:block;box-shadow:var(--el-1)}
+.sheet__row{display:flex;gap:10px;margin-top:14px}
+.sheet__row .btn{flex:1;margin-top:0}

@@ -1,15 +1,16 @@
-/* 새 앱 — 디자인 시스템 스타터.
-   색·모서리·그림자는 :root 변수만 바꾸면 전체에 반영됩니다. */
+/* 오늘 기분 — 임시 기능 셸 스타일.
+   ⚠️ 디자인 시안(preview.html) 도착 시 통째로 교체 예정. 지금은 중립/최소.
+   색·모서리·그림자는 :root 변수만 바꾸면 전체 반영. */
 :root {
-  --bg: #f8fafc;
+  --bg: #FBF6EE;
   --surface: #ffffff;
-  --ink: #0f172a;
-  --muted: #64748b;
-  --accent: #4f46e5;
+  --ink: #2A2520;
+  --muted: #7a726a;
+  --accent: #FF6F50;
   --accent-ink: #ffffff;
-  --line: #e2e8f0;
+  --line: #ece4d8;
   --radius: 16px;
-  --shadow: 0 8px 30px rgba(15, 23, 42, .08);
+  --shadow: 0 8px 30px rgba(42, 37, 32, .07);
 }
 
 * { box-sizing: border-box; }
@@ -29,44 +30,52 @@ body {
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 18px;
 }
 
 .app__head { text-align: center; margin-top: 8px; }
-.logo {
-  width: 64px; height: 64px; margin: 0 auto 14px;
-  display: grid; place-items: center;
-  background: var(--accent); color: var(--accent-ink);
-  border-radius: 20px; font-size: 36px; font-weight: 700; line-height: 1;
-  box-shadow: var(--shadow);
-}
-.app__title { margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -.02em; }
-.app__sub { margin: 6px 0 0; color: var(--muted); font-size: 14px; }
+.app__title { margin: 4px 0 0; font-size: 24px; font-weight: 800; letter-spacing: -.02em; }
+.app__sub { margin: 0; color: var(--muted); font-size: 14px; }
 
 .card {
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
-  padding: 22px;
+  padding: 18px;
   display: flex; flex-direction: column; gap: 14px;
 }
-
-.muted { color: var(--muted); margin: 0; font-size: 14px; }
-.hint { color: var(--muted); margin: 0; font-size: 12px; }
 
 .btn {
   appearance: none; border: 0; cursor: pointer;
   background: var(--accent); color: var(--accent-ink);
   font: inherit; font-weight: 700; font-size: 15px;
   padding: 13px 16px; border-radius: 12px;
-  transition: transform .05s ease, opacity .2s ease;
 }
-.btn:active { transform: translateY(1px); }
-.btn--ghost {
-  background: transparent; color: var(--accent);
-  border: 1.5px solid var(--accent);
-}
+.btn--ghost { background: transparent; color: var(--accent); border: 1.5px solid var(--accent); }
 
 .app__foot { margin-top: auto; text-align: center; }
 .dot { color: var(--muted); font-size: 12px; }
+
+/* ── 기분 선택 그리드 (임시) ── */
+#moodPicker { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.mood {
+  appearance: none; cursor: pointer; font: inherit; font-weight: 700;
+  padding: 16px 4px; border-radius: 12px;
+  border: 1.5px solid var(--line); background: var(--surface); color: var(--ink);
+  border-bottom: 3px solid var(--mood, var(--accent));
+  min-height: 44px;
+}
+.mood.is-on { background: var(--mood, var(--accent)); color: #fff; border-color: var(--mood, var(--accent)); }
+
+/* ── 결과 카드 (임시) ── */
+.result__mood { margin: 0; font-size: 20px; font-weight: 800; }
+.result__label { margin: 0; color: var(--muted); font-size: 13px; }
+.song {
+  display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+  text-decoration: none; color: var(--ink);
+  padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px;
+}
+.song strong { font-size: 16px; }
+.song span { color: var(--muted); font-size: 14px; }
+.song em { margin-left: auto; color: var(--accent); font-style: normal; font-weight: 700; }

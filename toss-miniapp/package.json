@@ -1,0 +1,21 @@
+{
+  "name": "naengbiseo-toss",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "냉비서 — 앱인토스 WebView 미니앱 (Vite로 바닐라 PWA를 래핑)",
+  "scripts": {
+    "vendor": "node scripts/vendor.mjs",
+    "dev": "yarn vendor && granite dev",
+    "build": "yarn vendor && granite build",
+    "deploy": "ait deploy"
+  },
+  "dependencies": {
+    "@apps-in-toss/web-framework": "1.5.2"
+  },
+  "devDependencies": {
+    "vite": "^5.4.0",
+    "typescript": "^5.5.0"
+  },
+  "packageManager": "yarn@1.22.22"
+}

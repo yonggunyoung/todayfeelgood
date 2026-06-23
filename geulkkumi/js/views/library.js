@@ -161,6 +161,26 @@ function mount(root) {
   const segRow = el("div.segmented");
   const body = el("div.lib-body");
 
+  // 전역 검색: 특수문자 + 이모티콘 + 구분선을 한 번에.
+  const combined = [
+    ...allSymbolItems(),
+    ...allKaomoji(),
+    ...DECO_LINES.map((s) => ({ char: s, cat: "구분선", keywords: "구분선 라인 divider" })),
+  ];
+  const globalSearch = el("input.input.search", { type: "search",
+    placeholder: "전체 검색 — 기호·이모티콘·구분선 (예: 하트, ㅋㅋ, 화살표)" });
+  function runGlobal() {
+    const q = globalSearch.value.trim();
+    if (!q) { renderSeg(); return; }
+    const k = q.toLowerCase();
+    const items = combined.filter((it) => it.char.includes(q)
+      || (it.keywords && (it.keywords.includes(q) || it.keywords.toLowerCase().includes(k)))
+      || it.cat.includes(q));
+    clear(body);
+    body.append(el("div.sec-title", null, [`🔎 “${q}” ${items.length}개`]), grid(items, "search"));
+  }
+  globalSearch.addEventListener("input", debounce(runGlobal, 80));
+
   function renderSeg() {
     clear(body);
     if (seg === "symbols") body.append(browseSection(SYMBOLS, allSymbolItems(), "symbol"));
@@ -170,11 +190,15 @@ function mount(root) {
   }
   SEGMENTS.forEach((s) => {
     const b = el("button.seg" + (s.id === seg ? ".on" : ""), { type: "button" }, s.name);
-    b.onclick = () => { seg = s.id; segRow.querySelectorAll(".seg").forEach((x) => x.classList.toggle("on", x === b)); renderSeg(); };
+    b.onclick = () => {
+      seg = s.id; globalSearch.value = "";
+      segRow.querySelectorAll(".seg").forEach((x) => x.classList.toggle("on", x === b));
+      renderSeg();
+    };
     segRow.append(b);
   });
 
-  wrap.append(segRow, body);
+  wrap.append(globalSearch, segRow, body);
   root.append(wrap);
   renderSeg();
 }

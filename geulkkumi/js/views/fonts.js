@@ -1,68 +1,115 @@
-/* 글꾸미 — views/fonts.js : 멋글씨(특수문자·폰트) 변환 — 히어로 화면.
- * 입력 → 30+ 유니코드 스타일 실시간 미리보기 + 한글 자모/초성/데코. 탭 복사.
+/* 글꾸미 — views/fonts.js : 멋글씨 변환(히어로).
+ * 한글을 치면 '한글 꾸미기'를 맨 위에(프레임·끼우기·원/괄호 한글·자모/초성),
+ * 그 아래 영문·숫자 멋글씨(자주 쓰는 순). 글자수 카운터·호환성 ⚠·탭 복사.
  */
 "use strict";
 
 import { el, clear, copy, debounce, toast } from "../ui.js";
-import { isFavorite, toggleFavorite, setSetting } from "../store.js";
+import { isFavorite, toggleFavorite, setSetting, settings } from "../store.js";
 import { convertAll } from "../engine/unicode-fonts.js";
-import { decompose, chosung, deco } from "../engine/hangul.js";
+import { decompose, chosung, deco, circledHangul, parenHangul } from "../engine/hangul.js";
+import { applyFrame } from "../engine/decorate.js";
 
-const SAMPLE = "글꾸미 Type Aa1";
+const SAMPLE = "글꾸미 Aa1";
 let taRef = null;
 let pending = "";
 
-const HANGUL_DECOS = ["🌸", "⭐", "❤", "✨", "·", "ᰔ"];
+// 한글용 프레임 프리셋(항상 눈에 띄게 변함) + 사이 기호.
+const KO_PRESETS = [
+  "꒰ {} ꒱", "˚ʚ {} ɞ˚", "♡ {} ♡", "『 {} 』", "⋆｡°✩ {} ✩°｡⋆",
+  "⭒˚｡⋆ {} ⭒˚｡⋆", "☾ {} ☽", "❀ {} ❀", "˗ˏˋ {} ´ˎ˗", "【 {} 】",
+];
+const KO_SEPS = ["˚", "⋆", "·", "♡", "✦", "𓏲"];
 
-function resultRow(name, value, kind) {
+function bumpRecent(name) {
+  const cur = (settings().recentStyles || []).filter((n) => n !== name);
+  cur.unshift(name);
+  setSetting("recentStyles", cur.slice(0, 6));
+}
+
+function resultRow(name, value, kind, risk) {
   const star = el("button.fout-star", {
     type: "button", "aria-label": "즐겨찾기", title: "즐겨찾기",
-    text: isFavorite(value) ? "★" : "☆", "aria-pressed": isFavorite(value),
+    text: isFavorite(value) ? "★" : "☆", "aria-pressed": isFavorite(value) ? "true" : "false",
     onclick: (e) => {
       e.stopPropagation();
       const on = toggleFavorite(value, kind || "font");
       star.textContent = on ? "★" : "☆";
-      star.setAttribute("aria-pressed", on);
+      star.setAttribute("aria-pressed", on ? "true" : "false");
       toast(on ? "즐겨찾기에 담음 ★" : "즐겨찾기 해제");
     },
   });
+  const nameCell = el("div.fout-name", {
+    title: risk ? "일부 앱(인스타·일부 안드로이드)에서 깨질 수 있어요" : null,
+  }, risk ? name + " ⚠" : name);
   const val = el("button.fout-val", {
     type: "button", title: "탭하면 복사",
-    onclick: () => { copy(value, kind || "font"); setSetting("lastStyle", name); },
+    onclick: () => { copy(value, kind || "font"); if ((kind || "font") === "font") bumpRecent(name); },
   }, value);
-  return el("div.fout", null, [el("div.fout-name", null, name), val, star]);
+  return el("div.fout" + (risk ? ".risky" : ""), null, [nameCell, val, star]);
 }
 
-function render(out, ta) {
+function renderKorean(out, text) {
+  const list = el("div.fout-list");
+  KO_PRESETS.forEach((tpl) => list.append(resultRow("꾸민 한글", applyFrame(tpl, text), "hangul")));
+  KO_SEPS.forEach((s) => list.append(resultRow("사이 " + s, deco(text, s), "hangul")));
+  const ch = circledHangul(text); if (ch !== text) list.append(resultRow("원문자 한글", ch, "hangul"));
+  const ph = parenHangul(text); if (ph !== text) list.append(resultRow("괄호 한글", ph, "hangul"));
+  list.append(resultRow("자모 분해", decompose(text), "hangul"));
+  list.append(resultRow("초성체", chosung(text), "hangul"));
+  out.append(el("div.sec-title", null, ["🇰🇷 한글 꾸미기", el("span.sec-sub", null, "탭하면 복사")]), list);
+}
+
+function renderEnglish(out, text, dim) {
+  const recent = settings().recentStyles || [];
+  const rows = convertAll(text).slice().sort((a, b) => {
+    const ra = recent.indexOf(a.name), rb = recent.indexOf(b.name);
+    return (ra < 0 ? 999 : ra) - (rb < 0 ? 999 : rb);
+  });
+  const list = el("div.fout-list" + (dim ? ".dim" : ""));
+  rows.forEach((s) => list.append(resultRow(s.name, s.result, "font", s.risk)));
+  out.append(el("div.sec-title", null, ["✨ 영문·숫자 멋글씨", el("span.sec-sub", null, "자주 쓰는 순 · 탭 복사")]), list);
+}
+
+function counterText(raw) {
+  const n = [...raw].length;
+  if (!n) return "";
+  let warn = "";
+  if (n > 280) warn = " · X 280자 초과";
+  else if (n > 150) warn = " · 인스타 바이오(150) 근처";
+  else if (n > 20) warn = " · 카톡 닉(20) 초과";
+  return `보이는 ${n}자${warn}`;
+}
+
+function render(out, ta, counter) {
   const raw = ta.value;
   const text = raw.trim() ? raw : SAMPLE;
   const dim = !raw.trim();
-  clear(out);
-
-  const list = el("div.fout-list" + (dim ? ".dim" : ""));
-  convertAll(text).forEach((s) => list.append(resultRow(s.name, s.result)));
-  out.append(el("div.sec-title", null, ["✨ 영문·숫자 멋글씨", el("span.sec-sub", null, "탭하면 바로 복사")]), list);
-
-  if (/[가-힣]/.test(text)) {
-    const k = el("div.fout-list");
-    k.append(resultRow("자모 분해", decompose(text), "hangul"));
-    k.append(resultRow("초성체", chosung(text), "hangul"));
-    HANGUL_DECOS.forEach((sym) => k.append(resultRow("한글 데코 " + sym, deco(text, sym), "hangul")));
-    out.append(el("div.sec-title", null, ["🇰🇷 한글 변환"]), k);
+  if (counter) {
+    const c = counterText(raw);
+    counter.textContent = c;
+    counter.classList.toggle("warn", /초과|근처/.test(c));
   }
+  clear(out);
+  const hasKo = /[가-힣]/.test(text);
+  const hasLatin = /[A-Za-z0-9]/.test(text);
+  if (hasKo) renderKorean(out, text);
+  // 순수 한글 입력이면 영문 30줄(원본 그대로)은 생략 — 중복 노이즈 제거.
+  if (hasLatin || !hasKo) renderEnglish(out, text, dim);
 }
 
 function mount(root) {
   const wrap = el("div.view.view-fonts");
   const ta = el("textarea.input", {
-    rows: 2, placeholder: "여기에 입력 → 아래에서 원하는 멋글씨를 탭하면 복사돼요",
+    rows: 2, placeholder: "여기에 입력 → 아래에서 원하는 글씨를 탭하면 복사돼요 (한글·영문 모두)",
     "aria-label": "변환할 텍스트",
   });
   taRef = ta;
   if (pending) { ta.value = pending; pending = ""; }
 
+  const counter = el("span.counter", { "aria-live": "polite" });
   const out = el("div.fout-wrap", { "aria-live": "polite" });
-  const update = debounce(() => render(out, ta), 90);
+  const update = debounce(() => render(out, ta, counter), 90);
   ta.addEventListener("input", update);
 
   const tools = el("div.toolbar", null, [
@@ -71,14 +118,15 @@ function mount(root) {
       catch { toast("붙여넣기 권한이 없어요 — 직접 붙여넣어 주세요", "warn"); }
     } }, "📋 붙여넣기"),
     el("button.tbtn", { type: "button", onclick: () => { ta.value = ""; ta.focus(); update(); } }, "✕ 지우기"),
+    counter,
   ]);
 
   wrap.append(
-    el("p.lead", null, "입력 한 번이면 30가지 넘는 멋글씨로 — 인스타·카톡·게임 닉네임에 그대로 붙여넣기."),
+    el("p.lead", null, "입력 한 번이면 한글·영문 멋글씨로 — 인스타·카톡·디스코드·게임 닉네임에 바로 붙여넣기."),
     ta, tools, out,
   );
   root.append(wrap);
-  render(out, ta);
+  render(out, ta, counter);
 }
 
 export function prefill(text) {

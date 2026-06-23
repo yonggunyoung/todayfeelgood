@@ -120,6 +120,14 @@ export const STYLES = [
 const STYLE_BY_ID = Object.create(null);
 for (const s of STYLES) STYLE_BY_ID[s.id] = s;
 
+// 호환성 주의 스타일(인스타·일부 구형 안드로이드에서 깨질 수 있음) 플래그.
+const RISKY = new Set(["fraktur", "boldfraktur", "regional", "squared", "squaredneg",
+  "circledneg", "parenthesized", "superscript", "subscript", "upsidedown",
+  "strike", "slash", "underline", "doubleunder", "overline", "tilde"]);
+for (const s of STYLES) s.risk = RISKY.has(s.id);
+// 전각은 공백도 전각으로(자연스러운 전각 텍스트).
+if (STYLE_BY_ID.fullwidth) STYLE_BY_ID.fullwidth.map[" "] = "　";
+
 // 코드포인트 단위 순회(서로게이트 페어 보존).
 function* codePoints(str) {
   for (const ch of String(str)) yield ch;
@@ -156,9 +164,9 @@ export function convert(text, styleId) {
   return out;
 }
 
-// 미리보기 그리드용: 모든 스타일 결과를 한 번에.
+// 미리보기 그리드용: 모든 스타일 결과를 한 번에(호환성 플래그 포함).
 export function convertAll(text) {
-  return STYLES.map((s) => ({ id: s.id, name: s.name, result: convert(text, s.id) }));
+  return STYLES.map((s) => ({ id: s.id, name: s.name, result: convert(text, s.id), risk: !!s.risk }));
 }
 
 export function styleName(styleId) {

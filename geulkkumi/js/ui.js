@@ -13,8 +13,7 @@ export function el(tag, props, children) {
   if (props) for (const k in props) {
     const v = props[k];
     if (k === "class") node.className = node.className ? node.className + " " + v : v;
-    else if (k === "html") node.innerHTML = v;
-    else if (k === "text") node.textContent = v;
+    else if (k === "text") node.textContent = v; // innerHTML 싱크는 의도적으로 두지 않음(XSS 차단)
     else if (k === "style" && typeof v === "object") Object.assign(node.style, v);
     else if (k.startsWith("on") && typeof v === "function") node.addEventListener(k.slice(2).toLowerCase(), v);
     else if (k === "dataset") Object.assign(node.dataset, v);
@@ -65,10 +64,11 @@ export async function copy(text, kind) {
   return ok;
 }
 
-// 네이티브 공유(가능하면). 실패 시 복사로 폴백.
+// 네이티브 공유(가능하면) — 결과 + 앱 링크(출처) 동봉. 실패 시 복사로 폴백.
+const SHARE_URL = "https://yonggunyoung.github.io/todayfeelgood/geulkkumi/?utm_source=share&utm_medium=app";
 export async function share(text) {
   if (navigator.share) {
-    try { await navigator.share({ text }); addHistory(text, "share"); return true; }
+    try { await navigator.share({ text, url: SHARE_URL }); addHistory(text, "share"); return true; }
     catch { /* 취소/미지원 → 폴백 */ }
   }
   return copy(text);

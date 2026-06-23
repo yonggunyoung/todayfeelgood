@@ -51,3 +51,10 @@ test("convertAll — 모든 스타일 결과 + styleName", () => {
   assert.equal(styleName("bold"), "볼드");
   assert.equal(styleName("nope"), "nope");
 });
+
+test("호환성 플래그(risk) + 전각 공백(U+3000)", () => {
+  const all = convertAll("Ab");
+  assert.equal(all.find((s) => s.id === "fraktur").risk, true);
+  assert.equal(all.find((s) => s.id === "bold").risk, false);
+  assert.equal(convert("A B", "fullwidth"), "Ａ　Ｂ"); // 전각 A + 전각 공백 + 전각 B
+});

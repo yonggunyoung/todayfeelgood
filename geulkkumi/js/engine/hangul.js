@@ -50,4 +50,16 @@ export function deco(text, symbol) {
   return Array.from(String(text == null ? "" : text)).join(String(symbol == null ? "" : symbol));
 }
 
+// 원문자/괄호 한글 — 유니코드에 존재하는 14개 기본 음절(가~하)만 변환, 나머지는 원형.
+const BASE14 = "가나다라마바사아자차카타파하".split("");
+const CIRCLED_KO = {}, PAREN_KO = {};
+BASE14.forEach((s, i) => { CIRCLED_KO[s] = String.fromCodePoint(0x326E + i); PAREN_KO[s] = String.fromCodePoint(0x320E + i); });
+
+export function circledHangul(text) {
+  return Array.from(String(text == null ? "" : text)).map((c) => CIRCLED_KO[c] || c).join("");
+}
+export function parenHangul(text) {
+  return Array.from(String(text == null ? "" : text)).map((c) => PAREN_KO[c] || c).join("");
+}
+
 export const JAMO = { LEAD, VOWEL, TAIL };

@@ -9,12 +9,13 @@ import { render as renderArt, imageDataToLum } from "../engine/ascii-art.js";
 import { RAMPS, EMOJI_PALETTES, ART_MODES } from "../data/ramps.js";
 import { downloadArtPng } from "../png.js";
 
-// 모드별 픽셀 그리드 크기(문자 셀 종횡비 보정).
+// 모드별 픽셀 그리드 크기(문자 셀 종횡비 보정 + 세로 폭주 방지 상한).
 function dims(mode, cols, ar) {
-  if (mode === "braille") { const pw = cols * 2; return { pw, ph: Math.max(4, Math.round(pw * ar)) }; }
-  if (mode === "halfblocks") { const pw = cols; return { pw, ph: Math.max(2, Math.round(pw * ar)) }; }
-  if (mode === "emoji") { const pw = cols; return { pw, ph: Math.max(1, Math.round(pw * ar)) }; }
-  const pw = cols; return { pw, ph: Math.max(1, Math.round(pw * ar * 0.5)) }; // ascii/blocks: 모노 셀 1:2
+  const MAXH = 420;
+  if (mode === "braille") { const pw = cols * 2; return { pw, ph: Math.min(MAXH, Math.max(4, Math.round(pw * ar))) }; }
+  if (mode === "halfblocks") { const pw = cols; return { pw, ph: Math.min(MAXH, Math.max(2, Math.round(pw * ar))) }; }
+  if (mode === "emoji") { const pw = cols; return { pw, ph: Math.min(120, Math.max(1, Math.round(pw * ar))) }; }
+  const pw = cols; return { pw, ph: Math.min(MAXH, Math.max(1, Math.round(pw * ar * 0.5))) }; // ascii/blocks: 모노 셀 1:2
 }
 
 function mount(root) {
@@ -88,13 +89,18 @@ function mount(root) {
     if (m === "emoji" && opt.width > 44) { opt.width = 44; widthSlider.value = "44"; widthLabel.textContent = "44"; }
   }
 
+  const advanced = el("details.adv", null, [
+    el("summary", null, "세부 조정"),
+    el("div.opt-row", null, [ditherBtn]),
+    el("label.opt", null, ["명암", contrast]),
+    el("label.opt", null, ["밝기", bright]),
+  ]);
   const optionsBox = el("div.options", null, [
     el("div.opt-title", null, "변환 방식"), modeRow,
     el("label.opt", null, ["가로 ", widthSlider, widthLabel]),
-    el("div.opt-row", null, [invertBtn, ditherBtn]),
+    el("div.opt-row", null, [invertBtn]),
     rampWrap, palWrap,
-    el("label.opt", null, ["명암", contrast]),
-    el("label.opt", null, ["밝기", bright]),
+    advanced,
   ]);
 
   // ── 결과 액션 ────────────────────────────────────────────
@@ -153,8 +159,8 @@ function mount(root) {
   document.addEventListener("paste", wrap._onPaste);
 
   wrap.append(
-    el("p.lead", null, "사진을 도트(브라유)·문자·이모지 그림으로 — 그대로 채팅창에 붙여넣기."),
-    dz, optionsBox, actions, pre,
+    el("p.lead", null, "사진을 도트(브라유)·문자·이모지 그림으로. 결과는 고정폭(모노) 앱·디스코드에서 가장 잘 보여요."),
+    dz, pre, actions, optionsBox,
   );
   syncSubOpts();
   root.append(wrap);

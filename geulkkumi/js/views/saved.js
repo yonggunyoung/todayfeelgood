@@ -40,7 +40,10 @@ function mount(root) {
     }
   }
   function empty(title, sub) {
-    return el("div.empty-box", null, [el("div.empty-emoji", null, "🗂️"), el("strong", null, title), el("p", null, sub)]);
+    return el("div.empty-box", null, [
+      el("img.empty-mascot", { src: "./mascot.svg", alt: "꾸미", width: "92", height: "92" }),
+      el("strong", null, title), el("p", null, sub),
+    ]);
   }
 
   [["fav", "즐겨찾기 ★"], ["recent", "최근"]].forEach(([id, name]) => {

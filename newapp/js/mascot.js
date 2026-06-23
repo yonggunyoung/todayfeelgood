@@ -25,7 +25,7 @@ export function mascotSVG(mood = 'happy', plain = false) {
   const body = BODY[mood] || BODY.happy;
   const wb = plain ? '' : (W_BACK[mood] || '');
   const wf = plain ? '' : (W_FRONT[mood] || '');
-  return `<svg class="gi" viewBox="-3 -7 25 23" preserveAspectRatio="xMidYMid meet" shape-rendering="crispEdges" style="overflow:visible;display:block;width:100%;height:100%">`
+  return `<svg class="gi" aria-hidden="true" viewBox="-3 -7 25 23" preserveAspectRatio="xMidYMid meet" shape-rendering="crispEdges" style="overflow:visible;display:block;width:100%;height:100%">`
     + `<g style="animation:gi-bob 5s cubic-bezier(.45,.05,.55,.95) infinite"><g style="animation:gi-sway 7s cubic-bezier(.45,.05,.55,.95) infinite;transform-box:fill-box;transform-origin:50% 90%"><g style="animation:gi-breathe 4.4s cubic-bezier(.45,.05,.55,.95) infinite;transform-box:fill-box;transform-origin:50% 90%">`
     + `${wb}${body}${wf}</g></g></g></svg>`;
 }
@@ -33,7 +33,7 @@ export function mascotSVG(mood = 'happy', plain = false) {
 // 래스터화용 독립 SVG(xmlns + 고정 px). 공유 카드 캔버스에서 Image로 그릴 때 사용.
 export function mascotSVGStandalone(mood = 'happy', px = 200, plain = false) {
   return mascotSVG(mood, plain).replace(
-    '<svg class="gi" viewBox="-3 -7 25 23" preserveAspectRatio="xMidYMid meet" shape-rendering="crispEdges" style="overflow:visible;display:block;width:100%;height:100%">',
+    '<svg class="gi" aria-hidden="true" viewBox="-3 -7 25 23" preserveAspectRatio="xMidYMid meet" shape-rendering="crispEdges" style="overflow:visible;display:block;width:100%;height:100%">',
     `<svg xmlns="http://www.w3.org/2000/svg" width="${px}" height="${px}" viewBox="-3 -7 25 23" preserveAspectRatio="xMidYMid meet" shape-rendering="crispEdges">`
   );
 }

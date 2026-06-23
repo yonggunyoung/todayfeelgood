@@ -4,6 +4,8 @@
 import { mascotSVGStandalone } from './mascot.js';
 import { moodById } from './data/moods.js';
 import { recommendSong } from './recommend.js';
+import { openDialog } from './a11y.js';
+import { NATION_SUNNY } from './data/nation.js';
 
 const WD = ['일', '월', '화', '수', '목', '금', '토'];
 const cssVar = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
@@ -55,12 +57,12 @@ async function buildCard(moodId, dateKey) {
     note(x, chx + 72, chy + chh / 2 - 6, mink);
     x.textAlign = 'left';
     x.fillStyle = ink; x.font = '700 46px Cafe24Ssurround, Pretendard'; x.fillText(clip(song.title, 15), chx + 156, chy + 72);
-    x.fillStyle = soft; x.font = '500 34px Pretendard'; x.fillText(song.artist, chx + 156, chy + 118);
+    x.fillStyle = soft; x.font = '500 34px Pretendard'; x.fillText(clip(song.artist, 20), chx + 156, chy + 118);
     x.textAlign = 'center';
   }
 
   sun(x, W / 2 - 168, 1320, coral);
-  x.fillStyle = ink; x.font = '700 42px Pretendard'; x.textAlign = 'left'; x.fillText('오늘 전국 맑음 64%', W / 2 - 130, 1332); x.textAlign = 'center';
+  x.fillStyle = ink; x.font = '700 42px Pretendard'; x.textAlign = 'left'; x.fillText(`오늘 전국 맑음 ${NATION_SUNNY}%`, W / 2 - 130, 1332); x.textAlign = 'center';
 
   x.fillStyle = faint; x.font = '700 36px Cafe24Ssurround, Pretendard'; x.fillText('오늘 기분 · 구름이의 일기예보', W / 2, 1800);
   return c;
@@ -74,16 +76,18 @@ function showModal(canvas) {
   const sh = document.createElement('button'); sh.type = 'button'; sh.className = 'btn btn--primary'; sh.style.marginTop = '0'; sh.textContent = '공유 · 저장';
   sh.addEventListener('click', () => exportCard(canvas));
   const close = document.createElement('button'); close.type = 'button'; close.className = 'btn btn--ghost'; close.style.marginTop = '0'; close.textContent = '닫기';
-  close.addEventListener('click', () => ov.remove());
   row.append(sh, close); box.append(img, row); ov.append(box); document.body.append(ov);
-  ov.addEventListener('click', (e) => { if (e.target === ov) ov.remove(); });
+  const dlg = openDialog(ov, { label: '오늘 기분 카드', onClose: dismiss, initialFocus: () => sh });
+  function dismiss() { dlg.release(); ov.remove(); }
+  close.addEventListener('click', dismiss);
+  ov.addEventListener('click', (e) => { if (e.target === ov) dismiss(); });
 }
 
 function exportCard(canvas) {
   canvas.toBlob(async (blob) => {
     if (!blob) return;
     const file = new File([blob], 'oneul-gibun.png', { type: 'image/png' });
-    try { if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], text: '오늘 내 기분 날씨 ☁️ #오늘기분' }); return; } } catch (e) { /* 취소/미지원 → 저장 */ }
+    try { if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], text: '오늘 내 기분 날씨, 구름이가 골라준 노래 ☁️ #오늘기분 #구름이' }); return; } } catch (e) { /* 취소/미지원 → 저장 */ }
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'oneul-gibun.png'; a.click();
   }, 'image/png');
 }

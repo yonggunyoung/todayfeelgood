@@ -1,6 +1,7 @@
 // 오늘 기분 — 음악 성향 테스트 (바이럴 유입구). 5문항 → 구름이 타입 → 결과 카드.
 import { mascotSVG, mascotSVGStandalone } from './mascot.js';
 import { SONGS } from './data/songs.js';
+import { openDialog } from './a11y.js';
 
 const Q = [
   ['지금 듣고 싶은 분위기는?', [['밝고 신나는', 'happy'], ['설레는 감성', 'flutter'], ['잔잔한', 'calm'], ['센치한', 'blue'], ['강렬한', 'angry']]],
@@ -19,10 +20,10 @@ const TYPES = {
 const X_ICON = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
 
 export function openQuiz() {
-  let i = 0; const score = {};
+  let i = 0; const score = {}; let dlg = null;
   const ov = document.createElement('div'); ov.className = 'quiz';
   document.body.appendChild(ov);
-  const close = () => ov.remove();
+  const close = () => { if (dlg) dlg.release(); ov.remove(); };
 
   function paintQ() {
     const [q, opts] = Q[i];
@@ -37,7 +38,7 @@ export function openQuiz() {
       b.addEventListener('click', () => { score[type] = (score[type] || 0) + 1; i++; i < Q.length ? paintQ() : paintResult(); });
       wrap.appendChild(b);
     });
-    ov.scrollTop = 0;
+    ov.scrollTop = 0; if (dlg) dlg.refocus();
   }
 
   function paintResult() {
@@ -57,9 +58,10 @@ export function openQuiz() {
     ov.querySelector('.quiz__x').addEventListener('click', close);
     ov.querySelector('#qStart').addEventListener('click', () => { close(); location.hash = '#/home'; });
     ov.querySelector('#qShare').addEventListener('click', () => shareType(type, t));
-    ov.scrollTop = 0;
+    ov.scrollTop = 0; if (dlg) dlg.refocus();
   }
   paintQ();
+  dlg = openDialog(ov, { label: '음악 성향 테스트', initialFocus: () => ov.querySelector('.quiz__opt') });
 }
 
 // 결과 카드 (Canvas 1080×1350)
@@ -86,7 +88,7 @@ async function shareType(type, t) {
   x.fillStyle = faint; x.font = '700 34px Cafe24Ssurround, Pretendard'; x.fillText('오늘 기분 · 구름이의 일기예보', W / 2, 1250);
   c.toBlob(async (blob) => {
     if (!blob) return; const file = new File([blob], 'gibun-type.png', { type: 'image/png' });
-    try { if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], text: `나는 ${t.name}! #오늘기분 음악성향테스트` }); return; } } catch (e) {}
+    try { if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], text: `나는 ${t.name}! 내 음악 성향은? #오늘기분 #구름이 #음악성향테스트` }); return; } } catch (e) {}
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'gibun-type.png'; a.click();
   }, 'image/png');
 }

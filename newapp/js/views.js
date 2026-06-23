@@ -2,13 +2,13 @@
 import { mascotSVG } from './mascot.js';
 import { moodById } from './data/moods.js';
 import { todayKey } from './store.js';
+import { NATION } from './data/nation.js';
 
 const box = (px, svg) => `<span style="width:${px};height:${px};display:block">${svg}</span>`;
 
-// 전국 기분 날씨 (증분4 Firebase 전까지 예시 분포 — 콜드스타트 "날씨 톤")
-const DIST = [['happy', 58], ['flutter', 16], ['calm', 14], ['blue', 8], ['angry', 4]];
+// 전국 기분 날씨 — 분포는 data/nation.js 단일 출처(D13)
 export function weatherHTML() {
-  const rows = DIST.map(([k, p]) => {
+  const rows = NATION.map(([k, p]) => {
     const m = moodById(k);
     return `<div class="wx-row" data-mood="${k}">${box('30px', mascotSVG(k, true))}<span class="wx-row__name">${m.ko}</span><span class="wx-row__bar"><i style="width:${p}%"></i></span><span class="wx-row__pct">${p}%</span></div>`;
   }).join('');

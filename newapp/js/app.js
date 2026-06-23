@@ -7,6 +7,8 @@ import { openShareCard } from './share.js';
 import { weatherHTML, collectionHTML } from './views.js';
 import { openQuiz } from './quiz.js';
 import { loadCatalog } from './catalog.js';
+import { openDialog } from './a11y.js';
+import { NATION } from './data/nation.js';
 
 let state = store.load();
 const $ = (s, r = document) => r.querySelector(s);
@@ -60,7 +62,7 @@ function renderHome() {
     <div class="card gauge">
       <div class="gauge__top"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="5" fill="var(--happy)"/><g stroke="var(--happy)" stroke-width="1.6" stroke-linecap="round"><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></g></svg><span class="gauge__lab">지금 전국은 대체로 맑음</span></div>
       <p class="gauge__sub">행복한 사람이 제일 많아요</p>
-      <div class="gauge__bar" aria-hidden="true"><i class="s-happy" style="flex:58"></i><i class="s-flutter" style="flex:16"></i><i class="s-calm" style="flex:14"></i><i class="s-blue" style="flex:8"></i><i class="s-angry" style="flex:4"></i></div>
+      <div class="gauge__bar" aria-hidden="true">${NATION.map(([k, p]) => `<i class="s-${k}" style="flex:${p}"></i>`).join('')}</div>
     </div>
     <div class="card result" id="result" role="status" aria-live="polite" hidden></div>
   </div>`;
@@ -139,7 +141,7 @@ function renderResult(moodId, key) {
 
   if (listenUrl) {
     const listen = document.createElement('button'); listen.type = 'button'; listen.className = 'btn btn--primary';
-    listen.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>YouTube Music에서 듣기';
+    listen.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>유튜브 뮤직에서 듣기';
     listen.addEventListener('click', () => window.open(listenUrl, '_blank', 'noopener'));
     result.appendChild(listen);
   }
@@ -203,25 +205,28 @@ function maybeIosHint(el) {
 
 // ── 온보딩 ──
 const STEPS = [
-  ['happy', '안녕, 나는 구름이', '네 기분이 곧 내 날씨가 돼.<br>하루 한 번 톡 누르면, 딱 맞는 노래를 골라줄게.'],
+  ['happy', '안녕, 나는 구름이예요', '내 기분이 곧 구름이의 날씨가 돼요.<br>하루 한 번 톡 누르면, 딱 맞는 노래를 골라드릴게요.'],
   ['flutter', '오늘의 하늘, 같이 만들어요', '내 한 톨이 모여 전국 기분 날씨가 돼요.<br>기분 카드로 오늘을 자랑할 수도 있어요.'],
-  ['calm', '기록은 네 폰에만', '개인 기록은 이 기기에만 저장돼요.<br>전국 통계는 익명으로만 모아요.'],
+  ['calm', '기록은 내 폰에만', '개인 기록은 이 기기에만 저장돼요.<br>전국 통계는 익명으로만 모아요.'],
 ];
 function showOnboarding() {
-  let i = 0;
+  let i = 0, dlg = null;
   const ov = document.createElement('div'); ov.className = 'onb';
+  const finish = () => { try { localStorage.setItem(ONB_KEY, '1'); } catch (e) {} if (dlg) dlg.release(); ov.remove(); };
   const paint = () => {
     const [mood, t, d] = STEPS[i];
-    ov.innerHTML = `<div class="onb__m">${mascotSVG(mood, false)}</div>
+    const last = i === STEPS.length - 1;
+    ov.innerHTML = `<div class="onb__m" aria-hidden="true">${mascotSVG(mood, false)}</div>
       <div class="onb__t">${t}</div><div class="onb__d">${d}</div>
-      <div class="onb__dots">${STEPS.map((_, k) => `<i class="${k === i ? 'on' : ''}"></i>`).join('')}</div>
-      <button class="btn btn--primary onb__btn" type="button">${i === STEPS.length - 1 ? '구름이랑 시작하기' : '다음'}</button>`;
-    $('.onb__btn', ov).addEventListener('click', () => {
-      if (i === STEPS.length - 1) { try { localStorage.setItem(ONB_KEY, '1'); } catch (e) {} ov.remove(); }
-      else { i++; paint(); }
-    });
+      <div class="onb__dots" aria-hidden="true">${STEPS.map((_, k) => `<i class="${k === i ? 'on' : ''}"></i>`).join('')}</div>
+      <button class="btn btn--primary onb__btn" type="button">${last ? '구름이랑 시작하기' : '다음'}</button>
+      ${last ? '' : '<button class="onb__skip" type="button">건너뛰기</button>'}`;
+    $('.onb__btn', ov).addEventListener('click', () => { if (last) finish(); else { i++; paint(); if (dlg) dlg.refocus(); } });
+    const skip = $('.onb__skip', ov); if (skip) skip.addEventListener('click', finish);
   };
-  paint(); document.body.appendChild(ov);
+  document.body.appendChild(ov);
+  paint();
+  dlg = openDialog(ov, { label: '오늘 기분 소개', initialFocus: () => $('.onb__btn', ov) });
 }
 
 // ── 라우터 ──

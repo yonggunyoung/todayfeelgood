@@ -13,12 +13,12 @@ export function loadCatalog() {
       const c = JSON.parse(raw);
       if (c && typeof c === 'object') {
         const out = {};
-        for (const m of MOOD_KEYS) out[m] = Array.isArray(c[m]) ? c[m].filter((s) => s && s.title) : (SONGS[m] || []);
+        for (const m of MOOD_KEYS) out[m] = Array.isArray(c[m]) ? c[m].filter((s) => s && s.title) : structuredClone(SONGS[m] || []);
         return out;
       }
     }
   } catch (e) { /* 손상 시 시드 */ }
-  return SONGS;
+  return structuredClone(SONGS);
 }
 export function saveCatalog(c) { try { localStorage.setItem(KEY, JSON.stringify(c)); return true; } catch (e) { return false; } }
 export function resetCatalog() { try { localStorage.removeItem(KEY); } catch (e) { } }

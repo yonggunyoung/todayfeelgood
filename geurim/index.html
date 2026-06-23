@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
+  <title>그림공장 — AI 이미지 배치 생성 스튜디오</title>
+  <meta name="description" content="내 OpenAI·Gemini 키로 원하는 스타일의 프롬프트를 만들고, 수치만큼 이미지를 자동 생성·저장하는 개인용 스튜디오." />
+  <meta name="theme-color" content="#11121a" />
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="icon" href="./icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="./icon.svg" />
+  <link rel="stylesheet" href="./css/styles.css" />
+</head>
+<body>
+  <div id="shell">
+    <header id="topbar">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">🎨</span>
+        <span class="brand-text">
+          <strong>그림공장</strong>
+          <small>AI 이미지 배치 생성 스튜디오</small>
+        </span>
+      </div>
+      <button id="btn-go-settings" class="icon-btn" title="설정" aria-label="설정">⚙️</button>
+    </header>
+
+    <main id="main">
+      <!-- ───────── 만들기 ───────── -->
+      <section id="screen-create" class="screen">
+        <div class="card">
+          <label class="field-label" for="subject">무엇을 그릴까요? <span class="muted">(주제 · 한글 OK)</span></label>
+          <textarea id="subject" rows="2" placeholder="예) 우주복을 입은 고양이가 달 위에 앉아 지구를 바라본다"></textarea>
+          <button id="btn-idea" class="ghost-btn small">🎲 예시 아이디어</button>
+        </div>
+
+        <div class="card">
+          <div class="chip-group"><span class="chip-title">스타일</span><div id="chips-style" class="chips"></div></div>
+          <div class="chip-group"><span class="chip-title">분위기·조명</span><div id="chips-mood" class="chips"></div></div>
+          <div class="chip-group"><span class="chip-title">구도</span><div id="chips-shot" class="chips"></div></div>
+          <div class="chip-group"><span class="chip-title">색감</span><div id="chips-palette" class="chips"></div></div>
+          <div class="chip-group"><span class="chip-title">디테일 <span class="muted">(여러 개)</span></span><div id="chips-booster" class="chips"></div></div>
+        </div>
+
+        <div class="card">
+          <div class="grid3">
+            <div><label class="field-label" for="sel-aspect">비율</label><select id="sel-aspect"></select></div>
+            <div><label class="field-label" for="sel-model">모델</label><select id="sel-model"></select></div>
+            <div><label class="field-label" for="sel-quality">품질</label><select id="sel-quality"></select></div>
+          </div>
+          <div id="sel-style-wrap" class="hidden" style="margin-top:10px">
+            <label class="field-label" for="sel-style">DALL·E 스타일</label>
+            <select id="sel-style"><option value="vivid">선명하게(vivid)</option><option value="natural">자연스럽게(natural)</option></select>
+          </div>
+          <p id="model-note" class="muted small" style="margin-top:8px"></p>
+        </div>
+
+        <div class="card">
+          <label class="field-label" for="prompt">프롬프트 <span class="muted">(직접 수정 가능)</span></label>
+          <textarea id="prompt" rows="4" placeholder="옵션을 고르고 ‘프롬프트 만들기’를 누르면 여기에 채워집니다."></textarea>
+          <div class="btn-row">
+            <button id="btn-make" class="ghost-btn">🧩 프롬프트 만들기</button>
+            <button id="btn-enrich" class="ghost-btn">✨ AI로 다듬기</button>
+            <button id="btn-copy" class="ghost-btn">📋 복사</button>
+          </div>
+          <button id="adv-toggle" class="link-btn">＋ 고급 (제외 요소)</button>
+          <div id="adv-body" class="hidden">
+            <label class="field-label" for="negative">제외할 요소 <span class="muted">(negative)</span></label>
+            <textarea id="negative" rows="2" placeholder="예) 텍스트, 워터마크, 흐릿함"></textarea>
+          </div>
+        </div>
+
+        <div class="card sticky-actions">
+          <div class="count-row">
+            <label class="field-label" for="count">생성 수량</label>
+            <div class="stepper">
+              <button id="count-minus" class="step">−</button>
+              <input id="count" type="number" min="1" max="50" value="4" />
+              <button id="count-plus" class="step">＋</button>
+            </div>
+          </div>
+          <div class="btn-row">
+            <button id="btn-draft" class="ghost-btn flex1">👁 시안 1장</button>
+            <button id="btn-batch" class="primary-btn flex2">⚡ 한 번에 생성</button>
+          </div>
+          <button id="btn-cancel" class="danger-btn hidden">■ 중지</button>
+          <div id="progress-wrap" class="hidden">
+            <div class="progress"><div id="progress-bar"></div></div>
+            <p id="progress-text" class="muted small"></p>
+          </div>
+          <div id="strip" class="strip"></div>
+        </div>
+      </section>
+
+      <!-- ───────── 갤러리 ───────── -->
+      <section id="screen-gallery" class="screen hidden">
+        <div class="gallery-head">
+          <span id="gallery-count" class="muted">0장</span>
+          <div class="btn-row">
+            <button id="btn-zip" class="ghost-btn small">⬇ 전체 ZIP</button>
+            <button id="btn-clear" class="ghost-btn small danger-text">전체 삭제</button>
+          </div>
+        </div>
+        <div id="grid" class="grid"></div>
+      </section>
+
+      <!-- ───────── 설정 ───────── -->
+      <section id="screen-settings" class="screen hidden">
+        <div class="card">
+          <h2 class="card-title">API 키 <span class="muted small">(이 기기에만 저장 · 전송/동기화 안 함)</span></h2>
+          <label class="field-label" for="set-openai">OpenAI API 키 <span class="muted">platform.openai.com</span></label>
+          <div class="key-row">
+            <input id="set-openai" type="password" placeholder="sk-..." autocomplete="off" />
+            <button id="btn-test-openai" class="ghost-btn small">테스트</button>
+          </div>
+          <span id="status-openai" class="muted small"></span>
+
+          <label class="field-label" for="set-gemini" style="margin-top:14px">Gemini API 키 <span class="muted">aistudio.google.com</span></label>
+          <div class="key-row">
+            <input id="set-gemini" type="password" placeholder="AIza..." autocomplete="off" />
+            <button id="btn-test-gemini" class="ghost-btn small">테스트</button>
+          </div>
+          <span id="status-gemini" class="muted small"></span>
+
+          <p class="notice">⚠️ <b>ChatGPT Plus·Gemini Advanced 구독과 API 키는 별개</b>입니다. 이미지 생성은 위 두 콘솔에서 발급하는 <b>API 키</b>(사용량 과금)가 필요해요.</p>
+        </div>
+
+        <div class="card">
+          <h2 class="card-title">기본값</h2>
+          <label class="field-label" for="set-image-model">기본 이미지 모델</label>
+          <select id="set-image-model"></select>
+          <label class="field-label" for="set-text-model" style="margin-top:12px">프롬프트 보강 모델</label>
+          <select id="set-text-model"></select>
+          <label class="field-label" for="set-concurrency" style="margin-top:12px">동시 생성 수 <span class="muted">(1~4, 레이트리밋 보호)</span></label>
+          <input id="set-concurrency" type="number" min="1" max="4" value="2" />
+          <div class="toggles">
+            <label class="switch"><input id="set-autodl" type="checkbox" /> <span>생성 즉시 파일로 자동 저장</span></label>
+            <label class="switch"><input id="set-translate" type="checkbox" /> <span>AI 보강 시 영어로 번역</span></label>
+            <label class="switch"><input id="set-vary" type="checkbox" /> <span>여러 장일 때 조금씩 다르게</span></label>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2 class="card-title">로컬 프록시 <span class="muted small">(선택)</span></h2>
+          <p class="muted small">브라우저 직접 호출이 CORS로 막힐 때만 사용해요. 폴더에서 <code>npm run proxy</code> 실행 후 아래에 주소를 넣으세요.</p>
+          <input id="set-proxy" type="text" placeholder="http://localhost:8787 (비우면 직접 호출)" autocomplete="off" />
+        </div>
+
+        <div class="card">
+          <button id="btn-reset" class="ghost-btn small danger-text">설정·키 초기화</button>
+          <p class="muted small" style="margin-top:10px">생성한 이미지는 갤러리 탭의 ‘전체 삭제’로 지웁니다.</p>
+        </div>
+        <p class="muted small center" style="padding:8px 0 24px">그림공장 · 빌드 없는 정적 PWA · 본인 키 사용</p>
+      </section>
+    </main>
+
+    <nav id="tabbar">
+      <button class="tab active" data-tab="create"><span>🎨</span>만들기</button>
+      <button class="tab" data-tab="gallery"><span>🖼</span>갤러리</button>
+      <button class="tab" data-tab="settings"><span>⚙️</span>설정</button>
+    </nav>
+  </div>
+
+  <!-- 라이트박스 -->
+  <div id="lightbox" class="hidden">
+    <button id="lb-close" class="lb-close">✕</button>
+    <img id="lb-img" alt="" />
+    <div class="lb-panel">
+      <p id="lb-prompt"></p>
+      <p id="lb-meta" class="muted small"></p>
+      <div class="btn-row">
+        <button id="lb-dl" class="ghost-btn small">⬇ 다운로드</button>
+        <button id="lb-reuse" class="ghost-btn small">↻ 이 설정으로</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+  <script type="module" src="./js/app.js"></script>
+</body>
+</html>

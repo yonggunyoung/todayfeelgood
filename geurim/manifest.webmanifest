@@ -1,0 +1,14 @@
+{
+  "name": "그림공장 — AI 이미지 배치 생성 스튜디오",
+  "short_name": "그림공장",
+  "description": "내 OpenAI·Gemini 키로 원하는 스타일의 프롬프트를 만들고, 수치만큼 이미지를 자동 생성·저장하는 개인용 스튜디오.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0e0f17",
+  "theme_color": "#11121a",
+  "lang": "ko",
+  "icons": [
+    { "src": "./icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

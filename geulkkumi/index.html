@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>글꾸미 — 특수문자·멋글씨 만들기 & 사진 도트아트</title>
+  <meta name="description" content="텍스트를 30가지 멋글씨(𝓯𝓪𝓷𝓬𝔂·ⓑⓤⓑⓑⓛⓔ)로 변환하고, 사진·그림을 도트(브라유)·문자·이모지 아트로 만들어 인스타·카톡·게임 닉네임에 바로 붙여넣기. 특수문자·이모티콘·텍대 DB 내장." />
+  <meta name="keywords" content="특수문자, 멋글씨, 인스타폰트, 글씨체 변환, 이모티콘, 카오모지, 텍대, 도트아트, 아스키아트, 닉네임 꾸미기, 폰트 생성기" />
+  <meta name="theme-color" content="#ff7eb6" />
+  <link rel="canonical" href="https://yonggunyoung.github.io/todayfeelgood/geulkkumi/" />
+
+  <!-- Open Graph / 트위터 카드 -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="글꾸미 — 특수문자·멋글씨 & 사진 도트아트" />
+  <meta property="og:description" content="입력 한 번이면 30가지 멋글씨. 사진·그림은 도트·문자 아트로. 복사해서 어디든 붙여넣기." />
+  <meta property="og:image" content="./og.svg" />
+  <meta name="twitter:card" content="summary_large_image" />
+
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="icon" href="./icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="./icon.svg" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="글꾸미" />
+
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+  <link rel="stylesheet" as="style" crossorigin
+        href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+  <link rel="stylesheet" href="./css/styles.css" />
+</head>
+<body>
+  <div id="shell">
+    <header id="topbar">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">✦</span>
+        <div class="brand-text">
+          <strong>글꾸미</strong>
+          <small>특수문자 · 멋글씨 · 도트아트</small>
+        </div>
+      </div>
+      <div class="top-actions">
+        <button id="install-btn" class="icon-btn" type="button" hidden title="앱으로 설치">⬇️ 설치</button>
+        <button id="theme-btn" class="icon-btn" type="button" title="테마 전환" aria-label="테마 전환">🌗</button>
+      </div>
+    </header>
+
+    <main id="view" aria-live="polite"></main>
+
+    <footer id="appfoot">
+      <span>만든 글씨는 어디든 자유롭게 — 인스타 · 카톡 · 디스코드 · 게임</span>
+      <a id="support-link" href="#" rel="noopener" hidden>☕ 후원하기</a>
+    </footer>
+
+    <nav id="tabbar" aria-label="주요 메뉴"></nav>
+  </div>
+
+  <div id="toast-root" aria-live="assertive"></div>
+
+  <script type="module" src="./js/main.js"></script>
+</body>
+</html>

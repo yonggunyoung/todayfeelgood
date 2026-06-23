@@ -1,0 +1,28 @@
+{
+  "name": "글꾸미 — 특수문자·멋글씨·도트아트",
+  "short_name": "글꾸미",
+  "description": "텍스트를 멋글씨로, 사진·그림을 도트·문자 아트로. 특수문자·이모티콘·텍대 DB 내장. 복사해서 어디든 붙여넣기.",
+  "lang": "ko",
+  "dir": "ltr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#fff5fb",
+  "theme_color": "#ff7eb6",
+  "categories": ["utilities", "productivity", "photo", "social"],
+  "icons": [
+    { "src": "./icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ],
+  "shortcuts": [
+    { "name": "멋글씨 변환", "short_name": "멋글씨", "url": "./#fonts" },
+    { "name": "사진 아트", "short_name": "사진아트", "url": "./#photo" },
+    { "name": "그리기", "short_name": "그리기", "url": "./#draw" },
+    { "name": "꾸미기 DB", "short_name": "꾸미기", "url": "./#library" }
+  ],
+  "share_target": {
+    "action": "./",
+    "method": "GET",
+    "params": { "title": "title", "text": "text", "url": "url" }
+  }
+}

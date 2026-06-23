@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="글꾸미">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ff5fa2"/>
+      <stop offset="1" stop-color="#8b7bff"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#g)"/>
+  <path fill="#fff" d="M256 86c14 104 66 156 170 170-104 14-156 66-170 170-14-104-66-156-170-170 104-14 156-66 170-170Z"/>
+  <circle cx="398" cy="132" r="20" fill="#fff" opacity="0.9"/>
+  <circle cx="128" cy="392" r="14" fill="#fff" opacity="0.75"/>
+</svg>

@@ -3,7 +3,7 @@ import { MOODS, moodById } from './data/moods.js';
 import { recommendSong } from './recommend.js';
 import { store, recordMood, todayKey } from './store.js';
 import { mascotSVG } from './mascot.js';
-import { openShareCard } from './share.js';
+import { openShareCard, openWeeklyCard } from './share.js';
 import { weatherHTML, collectionHTML } from './views.js';
 import { openQuiz } from './quiz.js';
 import { loadCatalog } from './catalog.js';
@@ -235,7 +235,11 @@ function router() {
   const r = ['home', 'weather', 'collection', 'more'].includes(route) ? route : 'home';
   if (r === 'home') renderHome();
   else if (r === 'weather') view().innerHTML = weatherHTML();
-  else if (r === 'collection') view().innerHTML = collectionHTML(state);
+  else if (r === 'collection') {
+    view().innerHTML = collectionHTML(state);
+    const wb = view().querySelector('[data-act="weekly"]');
+    if (wb) wb.addEventListener('click', () => openWeeklyCard(state));
+  }
   else if (r === 'more') renderMore();
   renderTabs(r);
   view().scrollTop = 0;

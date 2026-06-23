@@ -19,6 +19,18 @@ function lastNKeys(n) {
   return out;
 }
 
+// 이번 주 플레이리스트 — 컬렉션 뷰와 공유 카드가 공유하는 단일 출처.
+// 반환: [{ k, day, mood, song }] (오늘이 첫 번째, 기록 없는 날 제외)
+export function weeklyPlaylist(state) {
+  const cat = loadCatalog();
+  const days = (state && state.days) || {};
+  return lastNKeys(7)
+    .map((k) => ({ k, rec: days[k] }))
+    .filter((x) => x.rec)
+    .map((x) => ({ k: x.k, day: Number(x.k.split('-')[2]), mood: x.rec.mood, song: recommendSong(x.rec.mood, { dateKey: x.k, catalog: cat }) }))
+    .filter((x) => x.song && x.song.source !== 'none');
+}
+
 // 전국 기분 날씨 — 분포는 data/nation.js 단일 출처(D13)
 export function weatherHTML() {
   const rows = NATION.map(([k, p]) => {
@@ -62,18 +74,13 @@ export function collectionHTML(state) {
   const dowRow = DOW.map((d) => `<div class="col-dow">${d}</div>`).join('');
 
   // 이번 주 구름이 플리 — 최근 7일 기록한 기분의 추천곡을 모은다(D6/사용자 "활용").
-  const cat = loadCatalog();
-  const week = lastNKeys(7)
-    .map((k) => ({ k, rec: state.days[k] }))
-    .filter((x) => x.rec)
-    .map((x) => ({ k: x.k, mood: x.rec.mood, song: recommendSong(x.rec.mood, { dateKey: x.k, catalog: cat }) }))
-    .filter((x) => x.song && x.song.source !== 'none');
+  const week = weeklyPlaylist(state);
   const playGo = '<svg class="pl-go" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"/></svg>';
-  const plRows = week.map(({ k, mood, song }) => {
-    const dd = Number(k.split('-')[2]);
-    return `<a class="pl-row" data-mood="${mood}" href="${esc(song.url)}" target="_blank" rel="noopener" aria-label="${esc(song.title)} ${esc(song.artist)} 듣기">${box('30px', mascotSVG(mood, true))}<span class="pl-meta"><b>${esc(song.title)}</b><small>${dd}일 · ${esc(song.artist)}</small></span>${playGo}</a>`;
-  }).join('');
-  const plSection = `<div class="pl-h"><span>이번 주 구름이 플리</span><small>기분 기록을 보고 구름이가 모았어요</small></div>`
+  const plRows = week.map(({ day, mood, song }) =>
+    `<a class="pl-row" data-mood="${mood}" href="${esc(song.url)}" target="_blank" rel="noopener" aria-label="${esc(song.title)} ${esc(song.artist)} 듣기">${box('30px', mascotSVG(mood, true))}<span class="pl-meta"><b>${esc(song.title)}</b><small>${day}일 · ${esc(song.artist)}</small></span>${playGo}</a>`
+  ).join('');
+  const shareIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M12 15V3M8 7l4-4 4 4"/></svg>';
+  const plSection = `<div class="pl-h"><span>이번 주 구름이 플리</span><small>기분 기록을 보고 구름이가 모았어요</small>${week.length ? `<button class="pl-share" type="button" data-act="weekly" aria-label="이번 주 플리 카드 공유">${shareIcon}플리 카드</button>` : ''}</div>`
     + (week.length
       ? `<div class="card pl">${plRows}</div>`
       : `<p class="col-empty-msg" style="margin-top:6px">이번 주 기록이 쌓이면 구름이가 플리를 모아줘요</p>`);

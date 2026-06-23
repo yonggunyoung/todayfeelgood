@@ -144,9 +144,12 @@ body{background:var(--paper-2);color:var(--ink);font-family:var(--ui);font-weigh
 .col-empty-msg{text-align:center;color:var(--ink-soft);font-size:var(--fs-cap);margin-top:var(--sp-4)}
 
 /* 이번 주 구름이 플리 */
-.pl-h{display:flex;align-items:baseline;gap:8px;margin:var(--sp-5) 0 var(--sp-2);flex-wrap:wrap}
+.pl-h{display:flex;align-items:center;gap:8px;margin:var(--sp-5) 0 var(--sp-2);flex-wrap:wrap}
 .pl-h span{font-family:var(--disp);font-size:var(--fs-h3)}
 .pl-h small{color:var(--ink-soft);font-size:var(--fs-cap);font-weight:600}
+.pl-share{margin-left:auto;appearance:none;border:1px solid var(--line);background:#fff;color:var(--coral-ink);font:inherit;font-weight:700;font-size:var(--fs-micro);display:inline-flex;align-items:center;gap:5px;padding:7px 11px;border-radius:var(--r-full);cursor:pointer;box-shadow:var(--el-1)}
+.pl-share svg{width:14px;height:14px}
+.pl-share:active{transform:scale(.96)}
 .pl{padding:2px 14px}
 .pl-row{display:flex;align-items:center;gap:12px;padding:11px 0;text-decoration:none;color:var(--ink)}
 .pl-row+.pl-row{border-top:1px solid var(--line)}

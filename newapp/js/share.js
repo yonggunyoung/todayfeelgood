@@ -6,6 +6,7 @@ import { moodById } from './data/moods.js';
 import { recommendSong } from './recommend.js';
 import { openDialog } from './a11y.js';
 import { NATION_SUNNY } from './data/nation.js';
+import { weeklyPlaylist } from './views.js';
 
 const WD = ['일', '월', '화', '수', '목', '금', '토'];
 const cssVar = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
@@ -68,26 +69,84 @@ async function buildCard(moodId, dateKey) {
   return c;
 }
 
-function showModal(canvas) {
+function showModal(canvas, opts = {}) {
+  const label = opts.alt || '오늘 기분 카드';
   const ov = document.createElement('div'); ov.className = 'sheet';
   const box = document.createElement('div'); box.className = 'sheet__box';
-  const img = new Image(); img.className = 'sheet__img'; img.alt = '오늘 기분 카드'; img.src = canvas.toDataURL('image/png');
+  const img = new Image(); img.className = 'sheet__img'; img.alt = label; img.src = canvas.toDataURL('image/png');
   const row = document.createElement('div'); row.className = 'sheet__row';
   const sh = document.createElement('button'); sh.type = 'button'; sh.className = 'btn btn--primary'; sh.style.marginTop = '0'; sh.textContent = '공유 · 저장';
-  sh.addEventListener('click', () => exportCard(canvas));
+  sh.addEventListener('click', () => exportCard(canvas, opts));
   const close = document.createElement('button'); close.type = 'button'; close.className = 'btn btn--ghost'; close.style.marginTop = '0'; close.textContent = '닫기';
   row.append(sh, close); box.append(img, row); ov.append(box); document.body.append(ov);
-  const dlg = openDialog(ov, { label: '오늘 기분 카드', onClose: dismiss, initialFocus: () => sh });
+  const dlg = openDialog(ov, { label, onClose: dismiss, initialFocus: () => sh });
   function dismiss() { dlg.release(); ov.remove(); }
   close.addEventListener('click', dismiss);
   ov.addEventListener('click', (e) => { if (e.target === ov) dismiss(); });
 }
 
-function exportCard(canvas) {
+function exportCard(canvas, opts = {}) {
+  const filename = opts.filename || 'oneul-gibun.png';
+  const text = opts.shareText || '오늘 내 기분 날씨, 구름이가 골라준 노래 ☁️ #오늘기분 #구름이';
   canvas.toBlob(async (blob) => {
     if (!blob) return;
-    const file = new File([blob], 'oneul-gibun.png', { type: 'image/png' });
-    try { if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], text: '오늘 내 기분 날씨, 구름이가 골라준 노래 ☁️ #오늘기분 #구름이' }); return; } } catch (e) { /* 취소/미지원 → 저장 */ }
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'oneul-gibun.png'; a.click();
+    const file = new File([blob], filename, { type: 'image/png' });
+    try { if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], text }); return; } } catch (e) { /* 취소/미지원 → 저장 */ }
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename; a.click();
   }, 'image/png');
+}
+
+// ── 이번 주 플리 카드 ──
+export async function openWeeklyCard(state) {
+  const list = weeklyPlaylist(state).slice(0, 7);
+  if (!list.length) return;
+  try { if (document.fonts && document.fonts.ready) await document.fonts.ready; } catch (e) { /* 폰트 폴백 */ }
+  const canvas = await buildWeeklyCard(list);
+  showModal(canvas, { alt: '이번 주 플리 카드', filename: 'oneul-weekly.png', shareText: '이번 주 내 기분 플레이리스트 ☁️ #오늘기분 #구름이' });
+}
+
+async function buildWeeklyCard(list) {
+  const W = 1080, H = 1920, c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d');
+  const paper = cssVar('--paper') || '#FBF6EE', ink = cssVar('--ink') || '#2A2520',
+    soft = cssVar('--ink-soft') || '#6B6258', faint = cssVar('--ink-faint') || '#8A8278', coral = cssVar('--coral') || '#FF6F50', line = cssVar('--line') || '#EAE0CE';
+  // 최다 기분 = 히어로 마스코트
+  const freq = {}; list.forEach((it) => { freq[it.mood] = (freq[it.mood] || 0) + 1; });
+  let hero = list[0].mood, best = -1; for (const k in freq) if (freq[k] > best) { best = freq[k]; hero = k; }
+  const hmood = cssVar(`--${hero}`) || coral;
+
+  x.fillStyle = paper; x.fillRect(0, 0, W, H);
+  const m = 52, cw = W - 2 * m, ch = H - 2 * m, R = 72;
+  x.fillStyle = '#FFFDF8'; rrect(x, m, m, cw, ch, R); x.fill();
+  x.fillStyle = paper;
+  const dots = (x0, y0, x1, y1, n) => { for (let i = 0; i <= n; i++) { const t = i / n; x.beginPath(); x.arc(x0 + (x1 - x0) * t, y0 + (y1 - y0) * t, 15, 0, 7); x.fill(); } };
+  dots(m, m, m + cw, m, 16); dots(m, m + ch, m + cw, m + ch, 16); dots(m, m, m, m + ch, 28); dots(m + cw, m, m + cw, m + ch, 28);
+
+  // 헤더
+  x.textAlign = 'center';
+  x.fillStyle = ink; x.font = '700 60px Cafe24Ssurround, Pretendard'; x.fillText('이번 주 나의 플리', W / 2, 188);
+  x.fillStyle = soft; x.font = '600 32px Pretendard'; x.fillText('구름이가 기록을 보고 모았어요', W / 2, 240);
+  const fmt = (k) => { const p = k.split('-'); return `${Number(p[1])}.${Number(p[2])}`; };
+  x.fillStyle = faint; x.font = '700 30px Pretendard'; x.fillText(`${fmt(list[list.length - 1].k)} – ${fmt(list[0].k)}`, W / 2, 288);
+
+  // 히어로 마스코트
+  x.fillStyle = hexA(hmood, 0.2); x.beginPath(); x.arc(W / 2, 470, 168, 0, 7); x.fill();
+  const himg = await svgToImage(mascotSVGStandalone(hero, 300, false));
+  x.drawImage(himg, W / 2 - 150, 320, 300, 300);
+
+  // 곡 목록
+  let y = 720; const rowH = Math.min(150, Math.floor((1760 - y) / list.length));
+  list.forEach((it) => {
+    const mc = cssVar(`--${it.mood}`) || coral, cy = y + rowH / 2;
+    x.fillStyle = mc; x.beginPath(); x.arc(m + 64, cy - 6, 18, 0, 7); x.fill();
+    x.textAlign = 'left';
+    x.fillStyle = ink; x.font = '700 42px Cafe24Ssurround, Pretendard'; x.fillText(clip(it.song.title, 18), m + 112, cy - 14);
+    x.fillStyle = soft; x.font = '500 30px Pretendard'; x.fillText(`${it.day}일 · ${clip(it.song.artist, 24)}`, m + 112, cy + 28);
+    x.strokeStyle = line; x.lineWidth = 1.5; x.beginPath(); x.moveTo(m + 36, y + rowH - 4); x.lineTo(W - m - 36, y + rowH - 4); x.stroke();
+    y += rowH;
+  });
+
+  // 푸터
+  x.textAlign = 'center';
+  x.fillStyle = faint; x.font = '700 36px Cafe24Ssurround, Pretendard'; x.fillText('오늘 기분 · 구름이의 일기예보', W / 2, 1800);
+  return c;
 }

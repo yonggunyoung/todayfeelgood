@@ -17,13 +17,17 @@ const TYPES = {
   blue: { name: '빗방울 구름이', desc: '마음을 가만히 곱씹는 타입.<br>위로가 되는 곡이 어울려요.' },
   angry: { name: '번개 구름이', desc: '에너지를 시원하게 분출하는 타입.<br>강렬한 곡으로 뻥 뚫어요.' },
 };
+const TASTE_KEY = 'oneulgibun:taste';
+// 저장된 음악 성향 타입(없으면 '') — 설정 화면 등에서 활용.
+export const tasteName = (id) => (TYPES[id] || {}).name || '';
+export function loadTaste() { try { return localStorage.getItem(TASTE_KEY) || ''; } catch (e) { return ''; } }
 const X_ICON = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
 
-export function openQuiz() {
+export function openQuiz(opts = {}) {
   let i = 0; const score = {}; let dlg = null;
   const ov = document.createElement('div'); ov.className = 'quiz';
   document.body.appendChild(ov);
-  const close = () => { if (dlg) dlg.release(); ov.remove(); };
+  const close = () => { if (dlg) dlg.release(); ov.remove(); if (opts.onClose) opts.onClose(); };
 
   function paintQ() {
     const [q, opts] = Q[i];
@@ -45,6 +49,7 @@ export function openQuiz() {
     let type = 'happy', best = -1;
     for (const k of Object.keys(TYPES)) if ((score[k] || 0) > best) { best = score[k] || 0; type = k; }
     const t = TYPES[type];
+    try { localStorage.setItem(TASTE_KEY, type); } catch (e) { /* 저장 실패 무시 */ }
     const recs = (SONGS[type] || []).slice(0, 4).map((s) => {
       const t = s.title.length > 14 ? s.title.slice(0, 13) + '…' : s.title;
       return `<span class="chip">${t}</span>`;

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <application
+      android:allowBackup="true"
+      android:label="글꾸미 키보드"
+      android:supportsRtl="true">
+    <!-- 커스텀 키보드(IME). 어떤 앱의 입력창에서든 commitText로 직접 입력. -->
+    <service
+        android:name=".GkInputService"
+        android:label="글꾸미 키보드"
+        android:permission="android.permission.BIND_INPUT_METHOD"
+        android:exported="true">
+      <intent-filter>
+        <action android:name="android.view.InputMethod" />
+      </intent-filter>
+      <meta-data android:name="android.view.im" android:resource="@xml/method" />
+    </service>
+  </application>
+</manifest>

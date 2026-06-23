@@ -191,3 +191,13 @@ body{background:var(--paper-2);color:var(--ink);font-family:var(--ui);font-weigh
 .sheet__img{width:100%;border-radius:var(--r-md);display:block;box-shadow:var(--el-1)}
 .sheet__row{display:flex;gap:10px;margin-top:14px}
 .sheet__row .btn{flex:1;margin-top:0}
+
+/* 업데이트 토스트 · iOS 안내 · 프리즈 */
+.uptoast{position:fixed;left:50%;bottom:88px;transform:translateX(-50%);display:flex;align-items:center;gap:12px;background:var(--ink);color:#fff;padding:10px 12px 10px 18px;border-radius:var(--r-full);z-index:90;box-shadow:var(--sh-lg);font-size:13px;font-weight:600}
+.uptoast button{appearance:none;border:0;background:var(--coral);color:#fff;font:inherit;font-weight:700;padding:7px 13px;border-radius:999px;cursor:pointer}
+.ioshint{display:flex;align-items:center;gap:12px;background:var(--happy-t);color:var(--ink);border-radius:var(--r-md);padding:14px 16px;margin-bottom:14px;border:1px solid var(--line)}
+.ioshint .ic{color:var(--coral);flex:none}
+.ioshint b{font-size:var(--fs-body)} .ioshint small{display:block;color:var(--ink-soft);font-size:var(--fs-cap);margin-top:2px;font-weight:500}
+.ioshint>button{margin-left:auto;appearance:none;border:0;background:none;color:var(--ink-faint);cursor:pointer;padding:2px;display:flex;flex:none}
+.col-freeze{display:flex;align-items:center;justify-content:center;gap:7px;color:var(--ink-soft);font-size:var(--fs-cap);font-weight:600;margin:2px 0 6px}
+.col-freeze svg,.col-freeze b{color:var(--coral)}

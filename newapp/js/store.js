@@ -22,13 +22,15 @@ export function todayKey(now = new Date()) {
   const day = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
 }
-function prevDay(key) {
+function prevDay(key, n = 1) {
   const d = new Date(`${key}T00:00:00`);
-  d.setDate(d.getDate() - 1);
+  d.setDate(d.getDate() - n);
   return todayKey(d);
 }
+export const MAX_FREEZE = 2;            // 연속 보호 프리즈 최대치
+function clampFreeze(n) { n = Math.floor(Number(n)); return (!Number.isFinite(n) || n < 0) ? 0 : Math.min(MAX_FREEZE, n); }
 
-export const emptyState = () => ({ schema: SCHEMA, days: {}, lastDate: '', streak: 0 });
+export const emptyState = () => ({ schema: SCHEMA, days: {}, lastDate: '', streak: 0, freezes: 1 });
 
 // 안전 로드: 깨진/변조 데이터도 throw·와이프 없이 복구(원칙1/D5).
 export function loadState(raw) {
@@ -48,6 +50,7 @@ export function loadState(raw) {
   }
   out.streak = Math.max(0, Math.floor(Number(obj.streak) || 0)); // 음수/NaN → 0
   out.lastDate = DATE_RE.test(obj.lastDate) ? obj.lastDate : '';
+  out.freezes = obj.freezes == null ? 1 : clampFreeze(obj.freezes);
   return out;
 }
 
@@ -56,10 +59,15 @@ export function loadState(raw) {
 export function recordMood(state, moodId, now = new Date()) {
   if (!isValidMood(moodId)) return state;             // 입력 불신
   const key = todayKey(now);
-  const next = { ...state, days: { ...state.days, [key]: { mood: moodId, ts: +new Date(now) } } };
+  const next = { ...state, days: { ...state.days, [key]: { mood: moodId, ts: +new Date(now) } }, freezes: clampFreeze(state.freezes), frozeToday: false };
   if (key > state.lastDate) {                          // 새 날만 streak 갱신
-    next.streak = state.lastDate === prevDay(key) ? state.streak + 1 : 1;
+    if (!state.lastDate) next.streak = 1;
+    else if (state.lastDate === prevDay(key)) next.streak = state.streak + 1;       // 연속
+    else if (state.lastDate === prevDay(key, 2) && clampFreeze(state.freezes) > 0) { // 하루 빠짐 + 프리즈 보유
+      next.streak = state.streak + 1; next.freezes = clampFreeze(state.freezes) - 1; next.frozeToday = true;
+    } else next.streak = 1;                            // 이틀 이상 공백 → 리셋
     next.lastDate = key;
+    if (next.streak > 0 && next.streak % 7 === 0) next.freezes = clampFreeze(next.freezes + 1); // 7일마다 프리즈 +1
   }
   return next;
 }

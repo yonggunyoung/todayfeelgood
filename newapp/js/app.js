@@ -82,7 +82,10 @@ function renderHome() {
 function pick(moodId) {
   state = recordMood(state, moodId);
   store.save(state);
+  const froze = state.frozeToday;
+  if (froze) { state.frozeToday = false; store.save(state); }
   renderHome();
+  if (froze) toast('프리즈로 연속 기록을 지켰어요');
 }
 
 function ytEmbed(id) {
@@ -152,9 +155,11 @@ function renderMore() {
   const v = view();
   v.innerHTML = `<div class="v">
     <h1 class="vtitle">더보기</h1>
+    <div id="iosHint"></div>
     <div class="set-list" id="setList"></div>
     <p class="set-ver">오늘 기분 · v0.1 · 구름이의 일기예보</p>
   </div>`;
+  maybeIosHint($('#iosHint', v));
   const list = $('#setList', v);
   const item = (icon, title, desc, fn, href) => {
     const el = document.createElement(href ? 'a' : 'button');
@@ -184,6 +189,16 @@ function toast(msg) {
   const t = document.createElement('div'); t.textContent = msg;
   t.style.cssText = 'position:fixed;left:50%;bottom:88px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:11px 18px;border-radius:999px;font-size:13px;font-weight:600;z-index:80;box-shadow:var(--sh-lg)';
   document.body.appendChild(t); setTimeout(() => t.remove(), 1900);
+}
+function maybeIosHint(el) {
+  if (!el) return;
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent || '');
+  const standalone = ('standalone' in navigator && navigator.standalone) || matchMedia('(display-mode: standalone)').matches;
+  let dismissed = '1'; try { dismissed = localStorage.getItem('oneulgibun:ioshint'); } catch (e) {}
+  if (!isIOS || standalone || dismissed) return;
+  el.className = 'ioshint';
+  el.innerHTML = '<svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M8 7l4-4 4 4M5 21h14"/></svg><div><b>아이폰에서 앱처럼 쓰기</b><small>공유 버튼 → “홈 화면에 추가”</small></div><button type="button" aria-label="닫기"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>';
+  el.querySelector('button').addEventListener('click', () => { try { localStorage.setItem('oneulgibun:ioshint', '1'); } catch (e) {} el.remove(); });
 }
 
 // ── 온보딩 ──
@@ -222,8 +237,24 @@ function router() {
 }
 window.addEventListener('hashchange', router);
 
-// ── 서비스워커 ──
-if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
+// ── 서비스워커 + 업데이트 알림 ──
+if ('serviceWorker' in navigator) window.addEventListener('load', async () => {
+  try {
+    const reg = await navigator.serviceWorker.register('./sw.js');
+    reg.addEventListener('updatefound', () => {
+      const nw = reg.installing;
+      if (nw) nw.addEventListener('statechange', () => {
+        if (nw.state === 'installed' && navigator.serviceWorker.controller) {
+          const t = document.createElement('div'); t.className = 'uptoast';
+          t.innerHTML = '<span>새 버전이 준비됐어요</span>';
+          const btn = document.createElement('button'); btn.type = 'button'; btn.textContent = '새로고침';
+          btn.addEventListener('click', () => location.reload()); t.appendChild(btn);
+          document.body.appendChild(t);
+        }
+      });
+    });
+  } catch (e) { /* SW 미지원 */ }
+});
 
 // 첫 실행 온보딩
 let onboarded = '1'; try { onboarded = localStorage.getItem(ONB_KEY); } catch (e) {}

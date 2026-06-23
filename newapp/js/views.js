@@ -54,6 +54,7 @@ export function collectionHTML(state) {
       <div class="card col-stat"><b style="color:var(--coral)">${recorded}</b><span>기록한 날</span></div>
       <div class="card col-stat"><b style="color:var(--calm)">${top}</b><span>이번 달 최다 기분</span></div>
     </div>
+    <div class="col-freeze"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/></svg>연속 보호 프리즈 <b>${Number.isFinite(state.freezes) ? state.freezes : 0}</b>개 · 하루 빠져도 한 번은 지켜줘요</div>
     <div class="col-grid">${dowRow}${cells}</div>
     <p class="col-empty-msg">빈 칸은 아직 비어 있어요 · 오늘 한 칸 채워볼까요</p>
   </div>`;

@@ -36,5 +36,20 @@ ok(s.streak === 1, '정상: 첫 기록 → streak 1');
 const past = recordMood(s, 'happy', new Date('2026-06-22T10:00:00'));
 ok(past.streak === s.streak, '변조: 과거 날짜 기록 → streak 불변');
 
+// ── streak 프리즈 ─────────────────────────────────────
+let a = recordMood(emptyState(), 'calm', new Date('2026-06-20T09:00:00'));
+a = recordMood(a, 'happy', new Date('2026-06-21T09:00:00'));
+ok(a.streak === 2, '프리즈: 연속 기록 → streak 2');
+let b = recordMood({ schema: 1, days: {}, lastDate: '2026-06-20', streak: 5, freezes: 1 }, 'calm', new Date('2026-06-22T09:00:00'));
+ok(b.streak === 6 && b.freezes === 0 && b.frozeToday === true, '프리즈: 하루 빠짐+프리즈 → streak 유지·차감');
+let cc = recordMood({ schema: 1, days: {}, lastDate: '2026-06-20', streak: 5, freezes: 0 }, 'calm', new Date('2026-06-22T09:00:00'));
+ok(cc.streak === 1 && cc.frozeToday === false, '프리즈: 하루 빠짐+프리즈 없음 → 리셋');
+let dd = recordMood({ schema: 1, days: {}, lastDate: '2026-06-20', streak: 5, freezes: 1 }, 'calm', new Date('2026-06-24T09:00:00'));
+ok(dd.streak === 1, '프리즈: 이틀 이상 공백 → 리셋');
+let ee = recordMood({ schema: 1, days: {}, lastDate: '2026-06-20', streak: 6, freezes: 0 }, 'calm', new Date('2026-06-21T09:00:00'));
+ok(ee.streak === 7 && ee.freezes === 1, '프리즈: 7일 달성 → 프리즈 +1');
+ok(loadState(JSON.stringify({ freezes: 5 })).freezes === 2, '프리즈: 과다 → MAX 2 clamp');
+ok(loadState('{}').freezes === 1, '프리즈: 누락 시 기본 1');
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

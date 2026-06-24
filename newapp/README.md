@@ -59,9 +59,31 @@ node newapp/tests/engine.test.mjs   # 엔진 경계 테스트 (20 passed)
 - *이 기기에 저장*(localStorage 즉시 반영) 또는 *코드 내보내기*로
   `js/data/songs.js` 교체 커밋 → 전 사용자 반영.
 
+## 전국 집계 켜기 (Firebase)
+"전국 기분 날씨"는 기본은 예시 분포(`data/nation.js`)로 동작하고, Firebase를 연결하면
+실시간 익명 집계로 바뀝니다. **SDK 없이 Firestore REST(fetch)만** 써서 CSP는 `connect-src`만 엽니다.
+1. Firebase 콘솔 → 프로젝트 생성 → **Firestore Database**를 *프로덕션 모드*로 생성.
+2. 웹 앱 등록 후 config의 `projectId`·`apiKey`를 `js/firebase-config.js`에 채운다(둘 다 채워야 ON).
+3. Firestore 규칙에 추가:
+   ```
+   match /databases/{db}/documents {
+     match /nation/{day} {
+       allow read: if true;
+       allow write: if request.resource.data.keys().hasOnly(['happy','flutter','calm','blue','angry']);
+     }
+   }
+   ```
+4. CSP는 이미 `connect-src https://firestore.googleapis.com` 허용됨. 끝.
+
+동작: 기분 1탭 → `nation/{날짜}` 문서의 기분 카운터 +1(하루 1회, 변경 시 이전 표 차감).
+표본이 `MIN_SAMPLES`(기본 20) 미만이면 예시 분포 유지(콜드스타트 노이즈 방지). 홈 게이지·전국날씨
+헤드라인·마스코트가 최다 기분으로 자동 전환. 공유 카드 % 는 일관성을 위해 예시값 고정.
+한계: 익명 공개 쓰기라 대규모 조작에 취약 — 필요 시 App Check/Functions로 강화.
+
 ## 데이터·프라이버시
 로컬 우선. 개인 기록(기분·streak·taste)은 기기 localStorage에만 저장(서버 미전송).
-전국 집계는 익명 합산 카운터만(증분4). 음악은 외부 링크아웃/임베드. 자세히는 `privacy.html`.
+전국 집계는 익명 합산 카운터만(`nation/{날짜}` 문서, 개인 식별 행 없음). 음악은 외부 링크아웃/임베드.
+자세히는 `privacy.html`.
 
 ## 엔지니어링 원칙 (DECISIONS 참고)
 1. **불신 기본값** — 깨질 영상ID 안 지어냄(검색 딥링크), 손상 입력 None-safe 복구.
@@ -77,7 +99,8 @@ node newapp/tests/engine.test.mjs   # 엔진 경계 테스트 (20 passed)
 - [x] 공유 카드(일일/주간) 9:16
 - [x] 카탈로그 확장(국내·해외·다세대 65곡) + 관리자 CMS
 - [x] 접근성·대비 AA·CSP·소셜 미리보기·PWA 아이콘
-- [ ] 전국 집계(Firebase) 실데이터 연결 — 현재 콜드스타트 예시 분포
+- [x] 전국 집계(Firebase) 연동 코드(REST·폴백·집계 전환) — `firebase-config.js`만 채우면 ON
+- [ ] 전국 집계 실 데이터 연결(콘솔 config·규칙 입력) + 라이브 검증
 - [ ] 다크 모드
 - [ ] 수익화(광고·소액 IAP·앱인토스)
 

@@ -3,6 +3,7 @@
 import { recommendSong } from '../js/recommend.js';
 import { loadState, recordMood, clampScore, emptyState } from '../js/store.js';
 import { MOODS } from '../js/data/moods.js';
+import { summarize } from '../js/nation-remote.js';
 
 let pass = 0, fail = 0;
 const ok = (cond, msg) => { if (cond) { pass++; } else { fail++; console.error('  ✗', msg); } };
@@ -50,6 +51,19 @@ let ee = recordMood({ schema: 1, days: {}, lastDate: '2026-06-20', streak: 6, fr
 ok(ee.streak === 7 && ee.freezes === 1, '프리즈: 7일 달성 → 프리즈 +1');
 ok(loadState(JSON.stringify({ freezes: 5 })).freezes === 2, '프리즈: 과다 → MAX 2 clamp');
 ok(loadState('{}').freezes === 1, '프리즈: 누락 시 기본 1');
+
+// ── taste 개인화 추천 ─────────────────────────────
+ok(recommendSong('happy', { dateKey: '2026-06-23' }).title === recommendSong('happy', { dateKey: '2026-06-23', taste: '' }).title, 'taste: 미지정은 기존과 동일(하위호환)');
+ok(recommendSong('happy', { dateKey: 'x', taste: 'calm' }).title === recommendSong('happy', { dateKey: 'x', taste: 'calm' }).title, 'taste: 같은 taste → 결정적');
+ok(new Set(['happy', 'flutter', 'calm', 'blue', 'angry'].map((t) => recommendSong('happy', { dateKey: '2026-06-23', taste: t }).title)).size >= 2, 'taste: 성향에 따라 추천이 갈린다');
+
+// ── 전국 집계 summarize (순수·None-safe) ──────────────
+ok(summarize({ happy: { integerValue: '60' }, blue: { integerValue: '40' } }, 10)[0][1] === 60, '집계: 60/40 → 60%');
+ok(summarize({ happy: { integerValue: '80' }, blue: { integerValue: '20' } }, 10)[0][0] === 'happy', '집계: 최다 기분 정렬');
+ok(summarize({}, 10) === null, '집계: 빈 데이터 → null(폴백)');
+ok(summarize(undefined, 10) === null, '집계: undefined → null(무크래시)');
+ok(summarize({ happy: { integerValue: '5' } }, 20) === null, '집계: 표본 부족 → null(폴백)');
+ok(summarize({ happy: { integerValue: '50' }, calm: { integerValue: '50' } }, 10).length === 5, '집계: 기분 5종 모두 반환');
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

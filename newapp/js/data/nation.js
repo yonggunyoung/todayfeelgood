@@ -5,3 +5,6 @@ export const NATION = [
 ];
 // "전국 맑음 N%" — 가장 큰 비중(행복=맑음).
 export const NATION_SUNNY = NATION[0][1];
+
+// 기분 → 전국 '날씨' 표현 (최다 기분에 따라 헤드라인 전환).
+export const WEATHER = { happy: '맑음', flutter: '반짝임', calm: '산들바람', blue: '비', angry: '천둥' };

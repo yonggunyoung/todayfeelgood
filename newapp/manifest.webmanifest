@@ -4,6 +4,7 @@
   "description": "하루 한 번 기분을 톡 누르면 구름이가 오늘의 노래를 골라줘요.",
   "lang": "ko",
   "start_url": "./",
+  "id": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",

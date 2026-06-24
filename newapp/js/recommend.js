@@ -12,10 +12,12 @@ function seedFrom(str) {
   return h;
 }
 
-export function recommendSong(moodId, { dateKey = '', catalog = SONGS } = {}) {
+// taste(음악 성향 타입)를 시드에 섞으면 같은 기분·같은 날이라도 사람마다 다른 곡이 나온다
+// → "내 취향을 아는" 개인화. taste 미지정('')이면 기존 결과와 100% 동일(하위호환).
+export function recommendSong(moodId, { dateKey = '', catalog = SONGS, taste = '' } = {}) {
   if (!MOOD_IDS.has(moodId)) return { ...FALLBACK };        // 입력 불신
   const list = catalog[moodId];
   if (!Array.isArray(list) || list.length === 0) return { ...FALLBACK }; // None-safe
-  const idx = seedFrom(String(dateKey) + moodId) % list.length;
+  const idx = seedFrom(String(dateKey) + moodId + (taste || '')) % list.length;
   return { ...list[idx] };
 }

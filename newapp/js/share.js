@@ -7,6 +7,8 @@ import { recommendSong } from './recommend.js';
 import { openDialog } from './a11y.js';
 import { NATION_SUNNY } from './data/nation.js';
 import { weeklyPlaylist } from './views.js';
+import { loadCatalog } from './catalog.js';
+import { loadTaste } from './quiz.js';
 
 const WD = ['일', '월', '화', '수', '목', '금', '토'];
 // 공유 카드는 앱 테마와 무관하게 항상 '밝은 종이' 톤 — 다크 모드여도 일관·인쇄 가능한 공유 이미지.
@@ -34,7 +36,7 @@ async function buildCard(moodId, dateKey) {
   const x = c.getContext('2d');
   const paper = L.paper, ink = L.ink, soft = L.soft, faint = L.faint, coral = L.coral;
   const mood = L.mood[moodId] || coral, tint = L.tint[moodId] || '#FFE4DE', mink = L.ink2[moodId] || ink;
-  const mo = moodById(moodId), song = recommendSong(moodId, { dateKey });
+  const mo = moodById(moodId), song = recommendSong(moodId, { dateKey, catalog: loadCatalog(), taste: loadTaste() });
   const d = new Date(`${dateKey}T00:00:00`);
 
   x.fillStyle = paper; x.fillRect(0, 0, W, H);

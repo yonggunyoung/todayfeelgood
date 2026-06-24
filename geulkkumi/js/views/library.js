@@ -7,6 +7,7 @@ import { el, clear, copyChip, copy, share, toast, debounce } from "../ui.js";
 import { SYMBOLS, allSymbolItems } from "../data/symbols.js";
 import { KAOMOJI, allKaomoji } from "../data/kaomoji.js";
 import { FRAMES, DECO_LINES, BLOCKS, renderTemplate } from "../data/templates.js";
+import { ASCII_ART } from "../data/asciiart.js";
 import { STYLES, convert } from "../engine/unicode-fonts.js";
 import { mix } from "../engine/decorate.js";
 import { openPreview } from "../preview.js";
@@ -14,8 +15,9 @@ import { openPreview } from "../preview.js";
 const SEGMENTS = [
   { id: "symbols", name: "특수문자" },
   { id: "kaomoji", name: "이모티콘" },
-  { id: "mix", name: "혼합 생성" },
-  { id: "deco", name: "텍대·구분선" },
+  { id: "ascii", name: "아스키" },
+  { id: "mix", name: "혼합" },
+  { id: "deco", name: "텍대" },
 ];
 
 const RENDER_CAP = 400; // 대량(수천) 그리드도 빠르게 — 넘치면 카테고리/검색으로 좁히게 안내
@@ -159,6 +161,23 @@ function decoSection() {
   return box;
 }
 
+// ── 아스키 아트 갤러리 ──────────────────────────────────────
+function asciiSection() {
+  const box = el("div.lib-section");
+  box.append(el("p.lead", null, "여러 줄 그림을 탭해서 복사 — 고정폭(모노) 앱·디스코드에서 잘 보여요."));
+  ASCII_ART.forEach((a) => {
+    box.append(el("div.block-card", null, [
+      el("div.block-name", null, a.name),
+      el("pre.block-out", null, a.art),
+      el("div.toolbar", null, [
+        el("button.tbtn", { type: "button", onclick: () => copy(a.art, "ascii") }, "복사"),
+        el("button.tbtn", { type: "button", onclick: () => share(a.art) }, "공유"),
+      ]),
+    ]));
+  });
+  return box;
+}
+
 function mount(root) {
   let seg = "symbols";
   const wrap = el("div.view.view-library");
@@ -189,6 +208,7 @@ function mount(root) {
     clear(body);
     if (seg === "symbols") body.append(browseSection(SYMBOLS, allSymbolItems(), "symbol"));
     else if (seg === "kaomoji") body.append(browseSection(KAOMOJI, allKaomoji(), "kaomoji"));
+    else if (seg === "ascii") body.append(asciiSection());
     else if (seg === "mix") body.append(mixSection());
     else body.append(decoSection());
   }

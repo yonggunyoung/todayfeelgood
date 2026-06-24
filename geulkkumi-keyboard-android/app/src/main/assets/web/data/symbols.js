@@ -4,6 +4,8 @@
  */
 "use strict";
 
+import { UNICODE_CATS } from "./symbols-unicode.js";
+
 export const SYMBOLS = [
   { id: "popular", name: "인기", keywords: "추천 자주",
     items: "✨ ⭐ 🌟 ♡ ♥ ❤ ★ ☆ ✩ ✿ ❀ ✦ ✧ ⋆ “ ” ‘ ’ • · ° ◦ ✔ ✖ → ← ↑ ↓ ☑ ✓ ☀ ☁ ☂ ☃ ☘ ✈ ☎ ✉ ⚡ ☮ ☯ ♪ ♬ ♛ ♚ ✌ ☜ ☞".split(" ") },
@@ -67,7 +69,27 @@ export const SYMBOLS = [
 
   { id: "aesthetic", name: "감성 조합", keywords: "감성 y2k 트친 꾸밈 반짝",
     items: ["✧˖°", "⊹ ࣪ ˖", "⋆.˚⟡ ࣪ ⋆", "˗ˏˋ ★ ˎˊ˗", "ﾟ.*･｡ﾟ", "⟡ ⋆｡˚", "˚୨୧⋆｡˚", "‧₊˚✧", "°❀⋆.ೃ࿔*:･", "⋆⑅˚₊", "꒰ঌ ໒꒱", "☆彡", "ᰔᩚ", "𓂃 ࣪˖", "⋆˙⟡♡", "✩‧₊˚"] },
+
+  { id: "t-season", name: "계절·날씨", keywords: "테마 계절 봄 여름 가을 겨울 날씨",
+    items: "🌸 🌷 🌼 🌻 🌿 🍀 🍂 🍁 🎃 ☀️ 🌈 🌊 🍉 🌞 ❄️ ☃️ ⛄ 🌨️ 🌧️ ⛅ 🔥 💧 🌙 ⭐".split(" ") },
+  { id: "t-space", name: "우주·하늘", keywords: "테마 우주 별 달 space 하늘",
+    items: "🌌 🪐 🌠 ☄️ ✨ 🌟 💫 🌙 ⭐ 🛸 🚀 🌑 🌓 🌕 🌗 ☀️ ☁️ 🌈 🔭 👽".split(" ") },
+  { id: "t-love", name: "사랑·하트(이모지)", keywords: "테마 사랑 하트 love 이모지",
+    items: "❤️ 🧡 💛 💚 💙 💜 🖤 🤍 🤎 💕 💞 💓 💗 💖 💘 💝 💟 ❣️ 💌 😍 🥰 😘 💑 💏".split(" ") },
+  { id: "t-food", name: "간식·음료", keywords: "테마 음식 간식 디저트 카페 food",
+    items: "🍓 🍑 🍰 🧁 🍪 🍩 ☕ 🍵 🧋 🍫 🍬 🍭 🍦 🥐 🍿 🍡 🍮 🥞 🍙 🍜".split(" ") },
+  { id: "t-animal", name: "동물(이모지)", keywords: "테마 동물 강아지 고양이 토끼 animal",
+    items: "🐰 🐱 🐶 🐻 🐼 🐨 🐯 🦊 🐹 🐭 🐸 🐧 🐥 🦋 🐢 🐙 🐳 🦄 🐝 🐞".split(" ") },
+  { id: "t-halloween", name: "할로윈", keywords: "테마 할로윈 halloween 무서운",
+    items: "🎃 👻 🦇 🕸️ 🕷️ 💀 ☠️ 🧛 🧙 🧟 🍬 🕯️ ⚰️ 🪦 🌙".split(" ") },
+  { id: "t-xmas", name: "크리스마스", keywords: "테마 크리스마스 겨울 christmas 산타",
+    items: "🎄 🎅 🤶 ⛄ ❄️ 🎁 🔔 ⭐ 🦌 🕯️ 🍪 🥛 🧦 ☃️ ✨".split(" ") },
+  { id: "t-party", name: "파티·축하", keywords: "테마 파티 생일 축하 party 이벤트",
+    items: "🎉 🎊 🎈 🎀 🥳 🎂 🍰 🍾 🥂 🪅 🎆 🎇 🪩 🎁 ✨".split(" ") },
 ];
+
+// 유니코드 블록 생성 카테고리(대규모)를 합치기.
+SYMBOLS.push(...UNICODE_CATS);
 
 // 전 항목 평탄화(검색 인덱스용).
 export function allSymbolItems() {

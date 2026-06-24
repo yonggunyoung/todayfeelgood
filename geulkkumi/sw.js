@@ -1,12 +1,12 @@
 /* 글꾸미 — 서비스워커: 앱 셸 오프라인 캐시(빌드 없는 정적 PWA, 의존성 0).
  * 동일 출처 자산은 cache-first, 그 외(폰트 CDN 등)는 런타임 캐시. */
-const C = "geulkkumi-v4";
+const C = "geulkkumi-v5";
 const ASSETS = [
   "./", "./index.html", "./manifest.webmanifest", "./icon.svg", "./mascot.svg", "./og.svg", "./og.png",
   "./css/styles.css",
   "./js/main.js", "./js/ui.js", "./js/store.js", "./js/png.js", "./js/preview.js",
   "./js/engine/unicode-fonts.js", "./js/engine/decorate.js", "./js/engine/hangul.js", "./js/engine/ascii-art.js",
-  "./js/data/ramps.js", "./js/data/symbols.js", "./js/data/kaomoji.js", "./js/data/templates.js",
+  "./js/data/ramps.js", "./js/data/symbols.js", "./js/data/symbols-unicode.js", "./js/data/kaomoji.js", "./js/data/templates.js", "./js/data/asciiart.js",
   "./js/views/fonts.js", "./js/views/photo.js", "./js/views/draw.js", "./js/views/library.js", "./js/views/saved.js",
 ];
 

@@ -50,10 +50,10 @@ function render() {
     out.append(f);
   } else if (tab === "kao") {
     const g = document.createElement("div"); g.className = "grid";
-    KAOMOJI.forEach((c) => c.items.forEach((it) => g.append(cell(it)))); out.append(g);
+    KAOMOJI.flatMap((c) => c.items).slice(0, 300).forEach((it) => g.append(cell(it))); out.append(g);
   } else {
     const g = document.createElement("div"); g.className = "grid sym";
-    SYMBOLS.forEach((c) => c.items.forEach((it) => g.append(cell(it)))); out.append(g);
+    SYMBOLS.flatMap((c) => c.items).slice(0, 300).forEach((it) => g.append(cell(it))); out.append(g);
   }
 }
 q.addEventListener("input", render);

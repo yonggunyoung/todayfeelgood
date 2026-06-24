@@ -2,9 +2,10 @@
 import { mascotSVG } from './mascot.js';
 import { moodById } from './data/moods.js';
 import { todayKey } from './store.js';
-import { NATION } from './data/nation.js';
+import { WEATHER } from './data/nation.js';
 import { recommendSong } from './recommend.js';
 import { loadCatalog } from './catalog.js';
+import { getNation, isNationLive } from './nation-remote.js';
 
 const box = (px, svg) => `<span style="width:${px};height:${px};display:block">${svg}</span>`;
 const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -31,19 +32,20 @@ export function weeklyPlaylist(state) {
     .filter((x) => x.song && x.song.source !== 'none');
 }
 
-// 전국 기분 날씨 — 분포는 data/nation.js 단일 출처(D13)
+// 전국 기분 날씨 — 라이브 집계(nation-remote) 우선, 없으면 예시 분포(data/nation.js)
 export function weatherHTML() {
-  const rows = NATION.map(([k, p]) => {
+  const nat = getNation(), top = nat[0][0], live = isNationLive();
+  const rows = nat.map(([k, p]) => {
     const m = moodById(k);
     return `<div class="wx-row" data-mood="${k}">${box('30px', mascotSVG(k, true))}<span class="wx-row__name">${m.ko}</span><span class="wx-row__bar"><i style="width:${p}%"></i></span><span class="wx-row__pct">${p}%</span></div>`;
   }).join('');
-  return `<div class="v" data-mood="happy">
+  return `<div class="v" data-mood="${top}">
     <p class="vsub">전국 기분 날씨</p>
-    <h1 class="vtitle">지금 전국은<br>대체로 맑음</h1>
-    <div class="wx-hero">${box('120px', mascotSVG('happy', false))}</div>
+    <h1 class="vtitle">지금 전국은<br>대체로 ${WEATHER[top] || '맑음'}</h1>
+    <div class="wx-hero">${box('120px', mascotSVG(top, false))}</div>
     <div class="card" style="padding:6px 16px">${rows}</div>
-    <div class="wx-note">내 「설렘」 한 톨이 전국을 한 뼘 맑게 했어요</div>
-    <p class="col-empty-msg">아직 정식 집계 전이라 예시 날씨예요 · 곧 진짜 전국 집계가 열려요</p>
+    <div class="wx-note">내 기분 한 톨이 전국 날씨를 만들어요</div>
+    <p class="col-empty-msg">${live ? '실시간 전국 집계 · 방금 전 기준이에요' : '아직 정식 집계 전이라 예시 날씨예요 · 곧 진짜 전국 집계가 열려요'}</p>
   </div>`;
 }
 

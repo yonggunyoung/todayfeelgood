@@ -8,7 +8,8 @@ import { weatherHTML, collectionHTML } from './views.js';
 import { openQuiz, loadTaste, tasteName } from './quiz.js';
 import { loadCatalog } from './catalog.js';
 import { openDialog } from './a11y.js';
-import { NATION } from './data/nation.js';
+import { WEATHER } from './data/nation.js';
+import { reportMood, fetchNation, getNation, nationEnabled } from './nation-remote.js';
 
 let state = store.load();
 const $ = (s, r = document) => r.querySelector(s);
@@ -45,6 +46,7 @@ function renderHome() {
   const m = sel(), key = todayKey();
   const d = new Date(`${key}T00:00:00`);
   const v = view();
+  const nat = getNation(), topMood = nat[0][0], topKo = (moodById(topMood) || {}).ko || '';
   v.innerHTML = `<div class="v v-home" data-mood="${m || 'happy'}">
     <div class="halo"></div>
     <div class="bar">
@@ -61,9 +63,9 @@ function renderHome() {
     <div class="hero"><div class="hero__m" id="hero" aria-hidden="true">${mascotSVG(m || 'happy', false)}</div></div>
     <div class="picker" id="moodPicker" role="group" aria-label="오늘의 기분 선택"></div>
     <div class="card gauge">
-      <div class="gauge__top"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="5" fill="var(--happy)"/><g stroke="var(--happy)" stroke-width="1.6" stroke-linecap="round"><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></g></svg><span class="gauge__lab">지금 전국은 대체로 맑음</span></div>
-      <p class="gauge__sub">행복한 사람이 제일 많아요</p>
-      <div class="gauge__bar" aria-hidden="true">${NATION.map(([k, p]) => `<i class="s-${k}" style="flex:${p}"></i>`).join('')}</div>
+      <div class="gauge__top"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="5" fill="var(--happy)"/><g stroke="var(--happy)" stroke-width="1.6" stroke-linecap="round"><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></g></svg><span class="gauge__lab">지금 전국은 대체로 ${WEATHER[topMood] || '맑음'}</span></div>
+      <p class="gauge__sub">${topKo} 기분이 가장 많아요</p>
+      <div class="gauge__bar" aria-hidden="true">${nat.map(([k, p]) => `<i class="s-${k}" style="flex:${p}"></i>`).join('')}</div>
     </div>
     <div class="card result" id="result" role="status" aria-live="polite" hidden></div>
   </div>`;
@@ -89,6 +91,8 @@ function pick(moodId) {
   if (froze) { state.frozeToday = false; store.save(state); }
   renderHome();
   if (froze) toast('프리즈로 연속 기록을 지켰어요');
+  // 전국 집계에 내 1표 반영 후, 갱신된 분포로 홈 게이지를 다시 그린다(설정됐을 때만).
+  if (nationEnabled()) reportMood(moodId).then(() => fetchNation()).then((d) => { if (d && document.querySelector('.v-home')) renderHome(); });
 }
 
 function ytEmbed(id) {
@@ -288,3 +292,6 @@ try { matchMedia('(prefers-color-scheme: dark)').addEventListener('change', appl
 let onboarded = '1'; try { onboarded = localStorage.getItem(ONB_KEY); } catch (e) {}
 if (!onboarded) showOnboarding();
 router();
+
+// 전국 집계가 설정돼 있으면 한 번 읽어와 현재 화면을 갱신(router는 fetch를 호출하지 않아 루프 없음).
+if (nationEnabled()) fetchNation().then((d) => { if (d) router(); });

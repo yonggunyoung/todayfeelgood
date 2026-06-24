@@ -6,8 +6,8 @@
 //   match /nation/{day} { allow read: if true;
 //     allow write: if request.resource.data.keys().hasOnly(['happy','flutter','calm','blue','angry']); }
 export const FIREBASE = {
-  projectId: '',
-  apiKey: '',
+  projectId: 'myfeel-94cba',
+  apiKey: 'AIzaSyATcpCzqIQkyP9lFYvy5SvI4pvAydINtVg',
 };
 // 실집계가 의미를 가지려면 최소 표본 수(이 미만이면 예시 분포 유지 — 콜드스타트 노이즈 방지).
 export const MIN_SAMPLES = 20;

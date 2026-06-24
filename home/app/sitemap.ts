@@ -96,12 +96,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "monthly" as const,
       priority: 0.6,
     })),
-    // 개별 아티클(읽을거리 글) — 각각 고유 URL.
+    // 개별 아티클(읽을거리 글) — 각각 고유 URL. 실용 가이드는 검색 유입 우선이라 priority↑.
     ...ARTICLES.map((a) => ({
       url: `${base}/stories/${a.slug}`,
-      lastModified: now,
+      lastModified: a.updated ? new Date(a.updated) : now,
       changeFrequency: "monthly" as const,
-      priority: 0.5,
+      priority: a.tag === "실용 가이드" ? 0.6 : 0.5,
     })),
     ...["privacy", "terms"].flatMap((doc) => [
       {

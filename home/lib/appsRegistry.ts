@@ -139,5 +139,30 @@ export const APPS: AppEntry[] = [
       "kaomoji",
       "ascii"
     ]
+  },
+  {
+    "id": "mood",
+    "path": "/mood",
+    "type": "static",
+    "status": "live",
+    "featured": true,
+    "emoji": "☁️",
+    "color": "#ff7a59",
+    "nameKo": "오늘 기분",
+    "nameEn": "Today's Mood",
+    "descKo": "기분을 톡 누르면 구름이가 오늘의 노래를 골라줘요",
+    "descEn": "Tap your mood — a cloud picks today's song",
+    "keywords": [
+      "기분",
+      "노래",
+      "음악",
+      "감정",
+      "무드",
+      "구름이",
+      "오늘기분",
+      "mood",
+      "song",
+      "music"
+    ]
   }
 ];

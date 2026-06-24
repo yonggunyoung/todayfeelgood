@@ -1,0 +1,58 @@
+# 글꾸미(main의 geulkkumi/)가 바뀌면 → 허브(great-darwin)의 static-apps/geulkkumi 사본을 자동 갱신.
+# 그래야 ddukkit.com/geulkkumi 가 항상 최신 글꾸미를 보여준다(냉비서 /fridge 와 동일 복사방식).
+# ※ 동기화는 자동, 실제 라이브 반영(오라클)은 Actions "Deploy (ddukkit hub)" 버튼으로.
+name: Sync geulkkumi to hub (/geulkkumi)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'geulkkumi/**'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-geulkkumi
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout 앱 (main)
+        uses: actions/checkout@v4
+        with:
+          path: app
+      - name: Checkout 허브 (great-darwin)
+        uses: actions/checkout@v4
+        with:
+          ref: claude/great-darwin-1FmUy
+          path: hub
+          fetch-depth: 0
+      - name: 글꾸미 정적 파일을 허브 static-apps/geulkkumi 로 복사
+        run: |
+          set -euo pipefail
+          SRC=app/geulkkumi
+          DEST=hub/static-apps/geulkkumi
+          rm -rf "$DEST"
+          mkdir -p "$DEST"
+          cp -r "$SRC"/index.html "$SRC"/sw.js "$SRC"/manifest.webmanifest \
+                "$SRC"/icon.svg "$SRC"/mascot.svg "$SRC"/og.png "$SRC"/og.svg \
+                "$SRC"/sitemap.xml "$SRC"/css "$SRC"/js "$DEST"/
+          echo "복사된 항목:"; ls "$DEST"
+      - name: 변경 있으면 커밋·푸시
+        run: |
+          set -euo pipefail
+          cd hub
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A static-apps/geulkkumi
+          if git diff --cached --quiet; then
+            echo "변경 없음 — 동기화 스킵"
+            exit 0
+          fi
+          git commit -m "sync: 글꾸미 → /geulkkumi 사본 갱신 (main ${GITHUB_SHA::7})"
+          git push origin HEAD:claude/great-darwin-1FmUy
+          echo "✅ 허브 사본 갱신 완료 — 라이브 반영은 'Deploy (ddukkit hub)' 버튼을 눌러주세요."

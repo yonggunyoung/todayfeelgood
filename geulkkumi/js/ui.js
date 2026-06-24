@@ -65,7 +65,7 @@ export async function copy(text, kind) {
 }
 
 // 네이티브 공유(가능하면) — 결과 + 앱 링크(출처) 동봉. 실패 시 복사로 폴백.
-const SHARE_URL = "https://yonggunyoung.github.io/todayfeelgood/geulkkumi/?utm_source=share&utm_medium=app";
+const SHARE_URL = "https://ddukkit.com/geulkkumi/?utm_source=share&utm_medium=app";
 export async function share(text) {
   if (navigator.share) {
     try { await navigator.share({ text, url: SHARE_URL }); addHistory(text, "share"); return true; }

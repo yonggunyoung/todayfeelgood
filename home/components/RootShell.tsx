@@ -66,6 +66,31 @@ export function RootShell({ locale, children }: { locale: Locale; children: Reac
         {/* 광고·분석 스크립트(env on/off, 기본 OFF). 토스 미니앱 빌드에선 env 비워 자동 비활성. */}
         <SiteScripts />
         {children}
+        {/* 사이트 전역 푸터 — 읽을 수 있는 콘텐츠/정책 페이지로 내부 링크(발견성·SEO). */}
+        <footer
+          style={{
+            borderTop: "1px solid rgba(128,128,128,.18)",
+            marginTop: 56,
+            padding: "26px 20px 40px",
+            fontSize: ".9rem",
+            textAlign: "center",
+            opacity: 0.9,
+          }}
+        >
+          <nav
+            aria-label="footer"
+            style={{ display: "flex", gap: 16, flexWrap: "wrap", justifyContent: "center", marginBottom: 10 }}
+          >
+            <a href="/">홈</a>
+            <a href="/about">소개</a>
+            <a href="/guide">가이드</a>
+            <a href="/faq">자주 묻는 질문</a>
+            <a href="/stories">읽을거리</a>
+            <a href="/privacy">개인정보처리방침</a>
+            <a href="/terms">이용약관</a>
+          </nav>
+          <div style={{ opacity: 0.65 }}>© ddukkit · 문의 yonggunyoung@gmail.com</div>
+        </footer>
       </body>
     </html>
   );

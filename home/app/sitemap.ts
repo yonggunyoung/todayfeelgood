@@ -88,6 +88,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
         },
       },
     },
+    // 소개·FAQ·읽을거리(아티클) — 본문 콘텐츠(애드센스/검색). 현재 ko.
+    ...["about", "faq", "stories"].map((doc) => ({
+      url: `${base}/${doc}`,
+      lastModified: now,
+      changeFrequency: "monthly" as const,
+      priority: 0.6,
+    })),
     ...["privacy", "terms"].flatMap((doc) => [
       {
         url: `${base}/${doc}`,

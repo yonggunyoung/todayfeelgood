@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import type { CSSProperties } from "react";
 import { notFound } from "next/navigation";
 import { ARTICLES, getArticle } from "../articles";
+import { Cover } from "../cover";
 
 export function generateStaticParams() {
   return ARTICLES.map((a) => ({ slug: a.slug }));
@@ -62,7 +63,8 @@ export default function ArticlePage({ params }: { params: { slug: string } }) {
         <a href="/">← 홈</a><a href="/stories">읽을거리 목록</a><a href="/faq">FAQ</a>
       </p>
       <article>
-        <h1 className="display" style={{ fontSize: "1.9rem", lineHeight: 1.3 }}>{a.title}</h1>
+        <Cover emoji={a.emoji} color={a.color} id={a.slug} height={180} />
+        <h1 className="display" style={{ fontSize: "1.9rem", lineHeight: 1.3, marginTop: 18 }}>{a.title}</h1>
         <p style={{ opacity: 0.55, fontSize: ".85rem", marginTop: 6 }}>
           {a.tag ?? "떡밥 문화"} · 읽는 데 {a.read}
           {a.updated ? ` · ${a.updated} 업데이트` : ""}

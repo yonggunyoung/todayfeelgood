@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { CSSProperties } from "react";
 import { ARTICLES } from "./articles";
+import { Cover } from "./cover";
 
 export const metadata: Metadata = {
   title: "읽을거리 — 떡밥 문화 이야기 & 광클 꿀팁",
@@ -29,7 +30,8 @@ const h2: CSSProperties = { fontSize: "1.2rem", marginTop: 34 };
 function Card({ a }: { a: (typeof ARTICLES)[number] }) {
   return (
     <a href={`/stories/${a.slug}`} style={card}>
-      <span style={badge}>{a.tag ?? "떡밥 문화"}</span>
+      <Cover emoji={a.emoji} color={a.color} id={a.slug} height={110} />
+      <span style={{ ...badge, marginTop: 12 }}>{a.tag ?? "떡밥 문화"}</span>
       <div style={{ fontSize: "1.12rem", fontWeight: 700 }}>{a.title}</div>
       <div style={{ opacity: 0.8, marginTop: 6 }}>{a.desc}</div>
       <div style={{ opacity: 0.55, fontSize: ".82rem", marginTop: 6 }}>읽는 데 {a.read}</div>

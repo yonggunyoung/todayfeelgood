@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { siteUrl } from "@webapp/seo";
+import { ARTICLES } from "./(ko)/stories/articles";
 
 /**
  * 홈(루트) sitemap — 한국어(`/`)·영어(`/en`) 양쪽을 언어 대체(alternates)와 함께 노출.
@@ -88,12 +89,19 @@ export default function sitemap(): MetadataRoute.Sitemap {
         },
       },
     },
-    // 소개·FAQ·읽을거리(아티클) — 본문 콘텐츠(애드센스/검색). 현재 ko.
+    // 소개·FAQ·읽을거리(목록) — 본문 콘텐츠(애드센스/검색). 현재 ko.
     ...["about", "faq", "stories"].map((doc) => ({
       url: `${base}/${doc}`,
       lastModified: now,
       changeFrequency: "monthly" as const,
       priority: 0.6,
+    })),
+    // 개별 아티클(읽을거리 글) — 각각 고유 URL.
+    ...ARTICLES.map((a) => ({
+      url: `${base}/stories/${a.slug}`,
+      lastModified: now,
+      changeFrequency: "monthly" as const,
+      priority: 0.5,
     })),
     ...["privacy", "terms"].flatMap((doc) => [
       {

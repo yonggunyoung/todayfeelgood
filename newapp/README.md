@@ -50,7 +50,7 @@ node newapp/tests/engine.test.mjs   # 엔진 경계 테스트 (20 passed)
 
 ## 배포 (자동)
 `main` 병합 시 GitHub Pages 자동 배포(`.github/workflows/pages.yml`, `path: .`)
-→ `https://yonggunyoung.github.io/todayfeelgood/newapp/`
+→ `https://ddukkit.com/mood/` (허브 마운트 / GitHub Pages 원본: `https://yonggunyoung.github.io/todayfeelgood/newapp/`)
 
 ## 음악 관리
 `더보기 → 음악 관리(관리자)` 또는 `/newapp/admin.html`.

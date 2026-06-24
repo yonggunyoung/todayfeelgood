@@ -13,12 +13,17 @@ const TARGETS = {
   openai: 'https://api.openai.com',
   gemini: 'https://generativelanguage.googleapis.com',
 };
+// 브라우저→프록시→제공자로 통과시키는(그리고 CORS 프리플라이트에서 허용하는) 요청 헤더 화이트리스트.
+//  · x-goog-user-project: Gemini를 Google 로그인(OAuth)으로 쓸 때 청구 프로젝트 지정 — 빠지면 403.
+//  · x-goog-api-key:      Gemini 키를 헤더로 보내는 방식도 통과(현재 앱은 ?key= 사용).
+// 두 곳(아래 CORS 응답 + 실제 포워딩)에서 같은 목록을 써서 서로 어긋나지 않게 한다.
+const FWD_HEADERS = ['authorization', 'content-type', 'x-goog-user-project', 'x-goog-api-key'];
 // 호출 오리진을 그대로 반사(보통 http://localhost:8080). 와일드카드(*) 대신 요청 오리진만 허용.
 const corsFor = (req) => ({
   'Access-Control-Allow-Origin': req.headers.origin || 'null',
   'Vary': 'Origin',
   'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
-  'Access-Control-Allow-Headers': 'authorization,content-type',
+  'Access-Control-Allow-Headers': FWD_HEADERS.join(','),
   'Access-Control-Max-Age': '86400',
 });
 
@@ -32,8 +37,7 @@ const server = http.createServer(async (req, res) => {
 
   const targetUrl = base + '/' + rest.join('/'); // 쿼리스트링(?key=)은 rest 마지막에 포함됨
   const headers = {};
-  if (req.headers['authorization']) headers['authorization'] = req.headers['authorization'];
-  if (req.headers['content-type']) headers['content-type'] = req.headers['content-type'];
+  for (const h of FWD_HEADERS) { if (req.headers[h]) headers[h] = req.headers[h]; }
 
   const chunks = [];
   req.on('data', (c) => chunks.push(c));

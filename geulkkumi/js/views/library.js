@@ -18,10 +18,12 @@ const SEGMENTS = [
   { id: "deco", name: "텍대·구분선" },
 ];
 
+const RENDER_CAP = 400; // 대량(수천) 그리드도 빠르게 — 넘치면 카테고리/검색으로 좁히게 안내
 function grid(items, kind) {
   const g = el("div.sym-grid");
-  items.forEach((it) => g.append(copyChip(it.char, { kind, label: it.char })));
+  items.slice(0, RENDER_CAP).forEach((it) => g.append(copyChip(it.char, { kind, label: it.char })));
   if (!items.length) g.append(el("div.empty-note", null, "검색 결과가 없어요"));
+  else if (items.length > RENDER_CAP) g.append(el("div.empty-note", null, `+${items.length - RENDER_CAP}개 더 — 카테고리나 검색으로 좁혀보세요`));
   return g;
 }
 

@@ -4,6 +4,8 @@
  */
 "use strict";
 
+import { UNICODE_CATS } from "./symbols-unicode.js";
+
 export const SYMBOLS = [
   { id: "popular", name: "인기", keywords: "추천 자주",
     items: "✨ ⭐ 🌟 ♡ ♥ ❤ ★ ☆ ✩ ✿ ❀ ✦ ✧ ⋆ “ ” ‘ ’ • · ° ◦ ✔ ✖ → ← ↑ ↓ ☑ ✓ ☀ ☁ ☂ ☃ ☘ ✈ ☎ ✉ ⚡ ☮ ☯ ♪ ♬ ♛ ♚ ✌ ☜ ☞".split(" ") },
@@ -68,6 +70,9 @@ export const SYMBOLS = [
   { id: "aesthetic", name: "감성 조합", keywords: "감성 y2k 트친 꾸밈 반짝",
     items: ["✧˖°", "⊹ ࣪ ˖", "⋆.˚⟡ ࣪ ⋆", "˗ˏˋ ★ ˎˊ˗", "ﾟ.*･｡ﾟ", "⟡ ⋆｡˚", "˚୨୧⋆｡˚", "‧₊˚✧", "°❀⋆.ೃ࿔*:･", "⋆⑅˚₊", "꒰ঌ ໒꒱", "☆彡", "ᰔᩚ", "𓂃 ࣪˖", "⋆˙⟡♡", "✩‧₊˚"] },
 ];
+
+// 유니코드 블록 생성 카테고리(대규모)를 합치기.
+SYMBOLS.push(...UNICODE_CATS);
 
 // 전 항목 평탄화(검색 인덱스용).
 export function allSymbolItems() {

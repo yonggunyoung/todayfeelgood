@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    * { box-sizing: border-box; margin: 0; font-family: -apple-system, system-ui, 'Apple SD Gothic Neo', sans-serif; }
+    body { background: #fff5fb; color: #2a2030; height: 300px; display: flex; flex-direction: column; overflow: hidden; }
+    .hd { display: flex; gap: 6px; padding: 8px; background: #fff; border-bottom: 1px solid #f0e3ee; }
+    .q { flex: 1; border: 1.5px solid #e6d4e6; border-radius: 10px; padding: 9px 10px; font-size: 15px; outline: none; }
+    .q:focus { border-color: #ff5fa2; }
+    .kb { border: 0; background: #f6eef8; border-radius: 8px; padding: 0 10px; font-size: 13px; font-weight: 700; color: #6b6177; }
+    .tabs { display: flex; gap: 4px; padding: 6px 8px; background: #fff; }
+    .tab { flex: 1; border: 0; background: #f6eef8; border-radius: 999px; padding: 7px; font-size: 12px; font-weight: 700; color: #6b6177; }
+    .tab.on { background: #ffe6f1; color: #d6286f; }
+    .out { flex: 1; overflow: auto; padding: 6px 8px 12px; }
+    .row { display: flex; flex-direction: column; gap: 1px; width: 100%; text-align: left; border: 1px solid #f0e3ee; background: #fff; border-radius: 10px; padding: 7px 10px; margin-bottom: 5px; }
+    .rn { font-size: 10px; font-weight: 700; color: #847b90; }
+    .rv { font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; }
+    .grid.sym { grid-template-columns: repeat(7, 1fr); }
+    .cell { border: 1px solid #f0e3ee; background: #fff; border-radius: 10px; min-height: 40px; font-size: 17px; }
+  </style>
+  <title>글꾸미 키보드</title>
+</head>
+<body>
+  <div class="hd">
+    <input id="q" class="q" placeholder="입력 → 탭하면 채팅창에 바로 입력" autocomplete="off" />
+    <button id="kb" class="kb" type="button" title="키보드 전환">⌨</button>
+  </div>
+  <div id="tabs" class="tabs"></div>
+  <div id="out" class="out"></div>
+  <script type="module" src="./keyboard.js"></script>
+</body>
+</html>

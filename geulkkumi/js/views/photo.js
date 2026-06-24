@@ -159,7 +159,7 @@ function mount(root) {
   document.addEventListener("paste", wrap._onPaste);
 
   wrap.append(
-    el("p.lead", null, "사진을 도트(브라유)·문자·이모지 그림으로. 결과는 고정폭(모노) 앱·디스코드에서 가장 잘 보여요."),
+    el("p.lead", null, "사진을 도트(브라유)·문자·이모지 그림으로 — 밈·짤 사진을 올리면 그대로 도트/이모지 밈이 됩니다. 고정폭(모노) 앱·디스코드에서 가장 잘 보여요."),
     dz, pre, actions, optionsBox,
   );
   syncSubOpts();

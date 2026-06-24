@@ -65,7 +65,7 @@ export async function copy(text, kind) {
 }
 
 // 네이티브 공유(가능하면) — 결과 + 앱 링크(출처) 동봉. 실패 시 복사로 폴백.
-const SHARE_URL = "https://yonggunyoung.github.io/todayfeelgood/geulkkumi/?utm_source=share&utm_medium=app";
+const SHARE_URL = "https://ddukkit.com/geulkkumi/?utm_source=share&utm_medium=app";
 export async function share(text) {
   if (navigator.share) {
     try { await navigator.share({ text, url: SHARE_URL }); addHistory(text, "share"); return true; }
@@ -99,4 +99,23 @@ export function copyChip(text, opts) {
 // 디바운스(입력 → 미리보기 갱신).
 export function debounce(fn, ms) {
   let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); };
+}
+
+// 바텀시트 모달(#modal-root 필요). 배경/✕/Esc로 닫힘. close 함수 반환.
+export function openSheet(node, title) {
+  const root = document.getElementById("modal-root");
+  if (!root) return () => {};
+  clear(root);
+  const onKey = (e) => { if (e.key === "Escape") close(); };
+  function close() { document.removeEventListener("keydown", onKey); document.body.style.overflow = ""; back.classList.remove("show"); setTimeout(() => clear(root), 220); }
+  const back = el("div.sheet-back", { onclick: (e) => { if (e.target === back) close(); } });
+  const sheet = el("div.sheet", { role: "dialog", "aria-modal": "true", "aria-label": title || "" });
+  sheet.append(
+    el("div.sheet-hd", null, [el("strong", null, title || ""), el("button.sheet-x", { type: "button", "aria-label": "닫기", onclick: close }, "✕")]),
+    el("div.sheet-body", null, [node]),
+  );
+  back.append(sheet); root.append(back);
+  document.addEventListener("keydown", onKey); document.body.style.overflow = "hidden";
+  requestAnimationFrame(() => back.classList.add("show"));
+  return close;
 }

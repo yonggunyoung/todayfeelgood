@@ -10,6 +10,7 @@ import { loadCatalog } from './catalog.js';
 import { openDialog } from './a11y.js';
 import { WEATHER } from './data/nation.js';
 import { reportMood, fetchNation, getNation, nationEnabled } from './nation-remote.js';
+import { myMusicEnabled, pickMyMusic, MY_MUSIC } from './mymusic.js';
 
 let state = store.load();
 const $ = (s, r = document) => r.querySelector(s);
@@ -136,7 +137,9 @@ function renderResult(moodId, key) {
     const line = document.createElement('div'); line.className = 'song-line';
     line.innerHTML = '<span class="song-line__t"></span><span class="song-line__a"></span>';
     $('.song-line__t', line).textContent = song.title; $('.song-line__a', line).textContent = song.artist;
-    result.appendChild(line); addReasons();
+    result.appendChild(line);
+    result.appendChild(ytOpenLink(`https://www.youtube.com/watch?v=${song.youtubeId}`)); // 임베드 막힘 대비 폴백
+    addReasons();
   } else {
     listenUrl = song.url || '';
     const a = document.createElement('a'); a.className = 'song'; a.href = listenUrl; a.target = '_blank'; a.rel = 'noopener';
@@ -157,6 +160,37 @@ function renderResult(moodId, key) {
   share.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M12 15V3M8 7l4-4 4 4"/></svg>오늘 기분 카드 공유하기';
   share.addEventListener('click', () => openShareCard(moodId, key));
   result.appendChild(share);
+
+  // "이런 곡은 어때요?" — 내 곡/플리 추천(설정됐을 때만 등장)
+  if (myMusicEnabled()) renderMyMusic(result, key, moodId);
+}
+
+function ytOpenLink(url) {
+  const a = document.createElement('a'); a.className = 'yt-open'; a.href = url; a.target = '_blank'; a.rel = 'noopener';
+  a.textContent = '유튜브에서 열기 ↗'; return a;
+}
+function renderMyMusic(result, key, moodId) {
+  const pick = pickMyMusic(key); if (!pick) return;
+  const card = document.createElement('div'); card.className = 'card mymusic'; card.dataset.mood = moodId;
+  const h = document.createElement('div'); h.className = 'mymusic__h';
+  h.innerHTML = `<span class="mymusic__hd">${MY_MUSIC.heading || '이런 곡은 어때요?'}</span><span class="mymusic__lb">${MY_MUSIC.label || '구름이가 만든 곡'}</span>`;
+  card.appendChild(h);
+  if (pick.kind === 'video') {
+    card.appendChild(ytEmbed(pick.youtubeId));
+    if (pick.title) {
+      const line = document.createElement('div'); line.className = 'song-line';
+      line.innerHTML = '<span class="song-line__t"></span><span class="song-line__a"></span>';
+      $('.song-line__t', line).textContent = pick.title; $('.song-line__a', line).textContent = pick.artist || '구름이';
+      card.appendChild(line);
+    }
+    card.appendChild(ytOpenLink(`https://www.youtube.com/watch?v=${pick.youtubeId}`));
+  } else {
+    const box = document.createElement('div'); box.className = 'ytlite on';
+    box.innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/videoseries?list=${pick.playlistId}&rel=0" allow="encrypted-media; picture-in-picture" allowfullscreen title="구름이 플레이리스트"></iframe>`;
+    card.appendChild(box);
+    card.appendChild(ytOpenLink(`https://www.youtube.com/playlist?list=${pick.playlistId}`));
+  }
+  result.insertAdjacentElement('afterend', card);
 }
 
 // ── 더보기/설정 ──

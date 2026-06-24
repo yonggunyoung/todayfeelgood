@@ -5,6 +5,7 @@ import { todayKey } from './store.js';
 import { WEATHER } from './data/nation.js';
 import { recommendSong } from './recommend.js';
 import { loadCatalog } from './catalog.js';
+import { loadTaste } from './quiz.js';
 import { getNation, isNationLive } from './nation-remote.js';
 
 const box = (px, svg) => `<span style="width:${px};height:${px};display:block">${svg}</span>`;
@@ -23,12 +24,12 @@ function lastNKeys(n) {
 // 이번 주 플레이리스트 — 컬렉션 뷰와 공유 카드가 공유하는 단일 출처.
 // 반환: [{ k, day, mood, song }] (오늘이 첫 번째, 기록 없는 날 제외)
 export function weeklyPlaylist(state) {
-  const cat = loadCatalog();
+  const cat = loadCatalog(), taste = loadTaste();
   const days = (state && state.days) || {};
   return lastNKeys(7)
     .map((k) => ({ k, rec: days[k] }))
     .filter((x) => x.rec)
-    .map((x) => ({ k: x.k, day: Number(x.k.split('-')[2]), mood: x.rec.mood, song: recommendSong(x.rec.mood, { dateKey: x.k, catalog: cat }) }))
+    .map((x) => ({ k: x.k, day: Number(x.k.split('-')[2]), mood: x.rec.mood, song: recommendSong(x.rec.mood, { dateKey: x.k, catalog: cat, taste }) }))
     .filter((x) => x.song && x.song.source !== 'none');
 }
 

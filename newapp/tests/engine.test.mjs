@@ -52,6 +52,11 @@ ok(ee.streak === 7 && ee.freezes === 1, '프리즈: 7일 달성 → 프리즈 +1
 ok(loadState(JSON.stringify({ freezes: 5 })).freezes === 2, '프리즈: 과다 → MAX 2 clamp');
 ok(loadState('{}').freezes === 1, '프리즈: 누락 시 기본 1');
 
+// ── taste 개인화 추천 ─────────────────────────────
+ok(recommendSong('happy', { dateKey: '2026-06-23' }).title === recommendSong('happy', { dateKey: '2026-06-23', taste: '' }).title, 'taste: 미지정은 기존과 동일(하위호환)');
+ok(recommendSong('happy', { dateKey: 'x', taste: 'calm' }).title === recommendSong('happy', { dateKey: 'x', taste: 'calm' }).title, 'taste: 같은 taste → 결정적');
+ok(new Set(['happy', 'flutter', 'calm', 'blue', 'angry'].map((t) => recommendSong('happy', { dateKey: '2026-06-23', taste: t }).title)).size >= 2, 'taste: 성향에 따라 추천이 갈린다');
+
 // ── 전국 집계 summarize (순수·None-safe) ──────────────
 ok(summarize({ happy: { integerValue: '60' }, blue: { integerValue: '40' } }, 10)[0][1] === 60, '집계: 60/40 → 60%');
 ok(summarize({ happy: { integerValue: '80' }, blue: { integerValue: '20' } }, 10)[0][0] === 'happy', '집계: 최다 기분 정렬');

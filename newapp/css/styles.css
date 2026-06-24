@@ -118,6 +118,7 @@ body{background:var(--paper-2);color:var(--ink);font-family:var(--ui);font-weigh
 .reasons{display:flex;flex-wrap:wrap;gap:6px;margin-top:var(--sp-3)}
 .reasons .why{width:100%;font-size:var(--fs-micro);font-weight:700;color:var(--ink-soft)}
 .chip{font-size:var(--fs-micro);font-weight:600;padding:6px 11px;border-radius:var(--r-full);background:var(--cmt);color:var(--cmi)}
+.chip--taste{background:color-mix(in srgb,var(--coral) 16%,transparent);color:var(--coral-ink);font-weight:700}
 
 /* 버튼 */
 .btn{appearance:none;border:0;cursor:pointer;width:100%;font:inherit;font-family:var(--disp);font-size:var(--fs-h3);display:flex;align-items:center;justify-content:center;gap:8px;padding:15px;border-radius:var(--r-md);transition:transform .18s var(--spring),box-shadow .2s}

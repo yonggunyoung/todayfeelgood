@@ -107,7 +107,8 @@ function ytEmbed(id) {
 
 function renderResult(moodId, key) {
   const result = document.getElementById('result');
-  const mo = moodById(moodId), song = recommendSong(moodId, { dateKey: key, catalog: loadCatalog() });
+  const taste = loadTaste();
+  const mo = moodById(moodId), song = recommendSong(moodId, { dateKey: key, catalog: loadCatalog(), taste });
   result.hidden = false; result.dataset.mood = moodId; result.innerHTML = '';
 
   const head = document.createElement('div'); head.className = 'result__head';
@@ -117,7 +118,8 @@ function renderResult(moodId, key) {
   const addReasons = () => {
     if (mo && mo.reasons) {
       const w = document.createElement('div'); w.className = 'reasons';
-      w.innerHTML = '<div class="why">구름이가 고른 이유</div>' + mo.reasons.map((r) => `<span class="chip">${r}</span>`).join('');
+      const tasteChip = taste ? `<span class="chip chip--taste">${tasteName(taste)} 취향 반영</span>` : '';
+      w.innerHTML = '<div class="why">구름이가 고른 이유</div>' + tasteChip + mo.reasons.map((r) => `<span class="chip">${r}</span>`).join('');
       result.appendChild(w);
     }
   };

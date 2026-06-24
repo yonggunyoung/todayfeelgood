@@ -15,6 +15,7 @@ const $ = (s, r = document) => r.querySelector(s);
 const view = () => document.getElementById('view');
 const WD = ['일', '월', '화', '수', '목', '금', '토'];
 const ONB_KEY = 'oneulgibun:onboarded';
+const THEME_KEY = 'oneulgibun:theme';
 const sel = () => { const t = state.days[todayKey()]; return t ? t.mood : null; };
 function svgEl(html) { const t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstChild; }
 
@@ -172,6 +173,9 @@ function renderMore() {
     list.appendChild(el);
   };
   item('<path d="M12 3v12M8 11l4 4 4-4M5 21h14"/>', '내 데이터 내보내기', '기록은 내 것 · JSON으로 저장', exportData);
+  const themePref = (() => { try { return localStorage.getItem(THEME_KEY) || 'system'; } catch (e) { return 'system'; } })();
+  const TLAB = { system: '시스템 설정 따름', light: '라이트', dark: '다크' }, TNEXT = { system: 'dark', dark: 'light', light: 'system' };
+  item('<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>', '화면 테마', `${TLAB[themePref] || '시스템 설정 따름'} · 눌러서 전환`, () => { setTheme(TNEXT[themePref] || 'system'); renderMore(); });
   const taste = loadTaste();
   item('<path d="M9 18V5l10-2v13"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/>', '음악 성향 테스트',
     taste ? `나의 타입: ${tasteName(taste)} · 다시 하기` : '5문항이면 끝 · 나의 구름이 타입', () => openQuiz({ onClose: router }));
@@ -189,6 +193,16 @@ function resetData() {
   try { localStorage.removeItem('oneulgibun:state'); } catch (e) {}
   state = store.load(); toast('기록을 초기화했어요'); router();
 }
+// ── 테마(다크/라이트/시스템) ──
+function resolveDark(pref) { return pref === 'dark' || (pref !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches); }
+function applyTheme() {
+  let pref = 'system'; try { pref = localStorage.getItem(THEME_KEY) || 'system'; } catch (e) {}
+  const dark = resolveDark(pref);
+  document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+  const mc = document.querySelector('meta[name="theme-color"]');
+  if (mc) mc.setAttribute('content', dark ? '#1C1922' : '#FBF6EE');
+}
+function setTheme(pref) { try { localStorage.setItem(THEME_KEY, pref); } catch (e) {} applyTheme(); }
 function toast(msg) {
   const t = document.createElement('div'); t.textContent = msg;
   t.style.cssText = 'position:fixed;left:50%;bottom:88px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:11px 18px;border-radius:999px;font-size:13px;font-weight:600;z-index:80;box-shadow:var(--sh-lg)';
@@ -266,6 +280,9 @@ if ('serviceWorker' in navigator) window.addEventListener('load', async () => {
     });
   } catch (e) { /* SW 미지원 */ }
 });
+
+// 시스템 테마 변경 추종(테마 설정이 '시스템'일 때만 실질 반영)
+try { matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme); } catch (e) {}
 
 // 첫 실행 온보딩
 let onboarded = '1'; try { onboarded = localStorage.getItem(ONB_KEY); } catch (e) {}

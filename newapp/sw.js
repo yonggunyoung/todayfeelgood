@@ -1,9 +1,10 @@
 // 오늘 기분 — 앱 셸 오프라인 캐시 (단독 PWA, 의존성 없음).
 // 파일 추가 시 ASSETS와 캐시 버전(C)을 같이 올린다.
-const C = 'oneulgibun-v13';
+const C = 'oneulgibun-v14';
 const ASSETS = [
   './', './index.html', './privacy.html', './admin.html',
   './css/styles.css',
+  './js/theme-init.js',
   './js/app.js', './js/store.js', './js/recommend.js', './js/mascot.js', './js/share.js', './js/views.js', './js/quiz.js', './js/catalog.js', './js/a11y.js', './js/admin.js',
   './js/data/moods.js', './js/data/songs.js', './js/data/nation.js',
   './manifest.webmanifest', './icon.svg', './icon-192.png', './icon-512.png', './apple-touch-icon.png',

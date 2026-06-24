@@ -1,6 +1,6 @@
 // 오늘 기분 — 공유 카드 생성 (Canvas 1080×1920). D6/공유 플로우.
 // 기분+노래+전국날씨를 한 장으로 → 미리보기 모달 → Web Share / 저장.
-// 색은 CSS 변수(--mood-*)에서 읽어 단일 출처 유지(D13).
+// 카드 색은 고정 라이트 팔레트(L) — 앱이 다크여도 공유 이미지는 일관된 밝은 종이.
 import { mascotSVGStandalone } from './mascot.js';
 import { moodById } from './data/moods.js';
 import { recommendSong } from './recommend.js';
@@ -9,7 +9,13 @@ import { NATION_SUNNY } from './data/nation.js';
 import { weeklyPlaylist } from './views.js';
 
 const WD = ['일', '월', '화', '수', '목', '금', '토'];
-const cssVar = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+// 공유 카드는 앱 테마와 무관하게 항상 '밝은 종이' 톤 — 다크 모드여도 일관·인쇄 가능한 공유 이미지.
+const L = {
+  paper: '#FBF6EE', ink: '#2A2520', soft: '#6B6258', faint: '#8A8278', coral: '#FF6F50', line: '#EAE0CE',
+  mood: { happy: '#FFC95C', flutter: '#FF9A8B', calm: '#9CC3A6', blue: '#8AA0C9', angry: '#E2725B' },
+  tint: { happy: '#FFF1D4', flutter: '#FFE4DE', calm: '#E3EFE6', blue: '#E2E8F2', angry: '#F7DDD6' },
+  ink2: { happy: '#B07A12', flutter: '#C45A48', calm: '#4F7B5C', blue: '#48597F', angry: '#A33D29' },
+};
 const clip = (s, n) => (s && s.length > n ? s.slice(0, n - 1) + '…' : s);
 function hexA(h, a) { h = (h || '#FF6F50').replace('#', ''); if (h.length === 3) h = h.split('').map((c) => c + c).join(''); const n = parseInt(h, 16); return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`; }
 function svgToImage(svg) { return new Promise((res, rej) => { const img = new Image(); const u = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' })); img.onload = () => { URL.revokeObjectURL(u); res(img); }; img.onerror = rej; img.src = u; }); }
@@ -26,9 +32,8 @@ export async function openShareCard(moodId, dateKey) {
 async function buildCard(moodId, dateKey) {
   const W = 1080, H = 1920, c = document.createElement('canvas'); c.width = W; c.height = H;
   const x = c.getContext('2d');
-  const paper = cssVar('--paper') || '#FBF6EE', ink = cssVar('--ink') || '#2A2520',
-    soft = cssVar('--ink-soft') || '#6B6258', faint = cssVar('--ink-faint') || '#8A8278', coral = cssVar('--coral') || '#FF6F50';
-  const mood = cssVar(`--${moodId}`) || coral, tint = cssVar(`--${moodId}-t`) || '#FFE4DE', mink = cssVar(`--${moodId}-ink`) || ink;
+  const paper = L.paper, ink = L.ink, soft = L.soft, faint = L.faint, coral = L.coral;
+  const mood = L.mood[moodId] || coral, tint = L.tint[moodId] || '#FFE4DE', mink = L.ink2[moodId] || ink;
   const mo = moodById(moodId), song = recommendSong(moodId, { dateKey });
   const d = new Date(`${dateKey}T00:00:00`);
 
@@ -107,12 +112,11 @@ export async function openWeeklyCard(state) {
 
 async function buildWeeklyCard(list) {
   const W = 1080, H = 1920, c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d');
-  const paper = cssVar('--paper') || '#FBF6EE', ink = cssVar('--ink') || '#2A2520',
-    soft = cssVar('--ink-soft') || '#6B6258', faint = cssVar('--ink-faint') || '#8A8278', coral = cssVar('--coral') || '#FF6F50', line = cssVar('--line') || '#EAE0CE';
+  const paper = L.paper, ink = L.ink, soft = L.soft, faint = L.faint, coral = L.coral, line = L.line;
   // 최다 기분 = 히어로 마스코트
   const freq = {}; list.forEach((it) => { freq[it.mood] = (freq[it.mood] || 0) + 1; });
   let hero = list[0].mood, best = -1; for (const k in freq) if (freq[k] > best) { best = freq[k]; hero = k; }
-  const hmood = cssVar(`--${hero}`) || coral;
+  const hmood = L.mood[hero] || coral;
 
   x.fillStyle = paper; x.fillRect(0, 0, W, H);
   const m = 52, cw = W - 2 * m, ch = H - 2 * m, R = 72;
@@ -136,7 +140,7 @@ async function buildWeeklyCard(list) {
   // 곡 목록
   let y = 720; const rowH = Math.min(150, Math.floor((1760 - y) / list.length));
   list.forEach((it) => {
-    const mc = cssVar(`--${it.mood}`) || coral, cy = y + rowH / 2;
+    const mc = L.mood[it.mood] || coral, cy = y + rowH / 2;
     x.fillStyle = mc; x.beginPath(); x.arc(m + 64, cy - 6, 18, 0, 7); x.fill();
     x.textAlign = 'left';
     x.fillStyle = ink; x.font = '700 42px Cafe24Ssurround, Pretendard'; x.fillText(clip(it.song.title, 18), m + 112, cy - 14);

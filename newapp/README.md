@@ -59,6 +59,12 @@ node newapp/tests/engine.test.mjs   # 엔진 경계 테스트 (20 passed)
 - *이 기기에 저장*(localStorage 즉시 반영) 또는 *코드 내보내기*로
   `js/data/songs.js` 교체 커밋 → 전 사용자 반영.
 
+## 내 곡 추천 켜기 ("이런 곡은 어때요?")
+결과 화면 아래 **내 Suno/큐레이션 곡**을 곁들여 추천하는 카드. `js/mymusic.js`만 채우면 등장(비면 숨김).
+- 곡별: `videos`에 `{ title, artist, youtubeId }` 추가(유튜브 watch?v= 뒤 11자) → 날짜별 1곡 인앱 임베드.
+- 또는 `playlistId`만 채우면 그 재생목록을 통째 임베드(매일 업로드하면 자동 반영).
+- 임베드 막힌 영상은 "유튜브에서 열기 ↗" 링크로 폴백. (서버 호스팅 X — 전부 유튜브)
+
 ## 전국 집계 켜기 (Firebase)
 "전국 기분 날씨"는 기본은 예시 분포(`data/nation.js`)로 동작하고, Firebase를 연결하면
 실시간 익명 집계로 바뀝니다. **SDK 없이 Firestore REST(fetch)만** 써서 CSP는 `connect-src`만 엽니다.

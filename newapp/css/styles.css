@@ -201,6 +201,13 @@ body{background:var(--paper-2);color:var(--ink);font-family:var(--ui);font-weigh
 .song-line{text-align:center;margin-top:10px}
 .song-line__t{font-family:var(--disp);font-size:var(--fs-h3);display:block}
 .song-line__a{font-size:var(--fs-cap);color:var(--ink-soft)}
+.yt-open{display:block;text-align:center;margin-top:10px;font-size:var(--fs-cap);font-weight:700;color:var(--coral-ink);text-decoration:none}
+
+/* "이런 곡은 어때요?" — 내 곡/플리 카드 */
+.mymusic{margin-top:var(--sp-4);padding:var(--sp-4)}
+.mymusic__h{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:10px}
+.mymusic__hd{font-family:var(--disp);font-size:var(--fs-h3)}
+.mymusic__lb{font-size:var(--fs-cap);font-weight:700;color:var(--cmi)}
 
 /* 음악 성향 테스트 */
 .quiz{position:fixed;inset:0;z-index:65;background:var(--paper);max-width:430px;margin:0 auto;display:flex;flex-direction:column;padding:max(52px,env(safe-area-inset-top)) 24px 28px;overflow-y:auto}

@@ -114,14 +114,37 @@
           </div>
           <span id="status-openai" class="muted small"></span>
 
-          <label class="field-label" for="set-gemini" style="margin-top:14px">Gemini API 키 <span class="muted">aistudio.google.com</span></label>
-          <div class="key-row">
-            <input id="set-gemini" type="password" placeholder="AIza..." autocomplete="off" />
-            <button id="btn-test-gemini" class="ghost-btn small">테스트</button>
+          <div class="field-label" style="margin-top:16px">Gemini 인증</div>
+          <div id="gemini-mode" class="seg">
+            <button type="button" class="seg-btn on" data-mode="key">API 키</button>
+            <button type="button" class="seg-btn" data-mode="oauth">Google 로그인</button>
           </div>
-          <span id="status-gemini" class="muted small"></span>
 
-          <p class="notice">⚠️ <b>ChatGPT Plus·Gemini Advanced 구독과 API 키는 별개</b>입니다. 이미지 생성은 위 두 콘솔에서 발급하는 <b>API 키</b>(사용량 과금)가 필요해요.</p>
+          <div id="gemini-key-block" style="margin-top:10px">
+            <div class="key-row">
+              <input id="set-gemini" type="password" placeholder="AIza...  (aistudio.google.com)" autocomplete="off" />
+              <button id="btn-test-gemini" class="ghost-btn small">테스트</button>
+            </div>
+            <span id="status-gemini" class="muted small"></span>
+          </div>
+
+          <div id="gemini-oauth-block" class="hidden" style="margin-top:10px">
+            <input id="set-google-client" type="text" placeholder="OAuth 클라이언트 ID  (...apps.googleusercontent.com)" autocomplete="off" />
+            <input id="set-gcp-project" type="text" placeholder="GCP 프로젝트 ID (할당량용, 선택)" autocomplete="off" style="margin-top:8px" />
+            <div class="btn-row">
+              <button id="btn-google-signin" class="ghost-btn small">Google로 로그인</button>
+              <button id="btn-google-signout" class="ghost-btn small">로그아웃</button>
+              <button id="btn-test-gemini-oauth" class="ghost-btn small">연결 테스트</button>
+            </div>
+            <span id="status-google" class="muted small"></span>
+            <p class="muted small" style="margin-top:8px; line-height:1.6">
+              설정(1회): Google Cloud Console → <b>API·서비스 → 사용자 인증 정보 → OAuth 클라이언트 ID(웹)</b> 생성 →
+              <b>승인된 JavaScript 원본</b>에 이 사이트 주소(예: <code>http://localhost:8080</code>) 추가 →
+              프로젝트에 <b>Generative Language API</b> 사용 설정(Imagen은 결제 필요). 동의 화면은 ‘테스트’ 모드 + 본인을 테스트 사용자로.
+            </p>
+          </div>
+
+          <p class="notice">⚠️ <b>유료 구독(ChatGPT Plus·Gemini Advanced)으로는 이미지를 프로그램 생성할 수 없습니다.</b> OpenAI는 <b>API 키</b>만 가능하고, Gemini는 <b>API 키 또는 Google 로그인(OAuth)</b> 중 선택할 수 있어요. 비용은 본인 계정 과금입니다.</p>
         </div>
 
         <div class="card">

@@ -56,8 +56,8 @@ test('gemini.isImagen / maxPerCall', () => {
   assert.equal(gemini.maxPerCall('gemini-2.5-flash-image'), 1);
 });
 
-test('gemini.buildImageRequest: imagen :predict + sampleCount 클램프', () => {
-  const r = gemini.buildImageRequest({ key: 'K', model: 'imagen-4.0-generate-001', prompt: 'p', n: 10, aspect: '3:4' });
+test('gemini.buildImageRequest: imagen :predict + sampleCount 클램프 (키 모드)', () => {
+  const r = gemini.buildImageRequest({ auth: { mode: 'key', key: 'K' }, model: 'imagen-4.0-generate-001', prompt: 'p', n: 10, aspect: '3:4' });
   assert.match(r.url, /:predict\?key=K$/);
   assert.equal(r.body.instances[0].prompt, 'p');
   assert.equal(r.body.parameters.sampleCount, 4, '최대 4로 클램프');
@@ -65,11 +65,27 @@ test('gemini.buildImageRequest: imagen :predict + sampleCount 클램프', () => 
   assert.equal(r.body.parameters.negativePrompt, undefined, 'imagen엔 negativePrompt 미전송(400 방지)');
 });
 
-test('gemini.buildImageRequest: flash-image :generateContent + responseModalities', () => {
-  const r = gemini.buildImageRequest({ key: 'K', model: 'gemini-2.5-flash-image', prompt: 'hi' });
+test('gemini.buildImageRequest: flash-image :generateContent + responseModalities (키 모드)', () => {
+  const r = gemini.buildImageRequest({ auth: { mode: 'key', key: 'K' }, model: 'gemini-2.5-flash-image', prompt: 'hi' });
   assert.match(r.url, /:generateContent\?key=K$/);
+  assert.equal(r.headers.Authorization, undefined, '키 모드는 Authorization 헤더 없음');
   assert.equal(r.body.contents[0].parts[0].text, 'hi');
   assert.deepEqual(r.body.generationConfig.responseModalities, ['TEXT', 'IMAGE']);
+});
+
+test('gemini.buildImageRequest: OAuth 모드 — Bearer 헤더 + ?key 없음 + x-goog-user-project', () => {
+  const r = gemini.buildImageRequest({ auth: { mode: 'oauth', token: 'TOK', project: 'proj-1' }, model: 'gemini-2.5-flash-image', prompt: 'hi' });
+  assert.ok(!r.url.includes('?key='), 'OAuth면 URL에 키 쿼리 없음');
+  assert.match(r.url, /:generateContent$/);
+  assert.equal(r.headers.Authorization, 'Bearer TOK');
+  assert.equal(r.headers['x-goog-user-project'], 'proj-1');
+});
+
+test('gemini.applyAuth: 프로젝트 없으면 x-goog-user-project 미포함', () => {
+  const { url, headers } = gemini.applyAuth('https://h/v1beta/models/m:generateContent', { mode: 'oauth', token: 'T' });
+  assert.equal(headers.Authorization, 'Bearer T');
+  assert.equal(headers['x-goog-user-project'], undefined);
+  assert.ok(!url.includes('?key='));
 });
 
 test('gemini.parseImage: predictions / candidates 두 형태', () => {

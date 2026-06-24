@@ -148,6 +148,9 @@ code { background: var(--bg-2); padding: 1px 6px; border-radius: 5px; font-size:
 .key-row { display: flex; gap: 8px; }
 .key-row input { flex: 1; }
 .notice { font-size: 0.8rem; color: var(--amber); background: rgba(244,193,82,0.08); border: 1px solid rgba(244,193,82,0.25); border-radius: var(--r-sm); padding: 10px 12px; margin-top: 14px; line-height: 1.6; }
+.seg { display: inline-flex; background: var(--bg-2); border: 1px solid var(--line); border-radius: 10px; padding: 3px; gap: 3px; }
+.seg-btn { font-size: 0.82rem; font-weight: 700; padding: 7px 14px; border-radius: 8px; color: var(--ink-2); }
+.seg-btn.on { background: var(--accent-bg); color: var(--accent-2); box-shadow: inset 0 0 0 1px var(--accent); }
 .toggles { display: flex; flex-direction: column; gap: 12px; margin-top: 16px; }
 .switch { display: flex; align-items: center; gap: 10px; font-size: 0.88rem; font-weight: 600; color: var(--ink-2); cursor: pointer; }
 .switch input { width: auto; }

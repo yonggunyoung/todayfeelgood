@@ -6,6 +6,9 @@ const KEY = 'geurim.settings.v1';
 const DEFAULTS = {
   openaiKey: '',
   geminiKey: '',
+  geminiAuthMode: 'key',  // 'key' | 'oauth' (Google 로그인)
+  googleClientId: '',     // OAuth 클라이언트 ID(공개값, 저장 안전). ...apps.googleusercontent.com
+  gcpProject: '',         // 할당량용 프로젝트 ID(선택) → x-goog-user-project
   imageModel: 'dall-e-3',
   textModel: 'gpt-4o-mini',
   proxyBase: '',          // 비우면 브라우저에서 직접 호출. CORS가 막히면 로컬 프록시 주소(예: http://localhost:8787)

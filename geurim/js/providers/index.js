@@ -2,6 +2,7 @@
 
 import * as openai from './openai.js';
 import * as gemini from './gemini.js';
+import * as gauth from './google-auth.js';
 
 // 이미지 모델 카탈로그 (UI 드롭다운). 모델명이 바뀌면 설정의 "직접 입력"으로 덮어쓸 수 있다.
 export const IMAGE_MODELS = [
@@ -33,8 +34,25 @@ export function baseFor(provider, settings) {
   return provider === 'gemini' ? gemini.GEMINI_BASE : openai.OPENAI_BASE;
 }
 
-export function keyFor(provider, settings) {
-  return provider === 'gemini' ? settings.geminiKey : settings.openaiKey;
+// Gemini 인증 객체 구성 — 키 모드면 {mode:'key'}, OAuth 모드면 토큰을 (무UI로) 받아 {mode:'oauth'}.
+async function geminiAuth(settings) {
+  if (settings.geminiAuthMode === 'oauth') {
+    if (!settings.googleClientId) throw new Error('Google OAuth 클라이언트 ID를 설정에 입력해 주세요.');
+    const token = await gauth.getToken(settings.googleClientId); // silent; 실패 시 throw → "다시 로그인"
+    return { mode: 'oauth', token, project: (settings.gcpProject || '').trim() || undefined };
+  }
+  if (!settings.geminiKey) throw new Error('Gemini 자격이 없어요. 설정에서 API 키를 넣거나 Google 로그인을 하세요.');
+  return { mode: 'key', key: settings.geminiKey };
+}
+
+// 생성 전 빠른 자격 확인(동기) — 버튼 가드용
+export function hasCredentials(provider, settings) {
+  if (provider === 'gemini') {
+    return settings.geminiAuthMode === 'oauth'
+      ? (!!settings.googleClientId && (gauth.hasValidToken() || gauth.isConsented()))
+      : !!settings.geminiKey;
+  }
+  return !!settings.openaiKey;
 }
 
 // 호출당 최대 장수 — 배치 청크 크기 결정에 사용
@@ -50,24 +68,33 @@ export function maxPerCall(modelId) {
 export async function generateChunk({ modelId, prompt, n, aspect, quality, style }, settings, signal) {
   const provider = providerOf(modelId);
   const base = baseFor(provider, settings);
-  const key = keyFor(provider, settings);
-  if (!key) throw new Error(`${provider === 'gemini' ? 'Gemini' : 'OpenAI'} API 키가 없어요. 설정에서 키를 등록해 주세요.`);
-  return mod(provider).generateImages({ key, base, model: modelId, prompt, n, aspect, quality, style }, signal);
+  if (provider === 'gemini') {
+    const auth = await geminiAuth(settings);
+    return gemini.generateImages({ auth, base, model: modelId, prompt, n, aspect }, signal);
+  }
+  if (!settings.openaiKey) throw new Error('OpenAI API 키가 없어요. 설정에서 키를 등록해 주세요.');
+  return openai.generateImages({ key: settings.openaiKey, base, model: modelId, prompt, n, aspect, quality, style }, signal);
 }
 
 /** 프롬프트 보강 (텍스트 모델) */
 export async function enrich({ textModelId, prompt }, settings, signal) {
   const provider = TEXT_MODELS.find((m) => m.id === textModelId)?.provider || (/gemini/i.test(textModelId) ? 'gemini' : 'openai');
   const base = baseFor(provider, settings);
-  const key = keyFor(provider, settings);
-  if (!key) throw new Error(`${provider === 'gemini' ? 'Gemini' : 'OpenAI'} API 키가 없어요(프롬프트 보강용). 설정에서 키를 등록해 주세요.`);
-  return mod(provider).enrichPrompt({ key, base, model: textModelId, prompt }, signal);
+  if (provider === 'gemini') {
+    const auth = await geminiAuth(settings);
+    return gemini.enrichPrompt({ auth, base, model: textModelId, prompt }, signal);
+  }
+  if (!settings.openaiKey) throw new Error('OpenAI API 키가 없어요(프롬프트 보강용). 설정에서 키를 등록해 주세요.');
+  return openai.enrichPrompt({ key: settings.openaiKey, base, model: textModelId, prompt }, signal);
 }
 
-/** 키 테스트 */
-export async function testKey(provider, settings) {
+/** 자격 테스트 (키 또는 Google 로그인) */
+export async function testCredentials(provider, settings) {
   const base = baseFor(provider, settings);
-  const key = keyFor(provider, settings);
-  if (!key) throw new Error('키가 비어 있어요.');
-  return mod(provider).testKey(key, base);
+  if (provider === 'gemini') {
+    const auth = await geminiAuth(settings);
+    return gemini.testAuth(auth, base);
+  }
+  if (!settings.openaiKey) throw new Error('키가 비어 있어요.');
+  return openai.testKey(settings.openaiKey, base);
 }

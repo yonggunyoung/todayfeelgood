@@ -4,6 +4,7 @@ import * as store from './store.js';
 import * as db from './db.js';
 import * as P from './providers/index.js';
 import { runBatch } from './batch.js';
+import * as gauth from './providers/google-auth.js';
 import { buildPrompt, enrichInstruction, clampPrompt } from './prompt.js';
 import * as data from './styles-data.js';
 import * as gallery from './gallery.js';
@@ -17,6 +18,10 @@ function toast(msg) {
   const t = $('toast');
   t.textContent = msg; t.classList.add('show');
   clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2400);
+}
+function credMsg(provider) {
+  if (provider === 'gemini' && s.geminiAuthMode === 'oauth') return 'Google 로그인이 필요해요 (설정 → Gemini 인증 → Google로 로그인).';
+  return `${provider === 'gemini' ? 'Gemini' : 'OpenAI'} 자격이 필요해요 (설정).`;
 }
 
 // ── 현재 선택 상태 (store.lastSel 복원) ──────────
@@ -103,7 +108,7 @@ async function enrich() {
   if (!prompt) return;
   const textModelId = s.textModel;
   const provider = P.TEXT_MODELS.find((m) => m.id === textModelId)?.provider || 'openai';
-  if (!P.keyFor(provider, s)) { toast(`${provider === 'gemini' ? 'Gemini' : 'OpenAI'} 키가 필요해요(설정).`); return; }
+  if (!P.hasCredentials(provider, s)) { toast(credMsg(provider)); return; }
   setBusy($('btn-enrich'), true, '다듬는 중…');
   try {
     const out = await P.enrich({ textModelId, prompt: enrichInstruction(prompt, { translate: s.translate }) }, s);
@@ -140,7 +145,7 @@ async function generate(count) {
   const job = currentJob(count);
   if (!job) return;
   const provider = P.providerOf(job.modelId);
-  if (!P.keyFor(provider, s)) { toast(`${provider === 'gemini' ? 'Gemini' : 'OpenAI'} 키가 필요해요(설정).`); switchTab('settings'); return; }
+  if (!P.hasCredentials(provider, s)) { toast(credMsg(provider)); switchTab('settings'); return; }
 
   store.save({ lastCount: count, lastAspect: job.aspect, lastQuality: job.quality, lastStyle: job.style });
   abortCtl = new AbortController();
@@ -263,9 +268,51 @@ function switchTab(name) {
 }
 
 // ── 설정 패널 ───────────────────────────────────
+function getGeminiMode() {
+  const on = document.querySelector('#gemini-mode .seg-btn.on');
+  return on?.dataset.mode === 'oauth' ? 'oauth' : 'key';
+}
+function setGeminiMode(mode) {
+  document.querySelectorAll('#gemini-mode .seg-btn').forEach((b) => b.classList.toggle('on', b.dataset.mode === mode));
+  $('gemini-key-block').classList.toggle('hidden', mode !== 'key');
+  $('gemini-oauth-block').classList.toggle('hidden', mode !== 'oauth');
+}
+function setStatus(id, text, color) { const el = $(id); if (!el) return; el.textContent = text; el.style.color = color || ''; }
+function refreshGoogleStatus() {
+  if (gauth.hasValidToken()) {
+    const t = new Date(gauth.expiryMs()); const p = (n) => String(n).padStart(2, '0');
+    setStatus('status-google', `✅ 로그인됨 (토큰 만료 ${p(t.getHours())}:${p(t.getMinutes())})`, 'var(--green)');
+  } else if (gauth.isConsented()) {
+    setStatus('status-google', '동의됨 — 생성 시 자동 로그인되거나 ‘Google로 로그인’을 누르세요.', '');
+  } else {
+    setStatus('status-google', '아직 로그인하지 않았어요.', '');
+  }
+}
+
+function syncSettings() {
+  store.save({
+    openaiKey: $('set-openai').value.trim(),
+    geminiKey: $('set-gemini').value.trim(),
+    geminiAuthMode: getGeminiMode(),
+    googleClientId: $('set-google-client').value.trim(),
+    gcpProject: $('set-gcp-project').value.trim(),
+    imageModel: $('set-image-model').value,
+    textModel: $('set-text-model').value,
+    proxyBase: $('set-proxy').value.trim(),
+    concurrency: Math.max(1, Math.min(4, +$('set-concurrency').value || 2)),
+    autoDownload: $('set-autodl').checked,
+    translate: $('set-translate').checked,
+    vary: $('set-vary').checked,
+  });
+  Object.assign(s, store.get());
+}
+
 function loadSettingsUI() {
   $('set-openai').value = s.openaiKey || '';
   $('set-gemini').value = s.geminiKey || '';
+  $('set-google-client').value = s.googleClientId || '';
+  $('set-gcp-project').value = s.gcpProject || '';
+  setGeminiMode(s.geminiAuthMode || 'key');
   fillSelect('set-image-model', P.IMAGE_MODELS, s.imageModel);
   fillSelect('set-text-model', P.TEXT_MODELS, s.textModel);
   $('set-proxy').value = s.proxyBase || '';
@@ -273,47 +320,48 @@ function loadSettingsUI() {
   $('set-autodl').checked = s.autoDownload;
   $('set-translate').checked = s.translate;
   $('set-vary').checked = s.vary;
+  refreshGoogleStatus();
 }
+
 function bindSettings() {
-  const sync = () => {
-    store.save({
-      openaiKey: $('set-openai').value.trim(),
-      geminiKey: $('set-gemini').value.trim(),
-      imageModel: $('set-image-model').value,
-      textModel: $('set-text-model').value,
-      proxyBase: $('set-proxy').value.trim(),
-      concurrency: Math.max(1, Math.min(4, +$('set-concurrency').value || 2)),
-      autoDownload: $('set-autodl').checked,
-      translate: $('set-translate').checked,
-      vary: $('set-vary').checked,
-    });
-    Object.assign(s, store.get());
-  };
-  ['set-openai', 'set-gemini', 'set-proxy', 'set-concurrency'].forEach((id) => $(id).addEventListener('change', sync));
+  ['set-openai', 'set-gemini', 'set-google-client', 'set-gcp-project', 'set-proxy', 'set-concurrency'].forEach((id) => $(id).addEventListener('change', syncSettings));
   ['set-image-model', 'set-text-model', 'set-autodl', 'set-translate', 'set-vary'].forEach((id) => $(id).addEventListener('change', () => {
-    sync();
-    // 기본 이미지 모델을 만들기 탭 셀렉트에도 반영
+    syncSettings();
     if ([...$('sel-model').options].some((o) => o.value === s.imageModel)) { $('sel-model').value = s.imageModel; updateModelUI(); }
   }));
+  document.querySelectorAll('#gemini-mode .seg-btn').forEach((b) => b.addEventListener('click', () => { setGeminiMode(b.dataset.mode); syncSettings(); }));
 
-  $('btn-test-openai').addEventListener('click', () => testKey('openai', 'status-openai'));
-  $('btn-test-gemini').addEventListener('click', () => testKey('gemini', 'status-gemini'));
+  $('btn-test-openai').addEventListener('click', () => testCred('openai', 'status-openai'));
+  $('btn-test-gemini').addEventListener('click', () => testCred('gemini', 'status-gemini'));
+  $('btn-test-gemini-oauth').addEventListener('click', () => testCred('gemini', 'status-google'));
+
+  $('btn-google-signin').addEventListener('click', async () => {
+    syncSettings();
+    if (!s.googleClientId) { setStatus('status-google', '❌ 먼저 OAuth 클라이언트 ID를 입력하세요.', 'var(--red)'); return; }
+    setStatus('status-google', '로그인 창 여는 중…', '');
+    try { await gauth.signInInteractive(s.googleClientId); refreshGoogleStatus(); toast('✅ Google 로그인됨'); }
+    catch (e) { setStatus('status-google', '❌ ' + (e.message || '로그인 실패'), 'var(--red)'); }
+  });
+  $('btn-google-signout').addEventListener('click', async () => { await gauth.signOut(); refreshGoogleStatus(); toast('로그아웃됨'); });
+
   $('btn-reset').addEventListener('click', () => {
     if (!confirm('설정과 API 키를 모두 지울까요? (생성한 이미지는 유지)')) return;
+    gauth.signOut();
     store.reset(); Object.assign(s, store.get()); loadSettingsUI();
     fillSelect('sel-model', P.IMAGE_MODELS, s.imageModel); updateModelUI();
     toast('초기화했어요');
   });
 }
-async function testKey(provider, statusId) {
-  const sync = () => store.save({ openaiKey: $('set-openai').value.trim(), geminiKey: $('set-gemini').value.trim(), proxyBase: $('set-proxy').value.trim() });
-  Object.assign(s, sync());
-  const el = $(statusId); el.textContent = '확인 중…'; el.className = 'muted small';
+
+async function testCred(provider, statusId) {
+  syncSettings();
+  setStatus(statusId, '확인 중…', '');
   try {
-    await P.testKey(provider, s);
-    el.textContent = '✅ 키가 정상이에요'; el.style.color = 'var(--green)';
+    await P.testCredentials(provider, s);
+    setStatus(statusId, '✅ 정상이에요', 'var(--green)');
+    if (statusId === 'status-google') refreshGoogleStatus();
   } catch (e) {
-    el.textContent = '❌ ' + (e.message || '실패'); el.style.color = 'var(--red)';
+    setStatus(statusId, '❌ ' + (e.message || '실패'), 'var(--red)');
   }
 }
 
@@ -385,6 +433,11 @@ function init() {
   loadSettingsUI();
   bindSettings();
   refreshGalleryCount();
+
+  // OAuth 모드 + 이전 동의가 있으면 조용히 토큰을 미리 받아둔다(첫 생성이 매끄럽도록)
+  if (s.geminiAuthMode === 'oauth' && s.googleClientId && gauth.isConsented()) {
+    gauth.getToken(s.googleClientId).then(refreshGoogleStatus).catch(() => {});
+  }
 
   // 서비스워커
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});

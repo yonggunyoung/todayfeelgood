@@ -6,7 +6,7 @@ const ASSETS = [
   './css/styles.css',
   './js/app.js', './js/store.js', './js/db.js', './js/batch.js',
   './js/prompt.js', './js/styles-data.js', './js/zip.js', './js/gallery.js',
-  './js/providers/index.js', './js/providers/openai.js', './js/providers/gemini.js', './js/providers/net.js',
+  './js/providers/index.js', './js/providers/openai.js', './js/providers/gemini.js', './js/providers/net.js', './js/providers/google-auth.js',
 ];
 
 self.addEventListener('install', (e) => {

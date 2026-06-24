@@ -10,6 +10,8 @@ import { FRAMES, DECO_LINES, BLOCKS, renderTemplate } from "../data/templates.js
 import { ASCII_ART } from "../data/asciiart.js";
 import { STYLES, convert } from "../engine/unicode-fonts.js";
 import { mix } from "../engine/decorate.js";
+import { assemble, countCombos, randomSel, PARTS } from "../engine/kaomoji-gen.js";
+import { MEMES } from "../data/memes.js";
 import { openPreview } from "../preview.js";
 
 const SEGMENTS = [
@@ -17,7 +19,7 @@ const SEGMENTS = [
   { id: "kaomoji", name: "이모티콘" },
   { id: "ascii", name: "아스키" },
   { id: "mix", name: "혼합" },
-  { id: "deco", name: "텍대" },
+  { id: "deco", name: "텍대·밈" },
 ];
 
 const RENDER_CAP = 400; // 대량(수천) 그리드도 빠르게 — 넘치면 카테고리/검색으로 좁히게 안내
@@ -153,12 +155,86 @@ function decoSection() {
   }
   blockInput.addEventListener("input", debounce(renderBlocks, 80));
 
+  // 밈 생성 — 템플릿에 내 글자 끼우기.
+  const memeInput = el("input.input", { value: "내이름", placeholder: "밈에 들어갈 글자" });
+  const memeWrap = el("div");
+  function renderMemes() {
+    clear(memeWrap);
+    MEMES.forEach((mm) => {
+      const out = renderTemplate(mm.tpl, memeInput.value || "");
+      memeWrap.append(el("div.block-card", null, [
+        el("div.block-name", null, mm.name),
+        el("div.meme-out", null, out),
+        el("div.toolbar", null, [
+          el("button.tbtn", { type: "button", onclick: () => copy(out, "meme") }, "복사"),
+          el("button.tbtn", { type: "button", onclick: () => share(out) }, "공유"),
+        ]),
+      ]));
+    });
+  }
+  memeInput.addEventListener("input", debounce(renderMemes, 80));
+
   box.append(
+    el("div.sec-title", null, ["🤣 밈 생성", el("span.sec-sub", null, "내 글자로 관짝밈·어몽어스 등")]), memeInput, memeWrap,
     el("div.sec-title", null, "구분선·장식 (탭하면 복사)"), lines,
     el("div.sec-title", null, "텍대 블록"), blockInput, blockWrap,
   );
   renderBlocks();
+  renderMemes();
   return box;
+}
+
+// ── 카오모지 메이커(조합 생성) ──────────────────────────────
+function makerSection() {
+  const state = { bracket: 1, eye: 0, mouth: 1, arms: 0, effect: 0 };
+  const out = el("div.maker-out");
+  const refresh = () => { out.textContent = assemble(state); };
+  const rowDefs = [
+    ["괄호", "bracket", PARTS.brackets.map((b) => (b[0] || "·") + (b[1] || "·"))],
+    ["눈", "eye", PARTS.eyes.slice()],
+    ["입", "mouth", PARTS.mouths.map((m) => (m === " " ? "␣" : m))],
+    ["팔", "arms", PARTS.arms.map((a) => (a[0] || "·") + (a[1] || "·"))],
+    ["효과", "effect", PARTS.effects.map((f) => f || "없음")],
+  ];
+  const rows = {}, rowsWrap = el("div");
+  rowDefs.forEach(([label, key, opts]) => {
+    const r = el("div.chips.maker-row");
+    opts.forEach((lab, i) => {
+      const c = el("button.chip-opt" + (i === state[key] ? ".on" : ""), { type: "button" }, lab);
+      c.onclick = () => { state[key] = i; [...r.children].forEach((x, j) => x.classList.toggle("on", j === i)); refresh(); };
+      r.append(c);
+    });
+    rows[key] = r;
+    rowsWrap.append(el("div.opt-title", null, label), r);
+  });
+  function setRandom() {
+    Object.assign(state, randomSel((Math.random() * 1e9) | 0));
+    Object.keys(rows).forEach((key) => [...rows[key].children].forEach((x, j) => x.classList.toggle("on", j === state[key])));
+    refresh();
+  }
+  const box = el("div.maker", null, [
+    el("p.lead", null, `부품을 조합해 나만의 이모티콘 — 총 ${countCombos().toLocaleString()}가지 🎲`),
+    el("div.maker-stage", null, [out]),
+    el("div.toolbar", null, [
+      el("button.tbtn.primary", { type: "button", onclick: () => copy(assemble(state), "kaomoji") }, "📋 복사"),
+      el("button.tbtn", { type: "button", onclick: setRandom }, "🎲 랜덤"),
+      el("button.tbtn", { type: "button", onclick: () => openPreview(assemble(state)) }, "👁 미리보기"),
+    ]),
+    rowsWrap,
+  ]);
+  refresh();
+  return box;
+}
+
+function kaomojiSection() {
+  const wrap = el("div");
+  wrap.append(
+    el("div.sec-title", null, ["🛠 카오모지 메이커", el("span.sec-sub", null, "조합으로 무한 생성")]),
+    makerSection(),
+    el("div.sec-title", null, ["📚 모음 둘러보기"]),
+    browseSection(KAOMOJI, allKaomoji(), "kaomoji"),
+  );
+  return wrap;
 }
 
 // ── 아스키 아트 갤러리 ──────────────────────────────────────
@@ -207,7 +283,7 @@ function mount(root) {
   function renderSeg() {
     clear(body);
     if (seg === "symbols") body.append(browseSection(SYMBOLS, allSymbolItems(), "symbol"));
-    else if (seg === "kaomoji") body.append(browseSection(KAOMOJI, allKaomoji(), "kaomoji"));
+    else if (seg === "kaomoji") body.append(kaomojiSection());
     else if (seg === "ascii") body.append(asciiSection());
     else if (seg === "mix") body.append(mixSection());
     else body.append(decoSection());

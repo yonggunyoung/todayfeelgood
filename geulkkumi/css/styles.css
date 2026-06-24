@@ -233,6 +233,15 @@ details.adv > summary::before { content: "⚙ "; }
 .mix-preview { margin: 12px 0; min-height: 72px; display: grid; place-items: center; padding: 18px; border-radius: var(--r-lg); background: var(--grad-soft); border: 1px solid var(--line); }
 .mix-out { font-size: var(--t-display); font-weight: var(--w-med); text-align: center; word-break: break-word; }
 
+/* 카오모지 메이커 */
+.maker-stage { display: grid; place-items: center; padding: 22px 14px; border-radius: var(--r-lg); background: var(--grad-soft); border: 1px solid var(--line); margin: 8px 0; min-height: 78px; }
+.maker-out { font-size: 28px; font-weight: 600; text-align: center; word-break: break-word; }
+.maker-row { overflow-x: auto; flex-wrap: nowrap; padding-bottom: 4px; -webkit-overflow-scrolling: touch; margin-bottom: 2px; }
+.maker-row::-webkit-scrollbar { height: 0; }
+.maker-row .chip-opt { flex: 0 0 auto; min-width: 36px; }
+/* 밈 결과(이모지 포함 인라인 텍스트) */
+.meme-out { font-size: 15px; line-height: 1.5; word-break: break-word; margin: 2px 0; }
+
 /* ── 아트 출력 ── */
 .art-out {
   font-family: var(--mono); font-size: 9px; line-height: 1.0; white-space: pre; overflow: auto;

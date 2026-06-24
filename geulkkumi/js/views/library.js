@@ -175,7 +175,7 @@ function decoSection() {
   memeInput.addEventListener("input", debounce(renderMemes, 80));
 
   box.append(
-    el("div.sec-title", null, ["🤣 밈 생성", el("span.sec-sub", null, "내 글자로 관짝밈·어몽어스 등")]), memeInput, memeWrap,
+    el("div.sec-title", null, ["🗯 짤 문구(밈 텍스트)", el("span.sec-sub", null, "내 글자로 — 그림 밈은 사진아트·아스키 탭")]), memeInput, memeWrap,
     el("div.sec-title", null, "구분선·장식 (탭하면 복사)"), lines,
     el("div.sec-title", null, "텍대 블록"), blockInput, blockWrap,
   );
@@ -240,7 +240,7 @@ function kaomojiSection() {
 // ── 아스키 아트 갤러리 ──────────────────────────────────────
 function asciiSection() {
   const box = el("div.lib-section");
-  box.append(el("p.lead", null, "여러 줄 그림을 탭해서 복사 — 고정폭(모노) 앱·디스코드에서 잘 보여요."));
+  box.append(el("p.lead", null, "도트·이모지·문자 그림을 탭해서 복사. 내 밈/사진은 ‘사진아트’ 탭에 올리면 도트 그림으로 만들어져요."));
   ASCII_ART.forEach((a) => {
     box.append(el("div.block-card", null, [
       el("div.block-name", null, a.name),

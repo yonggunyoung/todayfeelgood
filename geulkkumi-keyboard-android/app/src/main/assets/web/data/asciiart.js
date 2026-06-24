@@ -1,4 +1,5 @@
-/* 글꾸미 — data/asciiart.js : 아스키 아트 갤러리(여러 줄 그림, 탭 복사). 큐레이션·공개 모티프. */
+/* 글꾸미 — data/asciiart.js : 도트·아스키 아트 갤러리(여러 줄 그림, 탭 복사). 픽셀(이모지)·문자 큐레이션.
+ * ※ 어떤 밈/사진이든 도트 그림으로 만들려면 "사진아트" 탭(브라유 도트/이모지) 사용. */
 "use strict";
 
 export const ASCII_ART = [
@@ -18,4 +19,16 @@ export const ASCII_ART = [
   { id: "sparkle", name: "반짝", art: "  ✦\n✧ ✦ ✧\n  ✦" },
   { id: "peace", name: "평화", art: " ✌\n╱ │ ╲\n PEACE" },
   { id: "hi", name: "인사", art: "╭━━━━━╮\n┃ H I ┃\n╰━┳━━━╯\n  ╰(•◡•)" },
+  { id: "pxheart", name: "픽셀 하트", art: "🤍❤️🤍❤️🤍\n❤️❤️❤️❤️❤️\n🤍❤️❤️❤️🤍\n🤍🤍❤️🤍🤍" },
+  { id: "pxstar", name: "픽셀 별", art: "🤍🤍⭐🤍🤍\n🤍⭐⭐⭐🤍\n⭐⭐⭐⭐⭐\n🤍⭐🤍⭐🤍" },
+  { id: "pxdiamond", name: "픽셀 다이아", art: "🤍🤍💎🤍🤍\n🤍💎💎💎🤍\n💎💎💎💎💎\n🤍💎💎💎🤍\n🤍🤍💎🤍🤍" },
+  { id: "pxmushroom", name: "픽셀 버섯", art: "🟥🟥🟥🟥🟥\n🟥⬜🟥⬜🟥\n🟥🟥🟥🟥🟥\n🤍🟫🟫🟫🤍" },
+  { id: "pxcoffin", name: "관짝(픽셀)", art: "⬛⬛⬛⬛⬛\n⬛🟫✝️🟫⬛\n⬛🟫🟫🟫⬛\n⬛⬛⬛⬛⬛\n🕺💃🕺💃🕺" },
+  { id: "pxghost", name: "픽셀 유령", art: "🤍👀👀🤍\n👻👻👻👻\n👻👻👻👻\n👻🤍👻🤍" },
+  { id: "pxcat", name: "픽셀 고양이", art: "🖤🤍🤍🖤\n🐱🐱🐱🐱\n🖤🐱🐱🖤\n🤍🖤🖤🤍" },
+  { id: "pxinvader", name: "인베이더", art: "🤍👾🤍👾🤍\n👾👾👾👾👾\n👾🤍👾🤍👾\n🤍👾🤍👾🤍" },
+  { id: "dog2", name: "강아지(문자)", art: " ／＞　 フ\n　| 　_　_|\n／` ミ＿xノ" },
+  { id: "seal", name: "물범", art: "(　･㉨･)\nﾉ​つ🐟" },
+  { id: "moai", name: "모아이(기가차드)", art: "　　🗿\n　／🍷＼" },
+  { id: "checkbox", name: "체크박스", art: "✅ 완료\n⬜ 진행\n❌ 취소" },
 ];

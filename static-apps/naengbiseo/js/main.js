@@ -3324,7 +3324,9 @@ function renderSettings() {
                 <button class="btn btn-sm btn-tint" onclick="UI.famCreate()">코드 만들기</button>
                 <button class="btn btn-sm btn-soft" onclick="UI.famJoin()">코드 입력</button></div>`}
          </div>`
-      : `<button class="btn btn-block" style="background:#fff;border:1px solid var(--hairline);box-shadow:var(--shadow-card);font-weight:800" onclick="UI.doLogin()">
+      : (typeof window !== 'undefined' && window.__TOSS__)
+        ? `<div class="card flat"><p class="hint" style="margin:0">☁️ 클라우드 백업·가족 공유는 <b>토스 로그인</b>으로 곧 제공돼요. 지금은 데이터가 이 기기에 안전하게 저장됩니다 (설정 → 데이터 → 내보내기로 직접 백업 가능).</p></div>`
+        : `<button class="btn btn-block" style="background:#fff;border:1px solid var(--hairline);box-shadow:var(--shadow-card);font-weight:800" onclick="UI.doLogin()">
            <span style="font-weight:900;color:#4285F4">G</span>&nbsp; 구글로 시작하기 — 백업 · 기기 이동 · 가족 공유
          </button>
          <p class="hint" style="text-align:center;margin:8px 0 0">로그인 없이도 이 기기에서는 모든 기능을 쓸 수 있어요</p>`;

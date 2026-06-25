@@ -50,11 +50,18 @@ async function boot() {
   //   try { await tossLogin(); } catch (e) { console.warn('[toss] login skipped', e); }
   // }
 
-  // (d) 기존 냉비서 앱 부팅. import 시점에 자체적으로 화면을 렌더한다.
-  //   vendor/ 는 scripts/vendor.mjs 가 루트 앱에서 복사해 둔다(yarn vendor).
-  //   Vite가 /vendor 를 정적 자산으로 서빙하므로 절대경로로 import.
-  // @ts-expect-error — 바닐라 JS 모듈(타입 선언 없음). vendor(=publicDir) 정적 자산. Vite 미변환·런타임 로드(@vite-ignore).
-  await import(/* @vite-ignore */ '/js/main.js');
+  // (d) 기존 냉비서 앱 부팅. js/main.js 는 import 시점에 스스로 화면을 렌더한다.
+  //   vendor/(=publicDir)의 정적 자산이라 번들러가 건드리면 안 됨 → 동적 import 대신
+  //   런타임에 <script type="module"> 주입으로 로드 (루트 index.html이 ./js/main.js 를
+  //   로드하던 방식과 동일). 이러면 Rollup이 빌드 때 /js/main.js 를 해석하려다 실패하지 않는다.
+  await new Promise<void>((resolve, reject) => {
+    const s = document.createElement('script');
+    s.type = 'module';
+    s.src = '/js/main.js'; // dist/js/main.js (publicDir 복사본). 상대 임포트는 /js/ 기준으로 해결됨.
+    s.onload = () => resolve();
+    s.onerror = () => reject(new Error('냉비서 앱 로드 실패: /js/main.js'));
+    document.body.appendChild(s);
+  });
 }
 
 boot().catch((err) => {

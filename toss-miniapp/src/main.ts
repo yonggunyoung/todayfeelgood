@@ -53,8 +53,8 @@ async function boot() {
   // (d) 기존 냉비서 앱 부팅. import 시점에 자체적으로 화면을 렌더한다.
   //   vendor/ 는 scripts/vendor.mjs 가 루트 앱에서 복사해 둔다(yarn vendor).
   //   Vite가 /vendor 를 정적 자산으로 서빙하므로 절대경로로 import.
-  // @ts-expect-error — 바닐라 JS 모듈(타입 선언 없음). vendor 복사본이라 빌드 시 존재.
-  await import('/vendor/js/main.js');
+  // @ts-expect-error — 바닐라 JS 모듈(타입 선언 없음). vendor(=publicDir) 정적 자산. Vite 미변환·런타임 로드(@vite-ignore).
+  await import(/* @vite-ignore */ '/js/main.js');
 }
 
 boot().catch((err) => {

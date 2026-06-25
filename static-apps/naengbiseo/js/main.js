@@ -2210,11 +2210,12 @@ UI.openRecipe = (rid) => {
     </div>
     <div>
       ${r.ingredients.map((g) => {
-        if (g.st) return `<span class="chip">${esc(g.n)} (양념)</span>`;
+        if (g.st) return `<span class="chip chip-season">${esc(g.n)}${g.a ? ` <b class="amt" data-b="${g.a}" data-u="${esc(g.u || '')}" data-st="1">${fmtAmt(g.a) + (g.u || '')}</b>` : ' (양념)'}</span>`;
         const miss = a.missing.includes(g.n);
         return `<span class="chip ${miss ? 'miss' : 'have'}" ${miss ? `onclick="UI.addShopping('${esc(g.n)}')"` : ''}>${miss ? '＋ ' : '✓ '}${esc(g.n)} <b class="amt" data-b="${g.a || 0}" data-u="${esc(g.u || '')}">${g.a ? fmtAmt(g.a) + (g.u || '') : ''}</b></span>`;
       }).join('')}
     </div>
+    <p id="serv-hint" class="hint" style="display:none;margin:7px 4px 0">※ <b>양념은 인분만큼 그대로 곱하면 짜져요</b> — 증가분의 75%만 늘렸어요(2인분=1.75배). 끝에 한 번 맛보고 조절하세요 👩‍🍳</p>
     ${r.steps?.length ? `<div class="section-title"><h2>만드는 법</h2><small class="timer-quick" onclick="UI.recipeTimer(${r.time || 10})">⏲️ ${r.time || 10}분</small></div>
     <div class="card flat" style="padding:6px 15px"><ul class="steps">${r.steps.map((st) => {
       const pm = passiveMin(st);
@@ -2548,13 +2549,19 @@ UI.handleVoice = (t) => {
   }
 };
 
+// 인분 환산 — 주재료는 선형(×n), 양념은 비선형(증가분의 75%만: 2배→1.75배·3배→2.5배).
+//   짠맛/향신료는 정확히 ×n 하면 과해진다는 조리 원칙 반영. 줄일 땐 너무 싱거워지지 않게 같은 식으로 덜 줄임.
+const servFactor = (n, seasoning) => (seasoning ? 1 + (n - 1) * 0.75 : n);
 UI.dtServ = (n) => {
   detailServings = n;
   $$('#dt-serv button').forEach((b, i) => b.classList.toggle('on', i + 1 === n));
   $$('#modal-root .amt').forEach((el) => {
     const b = parseFloat(el.dataset.b) || 0;
-    el.textContent = b ? fmtAmt(b * n) + (el.dataset.u || '') : '';
+    const f = servFactor(n, el.dataset.st === '1');
+    el.textContent = b ? fmtAmt(b * f) + (el.dataset.u || '') : '';
   });
+  const hint = $('#serv-hint');
+  if (hint) hint.style.display = n > 1 ? 'block' : 'none';
 };
 
 UI.addMissing = (rid) => {
@@ -2646,6 +2653,10 @@ UI.rfAuto = async () => {
   });
 };
 async function rfRun(url) {
+  // 광고 시트가 레시피 폼을 덮어버렸을 수 있으니 → 폼을 다시 띄우고 URL을 복원한 뒤 바로 정리.
+  //   (광고 보고 나서 "다시 검색해야 하는" 문제 방지 — 로드 상태 유지)
+  if (!$('#rf-yt')) { renderRecipeForm(true); }
+  const inp = $('#rf-yt'); if (inp && !inp.value.trim()) inp.value = url;
   const btn = $('#rf-auto');
   if (btn) { btn.disabled = true; btn.textContent = '🤖 영상 내용 정리 중… (20~40초)'; }
   try {

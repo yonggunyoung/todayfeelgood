@@ -269,6 +269,21 @@ async function gemini(body, model, apiKey) {
     err.code = res.status === 429 ? 503 : 502;
     throw err;
   }
+  // 실제 토큰 사용량 측정 — 로그 + 일별 누적(Firestore ai_usage/{날짜}). 비차단(실패 무시).
+  const usage = data.usageMetadata;
+  if (usage) {
+    console.log(`[gemini-tokens] model=${model} prompt=${usage.promptTokenCount} output=${usage.candidatesTokenCount} total=${usage.totalTokenCount}`);
+    try {
+      const day = new Date().toISOString().slice(0, 10);
+      db.collection('ai_usage').doc(day).set({
+        calls: admin.firestore.FieldValue.increment(1),
+        promptTokens: admin.firestore.FieldValue.increment(usage.promptTokenCount || 0),
+        outputTokens: admin.firestore.FieldValue.increment(usage.candidatesTokenCount || 0),
+        totalTokens: admin.firestore.FieldValue.increment(usage.totalTokenCount || 0),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      }, { merge: true }).catch(() => {});
+    } catch { /* noop */ }
+  }
   const cand = Array.isArray(data.candidates) ? data.candidates[0] : null;
   if (!cand) {
     if (data.promptFeedback?.blockReason) throw Object.assign(new Error('분석할 수 없는 콘텐츠예요.'), { code: 422 });

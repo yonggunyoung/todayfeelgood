@@ -2674,7 +2674,8 @@ UI.rfAuto = async () => {
   if (aiUnlimited() || rfFreeRetry) { rfFreeRetry = false; rfRun(url); return; }
   playAd({
     reward: '🤖 빠른 레시피 1회',
-    onComplete: () => { UI.closeSheet(); rfRun(url); },
+    // closeSheet가 draft를 null로 비우므로, 광고 닫기 전후로 draft를 보존해 폼이 깨지지 않게.
+    onComplete: () => { const d = draft; UI.closeSheet(); draft = d; rfRun(url); },
   });
 };
 async function rfRun(url) {

@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="./panel.css" />
+  <title>글꾸미</title>
+</head>
+<body>
+  <div class="hd">
+    <input id="q" class="q" placeholder="입력 → 탭하면 입력창에 삽입" autocomplete="off" />
+    <button id="x" class="x" type="button" title="닫기">✕</button>
+  </div>
+  <div id="tabs" class="tabs"></div>
+  <div id="out" class="out" aria-live="polite"></div>
+  <div id="toast" class="toast"></div>
+  <script type="module" src="./panel.js"></script>
+</body>
+</html>

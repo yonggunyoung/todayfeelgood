@@ -1,0 +1,11 @@
+{
+  "name": "geulkkumi",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "글꾸미 — 특수문자·멋글씨 변환 + 사진/그리기 → 도트·문자 아트 + 텍대·이모티콘 DB. 빌드 불필요 정적 PWA.",
+  "scripts": {
+    "start": "python3 -m http.server 8080",
+    "test": "node --test"
+  }
+}

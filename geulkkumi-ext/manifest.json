@@ -1,0 +1,18 @@
+{
+  "manifest_version": 3,
+  "name": "글꾸미 — 즉석 멋글씨 삽입",
+  "version": "1.0.0",
+  "description": "어떤 입력창에서든 글꾸미 배지를 띄워 멋글씨·이모티콘·특수문자를 바로 삽입. (Alt+G)",
+  "permissions": ["activeTab", "scripting", "clipboardWrite", "storage"],
+  "background": { "service_worker": "background.js" },
+  "action": { "default_title": "글꾸미 배지 켜기/끄기 (Alt+G)" },
+  "commands": {
+    "toggle-badge": {
+      "suggested_key": { "default": "Alt+G" },
+      "description": "포커스된 입력창에 글꾸미 배지 토글"
+    }
+  },
+  "web_accessible_resources": [
+    { "resources": ["panel/*", "engine/*", "data/*"], "matches": ["<all_urls>"] }
+  ]
+}

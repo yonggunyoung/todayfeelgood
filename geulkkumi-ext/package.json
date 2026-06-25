@@ -1,0 +1,10 @@
+{
+  "name": "geulkkumi-ext",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "글꾸미 브라우저 확장(MV3) — 어떤 입력창에서든 배지로 멋글씨·이모티콘 즉석 삽입.",
+  "scripts": {
+    "sync": "node tools/sync-engine.mjs"
+  }
+}

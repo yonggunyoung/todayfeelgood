@@ -1,0 +1,20 @@
+* { box-sizing: border-box; margin: 0; font-family: -apple-system, system-ui, 'Apple SD Gothic Neo', sans-serif; }
+body { width: 304px; height: 404px; display: flex; flex-direction: column; background: #fff5fb; color: #2a2030; overflow: hidden; position: relative; }
+.hd { display: flex; gap: 6px; padding: 10px; background: #fff; border-bottom: 1px solid #f0e3ee; }
+.q { flex: 1; border: 1.5px solid #e6d4e6; border-radius: 10px; padding: 8px 10px; font-size: 14px; outline: none; }
+.q:focus { border-color: #ff5fa2; }
+.x { border: 0; background: #f6eef8; border-radius: 8px; width: 34px; font-size: 13px; cursor: pointer; color: #6b6177; }
+.tabs { display: flex; gap: 4px; padding: 8px 10px; background: #fff; }
+.tab { flex: 1; border: 0; background: #f6eef8; border-radius: 999px; padding: 7px; font-size: 12px; font-weight: 700; color: #6b6177; cursor: pointer; }
+.tab.on { background: #ffe6f1; color: #d6286f; }
+.out { flex: 1; overflow: auto; padding: 8px 10px 14px; }
+.row { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; width: 100%; text-align: left; border: 1px solid #f0e3ee; background: #fff; border-radius: 12px; padding: 7px 10px; margin-bottom: 6px; cursor: pointer; }
+.row:hover { border-color: #ff5fa2; }
+.rn { font-size: 10px; font-weight: 700; color: #847b90; }
+.rv { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 262px; }
+.grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; }
+.grid.sym { grid-template-columns: repeat(6, 1fr); }
+.cell { border: 1px solid #f0e3ee; background: #fff; border-radius: 10px; min-height: 40px; font-size: 16px; cursor: pointer; overflow: hidden; white-space: nowrap; }
+.cell:hover { border-color: #ff5fa2; }
+.toast { position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%) translateY(10px); background: #2a2030; color: #fff; font-size: 12px; font-weight: 700; padding: 7px 14px; border-radius: 999px; opacity: 0; transition: .2s; pointer-events: none; }
+.toast.on { opacity: 1; transform: translateX(-50%) translateY(0); }

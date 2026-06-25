@@ -152,8 +152,9 @@ function proverbFloat(kind) {
   setTimeout(() => el.remove(), 2600);
 }
 
-function openSheet(html, { lock = false } = {}) {
-  // lock: 보상형 광고처럼 바깥 탭으로 닫히면 안 되는 시트 (명시적 버튼으로만 종료)
+function openSheet(html, { lock = false, overlay = false } = {}) {
+  // lock: 바깥 탭으로 안 닫히는 시트. overlay: 광고·게임처럼 다른 시트를 잠깐 덮는 시트 → 이전 시트를 보관해 닫힐 때 복원.
+  if (overlay) { const cur = $('#modal-root .sheet'); if (cur) sheetStack.push(cur.outerHTML); }
   $('#modal-root').innerHTML =
     `<div class="overlay" ${lock ? '' : 'onclick="if(event.target===this)UI.closeSheet()"'}>
        <div class="sheet">${lock ? '' : '<div class="grip"></div>'}${html}</div>
@@ -195,6 +196,7 @@ function attachSheetDrag() {
   sheet.addEventListener('pointercancel', end);
 }
 let sheetPushed = false;   // 뒤로가기로 시트가 닫히도록 히스토리에 한 칸 쌓아둠
+let sheetStack = [];       // 광고·게임 오버레이가 덮은 이전 시트 HTML (닫힐 때 복원)
 let ignoreNextPop = false;
 let closeForce = false; // 게임 나가기 확인을 거친 강제 종료
 UI.closeSheet = (fromPop = false) => {
@@ -208,6 +210,13 @@ UI.closeSheet = (fromPop = false) => {
   try { if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen(); } catch { /* noop */ }
   const chip = document.getElementById('timer-chip');
   if (chip && chip.parentElement !== document.body) document.body.appendChild(chip);
+  // 광고·게임 오버레이가 닫힘 → 덮었던 이전 시트(레시피 등) 복원. 완전히 닫지 않고 그 상태 유지.
+  if (sheetStack.length) {
+    $('#modal-root').innerHTML = `<div class="overlay" onclick="if(event.target===this)UI.closeSheet()">${sheetStack.pop()}</div>`;
+    attachSheetDrag(); relocateTimerChip();
+    if (!sheetPushed) { history.pushState({ nb: 'sheet' }, ''); sheetPushed = true; } // 복원된 시트도 뒤로가기로 닫히게
+    return;
+  }
   $('#modal-root').innerHTML = '';
   scanFile = null; scanResults = null; deductCtx = null; draft = null; qaLoc = null;
   vc = null; stopListen(); stopSpeak();
@@ -2219,7 +2228,7 @@ UI.openRecipe = (rid) => {
     ${r.steps?.length ? `<div class="section-title"><h2>만드는 법</h2><small class="timer-quick" onclick="UI.recipeTimer(${r.time || 10})">⏲️ ${r.time || 10}분</small></div>
     <div class="card flat" style="padding:6px 15px"><ul class="steps">${r.steps.map((st) => {
       const pm = passiveMin(st);
-      return `<li>${esc(st)}${pm ? `<button class="step-wait" onclick="UI.waitGame(${pm})">⏳ ${pm}분 — 타이머·게임</button>` : ''}</li>`;
+      return `<li>${stepHtml(st)}${pm ? `<button class="step-wait" onclick="UI.waitGame(${pm})">⏳ ${pm}분 — 타이머·게임</button>` : ''}</li>`;
     }).join('')}</ul></div>` : ''}
     ${r.tips?.length ? `<div class="banner" style="display:block">💡 <b>키포인트</b><br>${r.tips.map((t2) => '· ' + esc(t2)).join('<br>')}</div>` : ''}
     ${r.mine ? `<div class="btn-row" style="margin-bottom:0">
@@ -2485,6 +2494,21 @@ UI.quickTimer = () => {
 window.startTimer = (m) => startKitchenTimer(m);
 
 /* 긴 조리(끓이기·졸이기 등)에서 '손 놓는 시간' 감지 → 타이머 + 게임/광고 유도 */
+// 만드는법 본문 속 수치를 .amt 스팬으로 감싸 인분 환산에 같이 반영 (분·초·도 같은 시간/온도는 제외).
+//   양념성 단위(큰술·작은술·꼬집·줌)는 비선형(servFactor)로, 무게/부피/개수는 선형으로 자동 환산.
+const STEP_UNITS = '큰술|작은술|티스푼|테이블스푼|스푼|꼬집|줌|컵|종이컵|공기|kg|g|ml|L|리터|개|알|쪽|톨|모|장|봉|캔|마리|덩이|토막';
+const STEP_SEASON_U = new Set(['큰술', '작은술', '티스푼', '테이블스푼', '스푼', '꼬집', '줌']);
+function stepHtml(st) {
+  const re = new RegExp('(\\d+(?:\\.\\d+)?)\\s*(' + STEP_UNITS + ')', 'g');
+  let out = '', last = 0, m;
+  while ((m = re.exec(st))) {
+    out += esc(st.slice(last, m.index));
+    const num = parseFloat(m[1]); const unit = m[2];
+    out += `<b class="amt" data-b="${num}" data-u="${esc(unit)}" data-st="${STEP_SEASON_U.has(unit) ? 1 : 0}">${fmtAmt(num)}${esc(unit)}</b>`;
+    last = m.index + m[0].length;
+  }
+  return out + esc(st.slice(last));
+}
 function passiveMin(step) {
   if (!/끓|졸|삶|우려|익히|재워|절여|불려|쪄|구워|튀겨/.test(step)) return 0;
   const m = step.match(/(\d+)\s*분/);
@@ -2493,14 +2517,15 @@ function passiveMin(step) {
 }
 UI.waitGame = (min) => {
   startKitchenTimer(min);
+  // overlay: 레시피 상세를 보관 → 게임·광고·닫기 어느 경로든 끝나면 레시피로 복원(다시 안 띄워도 됨).
   openSheet(`
     <h2>⏳ ${min}분, 손 놓는 시간이에요</h2>
     <p class="sub">타이머를 켰어요. 기다리는 동안 게임 한 판 어때요? — 점수는 포인트로!</p>
     <div class="btn-row" style="flex-direction:column">
-      <button class="btn btn-primary btn-block" onclick="UI.closeSheet();UI.openGames()">🎮 게임하고 포인트 받기</button>
+      <button class="btn btn-primary btn-block" onclick="UI.openGames()">🎮 게임하고 포인트 받기</button>
       <button class="btn btn-accent btn-block" onclick="UI.waitAd()">🕒 짬시간 포인트 받기</button>
       <button class="btn btn-block" onclick="UI.closeSheet()">그냥 기다릴게요</button>
-    </div>`);
+    </div>`, { overlay: true });
 };
 UI.waitAd = () => {
   playAd({

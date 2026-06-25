@@ -2630,19 +2630,26 @@ function collectForm() {
 }
 
 // 빠른 레시피: 영상을 보지 않고 AI가 재료·순서를 채워준다
+let rfFreeRetry = false; // 광고 보고 실패했을 땐 다음 1회는 광고 없이 재시도(공정)
 UI.rfAuto = async () => {
   const url = $('#rf-yt').value.trim();
   if (!ytId(url)) { toast('유튜브 링크를 먼저 붙여넣어 주세요'); return; }
   const ready = aiReady();
   if (!ready.ok) { toast(isAdmin() ? ready.msg : '빠른 레시피는 베타 준비 중이에요 ✨ 곧 제공됩니다'); return; }
   collectForm();
-  const retryAuto = () => { renderRecipeForm(true); const inp = $('#rf-yt'); if (inp) inp.value = url; UI.rfAuto(); };
-  if (aiLeft().total <= 0) { UI.openRecharge(retryAuto); return; } // 무료·충전권 소진
+  // 빠른 레시피는 AI 비용이 가장 큰 기능 → 프리미엄은 바로, 그 외엔 보상형 광고 풀시청 후 1회.
+  //   (영수증 스캔은 무료 월 횟수, 빠른레시피는 광고/프리미엄으로 분리해 비용 보호)
+  if (aiUnlimited() || rfFreeRetry) { rfFreeRetry = false; rfRun(url); return; }
+  playAd({
+    reward: '🤖 빠른 레시피 1회',
+    onComplete: () => { UI.closeSheet(); rfRun(url); },
+  });
+};
+async function rfRun(url) {
   const btn = $('#rf-auto');
-  btn.disabled = true; btn.textContent = '🤖 영상 내용 정리 중… (20~40초)';
+  if (btn) { btn.disabled = true; btn.textContent = '🤖 영상 내용 정리 중… (20~40초)'; }
   try {
     const data = await extractRecipeFromYouTube(url, S.settings);
-    aiConsume(); // 성공 시에만 차감
     draft.yt = ytId(url);
     if (!draft.title) draft.title = data.title || '';
     draft.time = data.time || draft.time;
@@ -2657,12 +2664,12 @@ UI.rfAuto = async () => {
     renderRecipeForm(true);
     toast('정리 완료 ✨ 내용 확인하고 저장하세요');
   } catch (e) {
-    if (e.status === 429 && S.settings.aiMode === 'server') { UI.openRecharge(retryAuto); return; }
-    toast(e.message || '정리에 실패했어요');
+    if (!aiUnlimited()) rfFreeRetry = true; // 광고 봤는데 실패 → 다음 1회는 광고 없이
+    toast((e.message || '정리에 실패했어요') + (rfFreeRetry ? ' · 다시 누르면 광고 없이 한 번 더 시도돼요' : ''));
     const b = $('#rf-auto');
     if (b) { b.disabled = false; b.textContent = '🤖 빠른 레시피 — 영상 안 보고 재료·순서 자동 정리'; }
   }
-};
+}
 
 function rfIngRow(g, idx) {
   return `<div class="ing-row" data-idx="${idx}">

@@ -9,9 +9,14 @@
 // 중요: js/main.js 는 import 되는 순간 최상위에서 render()/initSync()/initAnalytics() 를 호출하며
 //       스스로 부팅한다. 따라서 플래그/로그인은 반드시 그 import "이전"에 처리해야 한다.
 
+import { graniteEvent, closeView } from '@apps-in-toss/web-framework';
+
 declare global {
   interface Window {
     __TOSS__?: boolean;
+    // 루트 앱(js/main.js)이 노출하는 뒤로가기 가드 — 토스 backEvent에 연결.
+    //   true=앱이 처리(종료 안 함) / false=홈에서 한 번 더 → closeView()로 종료.
+    __nbBack?: () => boolean;
     // 토스 WebView SDK가 주입할 수 있는 전역 후보 (js/toss.js 의 sdk() 와 동일 후보군)
     AppsInToss?: unknown;
     appsInToss?: unknown;
@@ -62,6 +67,27 @@ async function boot() {
     s.onerror = () => reject(new Error('냉비서 앱 로드 실패: /js/main.js'));
     document.body.appendChild(s);
   });
+
+  // (e) 토스 네이티브 뒤로가기 가드 — 앱이 로드되어 window.__nbBack 가 준비된 뒤 등록.
+  registerBackHandler();
+}
+
+// 토스 SDK backEvent → 앱의 뒤로가기 가드(window.__nbBack) 실행.
+//   웹/PWA의 history 가드(시트닫기→홈→경고후 종료)를 토스 네이티브 뒤로가기에서도 재현한다.
+//   graniteEvent('backEvent')를 등록하면 토스 기본 종료동작이 우리 콜백으로 대체됨.
+//   handled=true → 종료 안 함 / false(홈에서 한 번 더) → closeView()로 진짜 종료.
+function registerBackHandler() {
+  try {
+    graniteEvent.addEventListener('backEvent', {
+      onEvent: () => {
+        const handled = typeof window.__nbBack === 'function' ? window.__nbBack() : false;
+        if (!handled) closeView();
+      },
+      onError: (err: unknown) => { console.warn('[toss] backEvent 오류:', err); },
+    });
+  } catch (e) {
+    console.warn('[toss] backEvent 등록 실패(웹 환경일 수 있음):', e);
+  }
 }
 
 boot().catch((err) => {

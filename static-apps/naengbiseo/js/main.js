@@ -3632,6 +3632,22 @@ window.addEventListener('popstate', () => {
   history.back(); // 진짜 종료
 });
 
+// 토스 웹뷰 네이티브 뒤로가기용 — history가 아니라 토스 SDK가 뒤로가기를 가로채므로,
+// 같은 가드를 전역 함수로 노출한다. toss-miniapp/src/main.ts 가 graniteEvent('backEvent')에 연결.
+// 반환 true=앱이 처리(종료 안 함) / false=홈에서 한 번 더 → closeView()로 종료해도 됨.
+window.__nbBack = function () {
+  if (sheetPushed) { sheetPushed = false; UI.closeSheet(true); return true; }
+  if (moveCtx) { endMove(); render(); return true; }
+  if (tab !== 'home') { tab = 'home'; render(); return true; }
+  if (!exitArmed) {
+    exitArmed = true;
+    toast('한 번 더 뒤로 누르면 앱이 종료돼요');
+    setTimeout(() => { exitArmed = false; }, 2000);
+    return true;
+  }
+  return false;
+};
+
 // 상용 기본값: config.js에 서버 AI 주소가 채워져 있으면 전 사용자 자동 적용
 // 배포에 게이트웨이가 설정돼 있으면: 본인 키가 없는 사용자는 서버 모드로 자동 정렬(엔드포인트 보정 포함).
 // 키를 직접 넣은 사용자는 BYOK 그대로 존중. (구버전 테스트로 남은 aiMode='byok'+키없음 상태도 여기서 정상화)

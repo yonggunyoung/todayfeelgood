@@ -385,6 +385,19 @@ details.adv > summary::before { content: "⚙ "; }
 .pv-note.info { background: var(--mint-soft); color: var(--mint-ink); }
 .pv-note.warn { background: var(--warn-soft); color: var(--warn); }
 
+/* 채널 깨짐 보완 — 그림 메타(고지)·팁·고정폭/가변폭 비교 박스 */
+.art-meta { font-size: var(--t-caption); font-weight: var(--w-med); color: var(--ink-3); margin: 6px 2px 0; line-height: 1.4; }
+.tip-banner { font-size: var(--t-caption); font-weight: var(--w-med); color: var(--mint-ink); background: var(--mint-soft); border-radius: var(--r-md); padding: 9px 12px; margin: 8px 0 12px; line-height: 1.45; }
+.pv-tips { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+.pv-tip { font-size: 12px; line-height: 1.45; color: var(--ink-2); background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; }
+.pv-tip b { color: var(--ink); font-weight: 800; margin-right: 2px; }
+.pv-artbox { margin: 10px 0; border: 1px solid var(--line); border-radius: var(--r-md); overflow: hidden; background: var(--surface); }
+.pv-artbox.mono { border-color: var(--ok); }
+.pv-artbox.prop { border-color: var(--warn); }
+.pv-artcap { font-size: var(--t-caption); font-weight: var(--w-bold); padding: 7px 10px; color: var(--ink-2); border-bottom: 1px solid var(--line); background: var(--grad-soft); }
+.pv-artpre { padding: 10px; color: var(--ink); }
+.ad-slot { margin: 18px 0 4px; min-height: 0; } /* 광고 기본 OFF — 켜질 때만 표시 */
+
 @media (min-width: 600px) { #view { padding-left: 20px; padding-right: 20px; } .sheet-back { align-items: center; } .sheet { border-radius: var(--r-xl); } }
 @media (prefers-reduced-motion: reduce) {
   .view, .toast, .fout, .chip, .tbtn, .tab-ico, .brand-mark::after { animation: none !important; transition: none !important; }

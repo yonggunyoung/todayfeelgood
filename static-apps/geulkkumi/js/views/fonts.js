@@ -6,9 +6,10 @@
 
 import { el, clear, copy, debounce, toast } from "../ui.js";
 import { isFavorite, toggleFavorite, setSetting, settings } from "../store.js";
-import { convertAll, convert, zalgo } from "../engine/unicode-fonts.js";
+import { convertAll, convert, zalgo, mixStyle } from "../engine/unicode-fonts.js";
 import { decompose, chosung, deco, circledHangul, parenHangul } from "../engine/hangul.js";
-import { applyFrame } from "../engine/decorate.js";
+import { applyFrame, randomDecorate } from "../engine/decorate.js";
+import { FRAMES } from "../data/templates.js";
 import { openPreview } from "../preview.js";
 
 const SAMPLE = "글꾸미 Aa1";
@@ -100,6 +101,40 @@ function recommend(text) {
   return uniq.slice(0, 5);
 }
 
+// 🎲 믹스 & 자판기 — '개성' 생성 동선(조합 생성 철학). 시드 리롤로 무한 변주.
+const VEND_STYLES = ["bold", "boldscript", "fullwidth", "sansbold", "script", "smallcaps", "italic", "fraktur"];
+const VEND_SEPS = ["", "·", "˚", "⋆", "♡", "✦", "ᰔ", "₊˚"];
+const VEND_FRAMES = FRAMES.map((f) => f.tpl);
+function vending(text, seed) {
+  const styled = convert(text, VEND_STYLES[((seed % VEND_STYLES.length) + VEND_STYLES.length) % VEND_STYLES.length]);
+  return randomDecorate(styled, seed, { frames: VEND_FRAMES, seps: VEND_SEPS });
+}
+
+// 값이 리롤로 바뀌는 행 — 탭 복사 · 🎲 다시뽑기 · 👁 미리보기.
+function playRow(name, startSeed, compute) {
+  let seed = startSeed;
+  const val = el("button.fout-val", { type: "button", title: "탭하면 복사" });
+  const apply = () => { val.textContent = compute(seed) || "…"; };
+  val.onclick = () => copy(val.textContent, "font");
+  const dice = el("button.fout-pv", {
+    type: "button", title: "다시 뽑기", "aria-label": "다시 뽑기",
+    onclick: (e) => { e.stopPropagation(); seed++; apply(); },
+  }, "🎲");
+  const pv = el("button.fout-pv", {
+    type: "button", title: "미리보기", "aria-label": "붙여넣기 미리보기",
+    onclick: (e) => { e.stopPropagation(); openPreview(val.textContent); },
+  }, "👁");
+  apply();
+  return el("div.fout", null, [el("div.fout-name", null, name), val, dice, pv]);
+}
+
+function renderPlay(out, text) {
+  const list = el("div.fout-list");
+  if (mixStyle(text, 7) !== text) list.append(playRow("믹스체", 7, (s) => mixStyle(text, s)));
+  list.append(playRow("꾸미기 자판기", 3, (s) => vending(text, s)));
+  out.append(el("div.sec-title", null, ["🎲 믹스 & 자판기", el("span.sec-sub", null, "🎲로 다시 뽑기 · 탭 복사")]), list);
+}
+
 function renderRecommend(out, text) {
   const recs = recommend(text);
   if (!recs.length) return;
@@ -133,6 +168,7 @@ function render(out, ta, counter) {
   const hasKo = /[가-힣]/.test(text);
   const hasLatin = /[A-Za-z0-9]/.test(text);
   if (!dim) renderRecommend(out, text); // 실제 입력 시에만 추천
+  if (!dim) renderPlay(out, text);      // 믹스체·자판기(개성 생성)
   if (hasKo) renderKorean(out, text);
   // 순수 한글 입력이면 영문 30줄(원본 그대로)은 생략 — 중복 노이즈 제거.
   if (hasLatin || !hasKo) renderEnglish(out, text, dim);

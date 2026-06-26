@@ -14,12 +14,20 @@
     .tab { flex: 1; border: 0; background: #f6eef8; border-radius: 999px; padding: 7px; font-size: 12px; font-weight: 700; color: #6b6177; }
     .tab.on { background: #ffe6f1; color: #d6286f; }
     .out { flex: 1; overflow: auto; padding: 6px 8px 12px; }
-    .row { display: flex; flex-direction: column; gap: 1px; width: 100%; text-align: left; border: 1px solid #f0e3ee; background: #fff; border-radius: 10px; padding: 7px 10px; margin-bottom: 5px; }
+    .row-wrap { display: flex; gap: 5px; align-items: stretch; margin-bottom: 5px; }
+    .row { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; text-align: left; border: 1px solid #f0e3ee; background: #fff; border-radius: 10px; padding: 7px 10px; }
     .rn { font-size: 10px; font-weight: 700; color: #847b90; }
     .rv { font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .star { flex: 0 0 auto; width: 42px; border: 1px solid #f0e3ee; background: #fff; border-radius: 10px; font-size: 16px; color: #d6286f; }
+    .star.on { background: #ffe6f1; }
     .grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; }
     .grid.sym { grid-template-columns: repeat(7, 1fr); }
     .cell { border: 1px solid #f0e3ee; background: #fff; border-radius: 10px; min-height: 40px; font-size: 17px; }
+    .sec { font-size: 10px; font-weight: 700; color: #847b90; margin: 8px 2px 4px; }
+    .fav-row { display: flex; gap: 5px; align-items: stretch; margin-bottom: 5px; }
+    .fav-val { flex: 1; min-width: 0; text-align: left; border: 1px solid #f0e3ee; background: #fff; border-radius: 10px; padding: 9px 10px; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .fav-x { flex: 0 0 auto; width: 40px; border: 1px solid #f0e3ee; background: #fff; border-radius: 10px; font-size: 15px; color: #847b90; }
+    .empty { font-size: 12px; color: #847b90; padding: 16px 10px; line-height: 1.55; text-align: center; }
   </style>
   <title>글꾸미 키보드</title>
 </head>

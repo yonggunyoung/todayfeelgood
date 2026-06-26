@@ -43,6 +43,22 @@ export function padSides(text, ornament, times) {
   return orn ? `${orn} ${t} ${orn}` : t;
 }
 
+// 꾸미기 자판기 — 시드로 프레임·사이기호를 무작위 선택해 한 번에 꾸민다(결정론적·리롤 가능).
+// 카탈로그는 주입(엔진은 데이터 비의존): opts.frames=[tpl...], opts.seps=[sep...].
+function lcg(seed) { let s = (seed >>> 0) || 1; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
+export function randomDecorate(text, seed, opts) {
+  opts = opts || {};
+  const frames = opts.frames || [];
+  const seps = opts.seps || [];
+  const rnd = lcg(seed == null ? 1 : (seed | 0));
+  let out = String(text == null ? "" : text);
+  const sep = seps.length ? seps[Math.floor(rnd() * seps.length)] : "";
+  if (sep) out = interleave(out, sep);
+  const frame = frames.length ? frames[Math.floor(rnd() * frames.length)] : "";
+  if (frame) out = applyFrame(frame, out);
+  return out;
+}
+
 // 혼합: 폰트 변환 결과(styled) 위에 프레임/끼우기/감싸기를 단계적으로 적용.
 // opts: { frame, interleaveSep, wrap:[l,r], appendMark, pad:[orn,times] }
 export function mix(styledText, opts) {

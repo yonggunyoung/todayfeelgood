@@ -3714,8 +3714,19 @@ if (AI_ENDPOINT) {
 migratePantryUnits(); // 무게·부피 재고를 g·ml 기준으로 일괄 정렬(구버전 데이터 보정)
 // 커뮤니티 평점 — 캐시 즉시 적용 후 서버에서 갱신(실패해도 앱은 그대로 동작)
 try { applyCommunityStats(JSON.parse(localStorage.getItem('nb_cstats') || '{}')); } catch { /* noop */ }
-// 시작 화면 — 사용자가 고른 기본 화면으로 진입(첫 실행은 목적 질문 전이라 home 기본)
-const bootStart = applyStartTab(S.settings.startScreen);
+// 토스 딥링크/검색 진입(intoss://naengbiseo/<screen>) — 토스 안에서만 URL의 화면명을 인식해 그 탭으로.
+//   경로·쿼리·해시 어디에 와도 처리하고, 못 알아보면 기본 시작화면으로(앱은 항상 정상 진입). 웹/허브엔 영향 0.
+function deepLinkScreen() {
+  if (typeof window === 'undefined' || !window.__TOSS__) return null;
+  const raw = (location.pathname + location.search + location.hash).toLowerCase();
+  if (/fridge|pantry|냉장고/.test(raw)) return 'pantry';
+  if (/recipe|레시피/.test(raw)) return 'recipes';
+  if (/shop|장보기/.test(raw)) return 'shopping';
+  if (/home|홈/.test(raw)) return 'home';
+  return null;
+}
+// 시작 화면 — 토스 딥링크가 있으면 그 화면, 없으면 사용자가 고른 기본 화면.
+const bootStart = applyStartTab(deepLinkScreen() || S.settings.startScreen);
 render();
 initSync(() => { renderTop(); if (tab === 'settings') renderSettings(); });
 fetchRecipeStats().then((m) => {

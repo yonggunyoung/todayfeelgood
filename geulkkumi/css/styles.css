@@ -398,6 +398,24 @@ details.adv > summary::before { content: "⚙ "; }
 .pv-artpre { padding: 10px; color: var(--ink); }
 .ad-slot { margin: 18px 0 4px; min-height: 0; } /* 광고 기본 OFF — 켜질 때만 표시 */
 
+/* 상단 로고(홈 버튼화) */
+.brand { transition: transform .12s; border-radius: var(--r-md); }
+.brand:active { transform: scale(.97); }
+
+/* ⚡ 빠른 불러오기 시트 */
+.quick { display: flex; flex-direction: column; gap: 4px; }
+.quick-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 6px; }
+.quick-chip { display: flex; align-items: center; gap: 8px; text-align: left; width: 100%; border: 1px solid var(--line); background: var(--surface); border-radius: var(--r-md); padding: 9px 12px; box-shadow: var(--shadow-sm), var(--ring-hi); min-height: 44px; }
+.quick-text { font-size: var(--t-body); overflow-wrap: anywhere; }
+
+/* 모바일 보강 — 가로 넘침 방지 · 좌우 노치(가로/풀스크린) 안전영역 · 더블탭 지연 제거 · 긴 값 줄바꿈 */
+body { overflow-x: hidden; }
+#topbar { padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); }
+#view { padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); }
+#tabbar { padding-left: max(6px, env(safe-area-inset-left)); padding-right: max(6px, env(safe-area-inset-right)); }
+button, a, [role="button"], .tab, .seg, .chip-opt { touch-action: manipulation; }
+.fout-val, .saved-val, .rec-val, .quick-text { overflow-wrap: anywhere; }
+
 @media (min-width: 600px) { #view { padding-left: 20px; padding-right: 20px; } .sheet-back { align-items: center; } .sheet { border-radius: var(--r-xl); } }
 @media (prefers-reduced-motion: reduce) {
   .view, .toast, .fout, .chip, .tbtn, .tab-ico, .brand-mark::after { animation: none !important; transition: none !important; }

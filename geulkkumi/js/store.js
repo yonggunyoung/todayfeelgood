@@ -13,7 +13,7 @@ const DEFAULTS = {
   favorites: [],   // [{ text, kind, ts }]
   history: [],     // [{ text, kind, ts }]
   slots: [],       // [{ id, cat, text, ts }]
-  settings: { theme: "auto", lastStyle: "bold", artMode: "braille", artWidth: 80 },
+  settings: { theme: "auto", lastStyle: "bold", artMode: "braille", artWidth: 80, tabUses: {} },
 };
 
 function load() {
@@ -86,3 +86,19 @@ export function addSlot(cat, text) {
   persist();
 }
 export function removeSlot(id) { state.slots = getSlots().filter((s) => s.id !== id); persist(); }
+
+// ── 탭 사용 빈도(자주 쓰는 기능을 메인으로 자동) ──
+export function bumpTab(id) {
+  if (!id) return;
+  const uses = Object.assign({}, state.settings.tabUses || {});
+  uses[id] = (uses[id] || 0) + 1;
+  state.settings = Object.assign({}, state.settings, { tabUses: uses });
+  persist();
+}
+// 가장 많이 쓴 탭(없으면 fallback). 동률이면 먼저 본 키 유지(안정적).
+export function topTab(fallback) {
+  const uses = state.settings.tabUses || {};
+  let best = null, max = 0;
+  for (const k in uses) if (uses[k] > max) { max = uses[k]; best = k; }
+  return best || fallback || "fonts";
+}

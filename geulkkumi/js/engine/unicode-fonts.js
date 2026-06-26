@@ -144,3 +144,19 @@ export function convertAll(text) {
 
 export function styleName(styleId) { return STYLE_BY_ID[styleId] ? STYLE_BY_ID[styleId].name : styleId; }
 export function styleTier(styleId) { return STYLE_BY_ID[styleId] ? STYLE_BY_ID[styleId].tier : 99; }
+
+// 믹스체 — 글자마다 다른 안전(tier1) 글꼴을 섞어 '힙한/삐뚤' 감성. 시드로 결정론적(리롤 가능).
+// 매핑 풀은 tier1 치환형만(결합문자·뒤집기 제외 → 안 깨짐). 공백·한글 등 비매핑은 원형 유지.
+const MIX_POOL = STYLES.filter((s) => s.tier === 1 && s.kind === "map");
+function lcg(seed) { let s = (seed >>> 0) || 1; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
+export function mixStyle(text, seed) {
+  if (text == null) return "";
+  const rnd = lcg(seed == null ? 0x9e3779b9 : (seed | 0));
+  let out = "";
+  for (const ch of String(text)) {
+    if (ch === " " || ch === "\n" || ch === "\r" || ch === "\t") { out += ch; continue; }
+    const st = MIX_POOL[Math.floor(rnd() * MIX_POOL.length)];
+    out += st && ch in st.map ? st.map[ch] : ch;
+  }
+  return out;
+}

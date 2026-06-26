@@ -12,6 +12,8 @@ import { STYLES, convert } from "../engine/unicode-fonts.js";
 import { mix } from "../engine/decorate.js";
 import { assemble, countCombos, randomSel, PARTS } from "../engine/kaomoji-gen.js";
 import { MEMES } from "../data/memes.js";
+import { classify, codeBlock, widthWarning } from "../engine/channel.js";
+import { adSlot } from "../ads.js";
 import { openPreview } from "../preview.js";
 
 const SEGMENTS = [
@@ -238,19 +240,33 @@ function kaomojiSection() {
 }
 
 // ── 아스키 아트 갤러리 ──────────────────────────────────────
+// 그림 1개 카드 — 채널 고지(고정폭/이모지)·폭경고·코드블록 복사·미리보기 비교.
+function artCard(name, art) {
+  const c = classify(art);
+  const cap = c.kind === "emoji"
+    ? "📱 어디서나 모양 유지 · 색은 기기마다 달라요"
+    : "🟣 고정폭 전용 — 디스코드·슬랙은 ‘``` 복사’가 정확";
+  const ww = widthWarning(art);
+  const tools = [el("button.tbtn", { type: "button", onclick: () => copy(art, "ascii") }, "복사")];
+  if (c.kind !== "emoji")
+    tools.push(el("button.tbtn", { type: "button", onclick: () => copy(codeBlock(art), "ascii") }, "⟨⟩ ``` 복사"));
+  tools.push(el("button.tbtn", { type: "button", onclick: () => openPreview(art) }, "👁 미리보기"));
+  tools.push(el("button.tbtn", { type: "button", onclick: () => share(art) }, "공유"));
+  return el("div.block-card", null, [
+    el("div.block-name", null, name),
+    el("pre.block-out", null, art),
+    el("div.art-meta", null, cap + (ww ? " · ↔ " + ww : "")),
+    el("div.toolbar", null, tools),
+  ]);
+}
+
 function asciiSection() {
   const box = el("div.lib-section");
-  box.append(el("p.lead", null, "도트·이모지·문자 그림을 탭해서 복사. 내 밈/사진은 ‘사진아트’ 탭에 올리면 도트 그림으로 만들어져요."));
-  ASCII_ART.forEach((a) => {
-    box.append(el("div.block-card", null, [
-      el("div.block-name", null, a.name),
-      el("pre.block-out", null, a.art),
-      el("div.toolbar", null, [
-        el("button.tbtn", { type: "button", onclick: () => copy(a.art, "ascii") }, "복사"),
-        el("button.tbtn", { type: "button", onclick: () => share(a.art) }, "공유"),
-      ]),
-    ]));
-  });
+  box.append(
+    el("p.lead", null, "도트·이모지·문자 그림을 탭해서 복사. 내 밈/사진은 ‘사진아트’ 탭에 올리면 도트 그림으로 만들어져요."),
+    el("div.tip-banner", null, "💡 그림은 채널마다 글꼴이 달라요 — 디스코드·슬랙은 ‘``` 복사’, 카톡·인스타는 이모지·도트 그림이 안전해요. 👁로 미리 확인하세요."),
+  );
+  ASCII_ART.forEach((a) => box.append(artCard(a.name, a.art)));
   return box;
 }
 
@@ -299,6 +315,9 @@ function mount(root) {
   });
 
   wrap.append(globalSearch, segRow, body);
+  // 광고: 스크롤 맨 끝 1슬롯(기본 OFF — 퍼블리셔 ID 없으면 null → 아무것도 안 붙음). MONETIZE.md 참고.
+  const ad = adSlot();
+  if (ad) wrap.append(ad);
   root.append(wrap);
   renderSeg();
 }

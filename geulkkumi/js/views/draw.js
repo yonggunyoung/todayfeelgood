@@ -5,6 +5,7 @@
 
 import { el, copy, toast, debounce, share } from "../ui.js";
 import { render as renderArt, imageDataToLum } from "../engine/ascii-art.js";
+import { classify, codeBlock, compatBadge, widthWarning } from "../engine/channel.js";
 import { downloadArtPng } from "../png.js";
 
 const RES = 480;        // 내부 캔버스 해상도(정사각)
@@ -29,6 +30,7 @@ function mount(root) {
   ctx.lineCap = "round"; ctx.lineJoin = "round";
 
   const pre = el("pre.art-out.empty");
+  const meta = el("div.art-meta", { "aria-live": "polite" }); // 채널 고지·폭 경고
 
   // ── 그리기 ────────────────────────────────────────────
   let drawing = false, lastX = 0, lastY = 0;
@@ -66,8 +68,15 @@ function mount(root) {
     const out = renderArt(imageDataToLum(c.getImageData(0, 0, pw, ph)),
       { mode: opt.mode, invert: opt.invert, dither: true });
     pre.textContent = out;
-    pre.classList.toggle("empty", !out.replace(/[\s⠀]/g, ""));
+    const blank = !out.replace(/[\s⠀]/g, "");
+    pre.classList.toggle("empty", blank);
     pre.classList.toggle("emoji", opt.mode === "emoji");
+    if (blank) { meta.textContent = ""; cbBtn.style.display = "none"; }
+    else {
+      cbBtn.style.display = classify(out).kind === "emoji" ? "none" : "";
+      const ww = widthWarning(out);
+      meta.textContent = compatBadge(out).msg + (ww ? " · ↔ " + ww : "");
+    }
   }
   const processDebounced = debounce(process, 100);
 
@@ -104,8 +113,11 @@ function mount(root) {
     el("button.tbtn", { type: "button", onclick: clearCanvas }, "🗑 전체 지우기"),
   ]);
 
+  const cbBtn = el("button.tbtn", { type: "button", onclick: () => copy(codeBlock(pre.textContent), "art") }, "⟨⟩ ``` 복사");
+  cbBtn.style.display = "none";
   const actions = el("div.toolbar", null, [
     el("button.tbtn.primary", { type: "button", onclick: () => copy(pre.textContent, "art") }, "📋 복사"),
+    cbBtn,
     el("button.tbtn", { type: "button", onclick: () => share(pre.textContent) }, "🔗 공유"),
     el("button.tbtn", { type: "button", onclick: () => downloadArtPng(pre.textContent, opt.mode, "geulkkumi-draw.png") }, "🖼️ 이미지 저장"),
   ]);
@@ -120,7 +132,7 @@ function mount(root) {
       el("label.opt", null, ["해상도 ", wSlider, wLabel]),
       el("div.opt-row", null, [invertBtn]),
     ]),
-    actions, pre,
+    actions, pre, meta,
   ]);
   root.append(wrap);
   process();

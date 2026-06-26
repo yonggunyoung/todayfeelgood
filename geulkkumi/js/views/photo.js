@@ -7,6 +7,7 @@ import { el, clear, copy, toast, debounce, share } from "../ui.js";
 import { setSetting, settings } from "../store.js";
 import { render as renderArt, imageDataToLum } from "../engine/ascii-art.js";
 import { RAMPS, EMOJI_PALETTES, ART_MODES } from "../data/ramps.js";
+import { classify, codeBlock, compatBadge, widthWarning } from "../engine/channel.js";
 import { downloadArtPng } from "../png.js";
 
 // 모드별 픽셀 그리드 크기(문자 셀 종횡비 보정 + 세로 폭주 방지 상한).
@@ -31,6 +32,7 @@ function mount(root) {
 
   const wrap = el("div.view.view-photo");
   const pre = el("pre.art-out", { "aria-label": "변환 결과" });
+  const meta = el("div.art-meta", { "aria-live": "polite" }); // 채널 고지·폭 경고
   const dz = el("label.dropzone", { tabindex: "0" }, [
     el("div.dz-emoji", null, "🖼️"),
     el("div", null, "사진을 끌어다 놓거나 탭해서 선택"),
@@ -104,15 +106,27 @@ function mount(root) {
   ]);
 
   // ── 결과 액션 ────────────────────────────────────────────
+  const cbBtn = el("button.tbtn", { type: "button", onclick: () => copy(codeBlock(pre.textContent), "art") }, "⟨⟩ ``` 복사");
   const actions = el("div.toolbar", null, [
     el("button.tbtn.primary", { type: "button", onclick: () => copy(pre.textContent, "art") }, "📋 복사"),
+    cbBtn,
     el("button.tbtn", { type: "button", onclick: () => share(pre.textContent) }, "🔗 공유"),
     el("button.tbtn", { type: "button", onclick: savePng }, "🖼️ 이미지 저장"),
   ]);
 
+  // 결과의 채널 호환 고지 갱신(이모지면 코드블록 버튼 숨김).
+  function syncMeta() {
+    const out = pre.textContent || "";
+    if (!out) { meta.textContent = ""; cbBtn.style.display = "none"; return; }
+    const c = classify(out);
+    cbBtn.style.display = c.kind === "emoji" ? "none" : "";
+    const ww = widthWarning(out);
+    meta.textContent = compatBadge(out).msg + (ww ? " · ↔ " + ww : "");
+  }
+
   // ── 처리 ────────────────────────────────────────────────
   function process() {
-    if (!img) { pre.textContent = ""; pre.classList.add("empty"); return; }
+    if (!img) { pre.textContent = ""; pre.classList.add("empty"); syncMeta(); return; }
     pre.classList.remove("empty");
     const ar = img.naturalHeight / img.naturalWidth || 1;
     const { pw, ph } = dims(opt.mode, opt.width, ar);
@@ -129,6 +143,7 @@ function mount(root) {
     });
     pre.textContent = out;
     pre.classList.toggle("emoji", opt.mode === "emoji");
+    syncMeta();
   }
   const processDebounced = debounce(process, 120);
 
@@ -160,7 +175,7 @@ function mount(root) {
 
   wrap.append(
     el("p.lead", null, "사진을 도트(브라유)·문자·이모지 그림으로 — 밈·짤 사진을 올리면 그대로 도트/이모지 밈이 됩니다. 고정폭(모노) 앱·디스코드에서 가장 잘 보여요."),
-    dz, pre, actions, optionsBox,
+    dz, pre, meta, actions, optionsBox,
   );
   syncSubOpts();
   root.append(wrap);

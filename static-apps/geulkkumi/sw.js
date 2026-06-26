@@ -1,6 +1,6 @@
 /* 글꾸미 — 서비스워커: 앱 셸 오프라인 캐시(빌드 없는 정적 PWA, 의존성 0).
  * 동일 출처 자산은 cache-first, 그 외(폰트 CDN 등)는 런타임 캐시. */
-const C = "geulkkumi-v7";
+const C = "geulkkumi-v8";
 const ASSETS = [
   "./", "./index.html", "./manifest.webmanifest", "./icon.svg", "./mascot.svg", "./og.svg", "./og.png",
   "./css/styles.css",

@@ -197,6 +197,12 @@ function attachSheetDrag() {
 }
 let sheetPushed = false;   // 뒤로가기로 시트가 닫히도록 히스토리에 한 칸 쌓아둠
 let sheetStack = [];       // 광고·게임 오버레이가 덮은 이전 시트 HTML (닫힐 때 복원)
+// 게임·광고 같은 임시 오버레이를 열기 전 현재 시트를 보관 → 닫히면 그 시트로 복원.
+//   게임 시트(.gx) 위에서 또 광고 띄우는 인게임 흐름은 중첩하지 않음(스택 오염 방지).
+function stashSheet() {
+  const cur = $('#modal-root .sheet');
+  if (cur && !cur.querySelector('.gx')) sheetStack.push(cur.outerHTML);
+}
 let ignoreNextPop = false;
 let closeForce = false; // 게임 나가기 확인을 거친 강제 종료
 UI.closeSheet = (fromPop = false) => {
@@ -1699,7 +1705,7 @@ UI.openRecharge = (retry) => {
       <div style="font-size:1.7rem">🎮</div>
       <div class="grow"><b>게임하고 포인트 모으기</b>
         <p class="hint" style="margin:2px 0 0">100P 모으면 1회권으로 바로 충전돼요</p></div>
-      <button class="btn btn-sm btn-tint" onclick="UI.closeSheet();UI.openGames()">게임</button>
+      <button class="btn btn-sm btn-tint" onclick="UI.openGames()">게임</button>
     </div>`}
     <div class="card flat row" style="gap:12px">
       <div style="font-size:1.7rem">⭐</div>
@@ -1713,6 +1719,7 @@ UI.openRecharge = (retry) => {
    토스 안: 네이티브 보상형 SDK 시도 → 개별 운영/실패: 하우스 15초 (AdFit 교체 자리) */
 let adTimer = null;
 function playAd({ onComplete, note = '', reward = '' }) {
+  stashSheet(); // 현재 시트(레시피·등록폼 등) 보관 → 광고 닫히면 그 시트로 복원 (게임 시트 위에선 중첩 안 함)
   tossRewardedAd().then((r) => {
     if (r === true) { // 토스 보상형 완주 — 바로 보상 단계
       openSheet('<h2>📺 광고</h2><button id="ad-btn" class="btn btn-block btn-soft" disabled>보상 적용 중…</button>', { lock: true });
@@ -1871,7 +1878,7 @@ UI.redeem = async (id) => {
 };
 
 /* ── 🎮 게임 글루 — 각 게임 모듈의 시트가 onclick 문자열로 부른다 ── */
-UI.openGames = () => openGames();
+UI.openGames = () => { stashSheet(); openGames(); }; // 현재 시트(레시피 등) 보관 → 게임 끝나면 복원
 UI.gameFull = () => {
   const el = document.querySelector('.gx'); if (!el) return;
   try { if (document.fullscreenElement) (document.exitFullscreen || document.webkitExitFullscreen).call(document); else (el.requestFullscreen || el.webkitRequestFullscreen).call(el); }

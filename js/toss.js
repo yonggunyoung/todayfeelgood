@@ -15,8 +15,15 @@ function sdk() {
 export const inToss = () => !!sdk();
 
 /* 보상형 광고 — 토스 안: SDK 광고 / 밖: null 반환(하우스 광고 폴백은 호출측 playAd가 담당)
-   반환: true(보상 지급 조건 충족) | false(중도 이탈) | null(토스 환경 아님 → 폴백) */
+   반환: true(보상 지급 조건 충족) | false(중도 이탈) | null(토스 환경 아님 → 폴백)
+
+   토스 빌드에서는 src/toss-ads.ts 가 통합 광고 SDK(loadFullScreenAd/showFullScreenAd)를
+   window.__tossRewardedAd 로 노출한다 → 그게 있으면 그걸 우선 사용(권장 흐름: load→show→load).
+   없으면(구버전/주입형) 아래 전역 SDK 폴백, 그것도 없으면 null(웹). */
 export function tossRewardedAd() {
+  if (typeof window !== 'undefined' && typeof window.__tossRewardedAd === 'function') {
+    return window.__tossRewardedAd();
+  }
   const t = sdk();
   if (!t || !TOSS.rewardAdId) return Promise.resolve(null);
   return new Promise((resolve) => {

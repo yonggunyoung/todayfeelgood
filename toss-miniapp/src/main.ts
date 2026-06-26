@@ -10,6 +10,8 @@
 //       스스로 부팅한다. 따라서 플래그/로그인은 반드시 그 import "이전"에 처리해야 한다.
 
 import { graniteEvent, closeView } from '@apps-in-toss/web-framework';
+// 보상형 광고 브리지 등록(side-effect): window.__tossRewardedAd 노출 → js/toss.js 가 사용.
+import './toss-ads';
 
 declare global {
   interface Window {

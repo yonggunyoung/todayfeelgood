@@ -12,6 +12,8 @@
 import { graniteEvent, closeView } from '@apps-in-toss/web-framework';
 // 보상형 광고 브리지 등록(side-effect): window.__tossRewardedAd 노출 → js/toss.js 가 사용.
 import './toss-ads';
+// 배너 광고 브리지 등록(side-effect): window.__tossBanner 노출 → js/main.js 가 사용.
+import './toss-banner';
 
 declare global {
   interface Window {

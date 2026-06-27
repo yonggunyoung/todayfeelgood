@@ -108,6 +108,17 @@ a { color: var(--blue); text-decoration: none; }
 #tabbar button.active { color: var(--green); }
 #tabbar button:active { transform: scale(0.9); }
 
+/* ── 토스 인앱 배너 (WebView 전용 — JS가 토스+지원버전에서만 #nb-banner 를 생성) ── */
+#nb-banner {
+  position: fixed; left: 50%; transform: translateX(-50%);
+  bottom: calc(54px + env(safe-area-inset-bottom));
+  width: min(480px, 100%); z-index: 25;
+  background: var(--bg, #f5f3ec); border-top: 0.5px solid var(--hairline);
+}
+.nb-banner-slot { width: 100%; height: 96px; }
+/* 배너 노출 탭에선 본문 하단 여백을 배너 높이만큼 더 확보(고정 탭바 116px + 배너 96px) */
+body.has-ad-banner #view { padding-bottom: 212px; }
+
 /* ── 타이포 ─────────────────────────── */
 .hero { padding: 20px 4px 4px; }
 .hero h1 { font-family: var(--display); font-size: 1.78rem; line-height: 1.16; font-weight: 400; letter-spacing: -0.02em; color: var(--green-ink); }

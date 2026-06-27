@@ -3567,10 +3567,39 @@ UI.resetAll = () => {
 /* ── 라우팅 ─────────────────────────────── */
 const SCREENS = { home: renderHome, pantry: renderPantry, recipes: renderRecipes, shopping: renderShopping, settings: renderSettings };
 
+/* 토스 인앱 배너 — 탭바 위 "안정 컨테이너"에 1회만 부착하고, 탭별로 show/hide만 토글한다.
+   매 렌더마다 재부착하면 정책상 '자동 새로고침'이 되므로 부착은 딱 한 번(=SDK가 알아서 갱신).
+   미지원 토스앱/웹에선 supported()=false → 영역 자체를 만들지 않음(빈 공백 방지). */
+let tossBannerEl = null;
+let tossBannerInit = false;
+function tossBannerSync() {
+  if (typeof window === 'undefined' || !window.__TOSS__ || !window.__tossBanner) return;
+  if (!tossBannerInit) {
+    tossBannerInit = true;
+    try { if (!window.__tossBanner.supported()) return; } catch { return; }
+    const shell = document.getElementById('shell');
+    const tabbar = document.getElementById('tabbar');
+    if (!shell || !tabbar) return;
+    tossBannerEl = document.createElement('div');
+    tossBannerEl.id = 'nb-banner';
+    const slot = document.createElement('div');
+    slot.className = 'nb-banner-slot';
+    tossBannerEl.appendChild(slot);
+    shell.insertBefore(tossBannerEl, tabbar);
+    try { window.__tossBanner.mount(slot); } catch (e) { /* noop */ }
+  }
+  if (!tossBannerEl) return;
+  // 리스트/긴 체류 화면에서만 노출(홈 히어로·설정 제외). 하단 고정 배너라 ATF 정책 위반 아님.
+  const show = (tab === 'pantry' || tab === 'recipes' || tab === 'shopping');
+  tossBannerEl.style.display = show ? 'block' : 'none';
+  document.body.classList.toggle('has-ad-banner', show);
+}
+
 function render() {
   renderTop();
   (SCREENS[tab] || renderHome)();
   $$('#tabbar button').forEach((b) => b.classList.toggle('active', b.dataset.tab === tab));
+  tossBannerSync();
   window.scrollTo({ top: 0 });
 }
 UI.go = (t) => { endMove(); tab = t; render(); trackScreen(t); };

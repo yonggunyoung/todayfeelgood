@@ -1719,16 +1719,27 @@ UI.openRecharge = (retry) => {
    토스 안: 네이티브 보상형 SDK 시도 → 개별 운영/실패: 하우스 15초 (AdFit 교체 자리) */
 let adTimer = null;
 function playAd({ onComplete, note = '', reward = '' }) {
+  // 토스 안: 실제 SDK 보상형 광고만 사용한다. 우리 15초 카운트다운(하우스 광고)은 '웹 전용'.
+  //   → 토스에서 실광고와 가짜 카운트다운이 겹치거나, 광고 없이 숫자만 올라가는 문제를 원천 차단.
+  if (typeof window !== 'undefined' && window.__TOSS__) {
+    tossRewardedAd().then((r) => {
+      if (r === true) { // 완주 → 보상. 실광고는 SDK가 전면으로 이미 보여줬으니 '짧은 확인 시트'만.
+        stashSheet(); // 현재 시트 보관 → 확인 닫으면 그 시트로 복원
+        openSheet(`<div class="adx"><div class="adx-stage" style="padding:20px 8px 10px">
+          <div class="adx-slime">🎁</div><b>광고 시청 완료</b><p>보상을 적용했어요</p></div>
+          <button id="ad-btn" class="btn btn-block btn-soft" disabled>적용 중…</button></div>`, { lock: true });
+        onComplete($('#ad-btn'));
+        return;
+      }
+      // 미완주(false)·광고없음/오류(null) → 시트는 그대로 두고 안내만.
+      //   (이 경로에선 stashSheet를 안 하므로 sheetStack 오염 없음 → '닫아도 또 뜸' 방지)
+      toast(r === false ? '광고를 끝까지 봐야 보상을 받아요' : '지금은 광고를 불러오지 못했어요. 잠시 후 다시 시도해 주세요');
+    });
+    return;
+  }
+  // 웹(개별 운영): 자체 프로모션 하우스 광고(15초 카운트다운). AdFit/애드센스 교체 자리.
   stashSheet(); // 현재 시트(레시피·등록폼 등) 보관 → 광고 닫히면 그 시트로 복원 (게임 시트 위에선 중첩 안 함)
-  tossRewardedAd().then((r) => {
-    if (r === true) { // 토스 보상형 완주 — 바로 보상 단계
-      openSheet('<h2>📺 광고</h2><button id="ad-btn" class="btn btn-block btn-soft" disabled>보상 적용 중…</button>', { lock: true });
-      onComplete($('#ad-btn'));
-      return;
-    }
-    if (r === false) { toast('광고를 끝까지 봐야 보상을 받아요'); return; }
-    houseAd({ onComplete, note, reward }); // null = 토스 환경 아님/광고 없음 → 폴백
-  });
+  houseAd({ onComplete, note, reward });
 }
 function houseAd({ onComplete, note, reward }) {
   clearInterval(adTimer);

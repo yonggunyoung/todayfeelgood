@@ -30,18 +30,6 @@ declare global {
   }
 }
 
-// (a) 토스 WebView 환경 감지.
-//   - 주입 전역(window.AppsInToss 등) 또는 UA로 추정.
-// TODO(verify): 토스 WebView를 식별하는 공식 방법(전역 이름/UA 토큰)을 최신 문서로 확정.
-//   @apps-in-toss/web-framework 가 제공하는 env/플랫폼 판별 API가 있으면 그것을 사용할 것.
-function isTossWebView(): boolean {
-  if (typeof window === 'undefined') return false;
-  const w = window;
-  if (w.AppsInToss || w.appsInToss || w.tossMiniApp) return true;
-  const ua = navigator.userAgent || '';
-  return /toss/i.test(ua);
-}
-
 // (b) 부팅 전에 전역 플래그 세팅.
 //   냉비서(js/main.js 및 js/push.js)는 아직 이 플래그를 검사하지 않는다.
 // TODO(verify): 루트 앱에 분기 추가 필요 — 토스 빌드에서 다음을 끄려면:
@@ -51,7 +39,12 @@ function isTossWebView(): boolean {
 //   3) PWA 설치 배너: js/main.js 끝의 beforeinstallprompt/appinstalled/iOS-Safari IIFE 를
 //      `if (window.__TOSS__) return;` 으로 가드 (선택).
 //   ※ 이 분기들은 루트 앱에 아직 들어있지 않다. 플래그는 그 분기를 위해 미리 세팅하는 것.
-window.__TOSS__ = isTossWebView();
+//
+// ★ 중요: main.ts 는 "토스 빌드(toss-miniapp) 전용 엔트리"다. 웹 앱은 루트 index.html 이
+//   js/main.js 를 직접 로드하므로, 이 파일이 실행됐다는 것 자체가 "토스 WebView 안"이라는 확실한 신호다.
+//   (과거엔 window.AppsInToss/UA 휴리스틱으로 감지했으나 Granite WebView엔 그 전역이 없어 false 로
+//    떨어졌고 → 실광고 대신 하우스 광고(가짜 카운트다운)가 떴다. 그래서 무조건 true 로 고정해 해결.)
+window.__TOSS__ = true;
 
 async function boot() {
   // (c) (선택) 토스 로그인. 지금은 자동 실행하지 않고, 설정 화면 등에서 호출하도록 노출만 한다.

@@ -30,7 +30,7 @@ self.addEventListener('notificationclick', (e) => {
   }));
 });
 
-const CACHE = 'naengbiseo-v91';
+const CACHE = 'naengbiseo-v92';
 const SHELL = [
   './', './index.html', './arcade.html', './js/arcade.js', './css/styles.css', './manifest.webmanifest', './icon.svg',
   './js/main.js', './js/store.js', './js/engine.js', './js/units.js', './js/ai.js', './js/sync.js', './js/voice.js', './js/config.js', './js/analytics.js', './js/push.js',

@@ -4,7 +4,7 @@ import { ING, findIng, defaultShelf, defaultLocation, ingredientTip } from './da
 import { isWeight, measureOf, baseUnit, unitOptions, toBase, perBase, fmtBase, fmtRaw, stepFor, defaultEntry } from './units.js';
 import { recommend, recipesUsing, expiringItems, activeLeftovers, deductionPlan, modeList, getMode, allRecipes, buildCookPlan, setCommunityStats, communityRating } from './engine.js';
 import { scanImage, extractRecipeFromYouTube } from './ai.js';
-import { initSync, sync, makeSpaceCode, setSpaceCode, loginGoogle, logoutGoogle, syncAvailable, submitScore, topScores, submitRating, fetchRecipeStats } from './sync.js';
+import { initSync, sync, makeSpaceCode, setSpaceCode, loginGoogle, loginToss, logoutGoogle, syncAvailable, submitScore, topScores, submitRating, fetchRecipeStats } from './sync.js';
 import { initAnalytics, track, trackScreen } from './analytics.js';
 import { enablePush, pushSupported, pushOn, pushPermission } from './push.js';
 import { AI_ENDPOINT, COUPANG_TAG, AI_FN } from './config.js';
@@ -3387,7 +3387,10 @@ function renderSettings() {
                 <button class="btn btn-sm btn-soft" onclick="UI.famJoin()">코드 입력</button></div>`}
          </div>`
       : (typeof window !== 'undefined' && window.__TOSS__)
-        ? `<div class="card flat"><p class="hint" style="margin:0">☁️ 클라우드 백업·가족 공유는 <b>토스 로그인</b>으로 곧 제공돼요. 지금은 데이터가 이 기기에 안전하게 저장됩니다 (설정 → 데이터 → 내보내기로 직접 백업 가능).</p></div>`
+        ? `<button class="btn btn-block" style="background:#0064FF;color:#fff;border:none;box-shadow:var(--shadow-card);font-weight:800" onclick="UI.loginToss()">
+             토스로 로그인 — 백업 · 기기 이동 · 가족 공유
+           </button>
+           <p class="hint" style="text-align:center;margin:8px 0 0">로그인 없이도 이 기기에서는 모든 기능을 쓸 수 있어요</p>`
         : `<button class="btn btn-block" style="background:#fff;border:1px solid var(--hairline);box-shadow:var(--shadow-card);font-weight:800" onclick="UI.doLogin()">
            <span style="font-weight:900;color:#4285F4">G</span>&nbsp; 구글로 시작하기 — 백업 · 기기 이동 · 가족 공유
          </button>
@@ -3515,6 +3518,14 @@ UI.doLogin = async () => {
     await loginGoogle();
     setTimeout(() => { renderTop(); if (tab === 'settings') renderSettings(); }, 600);
   } catch (e) { toast(e.message || '로그인에 실패했어요'); }
+};
+UI.loginToss = async () => {
+  try {
+    toast('토스 로그인 중…');
+    await loginToss();
+    toast('로그인됐어요 — 백업·기기 이동·가족 공유가 켜졌어요');
+    setTimeout(() => { renderTop(); if (tab === 'settings') renderSettings(); }, 600);
+  } catch (e) { toast(e.message || '토스 로그인에 실패했어요'); }
 };
 UI.doLogout = async () => {
   await logoutGoogle();

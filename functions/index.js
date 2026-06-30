@@ -5,6 +5,7 @@ const { onRequest } = require('firebase-functions/v2/https');
 const { onSchedule } = require('firebase-functions/v2/scheduler');
 const { defineSecret } = require('firebase-functions/params');
 const admin = require('firebase-admin');
+const https = require('https'); // 토스 로그인 mTLS 서버간 통신용 (Node 내장)
 
 admin.initializeApp();
 const db = admin.firestore();
@@ -577,5 +578,88 @@ exports.expiryPush = onSchedule(
       }
     }
     console.log(`expiryPush: ${snap.size} tokens, ${sent} sent`);
+  }
+);
+
+/* ── 토스 로그인 (앱인토스) — 인가코드 → mTLS 토큰교환 → userKey → Firebase 커스텀 토큰 ──
+   문서: developers-apps-in-toss.toss.im/login/develop
+     1) 클라(미니앱): appLogin() → { authorizationCode, referrer } → 이 함수로 POST
+     2) 서버: POST generate-token (mTLS) → accessToken
+     3) 서버: GET login-me (Bearer) → userKey (앱 단위 고유 식별자, 비암호화)
+     4) 서버: createCustomToken('toss_'+userKey) → 클라가 signInWithCustomToken
+   ※ generate-token/login-me 는 mTLS 서버간 통신 필수 — 콘솔 발급 인증서/키를 시크릿으로.
+   ※ 이름 등 개인정보는 v2에서 복호화(AES-256-GCM, 복호화키+AAD). v1은 userKey만으로 충분. */
+const TOSS_MTLS_CERT = defineSecret('TOSS_MTLS_CERT'); // PEM (-----BEGIN CERTIFICATE-----)
+const TOSS_MTLS_KEY = defineSecret('TOSS_MTLS_KEY');   // PEM (-----BEGIN PRIVATE KEY-----)
+const TOSS_API_HOST = 'apps-in-toss-api.toss.im';
+
+// mTLS HTTPS 요청 (Node 내장 https). cert/key 로 클라이언트 인증서를 제시한다.
+function tossApiRequest({ method, path, headers, body, cert, key }) {
+  return new Promise((resolve, reject) => {
+    const req = https.request(
+      { method, hostname: TOSS_API_HOST, path, headers: headers || {}, cert, key, timeout: 7000 },
+      (res) => {
+        let data = '';
+        res.on('data', (c) => (data += c));
+        res.on('end', () => {
+          let json = null;
+          try { json = data ? JSON.parse(data) : null; } catch { /* 비-JSON 응답 */ }
+          resolve({ status: res.statusCode, json, raw: data });
+        });
+      }
+    );
+    req.on('error', reject);
+    req.on('timeout', () => req.destroy(new Error('toss api timeout')));
+    if (body) req.write(body);
+    req.end();
+  });
+}
+
+exports.tosslogin = onRequest(
+  { region: 'asia-northeast3', secrets: [TOSS_MTLS_CERT, TOSS_MTLS_KEY], cors: true, timeoutSeconds: 30, memory: '256MiB' },
+  async (req, res) => {
+    if (req.method !== 'POST') { res.status(405).json({ error: 'POST only' }); return; }
+    try {
+      const { authorizationCode, referrer } = req.body || {};
+      if (!authorizationCode || !referrer) { res.status(400).json({ error: 'authorizationCode·referrer가 필요해요' }); return; }
+
+      const cert = TOSS_MTLS_CERT.value();
+      const key = TOSS_MTLS_KEY.value();
+      if (!cert || !key) { res.status(501).json({ error: 'TOSS_MTLS 인증서 시크릿이 설정되지 않았어요' }); return; }
+
+      // 2) AccessToken 발급 (mTLS, 인가코드는 1회성·10분)
+      const tok = await tossApiRequest({
+        method: 'POST',
+        path: '/api-partner/v1/apps-in-toss/user/oauth2/generate-token',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ authorizationCode, referrer }),
+        cert, key,
+      });
+      const accessToken = tok.json && tok.json.success && tok.json.success.accessToken;
+      if (!accessToken) {
+        console.error('toss generate-token 실패', tok.status, tok.raw);
+        res.status(502).json({ error: '토스 토큰 교환에 실패했어요' }); return;
+      }
+
+      // 4) 사용자 정보 조회 → userKey (앱 단위 고유, 비암호화)
+      const me = await tossApiRequest({
+        method: 'GET',
+        path: '/api-partner/v1/apps-in-toss/user/oauth2/login-me',
+        headers: { Authorization: `Bearer ${accessToken}` },
+        cert, key,
+      });
+      const userKey = me.json && me.json.success && me.json.success.userKey;
+      if (!userKey) {
+        console.error('toss login-me 실패', me.status, me.raw);
+        res.status(502).json({ error: '토스 사용자 조회에 실패했어요' }); return;
+      }
+
+      // 5) Firebase 커스텀 토큰 — uid = toss_<userKey> → 클라에서 signInWithCustomToken → userdata/{uid} 동기화
+      const customToken = await admin.auth().createCustomToken(`toss_${userKey}`, { prov: 'toss' });
+      res.json({ customToken });
+    } catch (e) {
+      console.error('tosslogin 오류', e);
+      res.status(500).json({ error: '로그인 처리 중 오류가 발생했어요' });
+    }
   }
 );

@@ -128,6 +128,18 @@ export async function loginGoogle() {
     }
   }
 }
+/* ── 토스 로그인 (앱인토스) ── appLogin → 서버(/tosslogin) mTLS 교환 → 커스텀토큰 → signInWithCustomToken.
+   토스 브리지(window.__tossLogin, toss-miniapp/src/toss-login.ts)가 인가코드 획득·서버교환을 담당.
+   결과 사용자는 비익명(uid=toss_<userKey>)이라 기존 userdata/{uid} 동기화에 그대로 연결된다. */
+export async function loginToss() {
+  if (typeof window === 'undefined' || typeof window.__tossLogin !== 'function') {
+    throw new Error('토스 로그인은 토스 앱에서만 사용할 수 있어요');
+  }
+  if (!(await ensureFirebase())) throw new Error('계정 기능이 아직 준비되지 않았어요 (운영자 설정 대기 중)');
+  const customToken = await window.__tossLogin(); // appLogin → 서버교환 → 커스텀토큰
+  if (!customToken) throw new Error('토스 로그인을 취소했어요');
+  await authMod.signInWithCustomToken(auth, customToken);
+}
 export async function logoutGoogle() {
   if (auth) await authMod.signOut(auth);
 }

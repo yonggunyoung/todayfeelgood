@@ -4,9 +4,11 @@
 //   정책 준수: 보상은 'userEarnedReward'(완주) 때만. 한 번 호출 = 광고 한 번만(중복 노출 금지).
 import { loadFullScreenAd, showFullScreenAd } from '@apps-in-toss/web-framework';
 
-// TODO(실수익 전환): 사업자등록 + 콘솔 "보상형 광고그룹" 생성 후, 발급된 adGroupId로 교체.
-//   개발/검수 단계에서는 반드시 토스 공식 "테스트 광고 ID"를 써야 함(실제 ID로 테스트 시 정책 위반).
-const REWARD_AD_GROUP = 'ait-ad-test-rewarded-id';
+// 실제 보상형 광고그룹(레시피·게임_리워드) — 콘솔 발급 라이브 ID.
+//   ※ 테스트 ID(ait-ad-test-*)는 '출시 번들 금지' 정책이라 라이브 ID로 교체 완료.
+//      내부 테스트만 할 땐 로컬에서 잠깐 테스트 ID로 바꿔 쓰되, 그 상태로 검수요청은 금지.
+//   ※ 이 ID는 비밀이 아님(앱 번들에 그대로 실리는 클라이언트 식별자) — 공개 저장소 커밋 OK.
+const REWARD_AD_GROUP = 'ait.v2.live.fe5fa753c6f54b1c';
 
 declare global {
   interface Window {

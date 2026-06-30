@@ -10,9 +10,10 @@ import * as AIT from '@apps-in-toss/web-framework';
 //   (없으면 supported()=false 로 떨어져 배너를 만들지 않음 — 빌드/런타임 안전)
 const TossAds: any = (AIT as any).TossAds;
 
-// TODO(실수익 전환): 콘솔에서 "배너 광고그룹" 생성 후 발급된 adGroupId로 교체.
-//   개발/검수 단계에선 반드시 테스트 ID 사용(운영 ID로 테스트 시 정책 위반).
-const BANNER_AD_GROUP = 'ait-ad-test-banner-id'; // 배너(리스트형) 테스트 ID
+// 실제 배너 광고그룹(메인_배너, 문구 강조) — 콘솔 발급 라이브 ID.
+//   ※ 테스트 ID는 '출시 번들 금지' 정책이라 라이브 ID로 교체 완료.
+//   ※ 이 ID는 비밀이 아님(앱 번들에 실리는 클라이언트 식별자) — 공개 저장소 커밋 OK.
+const BANNER_AD_GROUP = 'ait.v2.live.bd0104ba0ca24dec';
 
 declare global {
   interface Window {

@@ -1738,7 +1738,7 @@ UI.openRecharge = (retry) => {
     <div class="card flat row" style="gap:12px">
       <div style="font-size:1.7rem">⭐</div>
       <div class="grow"><b>프리미엄 — 무제한 · 광고 없음</b>
-        <p class="hint" style="margin:2px 0 0">월 3,900원 (출시 준비 중)</p></div>
+        <p class="hint" style="margin:2px 0 0">월 3,900원</p></div>
       <button class="btn btn-sm btn-tint" onclick="UI.openPremium()">자세히</button>
     </div>
     <div class="btn-row"><button class="btn btn-block" onclick="UI.closeSheet()">다음에 할게요</button></div>`);
@@ -1856,7 +1856,7 @@ UI.adQuit = () => {
    배치: 홈 맨 아래 · 레시피 목록 아래 · 장보기 아래 (요리 진행·레시피 상세에는 두지 않는다)
    프리미엄(plan==='premium')은 모든 슬롯 미노출 */
 const HOUSE_ADS = [
-  { ico: '⭐', t: '냉비서 프리미엄', d: 'AI 무제한 · 광고 없음 · 월 3,900원 (준비 중)', act: 'UI.openPremium()' },
+  { ico: '⭐', t: '냉비서 프리미엄', d: 'AI 넉넉히(월 300회) · 광고 없음 · 월 3,900원', act: 'UI.openPremium()' },
   { ico: '📰', t: '냉장고 파먹기 매거진', d: '버리는 식비를 줄이는 부엌 지식 읽기', act: "window.open('https://yonggunyoung.github.io/todayfeelgood/blog/','_blank')" },
   { ico: '👨‍👩‍👧', t: '가족과 같이 쓰기', d: '코드 하나로 온 가족이 한 냉장고를 봐요', act: "UI.go('settings')" },
 ];
@@ -2105,7 +2105,7 @@ UI.openPremium = async () => {
     const prod = (list || [])[0];
     z.innerHTML = prod
       ? `<button class="btn btn-primary btn-block" id="pm-buy" onclick="UI.buyPremium('${esc(prod.sku)}')">${esc(prod.displayName)} — ${esc(prod.displayAmount)} 결제</button>`
-      : `<button class="btn btn-soft btn-block" disabled>상품 준비 중 — 콘솔에서 상품 등록·노출을 확인해 주세요</button>`;
+      : `<button class="btn btn-tint btn-block" onclick="UI.premiumInterest()">🔔 곧 다시 열려요 — 알림받기</button>`;
   } catch { const z = $('#pm-buyzone'); if (z) z.innerHTML = '<button class="btn btn-soft btn-block" disabled>상품을 불러오지 못했어요 — 잠시 후 다시</button>'; }
 };
 UI.buyPremium = async (sku) => {
@@ -3582,7 +3582,7 @@ function renderShopping() {
       <button class="btn btn-primary btn-block" onclick="UI.shopCommit()">✅ 구매한 ${done.length}개 냉장고로 옮기기</button>` : ''}
     <div class="shop-promo">
       <span class="sp-star">⭐</span>
-      <div class="grow"><b>냉비서 프리미엄</b><small>AI 무제한 · 광고 없음 · 월 3,900원 (준비 중)</small></div>
+      <div class="grow"><b>냉비서 프리미엄</b><small>AI 넉넉히 · 광고 없음 · 월 3,900원</small></div>
       <span class="sp-ad">AD</span>
     </div>
     ${adBanner('shopping')}`;
@@ -3765,7 +3765,7 @@ function renderSettings() {
       <p class="hint" style="margin:0 0 10px;color:var(--label)">${aiUnlimited() ? '⭐ 프리미엄 이용 중 — AI <b>월 300회</b>' : `이번 달 <b>${aiLeft().freeLeft}/${FREE_AI}회</b> 남음${aiLeft().credits ? ` · 충전권 ${aiLeft().credits}회` : ''}`}</p>
       <div class="row" style="gap:12px">
         <div style="font-size:1.5rem">⭐</div>
-        <div class="grow"><b>프리미엄 — 무제한 · 광고 없음</b><p class="hint" style="margin:2px 0 0">월 3,900원 (출시 준비 중)</p></div>
+        <div class="grow"><b>프리미엄 — 광고 없음 · AI 넉넉히</b><p class="hint" style="margin:2px 0 0">월 3,900원</p></div>
         <button class="btn btn-sm btn-tint" onclick="UI.openPremium()">자세히</button>
       </div>
     </div>` : `

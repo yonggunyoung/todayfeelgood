@@ -47,7 +47,7 @@ export const AI_FN = 'https://asia-northeast3-icebi-308e0.cloudfunctions.net/ai'
 export const TOSS = { rewardAdId: '', promotionId: '' };
 // 토스 로그인(appLogin+mTLS 백엔드)이 실제로 연결되면 true 로 — 그전엔 로그인 버튼을 숨겨
 //   검수 리뷰어가 '작동 안 하는 버튼'을 누르는 사고를 막는다(반려 방지).
-export const TOSS_LOGIN_LIVE = false;
+export const TOSS_LOGIN_LIVE = true;
 
 // ④ 쿠팡 파트너스 트래킹 ID — 장보기 "쿠팡" 버튼에 제휴 태그로 붙는다.
 //    설정에서 개별 ID를 넣으면 그게 우선한다(없으면 이 값 사용). 공정위 고지 문구가 함께 노출된다.

@@ -26,6 +26,7 @@ const DEFAULT = () => ({
   games: { best: {}, week: '', weekBest: {}, day: '', earned: 0 }, // 미니게임 기록 — 주간 리셋 승부욕
   adFreeUntil: 0,    // 포인트샵 "광고 없는 하루" 교환 시각
   planTrialUntil: 0, // 포인트샵 "프리미엄 맛보기" 만료 시각
+  premiumUntil: 0,   // ⭐ 프리미엄 30일 이용권 만료 시각 (토스 인앱결제)
   aiUse: { month: '', used: 0, credits: 0 }, // AI 사용 한도(클라 집계) — 월 무료 + 충전권. 프리미엄은 무제한
   onboarded: false,
   tutorialDone: false, // 첫 사용자 가이드 완료 여부
@@ -76,7 +77,7 @@ export function replaceState(remote) {
   const keepCode = S.settings.spaceCode;
   const keepPin = S.settings.adminPin;
   for (const k of ['meta', 'settings', 'pantry', 'leftovers', 'shopping', 'myRecipes', 'favs', 'ratings', 'ledger',
-    'decor', 'referral', 'plan', 'points', 'games', 'adFreeUntil', 'planTrialUntil', 'onboarded', 'tutorialDone', 'purposeAsked']) {
+    'decor', 'referral', 'plan', 'points', 'games', 'adFreeUntil', 'planTrialUntil', 'premiumUntil', 'onboarded', 'tutorialDone', 'purposeAsked']) {
     if (remote[k] !== undefined) S[k] = remote[k];
   }
   S.settings.aiKey = keepKey;

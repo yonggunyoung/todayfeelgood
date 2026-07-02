@@ -66,7 +66,7 @@ export function refund(p, label) {
    프리미엄/맛보기는 무제한. localStorage 기반이라 강제력은 약하지만(어뷰징은 Anthropic 월 한도·CF 레이트리밋으로 차단),
    일반 사용자에겐 자연스러운 무료→충전→구독 동선을 만든다. */
 export const FREE_AI = 5; // 매달 무료 AI 횟수 (영수증 스캔·유튜브 정리 합산)
-export const aiUnlimited = () => S.plan === 'premium' || (S.planTrialUntil || 0) > Date.now();
+export const aiUnlimited = () => S.plan === 'premium' || (S.premiumUntil || 0) > Date.now() || (S.planTrialUntil || 0) > Date.now();
 function aiRoll() {
   if (!S.aiUse) S.aiUse = { month: '', used: 0, credits: 0 };
   const m = today().slice(0, 7); // YYYY-MM
@@ -105,7 +105,7 @@ export const SHOP = [
 ];
 
 export const adFreeNow = () =>
-  S.plan === 'premium' || (S.adFreeUntil || 0) > Date.now() || (S.planTrialUntil || 0) > Date.now();
+  S.plan === 'premium' || (S.premiumUntil || 0) > Date.now() || (S.adFreeUntil || 0) > Date.now() || (S.planTrialUntil || 0) > Date.now();
 
 /* 미니게임 기록 — 역대 최고 + 주간 최고(월요일 리셋, "이번 주 기록 갱신" 승부욕) */
 function weekKey() {

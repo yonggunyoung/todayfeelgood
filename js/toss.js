@@ -55,3 +55,12 @@ export async function tossGivePoints(reason) {
     return false;
   }
 }
+
+/* 인앱 결제(프리미엄 30일권) — 토스 빌드의 브리지(window.__tossIAP, toss-miniapp/src/toss-iap.ts)를 사용.
+   반환: true(결제 완료) | false(취소/미지원 → 호출측이 안내). 웹/브리지 없음 = false. */
+export function tossPurchase(productId) {
+  if (typeof window !== 'undefined' && window.__tossIAP && typeof window.__tossIAP.purchase === 'function') {
+    return window.__tossIAP.purchase(productId);
+  }
+  return Promise.resolve(false);
+}

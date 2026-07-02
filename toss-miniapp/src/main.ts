@@ -16,6 +16,8 @@ import './toss-ads';
 import './toss-banner';
 // 토스 로그인 브리지 등록(side-effect): window.__tossLogin 노출 → js/sync.js 가 사용.
 import './toss-login';
+// 인앱 결제 브리지 등록(side-effect): window.__tossIAP 노출 → js/toss.js tossPurchase 가 사용.
+import './toss-iap';
 
 declare global {
   interface Window {

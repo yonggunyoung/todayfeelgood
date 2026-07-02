@@ -7,7 +7,7 @@ import { scanImage, extractRecipeFromYouTube } from './ai.js';
 import { initSync, sync, makeSpaceCode, setSpaceCode, loginGoogle, loginToss, logoutGoogle, syncAvailable, submitScore, topScores, submitRating, fetchRecipeStats } from './sync.js';
 import { initAnalytics, track, trackScreen } from './analytics.js';
 import { enablePush, pushSupported, pushOn, pushPermission } from './push.js';
-import { AI_ENDPOINT, COUPANG_TAG, AI_FN } from './config.js';
+import { AI_ENDPOINT, COUPANG_TAG, AI_FN, TOSS } from './config.js';
 import { canListen, speak, stopSpeak, startListen, stopListen, isListening, parseCommand } from './voice.js';
 import { earn, bonus, spend, refund, EARN, earnedToday, SHOP, adFreeNow, gameBest, aiLeft, aiConsume, aiGrant, aiUnlimited, FREE_AI } from './points.js';
 import { initGames, openGames, GAMES, gameFresh, gameVoice, gameVoicePass, gameDouble, gameGwangclick, setGameDiff } from './games.js';
@@ -15,7 +15,7 @@ import { gameDefense, defBuy, defStart, defSpeed, defPick, defRevive, defGiveUp,
 import { gamePuzzle } from './game-puzzle.js';
 import { gameGomoku, gomokuUndo, gomokuHintAd } from './game-gomoku.js';
 import { gameQuiz, quizPick, quizNext, quizReveal, quizRevealAll, quizFinish } from './game-quiz.js';
-import { tossRewardedAd } from './toss.js';
+import { tossRewardedAd, tossPurchase } from './toss.js';
 
 let tab = 'home';
 let pantryView = 'shelf';
@@ -1739,7 +1739,7 @@ UI.openRecharge = (retry) => {
       <div style="font-size:1.7rem">⭐</div>
       <div class="grow"><b>프리미엄 — 무제한 · 광고 없음</b>
         <p class="hint" style="margin:2px 0 0">월 3,900원 (출시 준비 중)</p></div>
-      <button class="btn btn-sm btn-tint" onclick="UI.premiumInterest()">알림받기</button>
+      <button class="btn btn-sm btn-tint" onclick="UI.openPremium()">자세히</button>
     </div>
     <div class="btn-row"><button class="btn btn-block" onclick="UI.closeSheet()">다음에 할게요</button></div>`);
 };
@@ -1856,7 +1856,7 @@ UI.adQuit = () => {
    배치: 홈 맨 아래 · 레시피 목록 아래 · 장보기 아래 (요리 진행·레시피 상세에는 두지 않는다)
    프리미엄(plan==='premium')은 모든 슬롯 미노출 */
 const HOUSE_ADS = [
-  { ico: '⭐', t: '냉비서 프리미엄', d: 'AI 무제한 · 광고 없음 · 월 3,900원 (준비 중)', act: 'UI.premiumInterest()' },
+  { ico: '⭐', t: '냉비서 프리미엄', d: 'AI 무제한 · 광고 없음 · 월 3,900원 (준비 중)', act: 'UI.openPremium()' },
   { ico: '📰', t: '냉장고 파먹기 매거진', d: '버리는 식비를 줄이는 부엌 지식 읽기', act: "window.open('https://yonggunyoung.github.io/todayfeelgood/blog/','_blank')" },
   { ico: '👨‍👩‍👧', t: '가족과 같이 쓰기', d: '코드 하나로 온 가족이 한 냉장고를 봐요', act: "UI.go('settings')" },
 ];
@@ -2031,6 +2031,54 @@ UI.premiumInterest = () => {
   S.premiumWish = true;
   save({ silent: true });
   toast('등록 완료! 프리미엄 출시 때 가장 먼저 알려드릴게요 🙌');
+};
+
+/* ── ⭐ 프리미엄 30일 이용권 (토스 인앱결제) ──
+   구독이 아니라 1회성 30일권: 자동갱신·해지 관리가 없어 단순하고, 만료 전 재구매 시 기간 누적.
+   결제는 토스 안에서만(브리지 __tossIAP). 콘솔 상품 ID = config.TOSS.premiumProductId('premium30'). */
+const premiumDays = () => Math.max(0, Math.ceil(((S.premiumUntil || 0) - Date.now()) / 86400e3));
+UI.openPremium = () => {
+  const on = (S.premiumUntil || 0) > Date.now();
+  const inToss = typeof window !== 'undefined' && window.__TOSS__;
+  const canBuy = inToss && window.__tossIAP && window.__tossIAP.supported && window.__tossIAP.supported();
+  openSheet(`
+    <h2>⭐ 냉비서 프리미엄</h2>
+    ${on ? `<div class="card flat" style="text-align:center;padding:16px"><b style="color:var(--green)">이용 중 — ${premiumDays()}일 남음</b><p class="hint" style="margin:4px 0 0">만료 전에 다시 구매하면 기간이 이어져요</p></div>` : ''}
+    <div class="card flat">
+      <div class="p-row"><span>🤖</span><div class="grow"><b>AI 무제한</b><small>영수증 스캔 · 빠른 레시피 횟수 제한 없음</small></div></div>
+      <div class="p-row"><span>🧘</span><div class="grow"><b>광고 없음</b><small>배너·보상형 대기 없이 바로바로</small></div></div>
+      <div class="p-row"><span>💚</span><div class="grow"><b>개발 응원</b><small>냉비서가 계속 좋아지는 힘이 돼요</small></div></div>
+    </div>
+    <div class="btn-row" style="flex-direction:column">
+      ${canBuy
+        ? `<button class="btn btn-primary btn-block" id="pm-buy" onclick="UI.buyPremium()">토스로 결제 — 30일 3,900원</button>`
+        : inToss
+          ? `<button class="btn btn-soft btn-block" disabled>결제 오픈 준비 중 — 곧 열려요</button>
+             <button class="btn btn-tint btn-block" onclick="UI.premiumInterest()">🔔 열리면 가장 먼저 알림받기</button>`
+          : `<button class="btn btn-tint btn-block" onclick="UI.premiumInterest()">🔔 출시 알림받기 (토스 앱에서 먼저 열려요)</button>`}
+      <button class="btn btn-block" onclick="UI.closeSheet()">닫기</button>
+    </div>
+    <p class="hint" style="text-align:center;margin-top:6px">1회 결제 30일 적용 · 자동갱신 없음 — 부담 없이 써보세요</p>`);
+};
+UI.buyPremium = async () => {
+  const b = $('#pm-buy');
+  if (b) { b.disabled = true; b.textContent = '토스 결제창 여는 중…'; }
+  try {
+    const ok = await tossPurchase((TOSS && TOSS.premiumProductId) || 'premium30');
+    if (ok === true) {
+      S.premiumUntil = Math.max(Date.now(), S.premiumUntil || 0) + 30 * 86400e3; // 만료 전 재구매 = 누적
+      save();
+      track('premium_purchase', { days: 30 });
+      toast('⭐ 프리미엄 30일 시작! 광고 없이 무제한으로 쓰세요');
+      UI.openPremium(); renderTop(); render();
+      return;
+    }
+    toast('결제가 완료되지 않았어요 — 언제든 다시 시도할 수 있어요');
+  } catch (e) {
+    toast((e && e.message) || '결제에 실패했어요 — 잠시 후 다시 시도해 주세요');
+  }
+  const b2 = $('#pm-buy');
+  if (b2) { b2.disabled = false; b2.textContent = '토스로 결제 — 30일 3,900원'; }
 };
 
 /* ── 레시피 ─────────────────────────────── */
@@ -3669,7 +3717,7 @@ function renderSettings() {
       <div class="row" style="gap:12px">
         <div style="font-size:1.5rem">⭐</div>
         <div class="grow"><b>프리미엄 — 무제한 · 광고 없음</b><p class="hint" style="margin:2px 0 0">월 3,900원 (출시 준비 중)</p></div>
-        <button class="btn btn-sm btn-tint" onclick="UI.premiumInterest()">알림받기</button>
+        <button class="btn btn-sm btn-tint" onclick="UI.openPremium()">자세히</button>
       </div>
     </div>` : `
     <div class="card flat">

@@ -174,7 +174,9 @@ function attachSheetDrag() {
   let startY = 0, dy = 0, dragging = false, armed = false;
   const onDown = (e) => {
     // 기능 요소·게임 조작 영역에서는 시작하지 않음 (버튼/입력/링크/캔버스/iframe 등)
-    if (e.target.closest('button, input, textarea, select, a, label, iframe, canvas, [onclick], .g-track')) return;
+    // ※ 반드시 "시트 내부" 요소만 검사 — 부모 .overlay에 onclick이 있어 시트 밖까지 보면 전부 걸려 드래그가 죽는다.
+    const t = e.target.closest('button, input, textarea, select, a, label, iframe, canvas, [onclick], .g-track');
+    if (t && t !== sheet && sheet.contains(t)) return;
     dragging = true;
     armed = !!e.target.closest('.grip, .gx-bar'); // 핸들은 즉시 드래그, 빈 영역은 조건 충족 시
     startY = e.clientY; dy = 0;
@@ -2235,28 +2237,51 @@ function chordSafe(f) { try { import('./games.js').then((g) => g.chord && g.chor
 
 let ladCtx = null;
 UI.menuLadder = () => {
-  const pool = menuCandidates(8);
+  const pool = menuCandidates(24); // 추천 전체에서 폭넓게 (요청: 모두 가능하게)
   if (pool.length < 2) { toast('추천 레시피가 아직 부족해요 — 재료를 담으면 늘어나요'); return; }
-  ladCtx = { pool, sel: pool.slice(0, Math.min(3, pool.length)).map((p) => p.id) };
+  ladCtx = { pool, sel: pool.slice(0, Math.min(3, pool.length)).map((p) => p.id), custN: 0 };
   renderLadderSetup();
 };
-function renderLadderSetup() {
+function ladPickChips() {
   const { pool, sel } = ladCtx;
+  return pool.map((p) => `<button class="chip ${sel.includes(p.id) ? 'have' : ''}" onclick="UI.ladTogglePick('${p.id}')">${esc(p.title)}</button>`).join('');
+}
+// 선택 토글은 칩 영역만 부분 갱신 — 시트 전체 재렌더로 인한 깜박임 제거
+function ladSyncSetup() {
+  const w = $('#lad-picks'); if (w) w.innerHTML = ladPickChips();
+  const b = $('#lad-go'); if (b) b.textContent = `사다리 만들기 (후보 ${ladCtx.sel.length}개)`;
+}
+function renderLadderSetup() {
   openSheet(`
     <h2>🪜 사다리 타기 — 메뉴 결정전</h2>
-    <p class="sub">후보를 2~4개 고르세요. 가족이 돌아가며 출발 번호를 찍으면 오늘 메뉴 확정!</p>
-    <div class="lad-picks">${pool.map((p) => `<button class="chip ${sel.includes(p.id) ? 'have' : ''}" onclick="UI.ladTogglePick('${p.id}')">${esc(p.title)}</button>`).join('')}</div>
+    <p class="sub">후보 2~4개 — 목록에서 고르거나 직접 입력하세요. 가족이 돌아가며 출발 번호를 찍으면 오늘 메뉴 확정!</p>
+    <div class="lad-custom">
+      <input id="lad-cust" placeholder="직접 입력 (예: 배달 치킨, 외식)" onkeydown="if(event.key==='Enter'){event.preventDefault();UI.ladAddCustom();}" />
+      <button class="btn btn-tint" onclick="UI.ladAddCustom()">＋ 추가</button>
+    </div>
+    <div class="lad-picks" id="lad-picks">${ladPickChips()}</div>
     <div class="btn-row" style="flex-direction:column">
-      <button class="btn btn-primary btn-block" onclick="UI.ladStart()">사다리 만들기 (후보 ${sel.length}개)</button>
+      <button class="btn btn-primary btn-block" id="lad-go" onclick="UI.ladStart()">사다리 만들기 (후보 ${ladCtx.sel.length}개)</button>
       <button class="btn btn-block" onclick="UI.closeSheet()">닫기</button>
     </div>`);
 }
+UI.ladAddCustom = () => {
+  const inp = $('#lad-cust');
+  const v = (inp && inp.value || '').trim();
+  if (!v) { toast('메뉴 이름을 입력해 주세요'); return; }
+  if (ladCtx.sel.length >= 4) { toast('후보는 최대 4개까지예요 — 하나를 빼고 추가해 주세요'); return; }
+  const id = 'cust' + (++ladCtx.custN);
+  ladCtx.pool.unshift({ id, title: v.slice(0, 20), custom: true });
+  ladCtx.sel.push(id);
+  if (inp) inp.value = '';
+  ladSyncSetup();
+};
 UI.ladTogglePick = (id) => {
   const s = ladCtx.sel; const i = s.indexOf(id);
   if (i >= 0) { if (s.length > 2) s.splice(i, 1); else toast('후보는 최소 2개 필요해요'); }
   else if (s.length < 4) s.push(id);
   else toast('후보는 최대 4개까지예요');
-  renderLadderSetup();
+  ladSyncSetup();
 };
 UI.ladStart = () => {
   const { pool, sel } = ladCtx;
@@ -2315,7 +2340,9 @@ UI.ladRun = (startCol) => {
     const m = $(`#lad-m${c}`); if (m) m.classList.add('win');
     chordSafe([523, 659, 784, 1047]);
     const d = $('#lad-done');
-    if (d) d.innerHTML = `<button class="btn btn-accent btn-block" onclick="UI.openRecipe('${win.id}')">🎉 오늘 메뉴는 "${esc(win.title)}" — 레시피 보기</button>`;
+    if (d) d.innerHTML = win.custom
+      ? `<div class="btn btn-accent btn-block" style="pointer-events:none">🎉 오늘 메뉴는 "${esc(win.title)}" — 맛있게 드세요!</div>`
+      : `<button class="btn btn-accent btn-block" onclick="UI.openRecipe('${win.id}')">🎉 오늘 메뉴는 "${esc(win.title)}" — 레시피 보기</button>`;
   }, 1900);
 };
 UI.toggleFav = (id) => {
@@ -3347,7 +3374,15 @@ const shopSrcOf = (x) => x.src || srcFromReason(x.reason);
 UI.addShopping = (name, silent = false, reason = '', src = '') => {
   const s = src || srcFromReason(reason || '레시피 재료');
   const ex = S.shopping.find((x) => x.name === name && !x.done);
-  if (ex) { // 이미 있으면 더 시급한 출처로 승격(out>low>recipe>manual)
+  if (ex) {
+    if (!silent) { // 직접 탭한 경우: 다시 누르면 담기 취소 (실수로 눌렀을 때 복구)
+      S.shopping = S.shopping.filter((x) => x !== ex);
+      save();
+      toast(`🧺 ${name} 담기를 취소했어요`);
+      render();
+      return;
+    }
+    // 자동 담기(요리 흐름 등)는 취소 대신 더 시급한 출처로 승격(out>low>recipe>manual)
     const rank = { out: 3, low: 2, recipe: 1, manual: 0 };
     if ((rank[s] || 0) > (rank[shopSrcOf(ex)] || 0)) { ex.src = s; ex.reason = reason || SHOP_SRC[s].label; }
   } else {

@@ -419,9 +419,23 @@ export function gameGwangclick() {
     </div>`);
   const f = document.getElementById('gclash-if');
   if (f) f.addEventListener('load', () => {
-    try { // 부모(토스 빌드)의 실광고 브리지를 자식에 노출 — 광클대전 광고 어댑터가 활용 가능
-      if (typeof window.__tossRewardedAd === 'function') f.contentWindow.__tossRewardedAd = window.__tossRewardedAd;
-      if (window.__TOSS__) f.contentWindow.__TOSS__ = true;
+    try {
+      const w = f.contentWindow;
+      if (!w) return;
+      if (window.__TOSS__) w.__TOSS__ = true;
+      // ① 실광고 연결 — 광클대전의 광고 어댑터는 AD.enabled=false면 광고 없이 즉시 보상하고,
+      //    AD.webRewarded(함수)가 있으면 그걸 실광고 경로로 쓴다(자체 설계 훅).
+      //    냉비서의 토스 보상형 브리지를 그 훅에 꽂으면 → 광클대전 안 "광고 보고 2배"도 진짜 광고 + 수익.
+      if (typeof window.__tossRewardedAd === 'function' && w.AD) {
+        w.AD.enabled = true;
+        w.AD.webRewarded = () => window.__tossRewardedAd().then((r) => r === true);
+      }
+      // ② 냉비서 유저 특권 — 떡밥(주제) 투척 자유화: 투척권 무료 + 일일 상한 확대.
+      //    (런타임 주입이라 ddukkit.com 단독 배포본에는 영향 없음)
+      if (w.GCProp && w.GCProp.DEFAULTS) {
+        w.GCProp.DEFAULTS.ticketCost = 0;
+        w.GCProp.DEFAULTS.dailyCap = 30;
+      }
     } catch { /* noop — 동일 출처가 아니면 무시 */ }
   });
 }

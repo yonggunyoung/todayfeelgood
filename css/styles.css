@@ -143,7 +143,10 @@ a { color: var(--blue); text-decoration: none; }
 .roulette b { font-size: 1.18rem; font-weight: 900; color: var(--green-ink); text-align: center; min-height: 1.5em; }
 
 /* ── 🪜 사다리 타기 ── */
-.lad-picks { display: flex; flex-wrap: wrap; gap: 2px; margin: 8px 0 4px; }
+.lad-custom { display: flex; gap: 8px; margin: 8px 0 2px; }
+.lad-custom input { flex: 1; }
+.lad-custom .btn { white-space: nowrap; }
+.lad-picks { display: flex; flex-wrap: wrap; gap: 2px; margin: 8px 0 4px; max-height: 168px; overflow-y: auto; align-content: flex-start; }
 .lad-wrap { background: var(--card); border: 1px solid var(--hairline); border-radius: 20px; padding: 12px 8px; box-shadow: var(--shadow-card); }
 .lad-cols { display: grid; gap: 4px; }
 .lad-startbtn {

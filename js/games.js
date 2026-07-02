@@ -45,6 +45,8 @@ export const GAMES = [
     desc: '슬라임 알로 AI와 5목 대결 — 광고로 한 수 무르기', open: 'UI.gameGomoku()' },
   { id: 'voice', emoji: '🎤', name: '외쳐! 재료', tag: '음성', needVoice: true,
     desc: '재료 이름을 빨리 외치기 — 8문제 스피드런', open: 'UI.gameVoice()' },
+  { id: 'click', emoji: '⚡', name: '광클! 재료 담기', tag: '스피드',
+    desc: '10초 동안 미친 듯이 탭! 빠를수록 콤보 보너스', open: 'UI.gameClick()' },
 ];
 
 // 공통 난이도 (하/중/상) — 게임마다 속도·시간·물량에 반영
@@ -83,12 +85,12 @@ export function openGames() {
     <p class="sub">끓는 동안 한 판 — 점수가 포인트로 (오늘 보상 ${left}판 남음 · 광고 보면 2배)</p>
     <p class="hint" style="text-align:center;margin:0 0 6px">난이도는 각 게임 화면에서 조절할 수 있어요</p>
     <div class="g-grid">${cards}</div>
-    <p class="hint" style="text-align:center;margin-top:10px">주간 기록은 월요일마다 리셋 — 이번 주 왕좌를 지키세요 👑</p>
+    <p class="hint" style="text-align:center;margin-top:10px">주간 기록은 월요일마다 리셋 — 이번 주 왕좌를 지키세요 👑<br>가족을 초대해 랭킹 대결로 <b>설거지 당번</b>을 정해보세요 🍽️</p>
     <div class="btn-row"><button class="btn btn-block" onclick="UI.closeSheet()">닫기</button></div>`);
 }
 
 /* ── 공통: 판 종료 → 점수/기록/포인트/광고 2배/랭킹 제출 ── */
-const PTS_DIV = { fresh: 25, voice: 10, defense: 70, puzzle: 90, quiz: 14 }; // 점수→포인트 환산 (수익성 보정)
+const PTS_DIV = { fresh: 25, voice: 10, defense: 70, puzzle: 90, quiz: 14, click: 20 }; // 점수→포인트 환산 (수익성 보정)
 export function finishGame(game, title, score, scoreLabel, replayFn, { extra = '' } = {}) {
   stopListen();
   const rec = recordScore(game, score);
@@ -133,9 +135,37 @@ export function gameDouble(p) {
   });
 }
 
-/* ── 인게임 광고(스테이지 오버레이, 시트 유지) → 이어하기/아이템 (전 게임 공용) ── */
+/* ── 인게임 광고(스테이지 오버레이, 시트 유지) → 이어하기/아이템 (전 게임 공용) ──
+   토스 안: 실제 보상형 광고(전면). 시작 전에 "중간에 나가면 보상 없음"을 고지하고 선택권을 준다.
+           가짜 카운트다운("냉비서 프리미엄이 곧…")은 토스에서 절대 뜨지 않는다.
+   웹:     하우스 15초 카운트다운(기존 그대로 — AdFit 교체 자리). */
 export function inStageAd(stageEl, label, onReward, onSkip) {
   if (!stageEl) { onSkip && onSkip(); return; }
+  if (typeof window !== 'undefined' && window.__TOSS__) {
+    const ov = document.createElement('div'); ov.className = 'draft-overlay';
+    ov.innerHTML = `<div class="draft-in"><div class="draft-title">📺 광고 보기</div><p>${label}</p>
+      <p class="hint" style="margin:6px 0 10px">광고는 전체 화면으로 재생돼요.<br><b>중간에 나가면 보상을 받을 수 없어요.</b></p>
+      <button class="gx-btn-go" id="tad-go">광고 보고 받기</button>
+      <button class="qz-skip" id="tad-no">안 볼래요 (보상 없음)</button></div>`;
+    stageEl.appendChild(ov);
+    let done = false;
+    const fin = (reward, msg) => {
+      if (done) return; done = true; ov.remove();
+      if (msg) ui.toast(msg);
+      (reward ? onReward : onSkip) && (reward ? onReward() : onSkip());
+    };
+    ov.querySelector('#tad-no').onclick = () => fin(false);
+    ov.querySelector('#tad-go').onclick = () => {
+      const b = ov.querySelector('#tad-go'); b.disabled = true; b.textContent = '광고 불러오는 중…';
+      const fn = window.__tossRewardedAd;
+      (typeof fn === 'function' ? fn() : Promise.resolve(null)).then((r) => {
+        if (r === true) fin(true, '✅ 광고 시청 완료 — 보상이 적용됐어요');
+        else if (r === false) fin(false, '광고를 중간에 나가 보상을 받지 못했어요');
+        else fin(false, '지금은 광고를 불러오지 못했어요 — 잠시 후 다시 시도해 주세요');
+      });
+    };
+    return;
+  }
   const ov = document.createElement('div'); ov.className = 'draft-overlay';
   ov.innerHTML = `<div class="draft-in"><div class="draft-title">📺 광고</div><p>${label}</p>
     <div class="adx-stage" style="margin:6px 0 10px"><div class="adx-slime">🧊</div><b>냉비서 프리미엄이 곧</b></div>
@@ -363,4 +393,56 @@ function endVoice() {
   clearVoice();
   const score = Math.max(0, Math.round((60 - secs) * 2)); // 60초 예산 — 빠를수록 고득점
   finishGame('voice', '🎤 외쳐! 재료', score, `${secs.toFixed(1)}초 · ${score}점`, 'UI.gameVoice()');
+}
+
+/* ══ C. 광클! 재료 담기 — 10초 연타 스피드 (첫 탭에 시작) ══
+   빠른 연속 탭(간격이 짧을수록)이 콤보를 쌓아 탭당 점수가 커진다. 난이도가 높을수록 콤보 유지 기준이 빡빡. */
+const CLICK_GAP = { easy: 360, normal: 280, hard: 215 }; // 콤보 유지 최대 간격(ms)
+let cg = null;
+export function gameClick() {
+  cg = { taps: 0, score: 0, combo: 0, last: 0, t0: 0, iv: null, item: pickItem(), done: false };
+  ui.openSheet(`
+    <div class="g-stage" id="gc-stage">
+      <div class="g-hud"><span id="gc-time">10.0초</span><b id="gc-score">0</b><span id="gc-heat" class="g-combo"></span></div>
+      ${gameDiffRow('gameClick')}
+      <p class="hint" style="text-align:center;margin:4px 0 8px">10초 동안 <b>미친 듯이 탭</b>! 간격이 짧을수록 콤보 보너스</p>
+      <button class="g-clickpad" id="gc-pad"><span id="gc-emoji">${cg.item.emoji}</span><b id="gc-label">탭해서 시작!</b></button>
+      <p class="hint" style="text-align:center;margin-top:8px">가족·친구와 최고 기록 대결해 보세요 🏆</p>
+    </div>`);
+  document.getElementById('gc-pad')?.addEventListener('pointerdown', clickTap, { passive: true });
+}
+function clickTap() {
+  if (!cg || cg.done) return;
+  const now = performance.now();
+  if (!cg.t0) { // 첫 탭 — 타이머 시작
+    cg.t0 = now;
+    cg.iv = setInterval(() => {
+      const el = document.getElementById('gc-time');
+      if (!cg || !el || !el.isConnected) { if (cg) { clearInterval(cg.iv); cg = null; } return; }
+      const left = Math.max(0, 10 - (performance.now() - cg.t0) / 1000);
+      el.textContent = left.toFixed(1) + '초';
+      if (left <= 0) endClick();
+    }, 100);
+  }
+  const gap = now - (cg.last || now);
+  cg.combo = cg.last && gap <= (CLICK_GAP[getDiff()] || 280) ? cg.combo + 1 : 1;
+  cg.last = now;
+  cg.taps += 1;
+  const mult = 1 + Math.min(4, Math.floor(cg.combo / 10)); // 콤보 10마다 탭당 +1 (최대 5)
+  cg.score += mult;
+  if (cg.taps % 14 === 0) { cg.item = pickItem(); const e = document.getElementById('gc-emoji'); if (e) e.textContent = cg.item.emoji; }
+  if (cg.taps % 10 === 0) { beep(880 + mult * 120, 0.05, 'square', 0.1); buzz(8); }
+  const s = document.getElementById('gc-score'); if (s) s.textContent = cg.score;
+  const h = document.getElementById('gc-heat'); if (h) h.textContent = mult > 1 ? `🔥 ×${mult}` : '';
+  const l = document.getElementById('gc-label'); if (l) l.textContent = `${cg.taps}탭`;
+  const pad = document.getElementById('gc-pad'); if (pad) { pad.classList.remove('pop'); void pad.offsetWidth; pad.classList.add('pop'); }
+}
+function endClick() {
+  if (!cg || cg.done) return;
+  cg.done = true;
+  clearInterval(cg.iv);
+  const { taps, score } = cg;
+  cg = null;
+  chord([659, 784, 1047]);
+  finishGame('click', '⚡ 광클! 재료 담기', score, `${taps}탭 · ${score}점`, 'UI.gameClick()');
 }

@@ -8,8 +8,8 @@ import { enemySprite, fridgeSprite, itemSprite, drawSprite } from './pixel.js';
 // ── 밸런스: 100+ 웨이브용 완만한 곡선. 초반은 아주 너그럽게(잘 안 죽음), 후반은 업그레이드로 따라잡기. ──
 const BALANCE = {
   enemy: {
-    baseHP: 10, hpGrow: 1.145, speedBase: 16, speedGrow: 1.015, speedCap: 48,
-    countBase: 4, countGrow: 1.28, countCap: 40,
+    baseHP: 10, hpGrow: 1.155, speedBase: 16, speedGrow: 1.017, speedCap: 56,
+    countBase: 4, countGrow: 1.30, countCap: 48,
     // dmg=냉장고에 닿을 때 깎는 신선도 (작게 — 누적 실수만 위험). from=등장 시작 웨이브.
     // elem=속성(상극 시스템): mold곰팡이 / bug벌레 / frozen냉동 / waste음식물 / bone뼈
     types: {
@@ -58,8 +58,8 @@ const PLAY = { W: 440, H: 820 };
 // 난이도 (하/중/상) — 적 HP·속도·물량·침투피해·코인·어픽스 확률 배수
 const DIFF = {
   easy:   { key: 'easy', name: '하', sub: '느긋하게', hp: 0.8, spd: 0.9, count: 0.85, dmg: 0.7, coin: 1.2, affix: 0.5, color: '#5ef0b0' },
-  normal: { key: 'normal', name: '중', sub: '적당히', hp: 1.0, spd: 1.0, count: 1.0, dmg: 1.0, coin: 1.0, affix: 1.0, color: '#ffe04a' },
-  hard:   { key: 'hard', name: '상', sub: '살벌하게', hp: 1.5, spd: 1.18, count: 1.2, dmg: 1.45, coin: 0.85, affix: 1.7, color: '#ff4d6a' },
+  normal: { key: 'normal', name: '중', sub: '적당히', hp: 1.1, spd: 1.05, count: 1.05, dmg: 1.1, coin: 1.0, affix: 1.1, color: '#ffe04a' },
+  hard:   { key: 'hard', name: '상', sub: '살벌하게', hp: 1.95, spd: 1.32, count: 1.5, dmg: 1.9, coin: 0.8, affix: 2.4, color: '#ff4d6a' },
 };
 
 // 몬스터 속성(어픽스) — 처치 난도·다양성↑ (웨이브·난이도 따라 부여 확률↑)
@@ -621,12 +621,32 @@ function loop(now) {
   D.raf = requestAnimationFrame(loop);
 }
 
-/* ── 인게임 광고(스테이지 오버레이 — 캔버스 유지) → 아이템/보상 ── */
+/* ── 인게임 광고(스테이지 오버레이 — 캔버스 유지) → 아이템/보상 ──
+   토스 안: 실제 보상형 광고. 시작 전 "중간에 나가면 보상 없음" 고지 + 선택권.
+   웹:     "잠깐의 응원" 대기 카운트다운(기존 그대로). */
 function stageAd(label, onReward, secs = 15) {
   D.running = false; cancelAnimationFrame(D.raf); clearInterval(D._adTimer);
   D._adReward = onReward;
   const stage = D.canvas.parentElement;
   const ov = document.createElement('div'); ov.className = 'draft-overlay'; ov.id = 'def-ad';
+  if (typeof window !== 'undefined' && window.__TOSS__) {
+    ov.innerHTML = `<div class="draft-in">
+      <div class="draft-title">📺 광고 보기</div><p>${label}</p>
+      <p class="hint" style="margin:6px 0 10px">광고는 전체 화면으로 재생돼요.<br><b>중간에 나가면 보상을 받을 수 없어요.</b></p>
+      <button class="gx-btn-go" id="def-adbtn">광고 보고 받기</button>
+      <button class="qz-skip" onclick="UI.defAdSkip()">안 볼래요 (보상 없음)</button></div>`;
+    stage.appendChild(ov);
+    ov.querySelector('#def-adbtn').onclick = () => {
+      const b = document.getElementById('def-adbtn'); if (b) { b.disabled = true; b.textContent = '광고 불러오는 중…'; }
+      const fn = window.__tossRewardedAd;
+      (typeof fn === 'function' ? fn() : Promise.resolve(null)).then((r) => {
+        const t = gameUI()?.toast || (() => {});
+        if (r === true) { t('✅ 광고 시청 완료 — 보상이 적용됐어요'); UI_defAdDone(); }
+        else { t(r === false ? '광고를 중간에 나가 보상을 받지 못했어요' : '지금은 광고를 불러오지 못했어요 — 잠시 후 다시 시도해 주세요'); defAdSkip(); }
+      });
+    };
+    return;
+  }
   ov.innerHTML = `<div class="draft-in">
     <div class="draft-title">✨ 잠깐의 응원</div><p>${label}</p>
     <div class="adx-stage" style="margin:8px 0 10px"><div class="adx-slime">🧊</div><b>냉비서와 함께 — 잠시 기다려 주세요</b></div>

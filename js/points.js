@@ -9,8 +9,8 @@ export const EARN = {
   cook:     { p: 10, cap: 3,  label: '요리 완료',       emoji: '🍳' },
   rescue:   { p: 20, cap: 3,  label: '임박 재료 구출',  emoji: '🚑' },
   leftover: { p: 15, cap: 3,  label: '잔반 해결',       emoji: '🥡' },
-  ad:       { p: 3,  cap: 3,  label: '광고 시청 보너스', emoji: '📺' },
-  game:     { p: 0,  cap: 5,  label: '미니게임',        emoji: '🎮' }, // p는 점수 기반 가변, cap은 보상 판수
+  ad:       { p: 6,  cap: 4,  label: '광고 시청 보너스', emoji: '📺' }, // 실광고(수익 발생) 완주 보상 — 합리적 상향
+  game:     { p: 0,  cap: 6,  label: '미니게임',        emoji: '🎮' }, // p는 점수 기반 가변, cap은 보상 판수
 };
 
 const today = () => new Date().toISOString().slice(0, 10);

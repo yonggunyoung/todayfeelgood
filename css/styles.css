@@ -108,6 +108,19 @@ a { color: var(--blue); text-decoration: none; }
 #tabbar button.active { color: var(--green); }
 #tabbar button:active { transform: scale(0.9); }
 
+/* ── ⚡ 광클! 재료 담기 — 큰 연타 패드 ── */
+.g-clickpad {
+  width: 100%; min-height: 230px; margin-top: 4px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+  background: linear-gradient(160deg, #123524, #0a2417);
+  border: 2px solid rgba(94, 240, 176, 0.35); border-radius: 22px;
+  color: #eafff3; font-weight: 900; font-size: 1.05rem;
+  touch-action: manipulation; user-select: none; -webkit-user-select: none;
+}
+.g-clickpad span { font-size: 3.2rem; }
+.g-clickpad.pop { animation: gcPop 0.12s ease-out; }
+@keyframes gcPop { 0% { transform: scale(0.96); } 100% { transform: scale(1); } }
+
 /* ── 토스 인앱 배너 (WebView 전용 — JS가 토스+지원버전에서만 #nb-banner 를 생성) ── */
 #nb-banner {
   position: fixed; left: 50%; transform: translateX(-50%);

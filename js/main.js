@@ -10,7 +10,7 @@ import { enablePush, pushSupported, pushOn, pushPermission } from './push.js';
 import { AI_ENDPOINT, COUPANG_TAG, AI_FN } from './config.js';
 import { canListen, speak, stopSpeak, startListen, stopListen, isListening, parseCommand } from './voice.js';
 import { earn, bonus, spend, refund, EARN, earnedToday, SHOP, adFreeNow, gameBest, aiLeft, aiConsume, aiGrant, aiUnlimited, FREE_AI } from './points.js';
-import { initGames, openGames, GAMES, gameFresh, gameVoice, gameVoicePass, gameDouble, setGameDiff } from './games.js';
+import { initGames, openGames, GAMES, gameFresh, gameVoice, gameVoicePass, gameDouble, gameClick, setGameDiff } from './games.js';
 import { gameDefense, defBuy, defStart, defSpeed, defPick, defRevive, defGiveUp, defAdSkip, defAdSkill, defResume, defDraftAd, defWallMode, defElem, defMidSkill, defMidSkip, defActive } from './game-defense.js';
 import { gamePuzzle } from './game-puzzle.js';
 import { gameGomoku, gomokuUndo, gomokuHintAd } from './game-gomoku.js';
@@ -1718,29 +1718,47 @@ UI.openRecharge = (retry) => {
 /* 광고 재생 코어 — 모든 보상형(AI 충전·게임 2배)이 이 한 곳을 거친다.
    토스 안: 네이티브 보상형 SDK 시도 → 개별 운영/실패: 하우스 15초 (AdFit 교체 자리) */
 let adTimer = null;
+let tossAdPending = null; // 토스 사전고지 시트의 [광고 보기]가 이어받을 onComplete
 function playAd({ onComplete, note = '', reward = '' }) {
   // 토스 안: 실제 SDK 보상형 광고만 사용한다. 우리 15초 카운트다운(하우스 광고)은 '웹 전용'.
-  //   → 토스에서 실광고와 가짜 카운트다운이 겹치거나, 광고 없이 숫자만 올라가는 문제를 원천 차단.
+  //   광고 시작 전 반드시 고지("중간에 나가면 보상 없음") + 선택권을 준다 — 전면 광고는 나가기가
+  //   어려우므로, 보기 전에 알고 선택하게 하는 게 유일한 보호장치.
   if (typeof window !== 'undefined' && window.__TOSS__) {
-    tossRewardedAd().then((r) => {
-      if (r === true) { // 완주 → 보상. 실광고는 SDK가 전면으로 이미 보여줬으니 '짧은 확인 시트'만.
-        stashSheet(); // 현재 시트 보관 → 확인 닫으면 그 시트로 복원
-        openSheet(`<div class="adx"><div class="adx-stage" style="padding:20px 8px 10px">
-          <div class="adx-slime">🎁</div><b>광고 시청 완료</b><p>보상을 적용했어요</p></div>
-          <button id="ad-btn" class="btn btn-block btn-soft" disabled>적용 중…</button></div>`, { lock: true });
-        onComplete($('#ad-btn'));
-        return;
-      }
-      // 미완주(false)·광고없음/오류(null) → 시트는 그대로 두고 안내만.
-      //   (이 경로에선 stashSheet를 안 하므로 sheetStack 오염 없음 → '닫아도 또 뜸' 방지)
-      toast(r === false ? '광고를 끝까지 봐야 보상을 받아요' : '지금은 광고를 불러오지 못했어요. 잠시 후 다시 시도해 주세요');
-    });
+    tossAdPending = onComplete;
+    stashSheet(); // 현재 시트(레시피·등록폼 등) 보관 → 광고/고지 닫히면 그 시트로 복원
+    openSheet(`<div class="adx">
+      <h2 style="margin:0 0 6px">📺 광고 보고 받기</h2>
+      ${reward ? `<div class="adx-reward">🎁 ${reward}</div>` : ''}
+      <p class="sub" style="margin:8px 0 4px">광고는 <b>전체 화면</b>으로 재생돼요.<br><b>중간에 나가면 보상을 받을 수 없어요.</b></p>
+      ${note ? `<p class="adx-note">${note}</p>` : ''}
+      <div class="btn-row" style="flex-direction:column;margin-top:10px">
+        <button id="tad-start" class="btn btn-primary btn-block" onclick="UI.tossAdStart()">광고 보기</button>
+        <button class="btn btn-block" onclick="UI.closeSheet()">다음에 볼게요</button>
+      </div></div>`);
     return;
   }
   // 웹(개별 운영): 자체 프로모션 하우스 광고(15초 카운트다운). AdFit/애드센스 교체 자리.
   stashSheet(); // 현재 시트(레시피·등록폼 등) 보관 → 광고 닫히면 그 시트로 복원 (게임 시트 위에선 중첩 안 함)
   houseAd({ onComplete, note, reward });
 }
+UI.tossAdStart = () => {
+  const onComplete = tossAdPending;
+  const b = $('#tad-start');
+  if (b) { b.disabled = true; b.textContent = '광고 불러오는 중…'; }
+  tossRewardedAd().then((r) => {
+    if (r === true) { // 완주 → 보상. 고지 시트를 '적용 중' 시트로 교체(스택은 그대로 → 닫으면 원래 화면 복원)
+      tossAdPending = null;
+      openSheet(`<div class="adx"><div class="adx-stage" style="padding:20px 8px 10px">
+        <div class="adx-slime">🎁</div><b>광고 시청 완료</b><p>보상을 적용했어요</p></div>
+        <button id="ad-btn" class="btn btn-block btn-soft" disabled>적용 중…</button></div>`, { lock: true });
+      if (onComplete) onComplete($('#ad-btn'));
+      return;
+    }
+    tossAdPending = null;
+    UI.closeSheet(); // 고지 시트 닫기 → 원래 시트 복원
+    toast(r === false ? '광고를 중간에 나가 보상을 받지 못했어요' : '지금은 광고를 불러오지 못했어요 — 잠시 후 다시 시도해 주세요');
+  });
+};
 function houseAd({ onComplete, note, reward }) {
   clearInterval(adTimer);
   const total = 15;
@@ -1914,6 +1932,7 @@ UI.gameGomoku = () => gameGomoku();
 UI.gomokuUndo = () => gomokuUndo();
 UI.gomokuHintAd = () => gomokuHintAd();
 UI.gameFresh = () => gameFresh();
+UI.gameClick = () => gameClick();
 UI.gameVoice = () => gameVoice();
 UI.gameVoicePass = () => gameVoicePass();
 UI.gameDouble = (p) => gameDouble(p);
@@ -3062,6 +3081,12 @@ UI.applyDeduct = () => {
       <b style="display:block;margin-top:6px">음식이 남았나요?</b>
       <p class="hint">등록해 두면 까먹기 전에 챙겨드릴게요</p>
     </div>
+    ${(S.settings.spaceCode || '').trim() ? '' : `
+    <div class="invite-cta" onclick="${syncAvailable() ? 'UI.famCreate()' : 'UI.openInvite()'}">
+      <span class="ic-ico">👨‍👩‍👧</span>
+      <div class="grow"><b>냉장고 관리, 혼자 하지 마세요</b><small>가족을 초대하면 오늘 메뉴·재고를 온 가족이 같이 봐요</small></div>
+      <span class="ic-go">초대 ›</span>
+    </div>`}
     <div class="btn-row">
       <button class="btn btn-primary" onclick="UI.closeSheet();UI.refresh()">다 먹었어요</button>
       <button class="btn btn-accent" onclick="UI.openLeftoverForm('${esc(recipeTitle)}')">남았어요 → 잔반 등록</button>

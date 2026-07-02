@@ -406,14 +406,22 @@ function endVoice() {
   finishGame('voice', '🎤 외쳐! 재료', score, `${secs.toFixed(1)}초 · ${score}점`, 'UI.gameVoice()');
 }
 
-/* ══ C. ⚡광클대전 — 별도 개발된 단독 앱(gwangclick/offline.html, 단일 파일)을 게임 시트에 임베드 ══
-   진영전 밈 게임: 오늘의 떡밥에 편 골라 60초 광클. 자체 완결(자기 점수·연출·광고 어댑터 내장)이라
-   냉비서 포인트 환산 없이 '보너스 아케이드'로 제공한다. */
+/* ══ C. ⚡광클대전 — 별도 개발된 단독 앱을 "풀버전"(index.html: 실시간 전국 게이지·꾸미기·전체 기능)으로
+   게임 시트에 임베드 ══
+   자체 완결(자기 점수·연출·광고 어댑터 내장) — 냉비서 포인트 환산 없이 '보너스 아케이드'.
+   동일 출처 iframe이라 부모의 토스 보상형 광고 브리지를 넘겨줘 광클대전 내부 광고도 실광고를 쓸 수 있게 한다. */
 export function gameGwangclick() {
   ui.openSheet(`
     <div class="gx gclash-wrap">
       <div class="gx-bar gclash-bar"><b>⚡ 광클대전</b><span class="grow"></span>
         <button class="gclash-x" onclick="UI.closeSheet()">✕ 닫기</button></div>
-      <iframe class="gclash-frame" src="./gwangclick/offline.html" title="광클대전"></iframe>
+      <iframe id="gclash-if" class="gclash-frame" src="./gwangclick/index.html" title="광클대전"></iframe>
     </div>`);
+  const f = document.getElementById('gclash-if');
+  if (f) f.addEventListener('load', () => {
+    try { // 부모(토스 빌드)의 실광고 브리지를 자식에 노출 — 광클대전 광고 어댑터가 활용 가능
+      if (typeof window.__tossRewardedAd === 'function') f.contentWindow.__tossRewardedAd = window.__tossRewardedAd;
+      if (window.__TOSS__) f.contentWindow.__TOSS__ = true;
+    } catch { /* noop — 동일 출처가 아니면 무시 */ }
+  });
 }

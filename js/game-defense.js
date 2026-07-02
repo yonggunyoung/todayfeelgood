@@ -2,7 +2,7 @@
 // 플레이어는 적을 직접 탭하지 않는다: 냉장고가 자동 발사 → 점수=코인으로 무기/방어수단 강화.
 // 슬라임 렌더러 + 파티클·셰이크·히트스톱·코인흡수 손맛. 모든 밸런스는 BALANCE 한 곳.
 import { gameUI, beep, chord, buzz, finishGame } from './games.js';
-import { spend } from './points.js';
+import { spend, gameBest } from './points.js';
 import { S } from './store.js';
 import { blinkTick, Particles, Shake, Floaters, ease, clamp, setupCanvas } from './slime.js';
 import { enemySprite, fridgeSprite, itemSprite, drawSprite } from './pixel.js';
@@ -154,7 +154,7 @@ export function gameDefense() {
   ui.openSheet(`
     <div class="gx gx-def">
       <div class="gx-bar">
-        <b class="gx-title">🧊 냉장고 지키기</b>
+        <b class="gx-title">🧊 냉장고 지키기</b><span class="gx-live" id="def-live"></span>
         <span><button class="gx-full" onclick="UI.gameFull()">⛶</button><button class="gx-x" onclick="UI.closeSheet()">✕</button></span>
       </div>
       <div class="gx-stage"><canvas id="def-c"></canvas>
@@ -1303,6 +1303,15 @@ function renderShop() {
   // 변화 없으면 다시 그리지 않음(탭 유실 방지) + 위임 클릭(innerHTML 교체에도 유지)
   if (!el._bound) { el._bound = true; el.addEventListener('click', (e) => { const b = e.target.closest('[data-k]'); if (b && !b.classList.contains('locked') && !b.classList.contains('maxed')) defBuy(b.dataset.k); }); }
   updateWallBtn(); updateSpecialBtn();
+  // 실시간 점수·최고기록 HUD — 0.25초 주기 갱신, 최고 경신 중엔 금색 "신기록!"
+  const lv = document.getElementById('def-live');
+  if (lv) {
+    const best = gameBest('defense').all || 0;
+    const sc = Math.floor(D.score);
+    const rec = sc > best && best > 0;
+    lv.textContent = rec ? `${sc.toLocaleString()}점 · 👑 신기록 중!` : `${sc.toLocaleString()}점 · 🏆 ${best.toLocaleString()}`;
+    lv.classList.toggle('rec', rec);
+  }
   const sig = UP_ORDER.map((k) => locked(k) ? 'L' : maxed(k) ? 'M' : (D.coins >= cost(k) ? '1' : '0') + D.lv[k]).join(',');
   if (sig === D.shopSig) return;
   D.shopSig = sig;

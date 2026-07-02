@@ -166,29 +166,43 @@ function openSheet(html, { lock = false, overlay = false } = {}) {
   if (!lock) attachSheetDrag();
   relocateTimerChip(); // 게임 시트가 열리면 타이머를 컴팩트/전면으로
 }
-// 상단 손잡이(그립)·게임 상단바를 잡고 아래로 슬라이드하면 닫힘 (배경 스크롤과 충돌 안 나게 핸들에 touch-action:none)
+// 시트 슬라이드 닫기 — 그립/게임 상단바는 즉시, 그 외 "기능 없는 영역"도 본문이 맨 위일 때
+// 아래로 끌면 닫힌다(요청: 최상단 바뿐 아니라 빈 곳을 눌러 내려도 사라지게).
+// 스크롤과의 충돌: 본문이 스크롤돼 있거나 위로 긋는 제스처면 드래그를 포기하고 네이티브 스크롤에 양보.
 function attachSheetDrag() {
   const sheet = $('#modal-root .sheet'); if (!sheet) return;
-  let startY = 0, dy = 0, dragging = false;
+  let startY = 0, dy = 0, dragging = false, armed = false;
   const onDown = (e) => {
-    if (!e.target.closest('.grip, .gx-bar')) return; // 손잡이/게임 상단바에서만 시작
-    if (e.target.closest('button, input, textarea, select, a')) return;
-    dragging = true; startY = e.clientY; dy = 0;
-    sheet.style.transition = 'none'; sheet.style.willChange = 'transform';
+    // 기능 요소·게임 조작 영역에서는 시작하지 않음 (버튼/입력/링크/캔버스/iframe 등)
+    if (e.target.closest('button, input, textarea, select, a, label, iframe, canvas, [onclick], .g-track')) return;
+    dragging = true;
+    armed = !!e.target.closest('.grip, .gx-bar'); // 핸들은 즉시 드래그, 빈 영역은 조건 충족 시
+    startY = e.clientY; dy = 0;
+    sheet.style.willChange = 'transform';
     try { sheet.setPointerCapture(e.pointerId); } catch { /* noop */ }
   };
   const onMove = (e) => {
     if (!dragging) return;
-    e.preventDefault(); // 네이티브 스크롤(흐릿한 배경 움직임) 방지
+    const delta = e.clientY - startY;
+    if (!armed) {
+      if (sheet.scrollTop > 0) { dragging = false; return; }      // 본문 스크롤 중 → 드래그 아님
+      if (delta < -4) { dragging = false; return; }               // 위로 긋기 = 스크롤 의도
+      if (delta <= 10) return;                                     // 살짝은 무시(탭 오인 방지)
+      armed = true; startY = e.clientY;                            // 여기서부터 드래그 시작
+      sheet.style.transition = 'none';
+    }
+    e.preventDefault();
     dy = Math.max(0, e.clientY - startY);
     sheet.style.transform = `translateY(${dy}px)`;
     sheet.style.opacity = String(Math.max(0.4, 1 - dy / 600));
   };
   const end = () => {
     if (!dragging) return;
-    dragging = false; sheet.style.transition = ''; sheet.style.opacity = ''; sheet.style.willChange = '';
+    dragging = false; armed = false;
+    sheet.style.transition = ''; sheet.style.opacity = ''; sheet.style.willChange = '';
     if (dy > 90) { UI.closeSheet(); if (sheet.isConnected) sheet.style.transform = ''; } // 가드로 안 닫혔으면 제자리로
     else sheet.style.transform = '';
+    dy = 0;
   };
   sheet.addEventListener('pointerdown', onDown);
   sheet.addEventListener('pointermove', onMove);
@@ -338,9 +352,9 @@ function cookedShape(name, kind) {
 // SVG 캐릭터 조립 (재료/조리음식 공용) — 표정만 신선/임박 분기 (시안 FoodIcon 규격)
 function svgChar(shape, expiring, size) {
   const face = expiring
-    ? '<path d="M13.8 21.6 Q16 19.2 18.2 21.6" stroke="#2b2b2b" stroke-width="1.3" fill="none" stroke-linecap="round"/><path d="M20.4 18.6 Q22 21.2 22 22.4 a1.4 1.4 0 0 1 -2.8 0 Q19 21.2 20.4 18.6 Z" fill="#69B7F0" class="nb-tear"/>'
-    : '<ellipse cx="9.6" cy="19.4" rx="1.8" ry="1.1" fill="#FF9E8E" opacity=".75"/><ellipse cx="22.4" cy="19.4" rx="1.8" ry="1.1" fill="#FF9E8E" opacity=".75"/><path d="M14 20 Q16 22.4 18 20" stroke="#2b2b2b" stroke-width="1.3" fill="none" stroke-linecap="round"/>';
-  return '<svg class="food-ic" viewBox="0 0 32 32" width="' + size + '" height="' + size + '" style="display:block;overflow:visible" aria-hidden="true"><ellipse cx="16" cy="29.5" rx="8" ry="1.6" fill="#000" opacity=".07"/>' + shape + '<circle cx="12.5" cy="16.5" r="1.7" fill="#2b2b2b"/><circle cx="19.5" cy="16.5" r="1.7" fill="#2b2b2b"/><circle cx="11.9" cy="15.9" r=".5" fill="#fff"/><circle cx="18.9" cy="15.9" r=".5" fill="#fff"/>' + face + '</svg>';
+    ? '<path d="M10.6 13.7 Q12.4 12.7 14.1 13.5" stroke="#2b2b2b" stroke-width="1" fill="none" stroke-linecap="round" opacity=".65"/><path d="M17.9 13.5 Q19.6 12.7 21.4 13.7" stroke="#2b2b2b" stroke-width="1" fill="none" stroke-linecap="round" opacity=".65"/><path d="M13.8 21.6 Q16 19.2 18.2 21.6" stroke="#2b2b2b" stroke-width="1.3" fill="none" stroke-linecap="round"/><path d="M20.4 18.6 Q22 21.2 22 22.4 a1.4 1.4 0 0 1 -2.8 0 Q19 21.2 20.4 18.6 Z" fill="#69B7F0" class="nb-tear"/><ellipse cx="9.6" cy="19.6" rx="1.7" ry="1" fill="#FF9E8E" opacity=".5"/><ellipse cx="22.4" cy="19.6" rx="1.7" ry="1" fill="#FF9E8E" opacity=".5"/>'
+    : '<ellipse cx="9.6" cy="19.4" rx="2.1" ry="1.25" fill="#FF9E8E" opacity=".85"/><ellipse cx="22.4" cy="19.4" rx="2.1" ry="1.25" fill="#FF9E8E" opacity=".85"/><path d="M13.7 20 Q16 23 18.3 20" stroke="#2b2b2b" stroke-width="1.3" fill="none" stroke-linecap="round"/>';
+  return '<svg class="food-ic" viewBox="0 0 32 32" width="' + size + '" height="' + size + '" style="display:block;overflow:visible" aria-hidden="true"><ellipse cx="16" cy="29.5" rx="8" ry="1.6" fill="#000" opacity=".07"/>' + shape + '<circle cx="12.5" cy="16.5" r="1.7" fill="#2b2b2b"/><circle cx="19.5" cy="16.5" r="1.7" fill="#2b2b2b"/><circle cx="11.9" cy="15.9" r=".55" fill="#fff"/><circle cx="18.9" cy="15.9" r=".55" fill="#fff"/><circle cx="13.1" cy="17.2" r=".28" fill="#fff" opacity=".9"/><circle cx="20.1" cy="17.2" r=".28" fill="#fff" opacity=".9"/>' + face + '</svg>';
 }
 // 재료 아이콘 — 이름→특정, 없으면 카테고리 폴백. 항상 SVG 반환.
 function foodIcon(name, { expiring = false, size = 44, cat = '' } = {}) {
@@ -2082,6 +2096,11 @@ function renderRecipes() {
     <div class="hero"><h1>${mode.emoji} <em>${esc(mode.label)}</em> 레시피</h1>
       <p>${esc(mode.desc || '내 냉장고 기준으로 정렬했어요')}</p></div>
     <div class="mode-chips">${chips}</div>
+    <div class="fun-strip">
+      <button onclick="UI.menuRandom()"><span>🎲</span><b>랜덤 추천</b><small>냉장고가 골라줘요</small></button>
+      <button onclick="UI.menuLadder()"><span>🪜</span><b>사다리 타기</b><small>가족 메뉴 결정전</small></button>
+      <button class="fs-game" onclick="UI.openGames()"><span>🎮</span><b>게임 · 🅿${(S.points?.bal || 0).toLocaleString()}</b><small>짬시간 포인트</small></button>
+    </div>
     <div class="search-row">
       <input placeholder="요리 이름·태그 검색" value="${esc(recipeQuery)}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" oninput="UI.recipeSearch(this.value)" />
       <button class="btn btn-accent" onclick="UI.openYtSearch()" title="유튜브에서 찾기">🎬</button>
@@ -2167,6 +2186,138 @@ UI.recipeSearch = (v) => {
   if (el) el.innerHTML = recipeListHtml();
 };
 UI.setRTab = (t) => { rTab = t; renderRecipes(); };
+
+/* ── 🎲 랜덤 추천 · 🪜 사다리 타기 — "오늘 뭐 먹지" 결정 도구 (가족이 한 폰에 모여 쓰는 파티 기능) ── */
+function menuCandidates(n = 8) {
+  const { list } = recommend(S, S.settings.mode);
+  const pool = (list && list.length ? list : allRecipes(S)).slice(0, n);
+  return pool.map((r) => ({ id: r.id, title: r.title }));
+}
+let rouPool = null, rouTimer = null;
+UI.menuRandom = () => {
+  const pool = menuCandidates(10);
+  if (pool.length < 2) { toast('추천 레시피가 아직 부족해요 — 재료를 담으면 늘어나요'); return; }
+  rouPool = pool;
+  openSheet(`
+    <h2>🎲 오늘 뭐 먹지 — 랜덤 추천</h2>
+    <p class="sub">내 냉장고 기준 추천 레시피 중에서 하나를 뽑아요</p>
+    <div class="roulette"><div class="rou-ico">🍽️</div><b id="rou-title">두구두구…</b></div>
+    <div id="rou-done"></div>
+    <div class="btn-row" style="flex-direction:column">
+      <button class="btn btn-primary btn-block" id="rou-go" onclick="UI.rouSpin()">돌리기!</button>
+      <button class="btn btn-block" onclick="UI.closeSheet()">닫기</button>
+    </div>`);
+  UI.rouSpin();
+};
+UI.rouSpin = () => {
+  const pool = rouPool || [];
+  if (!pool.length) return;
+  clearTimeout(rouTimer);
+  const done = $('#rou-done'); if (done) done.innerHTML = '';
+  const go = $('#rou-go'); if (go) { go.disabled = true; go.textContent = '두구두구…'; }
+  let i = Math.floor(Math.random() * pool.length), step = 55, elapsed = 0;
+  const tick = () => {
+    const t = $('#rou-title'); if (!t) return; // 시트 닫힘 → 중단
+    i = (i + 1) % pool.length;
+    t.textContent = pool[i].title;
+    elapsed += step; step = Math.min(280, step * 1.14);
+    if (elapsed < 2400) { rouTimer = setTimeout(tick, step); return; }
+    const pick = pool[i];
+    t.textContent = `🎉 ${pick.title}!`;
+    chordSafe([659, 784, 1047]);
+    if (go) { go.disabled = false; go.textContent = '🔁 다시 돌리기'; }
+    const d = $('#rou-done');
+    if (d) d.innerHTML = `<button class="btn btn-accent btn-block" style="margin-top:4px" onclick="UI.openRecipe('${pick.id}')">🍳 이걸로 결정 — 레시피 보기</button>`;
+  };
+  tick();
+};
+function chordSafe(f) { try { import('./games.js').then((g) => g.chord && g.chord(f)); } catch { /* noop */ } }
+
+let ladCtx = null;
+UI.menuLadder = () => {
+  const pool = menuCandidates(8);
+  if (pool.length < 2) { toast('추천 레시피가 아직 부족해요 — 재료를 담으면 늘어나요'); return; }
+  ladCtx = { pool, sel: pool.slice(0, Math.min(3, pool.length)).map((p) => p.id) };
+  renderLadderSetup();
+};
+function renderLadderSetup() {
+  const { pool, sel } = ladCtx;
+  openSheet(`
+    <h2>🪜 사다리 타기 — 메뉴 결정전</h2>
+    <p class="sub">후보를 2~4개 고르세요. 가족이 돌아가며 출발 번호를 찍으면 오늘 메뉴 확정!</p>
+    <div class="lad-picks">${pool.map((p) => `<button class="chip ${sel.includes(p.id) ? 'have' : ''}" onclick="UI.ladTogglePick('${p.id}')">${esc(p.title)}</button>`).join('')}</div>
+    <div class="btn-row" style="flex-direction:column">
+      <button class="btn btn-primary btn-block" onclick="UI.ladStart()">사다리 만들기 (후보 ${sel.length}개)</button>
+      <button class="btn btn-block" onclick="UI.closeSheet()">닫기</button>
+    </div>`);
+}
+UI.ladTogglePick = (id) => {
+  const s = ladCtx.sel; const i = s.indexOf(id);
+  if (i >= 0) { if (s.length > 2) s.splice(i, 1); else toast('후보는 최소 2개 필요해요'); }
+  else if (s.length < 4) s.push(id);
+  else toast('후보는 최대 4개까지예요');
+  renderLadderSetup();
+};
+UI.ladStart = () => {
+  const { pool, sel } = ladCtx;
+  const items = sel.map((id) => pool.find((p) => p.id === id)).filter(Boolean);
+  const N = items.length, rows = 7;
+  const rungs = [];
+  for (let r = 0; r < rows; r++) {
+    const used = new Set();
+    for (let c = 0; c < N - 1; c++) {
+      if (Math.random() < 0.5 && !used.has(c) && !used.has(c - 1)) { rungs.push({ r, c }); used.add(c); }
+    }
+  }
+  Object.assign(ladCtx, { items, rungs, N, rows, ran: false });
+  const W = N * 80, H = rows * 40 + 80;
+  const X = (c) => c * 80 + 40, Y = (r) => r * 40 + 40;
+  const vlines = items.map((_, c) => `<line x1="${X(c)}" y1="14" x2="${X(c)}" y2="${H - 20}" stroke="#cfd8cf" stroke-width="4" stroke-linecap="round"/>`).join('');
+  const rlines = rungs.map((g) => `<line x1="${X(g.c)}" y1="${Y(g.r)}" x2="${X(g.c + 1)}" y2="${Y(g.r)}" stroke="#cfd8cf" stroke-width="4" stroke-linecap="round"/>`).join('');
+  openSheet(`
+    <h2>🪜 사다리 타기</h2>
+    <p class="sub">출발할 번호를 탭하세요 — 도착한 곳이 오늘의 메뉴!</p>
+    <div class="lad-wrap">
+      <div class="lad-cols" style="grid-template-columns:repeat(${N},1fr)">${items.map((_, i) => `<button class="lad-startbtn" id="lad-s${i}" onclick="UI.ladRun(${i})">${i + 1}</button>`).join('')}</div>
+      <svg viewBox="0 0 ${W} ${H}" class="lad-svg">${vlines}${rlines}
+        <polyline id="lad-path" fill="none" stroke="var(--green)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" points=""/></svg>
+      <div class="lad-cols" style="grid-template-columns:repeat(${N},1fr)">${items.map((it, i) => `<div class="lad-menu" id="lad-m${i}">${esc(it.title)}</div>`).join('')}</div>
+    </div>
+    <div class="btn-row" style="flex-direction:column">
+      <div id="lad-done"></div>
+      <button class="btn btn-block" onclick="UI.menuLadder()">↺ 후보 다시 고르기</button>
+    </div>`);
+};
+UI.ladRun = (startCol) => {
+  const L = ladCtx;
+  if (!L || L.ran) return;
+  L.ran = true;
+  const { rungs, N, rows, items } = L;
+  const X = (c) => c * 80 + 40, Y = (r) => r * 40 + 40;
+  let c = startCol;
+  const pts = [[X(c), 14]];
+  for (let r = 0; r < rows; r++) {
+    pts.push([X(c), Y(r)]);
+    const right = rungs.find((g) => g.r === r && g.c === c);
+    const left = rungs.find((g) => g.r === r && g.c === c - 1);
+    if (right) { c += 1; pts.push([X(c), Y(r)]); }
+    else if (left) { c -= 1; pts.push([X(c), Y(r)]); }
+  }
+  pts.push([X(c), rows * 40 + 60]);
+  const pl = $('#lad-path'); if (!pl) return;
+  pl.setAttribute('points', pts.map((p) => p.join(',')).join(' '));
+  const len = pl.getTotalLength();
+  pl.style.strokeDasharray = String(len); pl.style.strokeDashoffset = String(len); pl.style.transition = 'none';
+  requestAnimationFrame(() => { pl.style.transition = 'stroke-dashoffset 1.8s cubic-bezier(.4,0,.4,1)'; pl.style.strokeDashoffset = '0'; });
+  const sb = $(`#lad-s${startCol}`); if (sb) sb.classList.add('on');
+  setTimeout(() => {
+    const win = items[c];
+    const m = $(`#lad-m${c}`); if (m) m.classList.add('win');
+    chordSafe([523, 659, 784, 1047]);
+    const d = $('#lad-done');
+    if (d) d.innerHTML = `<button class="btn btn-accent btn-block" onclick="UI.openRecipe('${win.id}')">🎉 오늘 메뉴는 "${esc(win.title)}" — 레시피 보기</button>`;
+  }, 1900);
+};
 UI.toggleFav = (id) => {
   const i = S.favs.indexOf(id);
   if (i >= 0) S.favs.splice(i, 1); else S.favs.push(id);

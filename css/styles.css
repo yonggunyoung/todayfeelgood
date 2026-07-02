@@ -118,6 +118,57 @@ a { color: var(--blue); text-decoration: none; }
 }
 .gclash-frame { flex: 1; width: 100%; border: 0; border-radius: 16px; background: #0a0b0d; min-height: 70dvh; }
 
+/* ── 레시피 fun-strip — 랜덤·사다리·게임(포인트) 주요 기능을 한 줄에 크게 ── */
+.fun-strip { display: grid; grid-template-columns: 1fr 1fr 1.15fr; gap: 8px; margin: 10px 0 4px; }
+.fun-strip button {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 1px;
+  padding: 11px 12px; border-radius: 16px; background: var(--card);
+  border: 1px solid var(--hairline); box-shadow: var(--shadow-card); text-align: left;
+}
+.fun-strip button span { font-size: 1.25rem; margin-bottom: 2px; }
+.fun-strip button b { font-size: 0.8rem; font-weight: 800; color: var(--green-ink); white-space: nowrap; }
+.fun-strip button small { font-size: 0.64rem; color: var(--label-2); font-weight: 600; white-space: nowrap; }
+.fun-strip .fs-game { background: linear-gradient(150deg, #0fa45a, #0a6238); border: none; }
+.fun-strip .fs-game b, .fun-strip .fs-game small { color: #fff; }
+.fun-strip .fs-game small { opacity: 0.85; }
+.fun-strip button:active { transform: scale(0.96); }
+
+/* ── 🎲 랜덤 추천 룰렛 ── */
+.roulette {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  background: var(--card); border: 1px solid var(--hairline); border-radius: 20px;
+  padding: 26px 14px; margin: 8px 0; box-shadow: var(--shadow-card);
+}
+.rou-ico { font-size: 2.6rem; }
+.roulette b { font-size: 1.18rem; font-weight: 900; color: var(--green-ink); text-align: center; min-height: 1.5em; }
+
+/* ── 🪜 사다리 타기 ── */
+.lad-picks { display: flex; flex-wrap: wrap; gap: 2px; margin: 8px 0 4px; }
+.lad-wrap { background: var(--card); border: 1px solid var(--hairline); border-radius: 20px; padding: 12px 8px; box-shadow: var(--shadow-card); }
+.lad-cols { display: grid; gap: 4px; }
+.lad-startbtn {
+  margin: 0 auto; width: 40px; height: 40px; border-radius: 50%;
+  background: var(--green-bg); color: var(--green-deep); font-weight: 900; font-size: 1.05rem;
+}
+.lad-startbtn.on { background: var(--green); color: #fff; }
+.lad-svg { width: 100%; height: auto; display: block; margin: 4px 0; }
+.lad-menu {
+  text-align: center; font-size: 0.72rem; font-weight: 800; color: var(--label-2);
+  padding: 6px 3px; border-radius: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.lad-menu.win { background: var(--green); color: #fff; animation: ladWin 0.5s ease; }
+@keyframes ladWin { 0% { transform: scale(0.8); } 60% { transform: scale(1.12); } 100% { transform: scale(1); } }
+
+/* ── 디펜스 실시간 점수·최고 HUD ── */
+.gx-live { margin-left: auto; margin-right: 8px; font-size: 0.72rem; font-weight: 800; color: #9fb2d6; white-space: nowrap; }
+.gx-live.rec { color: #ffe04a; animation: recPulse 0.9s ease-in-out infinite; }
+@keyframes recPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
+
+/* ── 캐릭터 살랑임 — 신선한 아이(soon/urgent 아님)도 아주 은은하게 숨쉬기 ── */
+.f-item .fi-face { animation: chr-idle 4.2s ease-in-out infinite; transform-origin: 50% 100%; }
+@keyframes chr-idle { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-1px); } }
+@media (prefers-reduced-motion: reduce) { .f-item .fi-face { animation: none; } }
+
 /* ── 토스 인앱 배너 (WebView 전용 — JS가 토스+지원버전에서만 #nb-banner 를 생성) ── */
 #nb-banner {
   position: fixed; left: 50%; transform: translateX(-50%);

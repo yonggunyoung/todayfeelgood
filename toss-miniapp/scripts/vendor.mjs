@@ -13,13 +13,15 @@ const miniappDir = resolve(__dirname, '..');
 const rootDir = resolve(miniappDir, '..');
 const vendorDir = resolve(miniappDir, 'vendor');
 
-// [원본(루트), 대상(vendor)] 쌍. 디렉터리는 재귀 복사.
+// [원본(루트), 대상(vendor), (선택)filter] — 디렉터리는 재귀 복사.
+// ⚡광클대전은 풀버전(index.html + gc-*.js + vendor 라이브러리)을 통째로 임베드하되,
+// 홍보 이미지·문서·도메인 설정은 번들 용량 절약을 위해 제외한다.
+const GWANG_SKIP = /[\\/](promo|tests)([\\/]|$)|\.md$|[\\/]CNAME$|[\\/](sw\.js|manifest\.webmanifest|offline\.html)$/;
 const COPIES = [
   [resolve(rootDir, 'css'), resolve(vendorDir, 'css')],
   [resolve(rootDir, 'js'), resolve(vendorDir, 'js')],
   [resolve(rootDir, 'icon.svg'), resolve(vendorDir, 'icon.svg')],
-  // ⚡광클대전 — 단일 파일 단독 앱을 게임 시트 iframe으로 임베드 (games.js gameGwangclick)
-  [resolve(rootDir, 'gwangclick', 'offline.html'), resolve(vendorDir, 'gwangclick', 'offline.html')],
+  [resolve(rootDir, 'gwangclick'), resolve(vendorDir, 'gwangclick'), (src) => !GWANG_SKIP.test(src)],
 ];
 
 async function exists(p) {
@@ -36,15 +38,15 @@ async function main() {
   await rm(vendorDir, { recursive: true, force: true });
   await mkdir(vendorDir, { recursive: true });
 
-  for (const [src, dest] of COPIES) {
+  for (const [src, dest, filter] of COPIES) {
     if (!(await exists(src))) {
       console.error(`[vendor] 원본을 찾을 수 없음: ${src} — 루트 냉비서 앱 구조를 확인하세요.`);
       process.exitCode = 1;
       continue;
     }
     await mkdir(dirname(dest), { recursive: true }); // 단일 파일 대상의 상위 폴더 보장
-    await cp(src, dest, { recursive: true });
-    console.log(`[vendor] 복사: ${src} -> ${dest}`);
+    await cp(src, dest, { recursive: true, ...(filter ? { filter } : {}) });
+    console.log(`[vendor] 복사: ${src} -> ${dest}${filter ? ' (필터 적용)' : ''}`);
   }
   console.log('[vendor] 완료.');
 }

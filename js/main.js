@@ -168,48 +168,60 @@ function openSheet(html, { lock = false, overlay = false } = {}) {
 }
 // 시트 슬라이드 닫기 — 그립/게임 상단바는 즉시, 그 외 "기능 없는 영역"도 본문이 맨 위일 때
 // 아래로 끌면 닫힌다(요청: 최상단 바뿐 아니라 빈 곳을 눌러 내려도 사라지게).
-// 스크롤과의 충돌: 본문이 스크롤돼 있거나 위로 긋는 제스처면 드래그를 포기하고 네이티브 스크롤에 양보.
+// ※ 모바일은 pointer 이벤트만으론 안 된다 — 브라우저가 제스처를 스크롤로 가로채며 pointercancel을
+//   쏴버려 드래그가 죽는다(그립만 됐던 이유: 그립에 touch-action:none). 그래서 터치는
+//   touchmove{passive:false}로 받아 조건 충족 시 preventDefault로 제스처를 우리가 선점한다.
 function attachSheetDrag() {
   const sheet = $('#modal-root .sheet'); if (!sheet) return;
-  let startY = 0, dy = 0, dragging = false, armed = false;
-  const onDown = (e) => {
-    // 기능 요소·게임 조작 영역에서는 시작하지 않음 (버튼/입력/링크/캔버스/iframe 등)
-    // ※ 반드시 "시트 내부" 요소만 검사 — 부모 .overlay에 onclick이 있어 시트 밖까지 보면 전부 걸려 드래그가 죽는다.
-    const t = e.target.closest('button, input, textarea, select, a, label, iframe, canvas, [onclick], .g-track');
-    if (t && t !== sheet && sheet.contains(t)) return;
-    dragging = true;
-    armed = !!e.target.closest('.grip, .gx-bar'); // 핸들은 즉시 드래그, 빈 영역은 조건 충족 시
-    startY = e.clientY; dy = 0;
-    sheet.style.willChange = 'transform';
-    try { sheet.setPointerCapture(e.pointerId); } catch { /* noop */ }
+  let startY = 0, dy = 0, active = false, armed = false;
+  const isInteractive = (target) => {
+    // 반드시 "시트 내부" 요소만 검사 — 부모 .overlay의 onclick까지 보면 전부 걸려 드래그가 죽는다.
+    const t = target.closest('button, input, textarea, select, a, label, iframe, canvas, [onclick], .g-track');
+    return !!(t && t !== sheet && sheet.contains(t));
   };
-  const onMove = (e) => {
-    if (!dragging) return;
-    const delta = e.clientY - startY;
+  const begin = (target, y) => {
+    if (isInteractive(target)) { active = false; return; }
+    active = true;
+    armed = !!target.closest('.grip, .gx-bar'); // 핸들은 즉시, 빈 영역은 조건 충족 시
+    startY = y; dy = 0;
+  };
+  // 반환: true = 이번 프레임을 우리가 소비(스크롤 차단해야 함)
+  const move = (y) => {
+    if (!active) return false;
+    const delta = y - startY;
     if (!armed) {
-      if (sheet.scrollTop > 0) { dragging = false; return; }      // 본문 스크롤 중 → 드래그 아님
-      if (delta < -4) { dragging = false; return; }               // 위로 긋기 = 스크롤 의도
-      if (delta <= 10) return;                                     // 살짝은 무시(탭 오인 방지)
-      armed = true; startY = e.clientY;                            // 여기서부터 드래그 시작
-      sheet.style.transition = 'none';
+      if (sheet.scrollTop > 0 || delta < -4) { active = false; return false; } // 스크롤 의도 → 양보
+      if (delta <= 10) return false;                                           // 살짝은 무시(탭 오인 방지)
+      armed = true; startY = y;
+      sheet.style.transition = 'none'; sheet.style.willChange = 'transform';
     }
-    e.preventDefault();
-    dy = Math.max(0, e.clientY - startY);
+    dy = Math.max(0, y - startY);
     sheet.style.transform = `translateY(${dy}px)`;
     sheet.style.opacity = String(Math.max(0.4, 1 - dy / 600));
+    return true;
   };
   const end = () => {
-    if (!dragging) return;
-    dragging = false; armed = false;
+    if (!active) return;
+    active = false; armed = false;
     sheet.style.transition = ''; sheet.style.opacity = ''; sheet.style.willChange = '';
     if (dy > 90) { UI.closeSheet(); if (sheet.isConnected) sheet.style.transform = ''; } // 가드로 안 닫혔으면 제자리로
     else sheet.style.transform = '';
     dy = 0;
   };
-  sheet.addEventListener('pointerdown', onDown);
-  sheet.addEventListener('pointermove', onMove);
-  sheet.addEventListener('pointerup', end);
-  sheet.addEventListener('pointercancel', end);
+  // 터치(모바일) — passive:false 필수: preventDefault로 브라우저 스크롤 가로채기
+  sheet.addEventListener('touchstart', (e) => { begin(e.target, e.touches[0].clientY); }, { passive: true });
+  sheet.addEventListener('touchmove', (e) => { if (move(e.touches[0].clientY)) e.preventDefault(); }, { passive: false });
+  sheet.addEventListener('touchend', end);
+  sheet.addEventListener('touchcancel', end);
+  // 마우스(데스크톱) — 터치와 이중 처리되지 않게 mouse 타입만
+  sheet.addEventListener('pointerdown', (e) => {
+    if (e.pointerType !== 'mouse') return;
+    begin(e.target, e.clientY);
+    if (active) { try { sheet.setPointerCapture(e.pointerId); } catch { /* noop */ } }
+  });
+  sheet.addEventListener('pointermove', (e) => { if (e.pointerType === 'mouse') move(e.clientY); });
+  sheet.addEventListener('pointerup', (e) => { if (e.pointerType === 'mouse') end(); });
+  sheet.addEventListener('pointercancel', (e) => { if (e.pointerType === 'mouse') end(); });
 }
 let sheetPushed = false;   // 뒤로가기로 시트가 닫히도록 히스토리에 한 칸 쌓아둠
 let sheetStack = [];       // 광고·게임 오버레이가 덮은 이전 시트 HTML (닫힐 때 복원)
@@ -2061,7 +2073,7 @@ function recipeCard(a) {
             ? '<span class="chip">🎬 영상만 저장됨 — 탭해서 재료 채우기</span>'
             : `<span class="match-badge ${matchCls}">재료 ${a.have}/${a.total}</span>
           ${a.missing.slice(0, 3).map((m) =>
-            `<span class="miss-chip" onclick="event.stopPropagation();UI.addShopping('${esc(m)}', false, '', 'recipe')">＋ ${esc(m)}</span>`).join('')}
+            `<span class="miss-chip" onclick="event.stopPropagation();UI.addShopping('${esc(m)}', false, '', 'recipe', this)">＋ ${esc(m)}</span>`).join('')}
           ${a.missing.length > 3 ? `<span class="match-badge">외 ${a.missing.length - 3}</span>` : ''}`}
         </div>
       </div>
@@ -2286,12 +2298,24 @@ UI.ladTogglePick = (id) => {
 UI.ladStart = () => {
   const { pool, sel } = ladCtx;
   const items = sel.map((id) => pool.find((p) => p.id === id)).filter(Boolean);
-  const N = items.length, rows = 7;
+  const N = items.length, rows = 8;
   const rungs = [];
   for (let r = 0; r < rows; r++) {
     const used = new Set();
     for (let c = 0; c < N - 1; c++) {
-      if (Math.random() < 0.5 && !used.has(c) && !used.has(c - 1)) { rungs.push({ r, c }); used.add(c); }
+      if (Math.random() < 0.55 && !used.has(c) && !used.has(c - 1)) { rungs.push({ r, c }); used.add(c); }
+    }
+  }
+  // 보강: 어떤 기둥 쌍(c↔c+1)에도 가로대가 최소 2개는 있게 — "일직선/연결 안 됨" 방지.
+  //   같은 행의 인접 가로대(교차 모호)는 피하면서 빈 행에 채워 넣는다.
+  for (let c = 0; c < N - 1; c++) {
+    let have = rungs.filter((g) => g.c === c).length;
+    if (have >= 2) continue;
+    const order = Array.from({ length: rows }, (_, i) => i).sort(() => Math.random() - 0.5);
+    for (const r of order) {
+      if (have >= 2) break;
+      if (rungs.some((g) => g.r === r && Math.abs(g.c - c) <= 1)) continue; // 그 행에 c-1/c/c+1 가로대 있으면 스킵
+      rungs.push({ r, c }); have += 1;
     }
   }
   Object.assign(ladCtx, { items, rungs, N, rows, ran: false });
@@ -2436,7 +2460,7 @@ UI.openRecipe = (rid) => {
       ${r.ingredients.map((g) => {
         if (g.st) return `<span class="chip chip-season">${esc(g.n)}${g.a ? ` <b class="amt" data-b="${g.a}" data-u="${esc(g.u || '')}" data-st="1">${fmtAmt(g.a) + (g.u || '')}</b>` : ' (양념)'}</span>`;
         const miss = a.missing.includes(g.n);
-        return `<span class="chip ${miss ? 'miss' : 'have'}" ${miss ? `onclick="UI.addShopping('${esc(g.n)}')"` : ''}>${miss ? '＋ ' : '✓ '}${esc(g.n)} <b class="amt" data-b="${g.a || 0}" data-u="${esc(g.u || '')}">${g.a ? fmtAmt(g.a) + (g.u || '') : ''}</b></span>`;
+        return `<span class="chip ${miss ? 'miss' : 'have'}" ${miss ? `onclick="UI.addShopping('${esc(g.n)}', false, '', '', this)"` : ''}>${miss ? '＋ ' : '✓ '}${esc(g.n)} <b class="amt" data-b="${g.a || 0}" data-u="${esc(g.u || '')}">${g.a ? fmtAmt(g.a) + (g.u || '') : ''}</b></span>`;
       }).join('')}
     </div>
     <p id="serv-hint" class="hint" style="display:none;margin:7px 4px 0">※ <b>양념은 인분만큼 그대로 곱하면 짜져요</b> — 증가분의 75%만 늘렸어요(2인분=1.75배). 끝에 한 번 맛보고 조절하세요 👩‍🍳</p>
@@ -3260,7 +3284,7 @@ UI.applyDeduct = () => {
       <p class="hint">등록해 두면 까먹기 전에 챙겨드릴게요</p>
     </div>
     ${(S.settings.spaceCode || '').trim() ? '' : `
-    <div class="invite-cta" onclick="${syncAvailable() ? 'UI.famCreate()' : 'UI.openInvite()'}">
+    <div class="invite-cta" onclick="UI.famInvite()">
       <span class="ic-ico">👨‍👩‍👧</span>
       <div class="grow"><b>냉장고 관리, 혼자 하지 마세요</b><small>가족을 초대하면 오늘 메뉴·재고를 온 가족이 같이 봐요</small></div>
       <span class="ic-go">초대 ›</span>
@@ -3371,13 +3395,21 @@ function srcFromReason(r) { // 구버전 데이터 보정
   return 'manual';
 }
 const shopSrcOf = (x) => x.src || srcFromReason(x.reason);
-UI.addShopping = (name, silent = false, reason = '', src = '') => {
+// el: 탭한 칩/버튼 요소 — 시트는 render()로 다시 안 그려지므로, 넘겨주면 그 자리에서 ✓↔＋ 표시를 바꿔준다.
+UI.addShopping = (name, silent = false, reason = '', src = '', el = null) => {
   const s = src || srcFromReason(reason || '레시피 재료');
   const ex = S.shopping.find((x) => x.name === name && !x.done);
+  const mark = (added) => { // 칩 첫 텍스트 노드(＋/✓)만 교체 — 안의 양 표시(<b class=amt>)는 보존
+    if (!el) return;
+    if (el.firstChild && el.firstChild.nodeType === 3) el.firstChild.textContent = added ? '✓ ' : '＋ ';
+    el.classList.toggle('have', added);
+    el.classList.toggle('miss', !added);
+  };
   if (ex) {
     if (!silent) { // 직접 탭한 경우: 다시 누르면 담기 취소 (실수로 눌렀을 때 복구)
       S.shopping = S.shopping.filter((x) => x !== ex);
       save();
+      mark(false);
       toast(`🧺 ${name} 담기를 취소했어요`);
       render();
       return;
@@ -3389,7 +3421,7 @@ UI.addShopping = (name, silent = false, reason = '', src = '') => {
     S.shopping.push({ id: uid(), name, reason: reason || SHOP_SRC[s].label, src: s, done: false, addedAt: Date.now() });
   }
   save();
-  if (!silent) { toast(`🧺 ${name} 장보기에 담았어요`); render(); }
+  if (!silent) { mark(true); toast(`🧺 ${name} 장보기에 담았어요`); render(); }
 };
 
 // 쿠팡 파트너스 제휴 링크 — 설정의 개별 ID가 우선, 없으면 배포 기본값(config.COUPANG_TAG).
@@ -3479,7 +3511,7 @@ function shopSuggestHtml() {
     <div class="sug-chips">${sug.map((p) => `<button class="sug-chip" onclick="UI.shopSug('${esc(p.name)}',this)">＋ ${p.emoji || ''} ${esc(p.name)}</button>`).join('')}</div>
   </div>`;
 }
-UI.shopSug = (name, el) => { UI.addShopping(name, true, '', 'low'); if (el) { el.disabled = true; el.textContent = '✓ 담음'; } toast(`🧺 ${name} 담았어요`); };
+UI.shopSug = (name) => { UI.addShopping(name, false, '', 'low'); }; // 토글(담기/취소) — render()가 제안 목록을 실제 상태로 갱신
 UI.shopCoupangAll = () => {
   const items = S.shopping.filter((x) => !x.done);
   if (!items.length) return;
@@ -3590,11 +3622,11 @@ function renderSettings() {
            ${st.spaceCode
              ? `<div class="row"><div class="grow"><b>👨‍👩‍👧 가족 공유 중</b>
                   <p class="hint" style="margin:2px 0 0">코드 <b>${esc(st.spaceCode)}</b> — 가족 기기에도 같은 코드를 입력하면 냉장고가 합쳐져요</p></div>
-                <button class="btn btn-sm btn-soft" onclick="UI.famShare()">초대 복사</button>
+                <button class="btn btn-sm btn-tint" onclick="UI.famInvite()">💌 간편 초대</button>
                 <button class="btn btn-sm btn-soft" onclick="UI.famLeave()">해제</button></div>`
              : `<div class="row"><div class="grow"><b>가족과 같이 쓰기</b>
                   <p class="hint" style="margin:2px 0 0">한 냉장고를 온 가족이 함께 — 코드 하나면 끝</p></div>
-                <button class="btn btn-sm btn-tint" onclick="UI.famCreate()">코드 만들기</button>
+                <button class="btn btn-sm btn-tint" onclick="UI.famInvite()">💌 간편 초대</button>
                 <button class="btn btn-sm btn-soft" onclick="UI.famJoin()">코드 입력</button></div>`}
          </div>`
       : (typeof window !== 'undefined' && window.__TOSS__)
@@ -3742,6 +3774,18 @@ UI.doLogout = async () => {
   await logoutGoogle();
   toast('로그아웃했어요 — 데이터는 이 기기와 클라우드에 그대로 있어요');
   renderTop(); renderSettings();
+};
+/* 가족 연계 원클릭 간편 초대 — 코드가 없으면 만들고, 있으면 그대로 공유.
+   폰 공유시트(카톡 등) 우선, 미지원이면 클립보드 복사. 친구 초대(포인트, openInvite)와는 별개. */
+UI.famInvite = async () => {
+  if (!syncAvailable()) { UI.openInvite(); return; } // 계정 기능 미설정 배포 → 친구 초대로 폴백
+  try {
+    let code = (S.settings.spaceCode || '').trim();
+    if (!code) { code = makeSpaceCode(); await setSpaceCode(code); renderTop(); }
+    const msg = `🧊 우리집 냉장고 같이 봐요!\n냉비서 앱 → 설정 → "코드 입력"에 이 코드를 넣어주세요: ${code}\n앱: ${location.origin}${location.pathname}`;
+    if (navigator.share) { try { await navigator.share({ text: msg }); toast('가족에게 초대장을 보냈어요 💌'); return; } catch { /* 사용자가 공유 취소 → 복사로 */ } }
+    copyText(msg);
+  } catch { toast('초대 준비에 실패했어요 — 잠시 후 다시 시도해 주세요'); }
 };
 UI.famCreate = async () => {
   const code = makeSpaceCode();

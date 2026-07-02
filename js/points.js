@@ -79,9 +79,18 @@ export function aiLeft() {
   const credits = S.aiUse.credits || 0;
   return { unlimited: false, freeLeft, credits, total: freeLeft + credits };
 }
+export const PREMIUM_AI_CAP = 300; // 프리미엄 공정사용(월) — 상품 문구도 '월 300회'로(과장 금지 정책+원가 보호)
 export function aiConsume() {
-  if (aiUnlimited()) return true;
   aiRoll();
+  if (aiUnlimited()) {
+    if ((S.aiUse.premMonth || '') !== S.aiUse.month) { S.aiUse.premMonth = S.aiUse.month; S.aiUse.premUsed = 0; }
+    if ((S.aiUse.premUsed || 0) < PREMIUM_AI_CAP) {
+      S.aiUse.premUsed = (S.aiUse.premUsed || 0) + 1;
+      save({ silent: true });
+      return true;
+    }
+    // 공정사용 초과(월 300회) → 일반 경로(무료 잔여/충전권)로 계속 사용 가능
+  }
   const freeLeft = Math.max(0, FREE_AI - (S.aiUse.used || 0));
   if (freeLeft > 0) S.aiUse.used = (S.aiUse.used || 0) + 1;
   else if ((S.aiUse.credits || 0) > 0) S.aiUse.credits -= 1;

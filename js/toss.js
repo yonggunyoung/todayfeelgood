@@ -56,11 +56,17 @@ export async function tossGivePoints(reason) {
   }
 }
 
-/* 인앱 결제(프리미엄 30일권) — 토스 빌드의 브리지(window.__tossIAP, toss-miniapp/src/toss-iap.ts)를 사용.
-   반환: true(결제 완료) | false(취소/미지원 → 호출측이 안내). 웹/브리지 없음 = false. */
-export function tossPurchase(productId) {
-  if (typeof window !== 'undefined' && window.__tossIAP && typeof window.__tossIAP.purchase === 'function') {
-    return window.__tossIAP.purchase(productId);
-  }
-  return Promise.resolve(false);
+/* 인앱 결제 — 토스 빌드의 브리지(window.__tossIAP, toss-miniapp/src/toss-iap.ts)를 사용.
+   sku는 콘솔이 자동 발급 → 하드코딩하지 않고 tossIapProducts()로 받아 쓴다.
+   purchase(sku, grant): grant({orderId,sku})가 지급을 수행하고 true 반환해야 최종 성공(30초 내). */
+export const tossIapSupported = () =>
+  typeof window !== 'undefined' && !!window.__tossIAP && window.__tossIAP.supported();
+export function tossIapProducts() {
+  return tossIapSupported() ? window.__tossIAP.products() : Promise.resolve([]);
+}
+export function tossPurchase(sku, grant) {
+  return tossIapSupported() ? window.__tossIAP.purchase(sku, grant) : Promise.resolve(false);
+}
+export function tossIapRestore(grant) {
+  return tossIapSupported() ? window.__tossIAP.restore(grant) : Promise.resolve(0);
 }

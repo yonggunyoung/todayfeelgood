@@ -10,7 +10,7 @@ import { enablePush, pushSupported, pushOn, pushPermission } from './push.js';
 import { AI_ENDPOINT, COUPANG_TAG, AI_FN } from './config.js';
 import { canListen, speak, stopSpeak, startListen, stopListen, isListening, parseCommand } from './voice.js';
 import { earn, bonus, spend, refund, EARN, earnedToday, SHOP, adFreeNow, gameBest, aiLeft, aiConsume, aiGrant, aiUnlimited, FREE_AI } from './points.js';
-import { initGames, openGames, GAMES, gameFresh, gameVoice, gameVoicePass, gameDouble, gameClick, setGameDiff } from './games.js';
+import { initGames, openGames, GAMES, gameFresh, gameVoice, gameVoicePass, gameDouble, gameGwangclick, setGameDiff } from './games.js';
 import { gameDefense, defBuy, defStart, defSpeed, defPick, defRevive, defGiveUp, defAdSkip, defAdSkill, defResume, defDraftAd, defWallMode, defElem, defMidSkill, defMidSkip, defActive } from './game-defense.js';
 import { gamePuzzle } from './game-puzzle.js';
 import { gameGomoku, gomokuUndo, gomokuHintAd } from './game-gomoku.js';
@@ -1729,7 +1729,7 @@ function playAd({ onComplete, note = '', reward = '' }) {
     openSheet(`<div class="adx">
       <h2 style="margin:0 0 6px">📺 광고 보고 받기</h2>
       ${reward ? `<div class="adx-reward">🎁 ${reward}</div>` : ''}
-      <p class="sub" style="margin:8px 0 4px">광고는 <b>전체 화면</b>으로 재생돼요.<br><b>중간에 나가면 보상을 받을 수 없어요.</b></p>
+      <p class="sub" style="margin:8px 0 4px">광고는 <b>전체 화면</b>으로 재생되고, <b>닫기 버튼이 없거나 늦게 나타날 수 있어요.</b><br><b>중간에 나가면 보상을 받을 수 없어요.</b> 시작 전인 지금만 취소할 수 있어요.</p>
       ${note ? `<p class="adx-note">${note}</p>` : ''}
       <div class="btn-row" style="flex-direction:column;margin-top:10px">
         <button id="tad-start" class="btn btn-primary btn-block" onclick="UI.tossAdStart()">광고 보기</button>
@@ -1932,7 +1932,7 @@ UI.gameGomoku = () => gameGomoku();
 UI.gomokuUndo = () => gomokuUndo();
 UI.gomokuHintAd = () => gomokuHintAd();
 UI.gameFresh = () => gameFresh();
-UI.gameClick = () => gameClick();
+UI.gameGwangclick = () => gameGwangclick();
 UI.gameVoice = () => gameVoice();
 UI.gameVoicePass = () => gameVoicePass();
 UI.gameDouble = (p) => gameDouble(p);

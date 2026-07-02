@@ -18,6 +18,8 @@ const COPIES = [
   [resolve(rootDir, 'css'), resolve(vendorDir, 'css')],
   [resolve(rootDir, 'js'), resolve(vendorDir, 'js')],
   [resolve(rootDir, 'icon.svg'), resolve(vendorDir, 'icon.svg')],
+  // ⚡광클대전 — 단일 파일 단독 앱을 게임 시트 iframe으로 임베드 (games.js gameGwangclick)
+  [resolve(rootDir, 'gwangclick', 'offline.html'), resolve(vendorDir, 'gwangclick', 'offline.html')],
 ];
 
 async function exists(p) {
@@ -40,6 +42,7 @@ async function main() {
       process.exitCode = 1;
       continue;
     }
+    await mkdir(dirname(dest), { recursive: true }); // 단일 파일 대상의 상위 폴더 보장
     await cp(src, dest, { recursive: true });
     console.log(`[vendor] 복사: ${src} -> ${dest}`);
   }

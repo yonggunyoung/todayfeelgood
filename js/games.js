@@ -5,7 +5,7 @@
 import { S } from './store.js';
 import { ING } from './data/ingredients.js';
 import { canListen, startListen, stopListen, isListening } from './voice.js';
-import { earn, bonus, canEarn, earnedToday, EARN, gameBest, recordScore } from './points.js';
+import { earn, bonus, canEarn, earnedToday, EARN, gameBest, recordScore, spend } from './points.js';
 
 let ui = null; // {openSheet, closeSheet, toast, playAd, onPoints, submitScore}
 export function initGames(ctx) { ui = ctx; }
@@ -45,8 +45,8 @@ export const GAMES = [
     desc: '슬라임 알로 AI와 5목 대결 — 광고로 한 수 무르기', open: 'UI.gameGomoku()' },
   { id: 'voice', emoji: '🎤', name: '외쳐! 재료', tag: '음성', needVoice: true,
     desc: '재료 이름을 빨리 외치기 — 8문제 스피드런', open: 'UI.gameVoice()' },
-  { id: 'click', emoji: '⚡', name: '광클! 재료 담기', tag: '스피드',
-    desc: '10초 동안 미친 듯이 탭! 빠를수록 콤보 보너스', open: 'UI.gameClick()' },
+  { id: 'gclash', emoji: '⚡', name: '광클대전', tag: '진영전',
+    desc: '오늘의 떡밥에 내 편 골라 60초 광클 — 전국 게이지를 내 편으로!', open: 'UI.gameGwangclick()' },
 ];
 
 // 공통 난이도 (하/중/상) — 게임마다 속도·시간·물량에 반영
@@ -90,7 +90,7 @@ export function openGames() {
 }
 
 /* ── 공통: 판 종료 → 점수/기록/포인트/광고 2배/랭킹 제출 ── */
-const PTS_DIV = { fresh: 25, voice: 10, defense: 70, puzzle: 90, quiz: 14, click: 20 }; // 점수→포인트 환산 (수익성 보정)
+const PTS_DIV = { fresh: 25, voice: 10, defense: 70, puzzle: 90, quiz: 14 }; // 점수→포인트 환산 (수익성 보정)
 export function finishGame(game, title, score, scoreLabel, replayFn, { extra = '' } = {}) {
   stopListen();
   const rec = recordScore(game, score);
@@ -139,13 +139,19 @@ export function gameDouble(p) {
    토스 안: 실제 보상형 광고(전면). 시작 전에 "중간에 나가면 보상 없음"을 고지하고 선택권을 준다.
            가짜 카운트다운("냉비서 프리미엄이 곧…")은 토스에서 절대 뜨지 않는다.
    웹:     하우스 15초 카운트다운(기존 그대로 — AdFit 교체 자리). */
+const AD_ALT_COST = 40; // 광고 대신 포인트로 받기 비용 (한 판 보상 상한 15P보다 크게 — 광고가 기본, 포인트는 선택지)
+function adAltBtnHtml() {
+  const bal = S.points?.bal || 0;
+  return bal >= AD_ALT_COST ? `<button class="gx-adcoin" id="tad-pay">🅿 ${AD_ALT_COST}P로 광고 없이 받기 (보유 ${bal}P)</button>` : '';
+}
 export function inStageAd(stageEl, label, onReward, onSkip) {
   if (!stageEl) { onSkip && onSkip(); return; }
   if (typeof window !== 'undefined' && window.__TOSS__) {
     const ov = document.createElement('div'); ov.className = 'draft-overlay';
     ov.innerHTML = `<div class="draft-in"><div class="draft-title">📺 광고 보기</div><p>${label}</p>
-      <p class="hint" style="margin:6px 0 10px">광고는 전체 화면으로 재생돼요.<br><b>중간에 나가면 보상을 받을 수 없어요.</b></p>
+      <p class="hint" style="margin:6px 0 10px">광고는 전체 화면으로 재생되고 <b>닫기 버튼이 없거나 늦게 나타날 수 있어요.</b><br><b>중간에 나가면 보상을 받을 수 없어요.</b> 시작 전인 지금만 취소할 수 있어요.</p>
       <button class="gx-btn-go" id="tad-go">광고 보고 받기</button>
+      ${adAltBtnHtml()}
       <button class="qz-skip" id="tad-no">안 볼래요 (보상 없음)</button></div>`;
     stageEl.appendChild(ov);
     let done = false;
@@ -155,6 +161,8 @@ export function inStageAd(stageEl, label, onReward, onSkip) {
       (reward ? onReward : onSkip) && (reward ? onReward() : onSkip());
     };
     ov.querySelector('#tad-no').onclick = () => fin(false);
+    const pay = ov.querySelector('#tad-pay');
+    if (pay) pay.onclick = () => { if (spend(AD_ALT_COST, '광고 대신 포인트')) { ui.onPoints?.(); fin(true, `🅿 ${AD_ALT_COST}P 사용 — 보상이 적용됐어요`); } else fin(false, '포인트가 부족해요'); };
     ov.querySelector('#tad-go').onclick = () => {
       const b = ov.querySelector('#tad-go'); b.disabled = true; b.textContent = '광고 불러오는 중…';
       const fn = window.__tossRewardedAd;
@@ -171,11 +179,14 @@ export function inStageAd(stageEl, label, onReward, onSkip) {
     <div class="adx-stage" style="margin:6px 0 10px"><div class="adx-slime">🧊</div><b>냉비서 프리미엄이 곧</b></div>
     <div class="ad-progress"><i class="ad-bar"></i></div>
     <button class="gx-btn-go ad-ok" disabled>광고 시청 중… 15초</button>
+    ${adAltBtnHtml()}
     <button class="qz-skip ad-skip">건너뛰기 (보상 없음)</button></div>`;
   stageEl.appendChild(ov);
   const bar = ov.querySelector('.ad-bar'); if (bar) { bar.style.transitionDuration = '15s'; requestAnimationFrame(() => { bar.style.width = '100%'; }); }
   const okb = ov.querySelector('.ad-ok'); let t = 15, done = false;
   const fin = (reward) => { if (done) return; done = true; clearInterval(iv); ov.remove(); (reward ? onReward : onSkip) && (reward ? onReward() : onSkip()); };
+  const payw = ov.querySelector('#tad-pay');
+  if (payw) payw.onclick = () => { if (spend(AD_ALT_COST, '광고 대신 포인트')) { ui.onPoints?.(); ui.toast(`🅿 ${AD_ALT_COST}P 사용 — 보상이 적용됐어요`); fin(true); } };
   const iv = setInterval(() => { if (!ov.isConnected) { clearInterval(iv); return; } t--; if (t > 0) { okb.textContent = `광고 시청 중… ${t}초`; return; } clearInterval(iv); okb.disabled = false; okb.textContent = '✅ 보상 받기'; okb.onclick = () => fin(true); }, 1000);
   ov.querySelector('.ad-skip').onclick = () => fin(false);
 }
@@ -395,54 +406,14 @@ function endVoice() {
   finishGame('voice', '🎤 외쳐! 재료', score, `${secs.toFixed(1)}초 · ${score}점`, 'UI.gameVoice()');
 }
 
-/* ══ C. 광클! 재료 담기 — 10초 연타 스피드 (첫 탭에 시작) ══
-   빠른 연속 탭(간격이 짧을수록)이 콤보를 쌓아 탭당 점수가 커진다. 난이도가 높을수록 콤보 유지 기준이 빡빡. */
-const CLICK_GAP = { easy: 360, normal: 280, hard: 215 }; // 콤보 유지 최대 간격(ms)
-let cg = null;
-export function gameClick() {
-  cg = { taps: 0, score: 0, combo: 0, last: 0, t0: 0, iv: null, item: pickItem(), done: false };
+/* ══ C. ⚡광클대전 — 별도 개발된 단독 앱(gwangclick/offline.html, 단일 파일)을 게임 시트에 임베드 ══
+   진영전 밈 게임: 오늘의 떡밥에 편 골라 60초 광클. 자체 완결(자기 점수·연출·광고 어댑터 내장)이라
+   냉비서 포인트 환산 없이 '보너스 아케이드'로 제공한다. */
+export function gameGwangclick() {
   ui.openSheet(`
-    <div class="g-stage" id="gc-stage">
-      <div class="g-hud"><span id="gc-time">10.0초</span><b id="gc-score">0</b><span id="gc-heat" class="g-combo"></span></div>
-      ${gameDiffRow('gameClick')}
-      <p class="hint" style="text-align:center;margin:4px 0 8px">10초 동안 <b>미친 듯이 탭</b>! 간격이 짧을수록 콤보 보너스</p>
-      <button class="g-clickpad" id="gc-pad"><span id="gc-emoji">${cg.item.emoji}</span><b id="gc-label">탭해서 시작!</b></button>
-      <p class="hint" style="text-align:center;margin-top:8px">가족·친구와 최고 기록 대결해 보세요 🏆</p>
+    <div class="gx gclash-wrap">
+      <div class="gx-bar gclash-bar"><b>⚡ 광클대전</b><span class="grow"></span>
+        <button class="gclash-x" onclick="UI.closeSheet()">✕ 닫기</button></div>
+      <iframe class="gclash-frame" src="./gwangclick/offline.html" title="광클대전"></iframe>
     </div>`);
-  document.getElementById('gc-pad')?.addEventListener('pointerdown', clickTap, { passive: true });
-}
-function clickTap() {
-  if (!cg || cg.done) return;
-  const now = performance.now();
-  if (!cg.t0) { // 첫 탭 — 타이머 시작
-    cg.t0 = now;
-    cg.iv = setInterval(() => {
-      const el = document.getElementById('gc-time');
-      if (!cg || !el || !el.isConnected) { if (cg) { clearInterval(cg.iv); cg = null; } return; }
-      const left = Math.max(0, 10 - (performance.now() - cg.t0) / 1000);
-      el.textContent = left.toFixed(1) + '초';
-      if (left <= 0) endClick();
-    }, 100);
-  }
-  const gap = now - (cg.last || now);
-  cg.combo = cg.last && gap <= (CLICK_GAP[getDiff()] || 280) ? cg.combo + 1 : 1;
-  cg.last = now;
-  cg.taps += 1;
-  const mult = 1 + Math.min(4, Math.floor(cg.combo / 10)); // 콤보 10마다 탭당 +1 (최대 5)
-  cg.score += mult;
-  if (cg.taps % 14 === 0) { cg.item = pickItem(); const e = document.getElementById('gc-emoji'); if (e) e.textContent = cg.item.emoji; }
-  if (cg.taps % 10 === 0) { beep(880 + mult * 120, 0.05, 'square', 0.1); buzz(8); }
-  const s = document.getElementById('gc-score'); if (s) s.textContent = cg.score;
-  const h = document.getElementById('gc-heat'); if (h) h.textContent = mult > 1 ? `🔥 ×${mult}` : '';
-  const l = document.getElementById('gc-label'); if (l) l.textContent = `${cg.taps}탭`;
-  const pad = document.getElementById('gc-pad'); if (pad) { pad.classList.remove('pop'); void pad.offsetWidth; pad.classList.add('pop'); }
-}
-function endClick() {
-  if (!cg || cg.done) return;
-  cg.done = true;
-  clearInterval(cg.iv);
-  const { taps, score } = cg;
-  cg = null;
-  chord([659, 784, 1047]);
-  finishGame('click', '⚡ 광클! 재료 담기', score, `${taps}탭 · ${score}점`, 'UI.gameClick()');
 }

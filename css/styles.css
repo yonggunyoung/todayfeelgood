@@ -7,8 +7,8 @@
   --bg: #f5f3ec;             /* 따뜻한 크림 (시안 기반) */
   --card: #ffffff;
   --label: #1c1d1f;
-  --label-2: #7d7b73;        /* 웜 그레이 본문 */
-  --label-3: #a8a59c;        /* 웜 라이트 그레이 힌트 */
+  --label-2: #676557;        /* 웜 그레이 본문 */
+  --label-3: #918e84;        /* 웜 라이트 그레이 힌트 */
   --hairline: #ece6d7;       /* 웜 헤어라인 */
   --green: #0fa45a;          /* 프레시 그린 (프라이머리) */
   --green-deep: #0a6238;     /* 진녹 (밝은 배경 위 텍스트·그라데이션 끝) */
@@ -50,7 +50,7 @@ body {
 }
 button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
 input, select, textarea {
-  font-family: inherit; font-size: 0.95rem; color: var(--label);
+  font-family: inherit; font-size: 1rem; color: var(--label); /* 16px — iOS 포커스 자동확대 방지 + 가독성 */
   background: rgba(118, 118, 128, 0.08); border: none; border-radius: var(--r-sm);
   padding: 12px 14px; width: 100%;
 }
@@ -100,7 +100,7 @@ a { color: var(--blue); text-decoration: none; }
 }
 #tabbar button {
   flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;
-  padding: 9px 0 7px; font-size: 0.625rem; font-weight: 800; color: var(--label-3);
+  padding: 9px 0 7px; font-size: 0.68rem; font-weight: 800; color: var(--label-3);
   transition: transform 0.12s, color 0.15s;
 }
 /* 라인 아이콘(SVG) 탭 — currentColor로 활성색 따라감 */
@@ -108,18 +108,15 @@ a { color: var(--blue); text-decoration: none; }
 #tabbar button.active { color: var(--green); }
 #tabbar button:active { transform: scale(0.9); }
 
-/* ── ⚡ 광클! 재료 담기 — 큰 연타 패드 ── */
-.g-clickpad {
-  width: 100%; min-height: 230px; margin-top: 4px;
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
-  background: linear-gradient(160deg, #123524, #0a2417);
-  border: 2px solid rgba(94, 240, 176, 0.35); border-radius: 22px;
-  color: #eafff3; font-weight: 900; font-size: 1.05rem;
-  touch-action: manipulation; user-select: none; -webkit-user-select: none;
+/* ── ⚡ 광클대전 임베드 — 단독 앱(offline.html)을 풀시트 iframe으로 ── */
+.gclash-wrap { display: flex; flex-direction: column; min-height: 82dvh; }
+.gclash-bar { display: flex; align-items: center; gap: 8px; padding: 4px 2px 10px; color: var(--green-ink); }
+.gclash-bar b { font-size: 1.05rem; }
+.gclash-x {
+  font-size: 0.8rem; font-weight: 800; color: var(--label-2);
+  background: rgba(118, 118, 128, 0.1); border-radius: 99px; padding: 7px 13px;
 }
-.g-clickpad span { font-size: 3.2rem; }
-.g-clickpad.pop { animation: gcPop 0.12s ease-out; }
-@keyframes gcPop { 0% { transform: scale(0.96); } 100% { transform: scale(1); } }
+.gclash-frame { flex: 1; width: 100%; border: 0; border-radius: 16px; background: #0a0b0d; min-height: 70dvh; }
 
 /* ── 토스 인앱 배너 (WebView 전용 — JS가 토스+지원버전에서만 #nb-banner 를 생성) ── */
 #nb-banner {
@@ -136,32 +133,32 @@ body.has-ad-banner #view { padding-bottom: 212px; }
 .hero { padding: 20px 4px 4px; }
 .hero h1 { font-family: var(--display); font-size: 1.78rem; line-height: 1.16; font-weight: 400; letter-spacing: -0.02em; color: var(--green-ink); }
 .hero h1 em { font-style: normal; color: var(--green-deep); }
-.hero p { color: var(--label-2); font-size: 0.85rem; margin-top: 7px; font-weight: 500; }
+.hero p { color: var(--label-2); font-size: 0.9rem; margin-top: 7px; font-weight: 500; }
 .section-title {
   display: flex; align-items: center; justify-content: space-between;
   margin: 24px 4px 10px;
 }
 .section-title h2 {
-  font-family: var(--display); font-size: 1.02rem; font-weight: 400; letter-spacing: -0.01em;
+  font-family: var(--display); font-size: 1.14rem; font-weight: 400; letter-spacing: -0.01em;
   color: var(--green-ink); display: inline-flex; align-items: center; gap: 8px;
 }
 .section-title h2::before {
-  content: ''; width: 4px; height: 15px; border-radius: 2px; background: var(--green); flex: none;
+  content: ''; width: 4px; height: 17px; border-radius: 2px; background: var(--green); flex: none;
 }
-.section-title small { color: var(--label-3); font-size: 0.74rem; font-weight: 700; }
+.section-title small { color: var(--label-2); font-size: 0.78rem; font-weight: 700; }
 
 /* ── 카드 ─────────────────────────── */
 .card {
   background: var(--card); border-radius: var(--r-lg);
   box-shadow: var(--shadow-card); padding: 15px; margin-bottom: 11px;
 }
-.card.flat { box-shadow: none; border: 0.5px solid var(--hairline); }
+.card.flat { box-shadow: none; border: 1px solid var(--hairline); }
 .row { display: flex; align-items: center; gap: 11px; }
 .grow { flex: 1; min-width: 0; }
 
 /* D-day 뱃지 */
 .stamp {
-  font-size: 0.66rem; font-weight: 800; padding: 4px 9px; border-radius: 8px;
+  font-size: 0.7rem; font-weight: 800; padding: 4px 9px; border-radius: 8px;
   display: inline-block; letter-spacing: 0.02em;
 }
 .stamp-danger { color: #fff; background: var(--red); }
@@ -170,7 +167,7 @@ body.has-ad-banner #view { padding-bottom: 212px; }
 
 .chip {
   display: inline-flex; align-items: center; gap: 4px;
-  font-size: 0.73rem; font-weight: 600; padding: 6px 11px; margin: 2px 4px 2px 0;
+  font-size: 0.78rem; font-weight: 600; padding: 6px 11px; margin: 2px 4px 2px 0;
   background: rgba(118, 118, 128, 0.08); border-radius: 99px; color: var(--label-2);
 }
 .chip.miss { background: var(--orange-bg); color: var(--orange); }
@@ -179,7 +176,7 @@ body.has-ad-banner #view { padding-bottom: 212px; }
 /* ── 버튼 ─────────────────────────── */
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-  font-weight: 700; font-size: 0.92rem; padding: 13px 16px; border-radius: var(--r-md);
+  font-weight: 700; font-size: 0.95rem; padding: 13px 16px; border-radius: var(--r-md);
   background: var(--card); box-shadow: var(--shadow-card);
   transition: transform 0.1s, opacity 0.1s; white-space: nowrap; color: var(--label);
 }

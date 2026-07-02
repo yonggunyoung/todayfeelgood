@@ -2,6 +2,8 @@
 // 플레이어는 적을 직접 탭하지 않는다: 냉장고가 자동 발사 → 점수=코인으로 무기/방어수단 강화.
 // 슬라임 렌더러 + 파티클·셰이크·히트스톱·코인흡수 손맛. 모든 밸런스는 BALANCE 한 곳.
 import { gameUI, beep, chord, buzz, finishGame } from './games.js';
+import { spend } from './points.js';
+import { S } from './store.js';
 import { blinkTick, Particles, Shake, Floaters, ease, clamp, setupCanvas } from './slime.js';
 import { enemySprite, fridgeSprite, itemSprite, drawSprite } from './pixel.js';
 
@@ -629,13 +631,22 @@ function stageAd(label, onReward, secs = 15) {
   D._adReward = onReward;
   const stage = D.canvas.parentElement;
   const ov = document.createElement('div'); ov.className = 'draft-overlay'; ov.id = 'def-ad';
+  const DEF_ALT = 40; // 광고 대신 포인트 비용
+  const altBtn = (S.points?.bal || 0) >= DEF_ALT ? `<button class="gx-adcoin" id="def-adpay">🅿 ${DEF_ALT}P로 광고 없이 받기 (보유 ${S.points.bal}P)</button>` : '';
   if (typeof window !== 'undefined' && window.__TOSS__) {
     ov.innerHTML = `<div class="draft-in">
       <div class="draft-title">📺 광고 보기</div><p>${label}</p>
-      <p class="hint" style="margin:6px 0 10px">광고는 전체 화면으로 재생돼요.<br><b>중간에 나가면 보상을 받을 수 없어요.</b></p>
+      <p class="hint" style="margin:6px 0 10px">광고는 전체 화면으로 재생되고 <b>닫기 버튼이 없거나 늦게 나타날 수 있어요.</b><br><b>중간에 나가면 보상을 받을 수 없어요.</b> 시작 전인 지금만 취소할 수 있어요.</p>
       <button class="gx-btn-go" id="def-adbtn">광고 보고 받기</button>
+      ${altBtn}
       <button class="qz-skip" onclick="UI.defAdSkip()">안 볼래요 (보상 없음)</button></div>`;
     stage.appendChild(ov);
+    const pay = ov.querySelector('#def-adpay');
+    if (pay) pay.onclick = () => {
+      const t = gameUI()?.toast || (() => {});
+      if (spend(DEF_ALT, '광고 대신 포인트')) { gameUI()?.onPoints?.(); t(`🅿 ${DEF_ALT}P 사용 — 보상이 적용됐어요`); UI_defAdDone(); }
+      else t('포인트가 부족해요');
+    };
     ov.querySelector('#def-adbtn').onclick = () => {
       const b = document.getElementById('def-adbtn'); if (b) { b.disabled = true; b.textContent = '광고 불러오는 중…'; }
       const fn = window.__tossRewardedAd;
@@ -652,8 +663,15 @@ function stageAd(label, onReward, secs = 15) {
     <div class="adx-stage" style="margin:8px 0 10px"><div class="adx-slime">🧊</div><b>냉비서와 함께 — 잠시 기다려 주세요</b></div>
     <div class="ad-progress"><i id="def-adbar"></i></div>
     <button class="gx-btn-go" id="def-adbtn" disabled>잠시만요… ${secs}초</button>
+    ${altBtn}
     <button class="qz-skip" onclick="UI.defAdSkip()">그냥 닫기</button></div>`;
   stage.appendChild(ov);
+  const payw = ov.querySelector('#def-adpay');
+  if (payw) payw.onclick = () => {
+    const t = gameUI()?.toast || (() => {});
+    if (spend(DEF_ALT, '광고 대신 포인트')) { gameUI()?.onPoints?.(); t(`🅿 ${DEF_ALT}P 사용 — 보상이 적용됐어요`); clearInterval(D._adTimer); UI_defAdDone(); }
+    else t('포인트가 부족해요');
+  };
   const bar = ov.querySelector('#def-adbar'); if (bar) { bar.style.transitionDuration = secs + 's'; requestAnimationFrame(() => { bar.style.width = '100%'; }); }
   let t = secs;
   D._adTimer = setInterval(() => {

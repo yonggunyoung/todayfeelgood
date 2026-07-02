@@ -1903,6 +1903,11 @@ UI.openPoints = () => {
       <div class="grow"><b>친구 초대하고 +${REF_INVITER}P</b><small>친구가 냉비서를 시작하면 둘 다 포인트를 받아요</small></div>
       <span class="ic-go">초대 ›</span>
     </div>
+    <div class="invite-cta cheer-cta" onclick="UI.cheerAd()">
+      <span class="ic-ico">💚</span>
+      <div class="grow"><b>광고 보고 개발 응원하기</b><small>${S.cheerCount ? `지금까지 ${S.cheerCount}번 응원해주셨어요 · ` : ''}광고 수익이 냉비서를 계속 키워요${aiUnlimited() ? ' (프리미엄이어도 응원 가능!)' : ''}</small></div>
+      <span class="ic-go">응원 ›</span>
+    </div>
     <div class="section-title" style="margin-top:14px"><h2>오늘 적립</h2><small>매일 자정 리셋</small></div>
     <div class="card flat">${rows}</div>
     <div class="section-title" style="margin-top:14px"><h2>교환소</h2><small>모은 포인트 쓰기</small></div>
@@ -1910,6 +1915,23 @@ UI.openPoints = () => {
     ${hist ? `<div class="section-title" style="margin-top:14px"><h2>최근 내역</h2></div><div class="card flat">${hist}</div>` : ''}
     <p class="hint" style="text-align:center;margin-top:10px">포인트는 활동으로만 적립되고 현금으로 바꿀 수 없어요.<br>기프티콘·토스포인트 교환은 준비되는 대로 열립니다.</p>
     <div class="btn-row"><button class="btn btn-block" onclick="UI.closeSheet()">닫기</button></div>`);
+};
+/* 💚 응원하기 — 자발적 광고 시청. 프리미엄(광고 없음)과 무관하게 항상 동작한다.
+   유료 결제가 없어도 팬은 광고로 응원, 프리미엄 유저도 추가 응원 가능. 실광고 = 실제 수익. */
+UI.cheerAd = () => {
+  playAd({
+    reward: '💚 개발 응원',
+    note: '광고 수익이 냉비서를 계속 좋아지게 하는 힘이에요 — 정말 고맙습니다!',
+    onComplete: (btn) => {
+      S.cheerCount = (S.cheerCount || 0) + 1;
+      const r = earn('ad'); // 일일 광고보너스 캡 내에서 소소한 보답(넘으면 응원 배지만)
+      save();
+      btn.className = 'btn btn-block btn-primary';
+      btn.textContent = `💚 응원 완료! 누적 ${S.cheerCount}번${r.ok ? ` · 🅿+${r.p}P` : ''} — 고맙습니다`;
+      btn.disabled = false; btn.onclick = () => UI.closeSheet();
+      renderTop();
+    },
+  });
 };
 UI.redeem = async (id) => {
   const it = SHOP.find((x) => x.id === id);
@@ -2057,6 +2079,11 @@ UI.openPremium = () => {
              <button class="btn btn-tint btn-block" onclick="UI.premiumInterest()">🔔 열리면 가장 먼저 알림받기</button>`
           : `<button class="btn btn-tint btn-block" onclick="UI.premiumInterest()">🔔 출시 알림받기 (토스 앱에서 먼저 열려요)</button>`}
       <button class="btn btn-block" onclick="UI.closeSheet()">닫기</button>
+    </div>
+    <div class="invite-cta cheer-cta" style="margin-top:8px" onclick="UI.cheerAd()">
+      <span class="ic-ico">💚</span>
+      <div class="grow"><b>광고 보고 응원하기</b><small>결제 대신·결제와 함께 — 광고로도 냉비서를 응원할 수 있어요</small></div>
+      <span class="ic-go">응원 ›</span>
     </div>
     <p class="hint" style="text-align:center;margin-top:6px">1회 결제 30일 적용 · 자동갱신 없음 — 부담 없이 써보세요</p>`);
 };

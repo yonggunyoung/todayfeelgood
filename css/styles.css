@@ -121,6 +121,8 @@ a { color: var(--blue); text-decoration: none; }
 /* ── 레시피 fun-strip — 랜덤·사다리·게임(포인트) 주요 기능을 한 줄에 크게 ── */
 .fun-strip { display: grid; grid-template-columns: 1fr 1fr 1.15fr; gap: 8px; margin: 10px 0 4px; }
 .fun-strip.fun-strip4 { grid-template-columns: 1fr 1fr; }
+.cheer-cta { background: linear-gradient(135deg, rgba(15,164,90,.1), rgba(15,164,90,.04)); border-color: rgba(15,164,90,.25); }
+.cheer-cta .ic-go { color: var(--green-deep); }
 .fun-strip button {
   display: flex; flex-direction: column; align-items: flex-start; gap: 1px;
   padding: 11px 12px; border-radius: 16px; background: var(--card);

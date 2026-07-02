@@ -2110,10 +2110,11 @@ function renderRecipes() {
     <div class="hero"><h1>${mode.emoji} <em>${esc(mode.label)}</em> 레시피</h1>
       <p>${esc(mode.desc || '내 냉장고 기준으로 정렬했어요')}</p></div>
     <div class="mode-chips">${chips}</div>
-    <div class="fun-strip">
+    <div class="fun-strip fun-strip4">
       <button onclick="UI.menuRandom()"><span>🎲</span><b>랜덤 추천</b><small>냉장고가 골라줘요</small></button>
       <button onclick="UI.menuLadder()"><span>🪜</span><b>사다리 타기</b><small>가족 메뉴 결정전</small></button>
-      <button class="fs-game" onclick="UI.openGames()"><span>🎮</span><b>게임 · 🅿${(S.points?.bal || 0).toLocaleString()}</b><small>짬시간 포인트</small></button>
+      <button onclick="UI.openGames()"><span>🎮</span><b>게임</b><small>랭킹 · 점수=포인트</small></button>
+      <button class="fs-game" onclick="UI.waitAd()"><span>🕒</span><b>짬시간 포인트 · 🅿${(S.points?.bal || 0).toLocaleString()}</b><small>광고 보고 바로 적립</small></button>
     </div>
     <div class="search-row">
       <input placeholder="요리 이름·태그 검색" value="${esc(recipeQuery)}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" oninput="UI.recipeSearch(this.value)" />
@@ -2129,10 +2130,6 @@ function renderRecipes() {
       ? `<div class="banner warn">🤰 임신 중 <b>섭취 주의 재료</b>(참치의 수은 등)가 든 레시피 ${blocked.length}개를 가렸어요 — 상해서가 아니라 안 드시는 게 좋은 재료라서예요. 다른 모드로 바꾸면 그대로 보입니다. (의학적 조언 아님 · 식단은 의료진과 상의)</div>` : ''}
     <button class="btn ${selMode ? 'btn-tint' : 'btn-soft'} btn-block" style="margin:2px 0 8px" onclick="UI.toggleSelMode()">
       ${selMode ? '✕ 같이 요리 선택 끝내기' : '👩‍🍳 같이 요리 — 여러 개 골라 통합 순서 만들기'}</button>
-    <div class="home-games" style="margin-bottom:10px">
-      <button onclick="UI.openGames()">🎮 게임하기</button>
-      <button class="ad" onclick="UI.waitAd()">🕒 짬시간 포인트</button>
-    </div>
     <div id="recipe-list">${recipeListHtml()}</div>
     ${adBanner('recipes')}
     ${selMode && cookSel.size ? `
@@ -3477,6 +3474,7 @@ function renderShopping() {
     ${open.length && coupangActive() ? `<p class="hint" style="margin:-4px 4px 10px;font-size:.72rem;color:var(--label-3)">이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.</p>` : ''}
     ${open.length === 0 && done.length === 0
       ? `<div class="empty"><span class="e-emoji">🧺</span><b>장보기 바구니가 비었어요</b><small>레시피의 부족 재료를 탭하거나<br>재료가 다 떨어지면 자동으로 담겨요</small></div>` : ''}
+    ${open.length ? `<div class="section-title" style="margin:8px 4px 0"><h2>🧺 살 것 ${open.length}개</h2><small>○ 체크 = 샀어요 · ✕ = 빼기</small></div>` : ''}
     ${shopGroupsHtml(open)}
     ${done.length ? `
       <div class="section-title"><h2>✓ 샀어요 (${done.length})</h2><small>입고하면 냉장고로 들어가요</small></div>
@@ -3507,7 +3505,8 @@ function shopSuggestHtml() {
   const sug = [...low, ...soon].slice(0, 10);
   if (!sug.length) return '';
   return `<div class="sug-box">
-    <div class="sug-h">🧠 떨어져가요 · 미리 담아둘까요?</div>
+    <div class="sug-h">🛒 아직 안 담김 — 곧 떨어지는 재료예요</div>
+    <p class="hint" style="margin:2px 0 6px">탭하면 아래 <b>살 것 목록</b>에 담겨요 (다시 탭하면 취소)</p>
     <div class="sug-chips">${sug.map((p) => `<button class="sug-chip" onclick="UI.shopSug('${esc(p.name)}',this)">＋ ${p.emoji || ''} ${esc(p.name)}</button>`).join('')}</div>
   </div>`;
 }
@@ -3782,7 +3781,10 @@ UI.famInvite = async () => {
   try {
     let code = (S.settings.spaceCode || '').trim();
     if (!code) { code = makeSpaceCode(); await setSpaceCode(code); renderTop(); }
-    const msg = `🧊 우리집 냉장고 같이 봐요!\n냉비서 앱 → 설정 → "코드 입력"에 이 코드를 넣어주세요: ${code}\n앱: ${location.origin}${location.pathname}`;
+    const isToss = typeof window !== 'undefined' && window.__TOSS__;
+    const webBase = isToss ? 'https://yonggunyoung.github.io/todayfeelgood/' : (location.origin + location.pathname);
+    const link = `${webBase}?join=${encodeURIComponent(code)}`;
+    const msg = `🧊 우리집 냉장고 같이 봐요!\n👇 링크만 누르면 바로 연결돼요\n${link}${isToss ? `\n토스에서: intoss://naengbiseo?join=${code}` : ''}\n(안 되면: 냉비서 → 설정 → "코드 입력"에 ${code})`;
     if (navigator.share) { try { await navigator.share({ text: msg }); toast('가족에게 초대장을 보냈어요 💌'); return; } catch { /* 사용자가 공유 취소 → 복사로 */ } }
     copyText(msg);
   } catch { toast('초대 준비에 실패했어요 — 잠시 후 다시 시도해 주세요'); }
@@ -4070,6 +4072,26 @@ try {
   const att = earn('daily');
   if (att.ok) setTimeout(() => toast(`📅 출석 +${att.p}P — 오늘도 냉장고부터!`), 1400);
 }
+
+// 가족 초대 링크로 진입 (?join=CODE) — 받는 쪽 원클릭 연결 (웹·토스 공통)
+const joinCode = (new URLSearchParams(location.search).get('join') || (location.hash.match(/join=([A-Za-z0-9-]+)/) || [])[1] || '').trim();
+if (joinCode && (S.settings.spaceCode || '').trim() !== joinCode) {
+  try { history.replaceState(null, '', location.pathname); } catch { /* noop */ }
+  setTimeout(() => {
+    openSheet(`<h2>👨‍👩‍👧 가족 냉장고 초대장</h2>
+      <p class="sub">초대 코드 <b>${esc(joinCode)}</b> — 연결하면 냉장고·레시피·장보기를 온 가족이 실시간으로 같이 봐요.</p>
+      <div class="btn-row" style="flex-direction:column">
+        <button class="btn btn-primary btn-block" onclick="UI.famJoinCode('${esc(joinCode)}')">💌 우리집 냉장고에 연결하기</button>
+        <button class="btn btn-block" onclick="UI.closeSheet()">다음에 할게요</button>
+      </div>`);
+  }, 700);
+}
+UI.famJoinCode = async (code) => {
+  await setSpaceCode(String(code || '').trim());
+  UI.closeSheet();
+  toast('👨‍👩‍👧 가족 냉장고에 연결됐어요!');
+  renderTop(); render();
+};
 
 // 공유 링크로 진입한 경우 (?share=NB1.…)
 const shared = new URLSearchParams(location.search).get('share');

@@ -44,7 +44,10 @@ export const AI_FN = 'https://asia-northeast3-icebi-308e0.cloudfunctions.net/ai'
 
 // ③ 앱인토스 입점 후 채우기 — 콘솔에서 발급받는 값 (비우면 개별 운영 모드로 자동 폴백)
 //    rewardAdId: 보상형 광고 단위 / promotionId: 토스포인트 프로모션 (비즈월렛 예산 선충전 필요)
-export const TOSS = { rewardAdId: '', promotionId: '', premiumProductId: 'premium30' }; // premiumProductId: 콘솔 인앱 상품 ID와 일치시킬 것
+export const TOSS = { rewardAdId: '', promotionId: '' };
+// 토스 로그인(appLogin+mTLS 백엔드)이 실제로 연결되면 true 로 — 그전엔 로그인 버튼을 숨겨
+//   검수 리뷰어가 '작동 안 하는 버튼'을 누르는 사고를 막는다(반려 방지).
+export const TOSS_LOGIN_LIVE = false;
 
 // ④ 쿠팡 파트너스 트래킹 ID — 장보기 "쿠팡" 버튼에 제휴 태그로 붙는다.
 //    설정에서 개별 ID를 넣으면 그게 우선한다(없으면 이 값 사용). 공정위 고지 문구가 함께 노출된다.

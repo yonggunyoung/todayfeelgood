@@ -7,7 +7,7 @@ import { scanImage, extractRecipeFromYouTube } from './ai.js';
 import { initSync, sync, makeSpaceCode, setSpaceCode, loginGoogle, loginToss, logoutGoogle, syncAvailable, submitScore, topScores, submitRating, fetchRecipeStats } from './sync.js';
 import { initAnalytics, track, trackScreen } from './analytics.js';
 import { enablePush, pushSupported, pushOn, pushPermission } from './push.js';
-import { AI_ENDPOINT, COUPANG_TAG, AI_FN } from './config.js';
+import { AI_ENDPOINT, COUPANG_TAG, AI_FN, TOSS_LOGIN_LIVE } from './config.js';
 import { canListen, speak, stopSpeak, startListen, stopListen, isListening, parseCommand } from './voice.js';
 import { earn, bonus, spend, refund, EARN, earnedToday, SHOP, adFreeNow, gameBest, aiLeft, aiConsume, aiGrant, aiUnlimited, FREE_AI } from './points.js';
 import { initGames, openGames, GAMES, gameFresh, gameVoice, gameVoicePass, gameDouble, gameGwangclick, setGameDiff } from './games.js';
@@ -3724,10 +3724,12 @@ function renderSettings() {
                 <button class="btn btn-sm btn-soft" onclick="UI.famJoin()">코드 입력</button></div>`}
          </div>`
       : (typeof window !== 'undefined' && window.__TOSS__)
-        ? `<button class="btn btn-block" style="background:#0064FF;color:#fff;border:none;box-shadow:var(--shadow-card);font-weight:800" onclick="UI.loginToss()">
-             토스로 로그인 — 백업 · 기기 이동 · 가족 공유
-           </button>
-           <p class="hint" style="text-align:center;margin:8px 0 0">로그인 없이도 이 기기에서는 모든 기능을 쓸 수 있어요</p>`
+        ? (TOSS_LOGIN_LIVE
+          ? `<button class="btn btn-block" style="background:#0064FF;color:#fff;border:none;box-shadow:var(--shadow-card);font-weight:800" onclick="UI.loginToss()">
+               토스로 로그인 — 백업 · 기기 이동 · 가족 공유
+             </button>
+             <p class="hint" style="text-align:center;margin:8px 0 0">로그인 없이도 이 기기에서는 모든 기능을 쓸 수 있어요</p>`
+          : `<div class="card flat"><p class="hint" style="margin:0">☁️ 클라우드 백업·가족 공유는 <b>토스 로그인</b>으로 곧 열려요. 지금은 이 기기에 안전하게 저장되고, 가족 공유는 설정의 <b>💌 간편 초대</b>로 코드 없이 연결할 수 있어요.</p></div>`)
         : `<button class="btn btn-block" style="background:#fff;border:1px solid var(--hairline);box-shadow:var(--shadow-card);font-weight:800" onclick="UI.doLogin()">
            <span style="font-weight:900;color:#4285F4">G</span>&nbsp; 구글로 시작하기 — 백업 · 기기 이동 · 가족 공유
          </button>

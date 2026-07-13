@@ -1534,6 +1534,10 @@ UI.openScan = () => {
   openSheet(`
     <h2>📷 AI 입고 스캔</h2><p class="sub">영수증 또는 펼쳐놓은 식재료 사진을 올려주세요</p>
     <p class="hint" style="margin:-2px 0 10px">${aiUnlimited() ? '⭐ 프리미엄 — <b>무제한</b>' : `이번 달 무료 <b>${aiLeft().freeLeft}/${FREE_AI}회</b> 남음${aiLeft().credits ? ` · 충전권 ${aiLeft().credits}회` : ''}`}</p>
+    <div class="scan-tips">
+      <b>📸 잘 나오는 팁</b>
+      <div>평평하게 펼치고 · <b>밝은 곳</b>에서 · 영수증 <b>전체</b>가 프레임 안에 · 그림자·구김 없이 · 정면에서</div>
+    </div>
     <label class="btn btn-block" style="margin-bottom:10px">
       🖼️ 사진 선택 / 촬영
       <input id="scan-file" type="file" accept="image/*" style="display:none" onchange="UI.scanPicked(this)" />
@@ -1566,6 +1570,7 @@ UI.runScan = async () => {
   };
   if (aiLeft().total <= 0) { UI.openRecharge(retry); return; } // 무료·충전권 소진 → 광고/프리미엄 안내
   btn.disabled = true; btn.textContent = '분석 중…';
+  { const rz = $('#scan-result'); if (rz) rz.innerHTML = '<p class="hint" style="text-align:center;margin:10px 0">🤖 AI가 사진을 읽는 중이에요 — 보통 5~10초 걸려요</p>'; }
   try {
     const items = await scanImage(scanFile, S.settings);
     aiConsume(); // 성공했을 때만 1회 차감 (실패는 차감 안 함)

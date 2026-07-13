@@ -67,11 +67,23 @@ async function callFn(path, payload) {
   if (!base) throw new Error('Gemini 백엔드(AI_FN) 주소가 설정에 없어요.');
   const backoff = (n) => new Promise((r) => setTimeout(r, 800 * (n + 1)));
   for (let attempt = 0; ; attempt++) {
-    const res = await fetch(base + path, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
+    const ctrl = new AbortController();
+    const to = setTimeout(() => ctrl.abort(), 45000); // 45초 타임아웃 — '무한 로딩' 방지
+    let res;
+    try {
+      res = await fetch(base + path, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal: ctrl.signal,
+      });
+    } catch (e) {
+      if (e && e.name === 'AbortError') throw new Error('분석이 오래 걸려요 — 더 선명한 사진(또는 다른 영상)으로 잠시 후 다시 시도해 주세요.');
+      if (attempt < 3) { await backoff(attempt); continue; }
+      throw new Error('네트워크가 불안정해요 — 잠시 후 다시 시도해 주세요.');
+    } finally {
+      clearTimeout(to);
+    }
     if (res.ok) {
       const data = await res.json().catch(() => null);
       if (!data) throw new Error('AI 응답을 읽지 못했어요. 잠시 후 다시 시도해 주세요.');
@@ -101,8 +113,8 @@ const PROMPT = `이 사진은 한국 마트/온라인몰 영수증이거나 장 
 설명 없이 아래 형태의 JSON 하나만 출력하세요:
 {"items":[{"name":"우유","qty":1,"unit":"개","confidence":0.96},{"name":"즉석밥","qty":3,"unit":"개","confidence":0.78}]}`;
 
-// 토큰 절약을 위해 긴 변 1280px로 축소 후 JPEG 인코딩
-async function downscale(file, max = 1280) {
+// 긴 변 1600px로 축소 후 JPEG 인코딩(영수증 작은 글자 인식↑; 서버 thinking을 꺼 토큰 여유 확보).
+async function downscale(file, max = 1600) {
   const url = URL.createObjectURL(file);
   try {
     const img = await new Promise((resolve, reject) => {

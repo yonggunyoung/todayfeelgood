@@ -259,11 +259,18 @@ async function handleYtRecipe(url, apiKey) {
 
 /* ── Gemini 호출 (서울 리전에서 → 지역 차단 회피) ─────── */
 async function gemini(body, model, apiKey) {
-  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+  const call = (b) => fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'x-goog-api-key': apiKey },
-    body: JSON.stringify(body),
+    body: JSON.stringify(b),
   });
+  let res = await call(body);
+  // 구버전 모델이 thinkingConfig 등 신규 필드를 400으로 거부하면, 그 필드만 빼고 1회 재시도(호환).
+  if (res.status === 400 && body.generationConfig && body.generationConfig.thinkingConfig) {
+    const b2 = { ...body, generationConfig: { ...body.generationConfig } };
+    delete b2.generationConfig.thinkingConfig;
+    res = await call(b2);
+  }
   const data = await res.json().catch(() => ({}));
   if (!res.ok || data.error) {
     const err = new Error(data.error?.message || `Gemini 호출 실패 (${res.status})`);
@@ -303,7 +310,7 @@ async function handleScanGemini(image, apiKey, model) {
       { inlineData: { mimeType: 'image/jpeg', data: image } },
       { text: SCAN_PROMPT_G },
     ] }],
-    generationConfig: { responseMimeType: 'application/json', temperature: 0 },
+    generationConfig: { responseMimeType: 'application/json', temperature: 0, maxOutputTokens: 1200, thinkingConfig: { thinkingBudget: 0 } },
   }, model, apiKey);
   let parsed;
   try { parsed = JSON.parse(text); } catch { parsed = null; }
@@ -361,7 +368,7 @@ async function handleYtRecipeGemini(url, apiKey, model) {
     try {
       const t = await gemini({
         contents: [{ parts: [{ text: YT_PROMPT_TEXT(meta.title, meta.description) }] }],
-        generationConfig: { responseMimeType: 'application/json' },
+        generationConfig: { responseMimeType: 'application/json', temperature: 0.2, maxOutputTokens: 2048, thinkingConfig: { thinkingBudget: 0 } },
       }, model, apiKey);
       const d = ytParse(t);
       if (d && d.ok && Array.isArray(d.ingredients) && d.ingredients.length) return d;
@@ -373,7 +380,7 @@ async function handleYtRecipeGemini(url, apiKey, model) {
   try {
     text = await gemini({
       contents: [{ parts: [{ fileData: { fileUri: url } }, { text: YT_PROMPT_G + (meta.title ? `\n(참고 제목: ${meta.title})` : '') }] }],
-      generationConfig: { responseMimeType: 'application/json' },
+      generationConfig: { responseMimeType: 'application/json', maxOutputTokens: 2048, thinkingConfig: { thinkingBudget: 0 } },
     }, model, apiKey);
   } catch {
     throw Object.assign(new Error('이 영상은 분석하지 못했어요. 설명란에 레시피가 없는 영상일 수 있어요 — 다른 영상으로 시도하거나 직접 입력해 주세요.'), { code: 422 });

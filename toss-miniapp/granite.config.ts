@@ -24,7 +24,8 @@ export default defineConfig({
   outdir: 'dist',
 
   brand: {
-    displayName: '냉비서',
+    // ★ 콘솔 '앱 정보'에 등록한 한국어 이름과 반드시 동일해야 함(검수 필수). 현재 앱정보: "냉장고 비서".
+    displayName: '냉장고 비서',
     // TODO(verify): 토스는 보통 PNG 아이콘을 요구함. 냉비서 PNG를 호스팅하고 그 URL로 교체할 것.
     //   (assets.html로 600x600 PNG를 생성해 호스팅 가능. 아래는 임시 SVG URL.)
     icon: 'https://yonggunyoung.github.io/todayfeelgood/icon.svg',

@@ -1600,7 +1600,22 @@ UI.runScan = async () => {
     btn.disabled = false;
   } catch (e) {
     if (e.status === 429 && S.settings.aiMode === 'server') { UI.openRecharge(retry); return; }
-    toast(e.message || 'AI 분석에 실패했어요');
+    // 못 읽었을 때 막다른 길("실패" 토스트)로 끝내지 않고 다음 행동을 제시 — 다시 찍기 / 직접 추가.
+    const noItems = /찾지 못|식재료를 찾|식품을 찾/.test(e.message || '');
+    const rz = $('#scan-result');
+    if (noItems && rz) {
+      rz.innerHTML = `<div class="card flat" style="text-align:center;padding:16px">
+        <div style="font-size:1.8rem">🧐</div>
+        <b style="display:block;margin-top:4px">이 사진에서 식품을 자동으로 못 읽었어요</b>
+        <p class="hint" style="margin:6px 0 12px">영수증이 접히거나 어두우면 어려워요.<br><b>평평하게·밝게·전체가 보이게</b> 다시 찍으면 잘 돼요.</p>
+        <div class="btn-row" style="flex-direction:column">
+          <button class="btn btn-primary btn-block" onclick="document.getElementById('scan-file')?.click()">📸 다시 찍기</button>
+          <button class="btn btn-tint btn-block" onclick="UI.closeSheet();UI.openQuickAdd()">✍️ 직접 추가로 담기</button>
+        </div></div>`;
+    } else {
+      if (rz) rz.innerHTML = '';
+      toast(e.message || 'AI 분석에 실패했어요');
+    }
     btn.textContent = '🤖 AI 분석';
     btn.disabled = false;
   }

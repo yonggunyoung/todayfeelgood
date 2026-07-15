@@ -1581,6 +1581,8 @@ UI.runScan = async () => {
       const learned = !!fixes[raw];
       if (learned) raw = fixes[raw]; // 지난번 사용자가 고친 대로 자동 반영(교정 학습)
       const ing = findIng(raw);
+      // 사전에 없는 브랜드/제품(비쵸비·박카스 등)은 AI가 준 cat으로 보관위치·이모지를 정해 '모든 상태'를 파악
+      const cm = (!ing && it.cat) ? SCAN_CAT[it.cat] : null;
       // 신뢰도 = 모델 confidence + 결정론적 보정(사전 매칭·학습된 교정은 강한 신호)
       let conf = typeof it.confidence === 'number' ? Math.max(0, Math.min(1, it.confidence)) : (ing ? 0.9 : 0.5);
       if (learned) conf = 0.95;
@@ -1589,8 +1591,8 @@ UI.runScan = async () => {
         name: ing ? ing.name : raw,
         orig: it.name,            // 교정 학습용 원본 AI 이름
         qty: it.qty || 1,
-        location: defaultLocation(ing),
-        emoji: ing?.emoji || '🍽️',
+        location: ing ? defaultLocation(ing) : (cm ? cm[0] : 'fridge'),
+        emoji: ing?.emoji || (cm ? cm[1] : '🍽️'),
         conf,
         confirmed: conf >= 0.85,   // 보수적 임계값 — 나머지는 1탭 확인 필요
       };
@@ -1619,6 +1621,14 @@ UI.runScan = async () => {
     btn.textContent = '🤖 AI 분석';
     btn.disabled = false;
   }
+};
+// AI 스캔 카테고리(cat) → [보관위치, 이모지]. 사전에 없는 브랜드/제품도 알맞은 칸에 넣기 위한 매핑.
+const SCAN_CAT = {
+  채소: ['fridge', '🥬'], 과일: ['fridge', '🍎'], 육류: ['fridge', '🥩'], 수산: ['fridge', '🐟'],
+  유제품: ['fridge', '🥛'], 계란: ['fridge', '🥚'], 두부콩: ['fridge', '🍲'], 면류: ['room', '🍜'],
+  쌀곡물: ['room', '🌾'], 빵: ['fridge', '🍞'], 과자간식: ['room', '🍪'], 음료: ['fridge', '🥤'],
+  주류: ['fridge', '🍺'], 양념소스: ['fridge', '🧂'], 냉동: ['freezer', '🧊'], 가공즉석: ['room', '🍱'],
+  반찬: ['fridge', '🥢'], 기타: ['fridge', '🍽️'],
 };
 /* 스캔 교정 학습 — 사용자가 고친 품목명을 이 기기에 기억해 다음 스캔에 자동 반영 (백엔드 없이 localStorage) */
 const SCANFIX_KEY = 'nb_scan_fixes';

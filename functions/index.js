@@ -302,8 +302,12 @@ async function gemini(body, model, apiKey) {
 }
 
 const SCAN_PROMPT_G = `${SCAN_PROMPT}
-confidence(0~1): 또렷·확실 0.9 이상, 브랜드 추측/흐림 0.6 이하.
-설명 없이 JSON 하나만: {"items":[{"name":"고추장","qty":1,"unit":"개","confidence":0.9}]}`;
+일반명이 없고 브랜드·제품명만 있으면 그 이름을 그대로 name에 쓰고, cat으로 종류를 판단하세요(예: "비쵸비"→과자간식, "박카스"→음료, "하리보"→과자간식).
+각 품목:
+- name(핵심 품목명 — 없으면 브랜드/제품명 유지)
+- cat(보관 판단용, 아래 중 하나): 채소|과일|육류|수산|유제품|계란|두부콩|면류|쌀곡물|빵|과자간식|음료|주류|양념소스|냉동|가공즉석|반찬|기타
+- qty(수량), confidence(0~1: 또렷·확실 0.9+, 브랜드 추측/흐림 0.6 이하)
+설명 없이 JSON 하나만: {"items":[{"name":"고추장","cat":"양념소스","qty":1,"confidence":0.9}]}`;
 
 async function handleScanGemini(image, apiKey, model) {
   const text = await gemini({

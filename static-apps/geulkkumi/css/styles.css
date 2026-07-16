@@ -416,6 +416,26 @@ body { overflow-x: hidden; }
 button, a, [role="button"], .tab, .seg, .chip-opt { touch-action: manipulation; }
 .fout-val, .saved-val, .rec-val, .quick-text { overflow-wrap: anywhere; }
 
+/* 복사 ✓ 플래시 — 누른 그 자리에서 확인(토스트 보조) */
+.copied { background: var(--ok-soft) !important; border-color: var(--ok) !important; transition: background .12s, border-color .12s; }
+
+/* 📍 타깃 선택기(어디에 붙일지) — 가로 스크롤 칩 */
+.target-row { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; padding-bottom: 2px; }
+.target-row::-webkit-scrollbar { display: none; }
+.target-row .chip-opt { flex: 0 0 auto; }
+
+/* iOS 찰떡 — 길게눌러 콜아웃/선택 방지(버튼류), 고무줄 스크롤 억제, 탭 하이라이트 정리 */
+button, .chip, .chip-opt, .tab, .seg, .tbtn, .icon-btn { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+.art-out, .block-out, .pv-artpre, .mix-out, .maker-out { -webkit-user-select: text; user-select: text; } /* 결과물은 선택 허용 */
+html, body { overscroll-behavior-y: none; }
+
+/* 📲 iOS 설치 가이드 시트 */
+.ios-step { display: flex; gap: 12px; align-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: 12px 14px; margin: 8px 0; }
+.ios-n { flex: 0 0 auto; width: 30px; height: 30px; display: grid; place-items: center; border-radius: 999px; background: var(--grad-brand); color: #fff; font-weight: 800; font-size: 14px; }
+.ios-t { font-weight: 800; font-size: var(--t-body); }
+.ios-s { font-size: var(--t-caption); color: var(--ink-3); }
+.ios-note { font-size: var(--t-caption); color: var(--ink-2); background: var(--mint-soft); border-radius: var(--r-md); padding: 9px 12px; margin-top: 10px; }
+
 @media (min-width: 600px) { #view { padding-left: 20px; padding-right: 20px; } .sheet-back { align-items: center; } .sheet { border-radius: var(--r-xl); } }
 @media (prefers-reduced-motion: reduce) {
   .view, .toast, .fout, .chip, .tbtn, .tab-ico, .brand-mark::after { animation: none !important; transition: none !important; }

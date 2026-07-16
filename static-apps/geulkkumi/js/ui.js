@@ -92,7 +92,11 @@ export function copyChip(text, opts) {
     },
   });
   chip.append(label, star);
-  chip.addEventListener("click", () => copy(text, kind));
+  chip.addEventListener("click", () => {
+    copy(text, kind);
+    chip.classList.add("copied"); // 그 자리 ✓ 피드백(토스트 보조)
+    setTimeout(() => chip.classList.remove("copied"), 650);
+  });
   return chip;
 }
 

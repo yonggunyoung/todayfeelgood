@@ -6,6 +6,7 @@
 import { el, openSheet, copy, toast } from "./ui.js";
 import { addSlot, SLOT_CATS } from "./store.js";
 import { classify, compatBadge, channelTips, widthWarning, codeBlock } from "./engine/channel.js";
+import { downloadNickCard } from "./png.js";
 
 function avatar(cls) { return el("div.pv-ava" + (cls ? "." + cls : "")); }
 
@@ -114,6 +115,7 @@ function buildSocialPreview(text) {
     tipsBlock(text),
     el("div.toolbar", null, [
       el("button.tbtn.primary", { type: "button", onclick: () => copy(text, "preview") }, "📋 이 글씨 복사"),
+      el("button.tbtn", { type: "button", title: "스토리·프사 공유용 카드 이미지", onclick: () => downloadNickCard(text) }, "🖼 카드 저장"),
     ]),
     el("div.opt-title", null, "💾 슬롯에 담아두기 (보관함에서 꺼내 쓰기)"),
     el("div.chips", null, SLOT_CATS.map((cat) =>

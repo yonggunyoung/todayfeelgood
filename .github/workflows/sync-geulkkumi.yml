@@ -39,7 +39,8 @@ jobs:
           rm -rf "$DEST"
           mkdir -p "$DEST"
           cp -r "$SRC"/index.html "$SRC"/sw.js "$SRC"/manifest.webmanifest \
-                "$SRC"/icon.svg "$SRC"/mascot.svg "$SRC"/og.png "$SRC"/og.svg \
+                "$SRC"/icon.svg "$SRC"/icon-180.png "$SRC"/icon-192.png "$SRC"/icon-512.png \
+                "$SRC"/mascot.svg "$SRC"/og.png "$SRC"/og.svg \
                 "$SRC"/sitemap.xml "$SRC"/css "$SRC"/js "$DEST"/
           echo "복사된 항목:"; ls "$DEST"
       - name: 변경 있으면 커밋·푸시

@@ -149,18 +149,39 @@ function boot() {
   // 사용자 탭 이동(해시 변경)마다 빈도 누적 → 다음 진입의 기본 탭에 반영.
   window.addEventListener("hashchange", () => { const id = location.hash.slice(1); render(id); if (byId[id]) bumpTab(id); });
 
-  // PWA 설치 버튼
+  // PWA 설치 버튼 — 안드로이드/데스크톱은 네이티브 프롬프트, 아이폰은 안내 시트.
   let deferred = null;
   const installBtn = document.getElementById("install-btn");
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+    || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1); // 아이패드 데스크톱 UA
   window.addEventListener("beforeinstallprompt", (e) => {
     e.preventDefault(); deferred = e;
     if (installBtn) installBtn.hidden = false;
   });
   if (installBtn) installBtn.onclick = async () => {
-    if (!deferred) return;
-    deferred.prompt(); await deferred.userChoice; deferred = null; installBtn.hidden = true;
+    if (deferred) { deferred.prompt(); await deferred.userChoice; deferred = null; installBtn.hidden = true; return; }
+    if (isIOS) openIosInstallGuide();
   };
+  // 아이폰: beforeinstallprompt가 영원히 안 오므로 버튼을 직접 노출(설치 전만).
+  if (isIOS && !isStandalone() && installBtn) installBtn.hidden = false;
   window.addEventListener("appinstalled", () => { if (installBtn) installBtn.hidden = true; });
+
+  function openIosInstallGuide() {
+    const steps = [
+      ["1", "Safari 하단(또는 상단)의 공유 버튼", "square.and.arrow.up — 네모에 ↑ 화살표"],
+      ["2", "메뉴를 내려 ‘홈 화면에 추가’ 선택", "Add to Home Screen"],
+      ["3", "오른쪽 위 ‘추가’ 탭", "홈 화면에 ✦ 글꾸미 아이콘 생성"],
+    ];
+    const box = el("div.ios-guide", null, [
+      el("p.lead", null, "홈 화면에 설치하면 전체화면 앱으로 열리고, 오프라인에서도 되고, 뒤로가기 실수 종료도 막아줘요."),
+      ...steps.map(([n, t, s]) => el("div.ios-step", null, [
+        el("span.ios-n", null, n),
+        el("div", null, [el("div.ios-t", null, t), el("div.ios-s", null, s)]),
+      ])),
+      el("p.ios-note", null, "🍎 iOS는 Safari에서 가장 잘 돼요. 크롬(iOS 16.4+)도 공유 메뉴에 같은 항목이 있어요."),
+    ]);
+    openSheet(box, "📲 아이폰에 설치하기");
+  }
 
   // 후원 링크(선택): 아래 URL을 채우면 푸터에 ☕ 후원 버튼이 나타남.
   const SUPPORT_URL = ""; // 예: "https://buymeacoffee.com/..." 또는 토스 익명송금 링크

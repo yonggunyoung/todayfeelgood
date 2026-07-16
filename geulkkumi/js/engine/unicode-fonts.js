@@ -49,6 +49,23 @@ const SMALLCAPS_MAP = customMap((m) => { for (let i = 0; i < 26; i++) { const c 
 const SUPER_MAP = Object.assign({}, SUPER_D, SUPER_L);
 const SUB_MAP = Object.assign({}, SUB_D, SUB_L);
 
+// 대문자 기준 표를 소문자에도 똑같이 적용(모양 스타일이라 대소 구분 무의미).
+function bothCases(upper) {
+  const m = {};
+  for (const k in upper) { m[k] = upper[k]; m[k.toLowerCase()] = upper[k]; }
+  return m;
+}
+// 라운드(몽글) — ᗩᗷᑕ 캐나다 원주민 음절문자 모양 차용(폰트 생성기 인기 1순위 계열).
+const ROUNDY = bothCases({ A:"ᗩ", B:"ᗷ", C:"ᑕ", D:"ᗪ", E:"ᗴ", F:"ᖴ", G:"ᘜ", H:"ᕼ", J:"ᒍ", K:"ᛕ", L:"ᒪ", M:"ᗰ", N:"ᑎ", P:"ᑭ", Q:"ᑫ", R:"ᖇ", S:"ᔕ", U:"ᑌ", V:"ᐯ", W:"ᗯ", X:"᙭" });
+// 돈글씨 — ₳฿₵ 통화기호 모양(생성기 표준 세트).
+const CURRENCY = bothCases({ A:"₳", B:"฿", C:"₵", D:"Đ", E:"Ɇ", F:"₣", G:"₲", H:"Ⱨ", I:"ł", K:"₭", L:"Ł", M:"₥", N:"₦", O:"Ø", P:"₱", R:"Ɽ", S:"₴", T:"₮", U:"Ʉ", W:"₩", X:"Ӿ", Y:"¥", Z:"Ⱬ" });
+// 러시아풍 — ЯUSSIAИ 감성(키릴 유사 모양 차용).
+const FAUXCYR = bothCases({ A:"Д", B:"Б", C:"Ц", E:"Э", G:"Г", I:"И", K:"К", M:"М", N:"И", O:"Ө", P:"П", R:"Я", T:"Т", U:"Ц", W:"Ш", X:"Ж", Y:"У" });
+// 그리스풍 — ΛΣΘΩ 프랫 감성.
+const GREEKISH = bothCases({ A:"Λ", D:"Δ", E:"Σ", F:"Φ", L:"Ɫ", O:"Θ", W:"Ω", X:"Ξ", Y:"Ψ" });
+// 룬 문자 — ᚨᛒᚲ 엘더 푸사르크(신비/게임 감성).
+const RUNES = bothCases({ A:"ᚨ", B:"ᛒ", C:"ᚲ", D:"ᛞ", E:"ᛖ", F:"ᚠ", G:"ᚷ", H:"ᚺ", I:"ᛁ", J:"ᛃ", K:"ᚴ", L:"ᛚ", M:"ᛗ", N:"ᚾ", O:"ᛟ", P:"ᛈ", R:"ᚱ", S:"ᛊ", T:"ᛏ", U:"ᚢ", V:"ᚡ", W:"ᚹ", Y:"ᛦ", Z:"ᛉ" });
+
 // Zalgo(채팅 뚫는 글씨) — 결합기호 스태킹. 결정론적(인덱스 해시) → 테스트 안정.
 const Z_UP = [0x0300,0x0301,0x0302,0x0303,0x0304,0x0306,0x0307,0x0308,0x030A,0x030B,0x0312,0x0313,0x0314,0x033D,0x0346,0x034A,0x0350,0x0351,0x0357];
 const Z_MID = [0x0334,0x0335,0x0336,0x0337,0x0338];
@@ -88,6 +105,13 @@ export const STYLES = [
   { id: "circled",       name: "동그라미",        tier: 1, kind: "map", map: fromRange(0x24B6, 0x24D0, null, CIRCLED_DIGITS) },
   { id: "upsidedown",    name: "뒤집기",          tier: 1, kind: "flip", map: FLIP },
   // ── Tier 2: 주의(일부 앱·구형에서 깨질 수 있음) ──
+  { id: "roundy",        name: "라운드(몽글)",    tier: 2, kind: "map", map: ROUNDY },
+  { id: "currency",      name: "돈글씨(₩)",       tier: 2, kind: "map", map: CURRENCY },
+  { id: "fauxcyr",       name: "러시아풍",        tier: 2, kind: "map", map: FAUXCYR },
+  { id: "greek",         name: "그리스풍",        tier: 2, kind: "map", map: GREEKISH },
+  { id: "runes",         name: "룬 문자",         tier: 2, kind: "map", map: RUNES },
+  { id: "glitter",       name: "반짝가루",        tier: 2, kind: "combine", combine: "꙰" },
+  { id: "underspark",    name: "밑별",            tier: 2, kind: "combine", combine: "͙" },
   { id: "fraktur",       name: "고딕(프락투어)",  tier: 2, kind: "map", map: fromRange(0x1D504, 0x1D51E, null, FRAKTUR_EXC) },
   { id: "boldfraktur",   name: "볼드 프락투어",   tier: 2, kind: "map", map: fromRange(0x1D56C, 0x1D586, null) },
   { id: "parenthesized", name: "괄호",            tier: 2, kind: "map", map: fromRange(0x1F110, 0x249C, null, PAREN_DIGITS) },

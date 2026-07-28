@@ -23,8 +23,9 @@
 ## 사전 준비물
 - **Node.js** (LTS), **yarn** (`packageManager` 참고)
 - **앱인토스 CLI/SDK**: `@apps-in-toss/web-framework` (dependency). `granite` / `ait` 명령 제공.
-- **⚠️ 사업자등록** — 앱인토스 입점의 필수 조건. ([가이드](https://toss.im/apps-in-toss/blog/business_registration))
-- 앱인토스 콘솔에서 앱 등록 → 거기서 정한 **appName** 을 `granite.config.ts` 에 반영.
+- **사업자등록 + 앱인토스 콘솔 계정** — 이미 냉비서를 운영 중이라면 **완료된 상태**.
+- 콘솔에서 **글꾸미를 새 미니앱으로 등록** → 거기서 정한 **appName** 을 `granite.config.ts` 에 반영.
+  (냉비서와 별개 앱이므로 `appName` 을 공유하면 안 된다.)
 
 ## 설치 & 실행
 ```bash
@@ -39,10 +40,43 @@ yarn dev                # → yarn vendor (글꾸미 자산 복사) 후 granite 
 
 ## 빌드 & 배포
 ```bash
-yarn build              # → yarn vendor 후 granite build (vite build) → dist/
-yarn deploy             # → ait deploy → 앱인토스 sandbox 배포
+yarn build              # → yarn vendor 후 granite build → dist/ + geulkkumi.ait
+yarn deploy             # → ait deploy (기본/default 프로필 토큰 사용)
 ```
-배포 후 콘솔에서 sandbox 확인 → 이상 없으면 **심사 제출**(최초 심사 며칠 소요).
+
+### API 키로 바로 배포 (CLI 확인 완료)
+`ait deploy` 는 **API 키를 직접 받는다** — 콘솔에서 발급한 키가 있으면 로그인 절차 없이 배포된다.
+```bash
+# (권장) 키를 프로필로 한 번 등록해 두고 재사용
+npx ait token add --api-key "<발급받은_API_KEY>" default
+yarn deploy -m "글꾸미 최초 배포"
+
+# 또는 매번 직접 전달
+npx ait deploy --api-key "<발급받은_API_KEY>" -m "글꾸미 최초 배포"
+```
+> 🔐 **API 키는 절대 저장소에 커밋하거나 채팅에 붙여넣지 말 것.** 로컬 프로필(`ait token add`)이나
+> GitHub Actions Secrets 에만 보관한다.
+
+배포 후 콘솔에서 sandbox 확인 → 이상 없으면 **심사 제출**.
+
+---
+
+## ✅ 이 스캐폴드로 실제 빌드가 되는지 검증함
+
+이 폴더는 **최신 CLI(`@apps-in-toss/web-framework` 2.10.8)로 실제 빌드까지 돌려 확인**했다:
+
+```
+✓ 33 modules transformed
+dist/web/assets/index-*.css   26.4 kB
+dist/web/assets/main-*.js    118.6 kB   ← 글꾸미 앱 전체
+dist/geulkkumi.ios.js / geulkkumi.android.js
+*  geulkkumi.ait 빌드 완료          ← 배포 아티팩트(1.8MB)
+```
+그리고 **빌드 산출물(`dist/web`)을 토스 WebView 조건(UA `toss/…` + 네이티브 전역)으로 띄워** 실측:
+`__TOSS__` 감지 ✓ · SW 등록 0건 ✓ · 뒤로가기 히스토리 미조작 ✓ · 타깃 선택기 7개 ✓ ·
+완성 프리셋 렌더 ✓ · 복사 시 **네이티브 햅틱 호출** ✓ · mascot 로드 ✓ · **무에러**.
+
+→ 남은 것은 **콘솔에 앱 등록(appName 확정)** 과 **`ait deploy`** 뿐이다.
 
 ---
 
@@ -91,7 +125,9 @@ geulkkumi-toss/
   - `permissions: []` — 글꾸미는 네이티브 권한 불필요. 심사에서 지적되면 그때 추가.
   - `navigationBar` 옵션 키 이름 — SDK 버전별 최신 문서로 확인.
 - **`src/main.ts`** — `isTossWebView()` 판별 방법, 햅틱 API 이름을 공식 문서로 확정.
-- **`package.json`** — `vite`/`typescript` 버전은 환경에 맞게. (`@apps-in-toss/web-framework: 1.5.2` 는 예제 기준값)
+  (햅틱은 실패해도 복사 흐름에 영향 없도록 try/catch + `navigator.vibrate` 폴백 처리됨)
+- **`package.json`** — `@apps-in-toss/web-framework: 2.10.8` / `vite 5.4.11` / `typescript 5.6.3`
+  조합으로 **빌드 성공을 확인**했다. (냉비서 스캐폴드의 1.5.2 는 구버전 → 2.10.8 로 올림)
 
 ## 참고
 - [개발자센터](https://developers-apps-in-toss.toss.im/) · [WebView 튜토리얼](https://developers-apps-in-toss.toss.im/tutorials/webview.html) · [예제](https://github.com/toss/apps-in-toss-examples) · [커뮤니티](https://techchat-apps-in-toss.toss.im/) · [사업자등록](https://toss.im/apps-in-toss/blog/business_registration)

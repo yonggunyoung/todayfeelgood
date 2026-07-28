@@ -99,10 +99,13 @@ function isStandalone() {
   try { return matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true; }
   catch { return false; }
 }
+// 토스 미니앱(WebView) 안인지 — geulkkumi-toss/src/main.ts 가 부팅 전에 세팅한다.
+const inToss = () => typeof window !== "undefined" && window.__TOSS__ === true;
 
 // 뒤로가기로 '완전 종료'를 막고 한 번 더 눌러야 나가게(설치앱 한정). 바닥에 가드 엔트리.
 function setupBackGuard(initial) {
-  if (!isStandalone()) return;
+  // 토스 안에서는 절대 히스토리를 가로채지 않는다 — 토스가 자체 뒤로가기/네비게이션을 쓴다.
+  if (inToss() || !isStandalone()) return;
   let armed = 0;
   try {
     history.replaceState({ g: 1 }, "");                       // 바닥 = 가드
@@ -163,7 +166,8 @@ function boot() {
     if (isIOS) openIosInstallGuide();
   };
   // 아이폰: beforeinstallprompt가 영원히 안 오므로 버튼을 직접 노출(설치 전만).
-  if (isIOS && !isStandalone() && installBtn) installBtn.hidden = false;
+  // 토스 안에서는 '홈 화면에 추가'가 불가/무의미 → 노출하지 않는다.
+  if (isIOS && !isStandalone() && !inToss() && installBtn) installBtn.hidden = false;
   window.addEventListener("appinstalled", () => { if (installBtn) installBtn.hidden = true; });
 
   function openIosInstallGuide() {
@@ -188,8 +192,8 @@ function boot() {
   const support = document.getElementById("support-link");
   if (support && SUPPORT_URL) { support.href = SUPPORT_URL; support.target = "_blank"; support.rel = "noopener"; support.hidden = false; }
 
-  // 서비스워커(오프라인)
-  if ("serviceWorker" in navigator) {
+  // 서비스워커(오프라인) — 토스 미니앱 빌드에는 sw.js가 없고 WebView라 불필요.
+  if ("serviceWorker" in navigator && !inToss()) {
     window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js").catch(() => {}));
   }
 }

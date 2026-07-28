@@ -59,7 +59,11 @@ export async function copy(text, kind) {
       ok = document.execCommand("copy"); ta.remove();
     } catch { ok = false; }
   }
-  if (ok) { addHistory(text, kind); toast("복사됐어요 ✓"); }
+  if (ok) {
+    addHistory(text, kind); toast("복사됐어요 ✓");
+    // 토스 미니앱이면 가벼운 햅틱(주입돼 있을 때만 — 웹에선 존재하지 않아 무동작).
+    try { window.__TOSS_HAPTIC__?.(); } catch { /* 부가 기능 */ }
+  }
   else toast("복사 실패 — 길게 눌러 직접 복사하세요", "warn");
   return ok;
 }

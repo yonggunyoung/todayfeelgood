@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>글꾸미 — 특수문자·멋글씨 만들기</title>
+  <meta name="description" content="텍스트를 37가지 멋글씨로 변환하고, 사진·그림을 도트·문자 아트로. 복사해서 어디든 붙여넣기." />
+  <meta name="theme-color" content="#ff7eb6" />
+  <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+  <!-- 폰트: 글꾸미 원본과 동일(Pretendard CDN). PWA manifest/apple-touch-icon은 토스 빌드에서 제외. -->
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+  <link rel="stylesheet" as="style" crossorigin
+        href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+  <link rel="stylesheet" href="/vendor/css/styles.css" />
+</head>
+<body>
+  <div id="shell">
+    <header id="topbar">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">✦</span>
+        <div class="brand-text">
+          <strong>글꾸미</strong>
+          <small>특수문자 · 멋글씨 · 도트아트</small>
+        </div>
+      </div>
+      <div class="top-actions">
+        <button id="quick-btn" class="icon-btn" type="button" title="빠른 불러오기 (즐겨찾기·슬롯)" aria-label="빠른 불러오기">⚡</button>
+        <!-- #install-btn 은 의도적으로 제외 — 토스 안에서는 '홈 화면에 설치'가 불가/무의미.
+             (js/main.js 는 이 버튼이 없어도 안전하게 동작한다: 모든 접근이 null 가드됨) -->
+        <button id="theme-btn" class="icon-btn" type="button" title="테마 전환" aria-label="테마 전환">🌗</button>
+      </div>
+    </header>
+
+    <main id="view" aria-live="polite"></main>
+
+    <footer id="appfoot">
+      <span>만든 글씨는 어디든 자유롭게 — 인스타 · 카톡 · 디스코드 · 게임</span>
+      <a id="support-link" href="#" rel="noopener" hidden>☕ 후원하기</a>
+    </footer>
+
+    <nav id="tabbar" aria-label="주요 메뉴"></nav>
+  </div>
+
+  <div id="modal-root"></div>
+  <div id="toast-root" aria-live="assertive"></div>
+
+  <!-- 토스 미니앱 엔트리. (원본 index.html 의 서비스워커 등록은 제외 — 토스 WebView에선 SW 불필요.) -->
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>

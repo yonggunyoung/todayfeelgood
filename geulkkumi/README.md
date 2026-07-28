@@ -35,6 +35,7 @@
 
 복붙도 귀찮을 때, 입력하는 그 자리에서 쓰는 경로입니다. 모두 **메인 앱의 순수 엔진을 그대로 재사용**(무빌드).
 
+- 🟦 **토스 미니앱(앱인토스)** — 토스 앱 안에서 바로 실행. 냉비서와 동일한 WebView 래핑 방식이며, 글꾸미는 **로그인·서버·권한이 0**이라 가장 단순한 형태. → [`geulkkumi-toss/`](../geulkkumi-toss)
 - 💻 **PC 브라우저 확장** — 입력창에 `글꾸미 ✨` 배지 → 클릭→선택→**그 입력창에 즉석 삽입**. → [`geulkkumi-ext/`](../geulkkumi-ext)
 - 📱 **안드로이드 커스텀 키보드** — 어떤 앱에서든 키보드 전환→**바로 입력**(Android Studio 빌드 스캐폴드). → [`geulkkumi-keyboard-android/`](../geulkkumi-keyboard-android)
 - 🧭 **iOS 단축어·북마클릿·전 플랫폼 사용법** → [`MOBILE.md`](./MOBILE.md)

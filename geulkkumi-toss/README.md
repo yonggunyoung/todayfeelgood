@@ -23,7 +23,8 @@
 ## 사전 준비물
 - **Node.js** (LTS), **yarn** (`packageManager` 참고)
 - **앱인토스 CLI/SDK**: `@apps-in-toss/web-framework` (dependency). `granite` / `ait` 명령 제공.
-- **사업자등록 + 앱인토스 콘솔 계정** — 이미 냉비서를 운영 중이라면 **완료된 상태**.
+- **앱인토스 콘솔 계정**(만 19세+ 본인 명의 토스 계정) — 이미 냉비서를 운영 중이면 **완료된 상태**.
+  ※ 계약·사업자등록 없이도 개인 자격으로 출시 가능(정산 계좌·세금 정보는 콘솔 기준 확인).
 - 콘솔에서 **글꾸미를 새 미니앱으로 등록** → 거기서 정한 **appName** 을 `granite.config.ts` 에 반영.
   (냉비서와 별개 앱이므로 `appName` 을 공유하면 안 된다.)
 
@@ -40,7 +41,7 @@ yarn dev                # → yarn vendor (글꾸미 자산 복사) 후 granite 
 
 ## 빌드 & 배포
 ```bash
-yarn build              # → yarn vendor 후 granite build → dist/ + geulkkumi.ait
+yarn build              # → yarn vendor 후 ait build → dist/web + geulkkumi.ait
 yarn deploy             # → ait deploy (기본/default 프로필 토큰 사용)
 ```
 
@@ -96,9 +97,26 @@ dist/geulkkumi.ios.js / geulkkumi.android.js
 `window.__TOSS_HAPTIC__` 훅을 주입한다(`src/main.ts` → 원본 `ui.js` 가 있을 때만 호출).
 웹에서는 훅이 없어 아무 일도 일어나지 않는다.
 
-### 광고
-`js/ads.js` 는 퍼블리셔 ID가 없으면 **완전 OFF(no-op)** 라 토스 빌드에 AdSense가 실리지 않는다.
-(토스 안에서 외부 광고 SDK는 정책 위반 소지 — 수익화는 토스 자체 보상형 광고를 쓸 것. `../js/toss.js` 참고)
+### 광고 (토스 배너 — 배선 완료, ID만 넣으면 ON)
+- 토스 안에서 외부 광고(AdSense)는 정책 소지가 있어 **쓰지 않는다**. `js/ads.js` 는 퍼블리셔 ID가 없으면 완전 OFF.
+- 대신 **토스 배너**를 쓴다. `src/toss-ads.ts` 가 SDK를 정식 import 해 `window.__TOSS_ADS__` 로 주입하고,
+  본체 `js/ads.js` 의 `attachTossBanner()` 가 `#toss-banner` 슬롯(콘텐츠 끝·탭바 위)에 붙인다.
+- **켜는 법**: 콘솔에서 배너 광고 그룹 생성 → `index.html` `<head>` 에 한 줄
+  ```html
+  <script>window.GEULKKUMI_ADS = { tossBannerAdGroupId: "ait.v2.live.xxxxxxxx" };</script>
+  ```
+  ID가 없으면 슬롯은 빈 채로 남고 레이아웃 영향도 0이다(현재 상태 = 광고 0).
+
+> ⚠️ **복사 동선(결과 리스트) 위에는 광고를 두지 않는다** — MONETIZE.md 원칙. 배너는 스크롤 끝 1개만.
+
+### 실제 SDK 광고 API (2.10.8 소스에서 확인 — 문서보다 이걸 믿을 것)
+```ts
+GoogleAdMob.loadAppsInTossAdMob({ options: { adGroupId }, onEvent, onError })  // → cleanup()
+GoogleAdMob.showAppsInTossAdMob({ options: { adGroupId }, onEvent, onError })
+TossAds.initialize({ callbacks }) ; TossAds.attachBanner(adGroupId, target, opts) // → { destroy }
+```
+- 식별자는 `adUnitId` 가 **아니라** `options.adGroupId` (**중첩**). 각 함수에 `.isSupported()` 가 있다.
+- 보상형은 **로드 → `loaded` 수신 후 표시**가 정석(곧장 show 하면 미노출이 잦다).
 
 ---
 

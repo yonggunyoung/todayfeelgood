@@ -55,6 +55,17 @@ if (window.__TOSS__) {
 }
 
 async function boot() {
+  // (c-2) 광고 브리지 주입 — 앱 import "이전"에. (js/ads.js 가 window.__TOSS_ADS__ 를 찾는다)
+  //   SDK를 번들할 수 있는 건 이 빌드뿐이라 여기서 감싼다. 광고 그룹 ID가 없으면 아무것도 뜨지 않는다.
+  if (window.__TOSS__) {
+    try {
+      const { installTossAds } = await import('./toss-ads');
+      installTossAds();
+    } catch (e) {
+      console.warn('[toss] 광고 브리지 주입 실패 — 광고 없이 계속', e);
+    }
+  }
+
   // (d) 글꾸미 앱 부팅. import 시점에 자체적으로 화면을 렌더한다.
   //   vendor/ 는 scripts/vendor.mjs 가 ../geulkkumi 에서 복사해 둔다(yarn vendor).
   // @ts-expect-error — 바닐라 JS 모듈(타입 선언 없음). vendor 복사본이라 빌드 시 존재.

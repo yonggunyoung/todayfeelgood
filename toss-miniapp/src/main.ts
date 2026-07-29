@@ -48,6 +48,17 @@ function isTossWebView(): boolean {
 window.__TOSS__ = isTossWebView();
 
 async function boot() {
+  // (b-2) 광고 브리지 주입 — 반드시 아래 앱 import "이전"에.
+  //   (js/toss.js 가 window.__TOSS_ADS__ 를 찾는다. SDK를 번들할 수 있는 건 이 빌드뿐이라 여기서 감싼다.)
+  if (window.__TOSS__) {
+    try {
+      const { installTossAds } = await import('./toss-ads');
+      installTossAds();
+    } catch (e) {
+      console.warn('[toss] 광고 브리지 주입 실패 — 하우스 광고로 폴백', e);
+    }
+  }
+
   // (c) (선택) 토스 로그인. 지금은 자동 실행하지 않고, 설정 화면 등에서 호출하도록 노출만 한다.
   //   자동 로그인을 원하면 아래 주석을 해제. (단, appLogin 은 사용자 동의 UI를 띄움)
   // if (window.__TOSS__) {

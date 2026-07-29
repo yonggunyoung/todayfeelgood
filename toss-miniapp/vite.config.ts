@@ -5,6 +5,8 @@ import { defineConfig } from 'vite';
 export default defineConfig({
   // 프로젝트 루트(= toss-miniapp/). index.html, /src, /vendor가 여기 있다.
   root: '.',
+  // vendor/ = 루트 냉비서 복사본(yarn vendor). 정적 자산으로 그대로 서빙되고 dist에도 포함된다.
+  publicDir: 'vendor',
   // 상대 경로 빌드 — 토스 WebView가 어떤 base에서 서빙하든 자산이 깨지지 않게.
   base: './',
   server: {

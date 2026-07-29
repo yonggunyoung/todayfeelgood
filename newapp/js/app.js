@@ -1,0 +1,333 @@
+// 오늘 기분 — 앱 라우터 + 홈/결과 + 온보딩 + 설정. 로직(store/recommend) 불변.
+import { MOODS, moodById } from './data/moods.js';
+import { recommendSong } from './recommend.js';
+import { store, recordMood, todayKey } from './store.js';
+import { mascotSVG } from './mascot.js';
+import { openShareCard, openWeeklyCard } from './share.js';
+import { weatherHTML, collectionHTML } from './views.js';
+import { openQuiz, loadTaste, tasteName } from './quiz.js';
+import { loadCatalog } from './catalog.js';
+import { openDialog } from './a11y.js';
+import { WEATHER } from './data/nation.js';
+import { reportMood, fetchNation, getNation, nationEnabled } from './nation-remote.js';
+import { myMusicEnabled, pickMyMusic, MY_MUSIC } from './mymusic.js';
+
+let state = store.load();
+const $ = (s, r = document) => r.querySelector(s);
+const view = () => document.getElementById('view');
+const WD = ['일', '월', '화', '수', '목', '금', '토'];
+const ONB_KEY = 'oneulgibun:onboarded';
+const THEME_KEY = 'oneulgibun:theme';
+const sel = () => { const t = state.days[todayKey()]; return t ? t.mood : null; };
+function svgEl(html) { const t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstChild; }
+
+const TABS = [
+  ['home', '홈', '<path d="M4 11l8-7 8 7M6 10v9a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-9"/>'],
+  ['weather', '날씨', '<circle cx="8" cy="9" r="3.2"/><path d="M11 16h6a3 3 0 0 0 0-6 4.5 4.5 0 0 0-8.6-1"/>'],
+  ['collection', '컬렉션', '<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/>'],
+  ['more', '더보기', '<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>'],
+];
+
+function renderTabs(active) {
+  const bar = document.getElementById('tabbar');
+  bar.innerHTML = '';
+  for (const [id, label, path] of TABS) {
+    const b = document.createElement('button');
+    b.className = 'tab' + (id === active ? ' is-on' : '');
+    b.type = 'button'; b.setAttribute('aria-label', label);
+    if (id === active) b.setAttribute('aria-current', 'page');
+    b.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${path}</svg><span>${label}</span>`;
+    b.addEventListener('click', () => { location.hash = '#/' + id; });
+    bar.appendChild(b);
+  }
+}
+
+// ── 홈 ──
+function renderHome() {
+  const m = sel(), key = todayKey();
+  const d = new Date(`${key}T00:00:00`);
+  const v = view();
+  const nat = getNation(), topMood = nat[0][0], topKo = (moodById(topMood) || {}).ko || '';
+  v.innerHTML = `<div class="v v-home" data-mood="${m || 'happy'}">
+    <div class="halo"></div>
+    <div class="bar">
+      <div class="bar__date">${d.getMonth() + 1}월 ${d.getDate()}일 <b>${WD[d.getDay()]}요일</b></div>
+      <div class="streak" ${state.streak > 0 ? '' : 'hidden'}>
+        <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c2 3 4 4.5 4 8a4 4 0 1 1-8 0c0-1.5.6-2.6 1.4-3.6.3 1.2 1 1.8 1.8 1.8C12 9 11 6.5 12 3Z" fill="var(--coral)"/></svg>
+        <span>${state.streak}</span>일째
+      </div>
+    </div>
+    <div class="head">
+      <h1 class="title">${m ? '구름이가 마음에 들었나 봐요' : '오늘 구름이는<br>어떤 날씨일까요?'}</h1>
+      <p class="sub">${m ? '내일의 날씨도 들으러 와요' : '기분을 톡 누르면 오늘의 노래가 와요'}</p>
+    </div>
+    <div class="hero"><div class="hero__m" id="hero" aria-hidden="true">${mascotSVG(m || 'happy', false)}</div></div>
+    <div class="picker" id="moodPicker" role="group" aria-label="오늘의 기분 선택"></div>
+    <div class="card gauge">
+      <div class="gauge__top"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="5" fill="var(--happy)"/><g stroke="var(--happy)" stroke-width="1.6" stroke-linecap="round"><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></g></svg><span class="gauge__lab">지금 전국은 대체로 ${WEATHER[topMood] || '맑음'}</span></div>
+      <p class="gauge__sub">${topKo} 기분이 가장 많아요</p>
+      <div class="gauge__bar" aria-hidden="true">${nat.map(([k, p]) => `<i class="s-${k}" style="flex:${p}"></i>`).join('')}</div>
+    </div>
+    <div class="card result" id="result" role="status" aria-live="polite" hidden></div>
+  </div>`;
+
+  // 피커
+  const picker = $('#moodPicker', v);
+  for (const mo of MOODS) {
+    const b = document.createElement('button');
+    b.className = 'mood' + (m === mo.id ? ' is-on' : '');
+    b.type = 'button'; b.setAttribute('data-mood', mo.id);
+    b.setAttribute('aria-label', `${mo.ko} 선택`); b.setAttribute('aria-pressed', m === mo.id ? 'true' : 'false');
+    b.innerHTML = `<div class="mood__chip"><span>${mascotSVG(mo.id, true)}</span></div><div class="mood__label">${mo.ko}</div>`;
+    b.addEventListener('click', () => pick(mo.id));
+    picker.appendChild(b);
+  }
+  if (m) renderResult(m, key);
+}
+
+function pick(moodId) {
+  state = recordMood(state, moodId);
+  store.save(state);
+  const froze = state.frozeToday;
+  if (froze) { state.frozeToday = false; store.save(state); }
+  renderHome();
+  if (froze) toast('프리즈로 연속 기록을 지켰어요');
+  // 전국 집계에 내 1표 반영 후, 갱신된 분포로 홈 게이지를 다시 그린다(설정됐을 때만).
+  if (nationEnabled()) reportMood(moodId).then(() => fetchNation()).then((d) => { if (d && document.querySelector('.v-home')) renderHome(); });
+}
+
+function ytEmbed(id) {
+  const box = document.createElement('div'); box.className = 'ytlite';
+  box.setAttribute('role', 'button'); box.tabIndex = 0; box.setAttribute('aria-label', '유튜브에서 재생');
+  box.innerHTML = `<img class="ytlite__thumb" src="https://i.ytimg.com/vi/${id}/hqdefault.jpg" alt="" loading="lazy"><span class="ytlite__btn"><svg width="30" height="30" viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></span>`;
+  const go = () => { box.classList.add('on'); box.innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen title="유튜브 재생"></iframe>`; };
+  box.addEventListener('click', go);
+  box.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } });
+  return box;
+}
+
+function renderResult(moodId, key) {
+  const result = document.getElementById('result');
+  const taste = loadTaste();
+  const mo = moodById(moodId), song = recommendSong(moodId, { dateKey: key, catalog: loadCatalog(), taste });
+  result.hidden = false; result.dataset.mood = moodId; result.innerHTML = '';
+
+  const head = document.createElement('div'); head.className = 'result__head';
+  head.innerHTML = `<div class="lab">오늘 구름이가 읽은 마음</div><div class="result__mood">${mo ? mo.ko : moodId}</div>`;
+  result.appendChild(head);
+
+  const addReasons = () => {
+    if (mo && mo.reasons) {
+      const w = document.createElement('div'); w.className = 'reasons';
+      const tasteChip = taste ? `<span class="chip chip--taste">${tasteName(taste)} 취향 반영</span>` : '';
+      w.innerHTML = '<div class="why">구름이가 고른 이유</div>' + tasteChip + mo.reasons.map((r) => `<span class="chip">${r}</span>`).join('');
+      result.appendChild(w);
+    }
+  };
+  let listenUrl = '';
+
+  if (song.source === 'none') {
+    const p = document.createElement('p'); p.className = 'gauge__sub'; p.style.textAlign = 'center';
+    p.textContent = '오늘은 구름이도 조용히 쉬는 날'; result.appendChild(p);
+  } else if (song.youtubeId) {
+    const lab = document.createElement('div'); lab.className = 'song__lab';
+    lab.style.cssText = 'text-align:center;margin-bottom:10px;color:var(--cmi)';
+    lab.textContent = '구름이가 골라준 한 곡'; result.appendChild(lab);
+    result.appendChild(ytEmbed(song.youtubeId));
+    const line = document.createElement('div'); line.className = 'song-line';
+    line.innerHTML = '<span class="song-line__t"></span><span class="song-line__a"></span>';
+    $('.song-line__t', line).textContent = song.title; $('.song-line__a', line).textContent = song.artist;
+    result.appendChild(line);
+    result.appendChild(ytOpenLink(`https://www.youtube.com/watch?v=${song.youtubeId}`)); // 임베드 막힘 대비 폴백
+    addReasons();
+  } else {
+    listenUrl = song.url || '';
+    const a = document.createElement('a'); a.className = 'song'; a.href = listenUrl; a.target = '_blank'; a.rel = 'noopener';
+    a.setAttribute('aria-label', `${song.title} ${song.artist} 유튜브 뮤직에서 듣기`);
+    a.innerHTML = `<div class="song__art"><svg width="26" height="26" viewBox="0 0 24 24" fill="var(--coral)" aria-hidden="true"><path d="M9 18V5l10-2v13"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/></svg></div><div class="song__meta"><div class="song__lab">구름이가 골라준 한 곡</div><div class="song__title"></div><div class="song__artist"></div></div><div class="song__play"><svg width="18" height="18" viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></div>`;
+    $('.song__title', a).textContent = song.title; $('.song__artist', a).textContent = song.artist;
+    result.appendChild(a); addReasons();
+  }
+
+  if (listenUrl) {
+    const listen = document.createElement('button'); listen.type = 'button'; listen.className = 'btn btn--primary';
+    listen.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>유튜브 뮤직에서 듣기';
+    listen.addEventListener('click', () => window.open(listenUrl, '_blank', 'noopener'));
+    result.appendChild(listen);
+  }
+  const share = document.createElement('button'); share.type = 'button'; share.dataset.act = 'share';
+  share.className = 'btn ' + (listenUrl ? 'btn--ghost' : 'btn--primary');
+  share.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M12 15V3M8 7l4-4 4 4"/></svg>오늘 기분 카드 공유하기';
+  share.addEventListener('click', () => openShareCard(moodId, key));
+  result.appendChild(share);
+
+  // "이런 곡은 어때요?" — 내 곡/플리 추천(설정됐을 때만 등장)
+  if (myMusicEnabled()) renderMyMusic(result, key, moodId);
+}
+
+function ytOpenLink(url) {
+  const a = document.createElement('a'); a.className = 'yt-open'; a.href = url; a.target = '_blank'; a.rel = 'noopener';
+  a.textContent = '유튜브에서 열기 ↗'; return a;
+}
+function renderMyMusic(result, key, moodId) {
+  const pick = pickMyMusic(key); if (!pick) return;
+  const card = document.createElement('div'); card.className = 'card mymusic'; card.dataset.mood = moodId;
+  const h = document.createElement('div'); h.className = 'mymusic__h';
+  h.innerHTML = `<span class="mymusic__hd">${MY_MUSIC.heading || '이런 곡은 어때요?'}</span><span class="mymusic__lb">${MY_MUSIC.label || '구름이가 만든 곡'}</span>`;
+  card.appendChild(h);
+  if (pick.kind === 'video') {
+    card.appendChild(ytEmbed(pick.youtubeId));
+    if (pick.title) {
+      const line = document.createElement('div'); line.className = 'song-line';
+      line.innerHTML = '<span class="song-line__t"></span><span class="song-line__a"></span>';
+      $('.song-line__t', line).textContent = pick.title; $('.song-line__a', line).textContent = pick.artist || '구름이';
+      card.appendChild(line);
+    }
+    card.appendChild(ytOpenLink(`https://www.youtube.com/watch?v=${pick.youtubeId}`));
+  } else {
+    const box = document.createElement('div'); box.className = 'ytlite on';
+    box.innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/videoseries?list=${pick.playlistId}&rel=0" allow="encrypted-media; picture-in-picture" allowfullscreen title="구름이 플레이리스트"></iframe>`;
+    card.appendChild(box);
+    card.appendChild(ytOpenLink(`https://www.youtube.com/playlist?list=${pick.playlistId}`));
+  }
+  result.insertAdjacentElement('afterend', card);
+}
+
+// ── 더보기/설정 ──
+function renderMore() {
+  const v = view();
+  v.innerHTML = `<div class="v">
+    <h1 class="vtitle">더보기</h1>
+    <div id="iosHint"></div>
+    <div class="set-list" id="setList"></div>
+    <p class="set-ver">오늘 기분 · v0.1 · 구름이의 일기예보</p>
+  </div>`;
+  maybeIosHint($('#iosHint', v));
+  const list = $('#setList', v);
+  const item = (icon, title, desc, fn, href) => {
+    const el = document.createElement(href ? 'a' : 'button');
+    if (href) { el.href = href; if (href.startsWith('./')) el.target = '_self'; } else el.type = 'button';
+    el.className = 'set-item';
+    el.innerHTML = `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icon}</svg><span>${title}${desc ? `<small>${desc}</small>` : ''}</span><svg class="arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>`;
+    if (fn) el.addEventListener('click', fn);
+    list.appendChild(el);
+  };
+  item('<path d="M12 3v12M8 11l4 4 4-4M5 21h14"/>', '내 데이터 내보내기', '기록은 내 것 · JSON으로 저장', exportData);
+  const themePref = (() => { try { return localStorage.getItem(THEME_KEY) || 'system'; } catch (e) { return 'system'; } })();
+  const TLAB = { system: '시스템 설정 따름', light: '라이트', dark: '다크' }, TNEXT = { system: 'dark', dark: 'light', light: 'system' };
+  item('<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>', '화면 테마', `${TLAB[themePref] || '시스템 설정 따름'} · 눌러서 전환`, () => { setTheme(TNEXT[themePref] || 'system'); renderMore(); });
+  const taste = loadTaste();
+  item('<path d="M9 18V5l10-2v13"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/>', '음악 성향 테스트',
+    taste ? `나의 타입: ${tasteName(taste)} · 다시 하기` : '5문항이면 끝 · 나의 구름이 타입', () => openQuiz({ onClose: router }));
+  item('<path d="M12 3a9 9 0 1 0 9 9 9 9 0 0 0-9-9zM12 8v4M12 16h.01"/>', '마음이 많이 힘들 땐', '자살예방상담 1393 (24시간)', null, 'tel:1393');
+  item('<rect x="4" y="4" width="16" height="16" rx="3"/><path d="M9 9h6M9 13h6M9 17h3"/>', '개인정보처리방침', '내 기분은 내 폰에 · 익명 집계', null, './privacy.html');
+  item('<circle cx="12" cy="12" r="3.2"/><path d="M12 4v2M12 18v2M4 12h2M18 12h2M6.3 6.3l1.4 1.4M16.3 16.3l1.4 1.4M17.7 6.3l-1.4 1.4M7.7 16.3l-1.4 1.4"/>', '음악 관리 (관리자)', '곡 카탈로그 · 유튜브 임베드 관리', null, './admin.html');
+  item('<path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/>', '데이터 초기화', '모든 기록 삭제', resetData);
+}
+function exportData() {
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'oneul-gibun-data.json'; a.click();
+}
+function resetData() {
+  if (!confirm('모든 기분 기록을 삭제할까요? 되돌릴 수 없어요.')) return;
+  try { localStorage.removeItem('oneulgibun:state'); } catch (e) {}
+  state = store.load(); toast('기록을 초기화했어요'); router();
+}
+// ── 테마(다크/라이트/시스템) ──
+function resolveDark(pref) { return pref === 'dark' || (pref !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches); }
+function applyTheme() {
+  let pref = 'system'; try { pref = localStorage.getItem(THEME_KEY) || 'system'; } catch (e) {}
+  const dark = resolveDark(pref);
+  document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+  const mc = document.querySelector('meta[name="theme-color"]');
+  if (mc) mc.setAttribute('content', dark ? '#1C1922' : '#FBF6EE');
+}
+function setTheme(pref) { try { localStorage.setItem(THEME_KEY, pref); } catch (e) {} applyTheme(); }
+function toast(msg) {
+  const t = document.createElement('div'); t.textContent = msg;
+  t.style.cssText = 'position:fixed;left:50%;bottom:88px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:11px 18px;border-radius:999px;font-size:13px;font-weight:600;z-index:80;box-shadow:var(--sh-lg)';
+  document.body.appendChild(t); setTimeout(() => t.remove(), 1900);
+}
+function maybeIosHint(el) {
+  if (!el) return;
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent || '');
+  const standalone = ('standalone' in navigator && navigator.standalone) || matchMedia('(display-mode: standalone)').matches;
+  let dismissed = '1'; try { dismissed = localStorage.getItem('oneulgibun:ioshint'); } catch (e) {}
+  if (!isIOS || standalone || dismissed) return;
+  el.className = 'ioshint';
+  el.innerHTML = '<svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M8 7l4-4 4 4M5 21h14"/></svg><div><b>아이폰에서 앱처럼 쓰기</b><small>공유 버튼 → “홈 화면에 추가”</small></div><button type="button" aria-label="닫기"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>';
+  el.querySelector('button').addEventListener('click', () => { try { localStorage.setItem('oneulgibun:ioshint', '1'); } catch (e) {} el.remove(); });
+}
+
+// ── 온보딩 ──
+const STEPS = [
+  ['happy', '안녕, 나는 구름이예요', '내 기분이 곧 구름이의 날씨가 돼요.<br>하루 한 번 톡 누르면, 딱 맞는 노래를 골라드릴게요.'],
+  ['flutter', '오늘의 하늘, 같이 만들어요', '내 한 톨이 모여 전국 기분 날씨가 돼요.<br>기분 카드로 오늘을 자랑할 수도 있어요.'],
+  ['calm', '기록은 내 폰에만', '개인 기록은 이 기기에만 저장돼요.<br>전국 통계는 익명으로만 모아요.'],
+];
+function showOnboarding() {
+  let i = 0, dlg = null;
+  const ov = document.createElement('div'); ov.className = 'onb';
+  const finish = () => { try { localStorage.setItem(ONB_KEY, '1'); } catch (e) {} if (dlg) dlg.release(); ov.remove(); };
+  const paint = () => {
+    const [mood, t, d] = STEPS[i];
+    const last = i === STEPS.length - 1;
+    ov.innerHTML = `<div class="onb__m" aria-hidden="true">${mascotSVG(mood, false)}</div>
+      <div class="onb__t">${t}</div><div class="onb__d">${d}</div>
+      <div class="onb__dots" aria-hidden="true">${STEPS.map((_, k) => `<i class="${k === i ? 'on' : ''}"></i>`).join('')}</div>
+      <button class="btn btn--primary onb__btn" type="button">${last ? '구름이랑 시작하기' : '다음'}</button>
+      ${last ? '' : '<button class="onb__skip" type="button">건너뛰기</button>'}`;
+    $('.onb__btn', ov).addEventListener('click', () => { if (last) finish(); else { i++; paint(); if (dlg) dlg.refocus(); } });
+    const skip = $('.onb__skip', ov); if (skip) skip.addEventListener('click', finish);
+  };
+  document.body.appendChild(ov);
+  paint();
+  dlg = openDialog(ov, { label: '오늘 기분 소개', initialFocus: () => $('.onb__btn', ov) });
+}
+
+// ── 라우터 ──
+function router() {
+  const route = (location.hash.replace('#/', '') || 'home');
+  const r = ['home', 'weather', 'collection', 'more'].includes(route) ? route : 'home';
+  if (r === 'home') renderHome();
+  else if (r === 'weather') view().innerHTML = weatherHTML();
+  else if (r === 'collection') {
+    view().innerHTML = collectionHTML(state);
+    const wb = view().querySelector('[data-act="weekly"]');
+    if (wb) wb.addEventListener('click', () => openWeeklyCard(state));
+  }
+  else if (r === 'more') renderMore();
+  renderTabs(r);
+  view().scrollTop = 0;
+}
+window.addEventListener('hashchange', router);
+
+// ── 서비스워커 + 업데이트 알림 ──
+if ('serviceWorker' in navigator) window.addEventListener('load', async () => {
+  try {
+    const reg = await navigator.serviceWorker.register('./sw.js');
+    reg.addEventListener('updatefound', () => {
+      const nw = reg.installing;
+      if (nw) nw.addEventListener('statechange', () => {
+        if (nw.state === 'installed' && navigator.serviceWorker.controller) {
+          const t = document.createElement('div'); t.className = 'uptoast';
+          t.innerHTML = '<span>새 버전이 준비됐어요</span>';
+          const btn = document.createElement('button'); btn.type = 'button'; btn.textContent = '새로고침';
+          btn.addEventListener('click', () => location.reload()); t.appendChild(btn);
+          document.body.appendChild(t);
+        }
+      });
+    });
+  } catch (e) { /* SW 미지원 */ }
+});
+
+// 시스템 테마 변경 추종(테마 설정이 '시스템'일 때만 실질 반영)
+try { matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme); } catch (e) {}
+
+// 첫 실행 온보딩
+let onboarded = '1'; try { onboarded = localStorage.getItem(ONB_KEY); } catch (e) {}
+if (!onboarded) showOnboarding();
+router();
+
+// 전국 집계가 설정돼 있으면 한 번 읽어와 현재 화면을 갱신(router는 fetch를 호출하지 않아 루프 없음).
+if (nationEnabled()) fetchNation().then((d) => { if (d) router(); });

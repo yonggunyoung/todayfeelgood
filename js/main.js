@@ -152,8 +152,9 @@ function proverbFloat(kind) {
   setTimeout(() => el.remove(), 2600);
 }
 
-function openSheet(html, { lock = false } = {}) {
-  // lock: 보상형 광고처럼 바깥 탭으로 닫히면 안 되는 시트 (명시적 버튼으로만 종료)
+function openSheet(html, { lock = false, overlay = false } = {}) {
+  // lock: 바깥 탭으로 안 닫히는 시트. overlay: 광고·게임처럼 다른 시트를 잠깐 덮는 시트 → 이전 시트를 보관해 닫힐 때 복원.
+  if (overlay) { const cur = $('#modal-root .sheet'); if (cur) sheetStack.push(cur.outerHTML); }
   $('#modal-root').innerHTML =
     `<div class="overlay" ${lock ? '' : 'onclick="if(event.target===this)UI.closeSheet()"'}>
        <div class="sheet">${lock ? '' : '<div class="grip"></div>'}${html}</div>
@@ -195,6 +196,13 @@ function attachSheetDrag() {
   sheet.addEventListener('pointercancel', end);
 }
 let sheetPushed = false;   // 뒤로가기로 시트가 닫히도록 히스토리에 한 칸 쌓아둠
+let sheetStack = [];       // 광고·게임 오버레이가 덮은 이전 시트 HTML (닫힐 때 복원)
+// 게임·광고 같은 임시 오버레이를 열기 전 현재 시트를 보관 → 닫히면 그 시트로 복원.
+//   게임 시트(.gx) 위에서 또 광고 띄우는 인게임 흐름은 중첩하지 않음(스택 오염 방지).
+function stashSheet() {
+  const cur = $('#modal-root .sheet');
+  if (cur && !cur.querySelector('.gx')) sheetStack.push(cur.outerHTML);
+}
 let ignoreNextPop = false;
 let closeForce = false; // 게임 나가기 확인을 거친 강제 종료
 UI.closeSheet = (fromPop = false) => {
@@ -208,6 +216,13 @@ UI.closeSheet = (fromPop = false) => {
   try { if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen(); } catch { /* noop */ }
   const chip = document.getElementById('timer-chip');
   if (chip && chip.parentElement !== document.body) document.body.appendChild(chip);
+  // 광고·게임 오버레이가 닫힘 → 덮었던 이전 시트(레시피 등) 복원. 완전히 닫지 않고 그 상태 유지.
+  if (sheetStack.length) {
+    $('#modal-root').innerHTML = `<div class="overlay" onclick="if(event.target===this)UI.closeSheet()">${sheetStack.pop()}</div>`;
+    attachSheetDrag(); relocateTimerChip();
+    if (!sheetPushed) { history.pushState({ nb: 'sheet' }, ''); sheetPushed = true; } // 복원된 시트도 뒤로가기로 닫히게
+    return;
+  }
   $('#modal-root').innerHTML = '';
   scanFile = null; scanResults = null; deductCtx = null; draft = null; qaLoc = null;
   vc = null; stopListen(); stopSpeak();
@@ -1690,7 +1705,7 @@ UI.openRecharge = (retry) => {
       <div style="font-size:1.7rem">🎮</div>
       <div class="grow"><b>게임하고 포인트 모으기</b>
         <p class="hint" style="margin:2px 0 0">100P 모으면 1회권으로 바로 충전돼요</p></div>
-      <button class="btn btn-sm btn-tint" onclick="UI.closeSheet();UI.openGames()">게임</button>
+      <button class="btn btn-sm btn-tint" onclick="UI.openGames()">게임</button>
     </div>`}
     <div class="card flat row" style="gap:12px">
       <div style="font-size:1.7rem">⭐</div>
@@ -1704,6 +1719,7 @@ UI.openRecharge = (retry) => {
    토스 안: 네이티브 보상형 SDK 시도 → 개별 운영/실패: 하우스 15초 (AdFit 교체 자리) */
 let adTimer = null;
 function playAd({ onComplete, note = '', reward = '' }) {
+  stashSheet(); // 현재 시트(레시피·등록폼 등) 보관 → 광고 닫히면 그 시트로 복원 (게임 시트 위에선 중첩 안 함)
   tossRewardedAd().then((r) => {
     if (r === true) { // 토스 보상형 완주 — 바로 보상 단계
       openSheet('<h2>📺 광고</h2><button id="ad-btn" class="btn btn-block btn-soft" disabled>보상 적용 중…</button>', { lock: true });
@@ -1862,7 +1878,7 @@ UI.redeem = async (id) => {
 };
 
 /* ── 🎮 게임 글루 — 각 게임 모듈의 시트가 onclick 문자열로 부른다 ── */
-UI.openGames = () => openGames();
+UI.openGames = () => { stashSheet(); openGames(); }; // 현재 시트(레시피 등) 보관 → 게임 끝나면 복원
 UI.gameFull = () => {
   const el = document.querySelector('.gx'); if (!el) return;
   try { if (document.fullscreenElement) (document.exitFullscreen || document.webkitExitFullscreen).call(document); else (el.requestFullscreen || el.webkitRequestFullscreen).call(el); }
@@ -2210,15 +2226,16 @@ UI.openRecipe = (rid) => {
     </div>
     <div>
       ${r.ingredients.map((g) => {
-        if (g.st) return `<span class="chip">${esc(g.n)} (양념)</span>`;
+        if (g.st) return `<span class="chip chip-season">${esc(g.n)}${g.a ? ` <b class="amt" data-b="${g.a}" data-u="${esc(g.u || '')}" data-st="1">${fmtAmt(g.a) + (g.u || '')}</b>` : ' (양념)'}</span>`;
         const miss = a.missing.includes(g.n);
         return `<span class="chip ${miss ? 'miss' : 'have'}" ${miss ? `onclick="UI.addShopping('${esc(g.n)}')"` : ''}>${miss ? '＋ ' : '✓ '}${esc(g.n)} <b class="amt" data-b="${g.a || 0}" data-u="${esc(g.u || '')}">${g.a ? fmtAmt(g.a) + (g.u || '') : ''}</b></span>`;
       }).join('')}
     </div>
+    <p id="serv-hint" class="hint" style="display:none;margin:7px 4px 0">※ <b>양념은 인분만큼 그대로 곱하면 짜져요</b> — 증가분의 75%만 늘렸어요(2인분=1.75배). 끝에 한 번 맛보고 조절하세요 👩‍🍳</p>
     ${r.steps?.length ? `<div class="section-title"><h2>만드는 법</h2><small class="timer-quick" onclick="UI.recipeTimer(${r.time || 10})">⏲️ ${r.time || 10}분</small></div>
     <div class="card flat" style="padding:6px 15px"><ul class="steps">${r.steps.map((st) => {
       const pm = passiveMin(st);
-      return `<li>${esc(st)}${pm ? `<button class="step-wait" onclick="UI.waitGame(${pm})">⏳ ${pm}분 — 타이머·게임</button>` : ''}</li>`;
+      return `<li>${stepHtml(st)}${pm ? `<button class="step-wait" onclick="UI.waitGame(${pm})">⏳ ${pm}분 — 타이머·게임</button>` : ''}</li>`;
     }).join('')}</ul></div>` : ''}
     ${r.tips?.length ? `<div class="banner" style="display:block">💡 <b>키포인트</b><br>${r.tips.map((t2) => '· ' + esc(t2)).join('<br>')}</div>` : ''}
     ${r.mine ? `<div class="btn-row" style="margin-bottom:0">
@@ -2484,6 +2501,21 @@ UI.quickTimer = () => {
 window.startTimer = (m) => startKitchenTimer(m);
 
 /* 긴 조리(끓이기·졸이기 등)에서 '손 놓는 시간' 감지 → 타이머 + 게임/광고 유도 */
+// 만드는법 본문 속 수치를 .amt 스팬으로 감싸 인분 환산에 같이 반영 (분·초·도 같은 시간/온도는 제외).
+//   양념성 단위(큰술·작은술·꼬집·줌)는 비선형(servFactor)로, 무게/부피/개수는 선형으로 자동 환산.
+const STEP_UNITS = '큰술|작은술|티스푼|테이블스푼|스푼|꼬집|줌|컵|종이컵|공기|kg|g|ml|L|리터|개|알|쪽|톨|모|장|봉|캔|마리|덩이|토막';
+const STEP_SEASON_U = new Set(['큰술', '작은술', '티스푼', '테이블스푼', '스푼', '꼬집', '줌']);
+function stepHtml(st) {
+  const re = new RegExp('(\\d+(?:\\.\\d+)?)\\s*(' + STEP_UNITS + ')', 'g');
+  let out = '', last = 0, m;
+  while ((m = re.exec(st))) {
+    out += esc(st.slice(last, m.index));
+    const num = parseFloat(m[1]); const unit = m[2];
+    out += `<b class="amt" data-b="${num}" data-u="${esc(unit)}" data-st="${STEP_SEASON_U.has(unit) ? 1 : 0}">${fmtAmt(num)}${esc(unit)}</b>`;
+    last = m.index + m[0].length;
+  }
+  return out + esc(st.slice(last));
+}
 function passiveMin(step) {
   if (!/끓|졸|삶|우려|익히|재워|절여|불려|쪄|구워|튀겨/.test(step)) return 0;
   const m = step.match(/(\d+)\s*분/);
@@ -2492,14 +2524,15 @@ function passiveMin(step) {
 }
 UI.waitGame = (min) => {
   startKitchenTimer(min);
+  // overlay: 레시피 상세를 보관 → 게임·광고·닫기 어느 경로든 끝나면 레시피로 복원(다시 안 띄워도 됨).
   openSheet(`
     <h2>⏳ ${min}분, 손 놓는 시간이에요</h2>
     <p class="sub">타이머를 켰어요. 기다리는 동안 게임 한 판 어때요? — 점수는 포인트로!</p>
     <div class="btn-row" style="flex-direction:column">
-      <button class="btn btn-primary btn-block" onclick="UI.closeSheet();UI.openGames()">🎮 게임하고 포인트 받기</button>
+      <button class="btn btn-primary btn-block" onclick="UI.openGames()">🎮 게임하고 포인트 받기</button>
       <button class="btn btn-accent btn-block" onclick="UI.waitAd()">🕒 짬시간 포인트 받기</button>
       <button class="btn btn-block" onclick="UI.closeSheet()">그냥 기다릴게요</button>
-    </div>`);
+    </div>`, { overlay: true });
 };
 UI.waitAd = () => {
   playAd({
@@ -2548,13 +2581,19 @@ UI.handleVoice = (t) => {
   }
 };
 
+// 인분 환산 — 주재료는 선형(×n), 양념은 비선형(증가분의 75%만: 2배→1.75배·3배→2.5배).
+//   짠맛/향신료는 정확히 ×n 하면 과해진다는 조리 원칙 반영. 줄일 땐 너무 싱거워지지 않게 같은 식으로 덜 줄임.
+const servFactor = (n, seasoning) => (seasoning ? 1 + (n - 1) * 0.75 : n);
 UI.dtServ = (n) => {
   detailServings = n;
   $$('#dt-serv button').forEach((b, i) => b.classList.toggle('on', i + 1 === n));
   $$('#modal-root .amt').forEach((el) => {
     const b = parseFloat(el.dataset.b) || 0;
-    el.textContent = b ? fmtAmt(b * n) + (el.dataset.u || '') : '';
+    const f = servFactor(n, el.dataset.st === '1');
+    el.textContent = b ? fmtAmt(b * f) + (el.dataset.u || '') : '';
   });
+  const hint = $('#serv-hint');
+  if (hint) hint.style.display = n > 1 ? 'block' : 'none';
 };
 
 UI.addMissing = (rid) => {
@@ -2630,19 +2669,31 @@ function collectForm() {
 }
 
 // 빠른 레시피: 영상을 보지 않고 AI가 재료·순서를 채워준다
+let rfFreeRetry = false; // 광고 보고 실패했을 땐 다음 1회는 광고 없이 재시도(공정)
 UI.rfAuto = async () => {
   const url = $('#rf-yt').value.trim();
   if (!ytId(url)) { toast('유튜브 링크를 먼저 붙여넣어 주세요'); return; }
   const ready = aiReady();
   if (!ready.ok) { toast(isAdmin() ? ready.msg : '빠른 레시피는 베타 준비 중이에요 ✨ 곧 제공됩니다'); return; }
   collectForm();
-  const retryAuto = () => { renderRecipeForm(true); const inp = $('#rf-yt'); if (inp) inp.value = url; UI.rfAuto(); };
-  if (aiLeft().total <= 0) { UI.openRecharge(retryAuto); return; } // 무료·충전권 소진
+  // 빠른 레시피는 AI 비용이 가장 큰 기능 → 프리미엄은 바로, 그 외엔 보상형 광고 풀시청 후 1회.
+  //   (영수증 스캔은 무료 월 횟수, 빠른레시피는 광고/프리미엄으로 분리해 비용 보호)
+  if (aiUnlimited() || rfFreeRetry) { rfFreeRetry = false; rfRun(url); return; }
+  playAd({
+    reward: '🤖 빠른 레시피 1회',
+    // closeSheet가 draft를 null로 비우므로, 광고 닫기 전후로 draft를 보존해 폼이 깨지지 않게.
+    onComplete: () => { const d = draft; UI.closeSheet(); draft = d; rfRun(url); },
+  });
+};
+async function rfRun(url) {
+  // 광고 시트가 레시피 폼을 덮어버렸을 수 있으니 → 폼을 다시 띄우고 URL을 복원한 뒤 바로 정리.
+  //   (광고 보고 나서 "다시 검색해야 하는" 문제 방지 — 로드 상태 유지)
+  if (!$('#rf-yt')) { renderRecipeForm(true); }
+  const inp = $('#rf-yt'); if (inp && !inp.value.trim()) inp.value = url;
   const btn = $('#rf-auto');
-  btn.disabled = true; btn.textContent = '🤖 영상 내용 정리 중… (20~40초)';
+  if (btn) { btn.disabled = true; btn.textContent = '🤖 영상 내용 정리 중… (20~40초)'; }
   try {
     const data = await extractRecipeFromYouTube(url, S.settings);
-    aiConsume(); // 성공 시에만 차감
     draft.yt = ytId(url);
     if (!draft.title) draft.title = data.title || '';
     draft.time = data.time || draft.time;
@@ -2657,12 +2708,12 @@ UI.rfAuto = async () => {
     renderRecipeForm(true);
     toast('정리 완료 ✨ 내용 확인하고 저장하세요');
   } catch (e) {
-    if (e.status === 429 && S.settings.aiMode === 'server') { UI.openRecharge(retryAuto); return; }
-    toast(e.message || '정리에 실패했어요');
+    if (!aiUnlimited()) rfFreeRetry = true; // 광고 봤는데 실패 → 다음 1회는 광고 없이
+    toast((e.message || '정리에 실패했어요') + (rfFreeRetry ? ' · 다시 누르면 광고 없이 한 번 더 시도돼요' : ''));
     const b = $('#rf-auto');
     if (b) { b.disabled = false; b.textContent = '🤖 빠른 레시피 — 영상 안 보고 재료·순서 자동 정리'; }
   }
-};
+}
 
 function rfIngRow(g, idx) {
   return `<div class="ing-row" data-idx="${idx}">
@@ -3324,7 +3375,9 @@ function renderSettings() {
                 <button class="btn btn-sm btn-tint" onclick="UI.famCreate()">코드 만들기</button>
                 <button class="btn btn-sm btn-soft" onclick="UI.famJoin()">코드 입력</button></div>`}
          </div>`
-      : `<button class="btn btn-block" style="background:#fff;border:1px solid var(--hairline);box-shadow:var(--shadow-card);font-weight:800" onclick="UI.doLogin()">
+      : (typeof window !== 'undefined' && window.__TOSS__)
+        ? `<div class="card flat"><p class="hint" style="margin:0">☁️ 클라우드 백업·가족 공유는 <b>토스 로그인</b>으로 곧 제공돼요. 지금은 데이터가 이 기기에 안전하게 저장됩니다 (설정 → 데이터 → 내보내기로 직접 백업 가능).</p></div>`
+        : `<button class="btn btn-block" style="background:#fff;border:1px solid var(--hairline);box-shadow:var(--shadow-card);font-weight:800" onclick="UI.doLogin()">
            <span style="font-weight:900;color:#4285F4">G</span>&nbsp; 구글로 시작하기 — 백업 · 기기 이동 · 가족 공유
          </button>
          <p class="hint" style="text-align:center;margin:8px 0 0">로그인 없이도 이 기기에서는 모든 기능을 쓸 수 있어요</p>`;
@@ -3630,6 +3683,22 @@ window.addEventListener('popstate', () => {
   history.back(); // 진짜 종료
 });
 
+// 토스 웹뷰 네이티브 뒤로가기용 — history가 아니라 토스 SDK가 뒤로가기를 가로채므로,
+// 같은 가드를 전역 함수로 노출한다. toss-miniapp/src/main.ts 가 graniteEvent('backEvent')에 연결.
+// 반환 true=앱이 처리(종료 안 함) / false=홈에서 한 번 더 → closeView()로 종료해도 됨.
+window.__nbBack = function () {
+  if (sheetPushed) { sheetPushed = false; UI.closeSheet(true); return true; }
+  if (moveCtx) { endMove(); render(); return true; }
+  if (tab !== 'home') { tab = 'home'; render(); return true; }
+  if (!exitArmed) {
+    exitArmed = true;
+    toast('한 번 더 뒤로 누르면 앱이 종료돼요');
+    setTimeout(() => { exitArmed = false; }, 2000);
+    return true;
+  }
+  return false;
+};
+
 // 상용 기본값: config.js에 서버 AI 주소가 채워져 있으면 전 사용자 자동 적용
 // 배포에 게이트웨이가 설정돼 있으면: 본인 키가 없는 사용자는 서버 모드로 자동 정렬(엔드포인트 보정 포함).
 // 키를 직접 넣은 사용자는 BYOK 그대로 존중. (구버전 테스트로 남은 aiMode='byok'+키없음 상태도 여기서 정상화)
@@ -3645,8 +3714,19 @@ if (AI_ENDPOINT) {
 migratePantryUnits(); // 무게·부피 재고를 g·ml 기준으로 일괄 정렬(구버전 데이터 보정)
 // 커뮤니티 평점 — 캐시 즉시 적용 후 서버에서 갱신(실패해도 앱은 그대로 동작)
 try { applyCommunityStats(JSON.parse(localStorage.getItem('nb_cstats') || '{}')); } catch { /* noop */ }
-// 시작 화면 — 사용자가 고른 기본 화면으로 진입(첫 실행은 목적 질문 전이라 home 기본)
-const bootStart = applyStartTab(S.settings.startScreen);
+// 토스 딥링크/검색 진입(intoss://naengbiseo/<screen>) — 토스 안에서만 URL의 화면명을 인식해 그 탭으로.
+//   경로·쿼리·해시 어디에 와도 처리하고, 못 알아보면 기본 시작화면으로(앱은 항상 정상 진입). 웹/허브엔 영향 0.
+function deepLinkScreen() {
+  if (typeof window === 'undefined' || !window.__TOSS__) return null;
+  const raw = (location.pathname + location.search + location.hash).toLowerCase();
+  if (/fridge|pantry|냉장고/.test(raw)) return 'pantry';
+  if (/recipe|레시피/.test(raw)) return 'recipes';
+  if (/shop|장보기/.test(raw)) return 'shopping';
+  if (/home|홈/.test(raw)) return 'home';
+  return null;
+}
+// 시작 화면 — 토스 딥링크가 있으면 그 화면, 없으면 사용자가 고른 기본 화면.
+const bootStart = applyStartTab(deepLinkScreen() || S.settings.startScreen);
 render();
 initSync(() => { renderTop(); if (tab === 'settings') renderSettings(); });
 fetchRecipeStats().then((m) => {

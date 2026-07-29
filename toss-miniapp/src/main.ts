@@ -9,9 +9,14 @@
 // 중요: js/main.js 는 import 되는 순간 최상위에서 render()/initSync()/initAnalytics() 를 호출하며
 //       스스로 부팅한다. 따라서 플래그/로그인은 반드시 그 import "이전"에 처리해야 한다.
 
+import { graniteEvent, closeView } from '@apps-in-toss/web-framework';
+
 declare global {
   interface Window {
     __TOSS__?: boolean;
+    // 루트 앱(js/main.js)이 노출하는 뒤로가기 가드 — 토스 backEvent에 연결.
+    //   true=앱이 처리(종료 안 함) / false=홈에서 한 번 더 → closeView()로 종료.
+    __nbBack?: () => boolean;
     // 토스 WebView SDK가 주입할 수 있는 전역 후보 (js/toss.js 의 sdk() 와 동일 후보군)
     AppsInToss?: unknown;
     appsInToss?: unknown;
@@ -61,11 +66,39 @@ async function boot() {
   //   try { await tossLogin(); } catch (e) { console.warn('[toss] login skipped', e); }
   // }
 
-  // (d) 기존 냉비서 앱 부팅. import 시점에 자체적으로 화면을 렌더한다.
-  //   vendor/ 는 scripts/vendor.mjs 가 루트 앱에서 복사해 둔다(yarn vendor).
-  //   Vite가 /vendor 를 정적 자산으로 서빙하므로 절대경로로 import.
-  // @ts-expect-error — 바닐라 JS 모듈(타입 선언 없음). vendor 복사본이라 빌드 시 존재.
-  await import('/vendor/js/main.js');
+  // (d) 기존 냉비서 앱 부팅. js/main.js 는 import 시점에 스스로 화면을 렌더한다.
+  //   vendor/(=publicDir)의 정적 자산이라 번들러가 건드리면 안 됨 → 동적 import 대신
+  //   런타임에 <script type="module"> 주입으로 로드 (루트 index.html이 ./js/main.js 를
+  //   로드하던 방식과 동일). 이러면 Rollup이 빌드 때 /js/main.js 를 해석하려다 실패하지 않는다.
+  await new Promise<void>((resolve, reject) => {
+    const s = document.createElement('script');
+    s.type = 'module';
+    s.src = '/js/main.js'; // dist/js/main.js (publicDir 복사본). 상대 임포트는 /js/ 기준으로 해결됨.
+    s.onload = () => resolve();
+    s.onerror = () => reject(new Error('냉비서 앱 로드 실패: /js/main.js'));
+    document.body.appendChild(s);
+  });
+
+  // (e) 토스 네이티브 뒤로가기 가드 — 앱이 로드되어 window.__nbBack 가 준비된 뒤 등록.
+  registerBackHandler();
+}
+
+// 토스 SDK backEvent → 앱의 뒤로가기 가드(window.__nbBack) 실행.
+//   웹/PWA의 history 가드(시트닫기→홈→경고후 종료)를 토스 네이티브 뒤로가기에서도 재현한다.
+//   graniteEvent('backEvent')를 등록하면 토스 기본 종료동작이 우리 콜백으로 대체됨.
+//   handled=true → 종료 안 함 / false(홈에서 한 번 더) → closeView()로 진짜 종료.
+function registerBackHandler() {
+  try {
+    graniteEvent.addEventListener('backEvent', {
+      onEvent: () => {
+        const handled = typeof window.__nbBack === 'function' ? window.__nbBack() : false;
+        if (!handled) closeView();
+      },
+      onError: (err: unknown) => { console.warn('[toss] backEvent 오류:', err); },
+    });
+  } catch (e) {
+    console.warn('[toss] backEvent 등록 실패(웹 환경일 수 있음):', e);
+  }
 }
 
 boot().catch((err) => {

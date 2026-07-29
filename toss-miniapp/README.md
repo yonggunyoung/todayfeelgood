@@ -111,3 +111,25 @@ toss-miniapp/
 
 ## 참고
 - [개발자센터](https://developers-apps-in-toss.toss.im/) · [WebView 튜토리얼](https://developers-apps-in-toss.toss.im/tutorials/webview.html) · [예제](https://github.com/toss/apps-in-toss-examples) · [개발자 커뮤니티](https://techchat-apps-in-toss.toss.im/) · [사업자등록 가이드](https://toss.im/apps-in-toss/blog/business_registration)
+
+---
+
+## 버전 등록(.ait) — 콘솔 "버전 등록하기"
+
+콘솔의 **버전 등록하기 → "ait 파일 선택"** 에 올릴 `.ait` 번들은 **빌드 결과물**이에요.
+
+```bash
+cd toss-miniapp
+# (권장) 정답 설정 확보 — 한 번만:
+npx create-ait-app naengbiseo     # 생성된 granite.config.ts·package.json과 본 스캐폴드를 대조, 다른 필드 반영
+
+yarn install
+yarn build                        # = yarn vendor + granite build (web.commands.build=vite build → dist/)
+                                  # → 프로젝트 루트에 <appName>.ait 생성 (예: naengbiseo.ait)
+```
+
+생성된 **`naengbiseo.ait`** 를 콘솔 "버전 등록하기"에 업로드 → 메모(출시노트) 작성 → **등록하기**.
+→ **QR/테스트 스킴이 자동 생성**되고, **토스앱에서 실기기 테스트** 가능. 문제없으면 **검수 요청**(최대 3영업일).
+
+> 빌드/실행 중 자산 404나 모듈 에러가 나면, 그 에러 메시지를 그대로 주세요 — vendor 경로/번들 설정을 맞춰드릴게요.
+> `npx create-ait-app` 결과와 본 스캐폴드의 필드가 다르면 그쪽(콘솔 생성본)이 정답이에요.

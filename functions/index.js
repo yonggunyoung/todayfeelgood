@@ -269,6 +269,21 @@ async function gemini(body, model, apiKey) {
     err.code = res.status === 429 ? 503 : 502;
     throw err;
   }
+  // 실제 토큰 사용량 측정 — 로그 + 일별 누적(Firestore ai_usage/{날짜}). 비차단(실패 무시).
+  const usage = data.usageMetadata;
+  if (usage) {
+    console.log(`[gemini-tokens] model=${model} prompt=${usage.promptTokenCount} output=${usage.candidatesTokenCount} total=${usage.totalTokenCount}`);
+    try {
+      const day = new Date().toISOString().slice(0, 10);
+      db.collection('ai_usage').doc(day).set({
+        calls: admin.firestore.FieldValue.increment(1),
+        promptTokens: admin.firestore.FieldValue.increment(usage.promptTokenCount || 0),
+        outputTokens: admin.firestore.FieldValue.increment(usage.candidatesTokenCount || 0),
+        totalTokens: admin.firestore.FieldValue.increment(usage.totalTokenCount || 0),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      }, { merge: true }).catch(() => {});
+    } catch { /* noop */ }
+  }
   const cand = Array.isArray(data.candidates) ? data.candidates[0] : null;
   if (!cand) {
     if (data.promptFeedback?.blockReason) throw Object.assign(new Error('분석할 수 없는 콘텐츠예요.'), { code: 422 });
@@ -302,16 +317,68 @@ const YT_PROMPT_G = `이 유튜브 요리 영상을 보고 레시피를 정리�
 설명 없이 JSON 하나만: {"ok":true,"title":"요리명","time":15,"kcal":400,"protein":20,"tags":["국물"],"ingredients":[{"name":"두부","amount":0.5,"unit":"모","seasoning":false}],"steps":["..."],"tips":["..."]}
 레시피를 못 찾으면 {"ok":false,"reason":"이유"} 만.`;
 
+const ytParse = (t) => { try { return JSON.parse(t); } catch { return null; } };
+
+// 유튜브 제목·설명란을 결정론적으로 수집 — 영상 이해(비싸고 잘 실패)에 안 휘둘리게.
+//   oEmbed(제목, API키 불필요) + watch 페이지의 ytInitialPlayerResponse.shortDescription.
+//   ※ 데이터센터 IP엔 동의/봇 페이지가 올 수 있어 설명란 수집은 best-effort. 실패하면 영상 폴백.
+async function fetchYtMeta(url) {
+  let title = '', description = '';
+  const id = (String(url).match(/(?:v=|youtu\.be\/|shorts\/|embed\/|live\/)([\w-]{11})/) || [])[1];
+  try {
+    const o = await fetch('https://www.youtube.com/oembed?format=json&url=' + encodeURIComponent(url), { headers: { 'accept-language': 'ko' } });
+    if (o.ok) { const j = await o.json(); title = j.title || ''; }
+  } catch { /* noop */ }
+  if (id) {
+    try {
+      const r = await fetch('https://www.youtube.com/watch?v=' + id, {
+        headers: { 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36', 'accept-language': 'ko-KR,ko;q=0.9' },
+      });
+      const html = await r.text();
+      const dm = html.match(/"shortDescription":"((?:\\.|[^"\\])*)"/);
+      if (dm) { const p = ytParse('"' + dm[1] + '"'); if (typeof p === 'string') description = p; }
+      if (!title) { const tm = html.match(/<meta name="title" content="([^"]*)"/); if (tm) title = tm[1]; }
+    } catch { /* noop */ }
+  }
+  return { title: String(title).slice(0, 300), description: String(description || '').slice(0, 6000) };
+}
+
+const YT_PROMPT_TEXT = (title, desc) => `아래는 유튜브 요리 영상의 제목과 설명란이에요. 이걸 바탕으로 레시피를 정리하세요.
+제목: ${title || '(없음)'}
+설명란:
+${desc || '(설명란 비어있음)'}
+
+${YT_PROMPT_G}`;
+
 async function handleYtRecipeGemini(url, apiKey, model) {
-  const text = await gemini({
-    contents: [{ parts: [
-      { fileData: { fileUri: url } },
-      { text: YT_PROMPT_G },
-    ] }],
-    generationConfig: { responseMimeType: 'application/json' },
-  }, model, apiKey);
-  let data;
-  try { data = JSON.parse(text); } catch { throw Object.assign(new Error('레시피 정리 결과를 읽지 못했어요.'), { code: 422 }); }
+  // 1) 제목·설명란 수집(결정론적·저비용)
+  const meta = await fetchYtMeta(url).catch(() => ({ title: '', description: '' }));
+  const hasDesc = (meta.description || '').replace(/\s/g, '').length > 40;
+
+  // 2) 1차: 설명란 텍스트로 정리 — 가장 싸고(토큰 수백) 한국 요리 채널 성공률 높음.
+  if (hasDesc || meta.title) {
+    try {
+      const t = await gemini({
+        contents: [{ parts: [{ text: YT_PROMPT_TEXT(meta.title, meta.description) }] }],
+        generationConfig: { responseMimeType: 'application/json' },
+      }, model, apiKey);
+      const d = ytParse(t);
+      if (d && d.ok && Array.isArray(d.ingredients) && d.ingredients.length) return d;
+    } catch { /* 영상 폴백으로 */ }
+  }
+
+  // 3) 2차(폴백): 영상 이해 — 설명란이 부족하거나 1차 실패 시에만(비용 큼).
+  let text;
+  try {
+    text = await gemini({
+      contents: [{ parts: [{ fileData: { fileUri: url } }, { text: YT_PROMPT_G + (meta.title ? `\n(참고 제목: ${meta.title})` : '') }] }],
+      generationConfig: { responseMimeType: 'application/json' },
+    }, model, apiKey);
+  } catch {
+    throw Object.assign(new Error('이 영상은 분석하지 못했어요. 설명란에 레시피가 없는 영상일 수 있어요 — 다른 영상으로 시도하거나 직접 입력해 주세요.'), { code: 422 });
+  }
+  const data = ytParse(text);
+  if (!data) throw Object.assign(new Error('레시피 정리 결과를 읽지 못했어요.'), { code: 422 });
   if (!data.ok) throw Object.assign(new Error(data.reason || '이 영상에서 레시피를 찾지 못했어요.'), { code: 422 });
   if (!Array.isArray(data.ingredients) || !data.ingredients.length) throw Object.assign(new Error('재료를 찾지 못했어요.'), { code: 422 });
   return data;

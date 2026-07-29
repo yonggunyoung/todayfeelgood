@@ -10,6 +10,19 @@ const CFG = (typeof window !== "undefined" && window.GEULKKUMI_ADS) || {};
 
 export function adsEnabled() { return !!(CFG && CFG.client); }
 
+/* ── 토스 미니앱 배너 ─────────────────────────────────────────
+ * 토스 안에서는 AdSense가 아니라 토스 배너를 쓴다(외부 광고 SDK는 정책 소지).
+ * 광고 브리지는 geulkkumi-toss/src/toss-ads.ts 가 부팅 전에 window.__TOSS_ADS__ 로 주입한다.
+ * 활성화: 콘솔에서 배너 광고 그룹 생성 → index.html <head> 에
+ *   <script>window.GEULKKUMI_ADS={ tossBannerAdGroupId:"ait.v2.live.xxxxx" };</script>
+ * ID가 없으면 아무것도 하지 않는다(현재 상태 = 광고 0). */
+export function attachTossBanner(target) {
+  const b = (typeof window !== "undefined" && window.__TOSS_ADS__) || null;
+  const id = CFG.tossBannerAdGroupId;
+  if (!b || !id || !target || !b.attachBanner) return null;
+  try { return b.attachBanner(id, target, {}) || null; } catch { return null; }
+}
+
 let loaded = false;
 function loadOnce() {
   if (loaded || !adsEnabled() || typeof document === "undefined") return;

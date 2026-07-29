@@ -192,6 +192,14 @@ function boot() {
   const support = document.getElementById("support-link");
   if (support && SUPPORT_URL) { support.href = SUPPORT_URL; support.target = "_blank"; support.rel = "noopener"; support.hidden = false; }
 
+  // 토스 배너 — 토스 앱 안에서만(슬롯 #toss-banner 는 토스 빌드 index.html 에만 존재).
+  //   광고 그룹 ID가 없으면 아무 일도 일어나지 않는다. 웹에서는 브리지 자체가 없다.
+  if (inToss()) {
+    import("./ads.js").then((m) => {
+      try { m.attachTossBanner(document.getElementById("toss-banner")); } catch { /* 부가기능 */ }
+    }).catch(() => {});
+  }
+
   // 서비스워커(오프라인) — 토스 미니앱 빌드에는 sw.js가 없고 WebView라 불필요.
   if ("serviceWorker" in navigator && !inToss()) {
     window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js").catch(() => {}));

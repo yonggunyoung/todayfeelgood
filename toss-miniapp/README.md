@@ -16,7 +16,7 @@
 - **Node.js** (LTS 권장; Vite 5 / TypeScript 5 호환 버전)
 - **yarn** (이 프로젝트의 패키지 매니저 — `package.json` 의 `packageManager` 참고)
 - **앱인토스 CLI / SDK**: `@apps-in-toss/web-framework` (dependency 로 포함). `granite` / `ait` 명령을 제공.
-  - `granite dev` / `granite build` 는 `@apps-in-toss/web-framework` 가 깔리면 사용 가능.
+  - `granite dev` / `ait build` 는 `@apps-in-toss/web-framework` 가 깔리면 사용 가능.
   - `ait deploy` 는 앱인토스 배포 CLI. 콘솔 로그인/토큰이 필요할 수 있음.
 
 ## 설치 & 실행 (정확한 명령)
@@ -32,7 +32,7 @@ yarn dev                # → yarn vendor (루트 자산 복사) 후 granite dev
 
 ## 빌드 & 배포
 ```bash
-yarn build              # → yarn vendor 후 granite build (vite build) → dist/
+yarn build              # → yarn vendor 후 ait build (granite build는 웹 프로젝트 지원 종료) → dist/web + .ait
 yarn deploy             # → ait deploy → 앱인토스 sandbox 로 배포
 ```
 - 배포 후 콘솔에서 sandbox 확인 → 이상 없으면 **심사 제출**(최초 심사 며칠 소요).

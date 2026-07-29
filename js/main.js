@@ -15,7 +15,7 @@ import { gameDefense, defBuy, defStart, defSpeed, defPick, defRevive, defGiveUp,
 import { gamePuzzle } from './game-puzzle.js';
 import { gameGomoku, gomokuUndo, gomokuHintAd } from './game-gomoku.js';
 import { gameQuiz, quizPick, quizNext, quizReveal, quizRevealAll, quizFinish } from './game-quiz.js';
-import { tossRewardedAd } from './toss.js';
+import { tossRewardedAd, tossAttachBanner } from './toss.js';
 
 let tab = 'home';
 let pantryView = 'shelf';
@@ -3665,6 +3665,10 @@ initGames({
   onPoints: () => { renderTop(); if (tab === 'home') renderHome(); },
   submitScore,
 });
+
+// 토스 배너 — 토스 앱 안에서만 붙는다(#toss-banner 는 토스 빌드 index.html 에만 존재).
+//   웹/PWA에서는 슬롯도 브리지도 없어 아무 일도 일어나지 않는다.
+try { tossAttachBanner(document.getElementById('toss-banner')); } catch { /* 광고는 부가기능 */ }
 
 // 사용 계측 시작 — 앱 진입 + 첫 화면(무엇이 쓰이나/리텐션 측정). measurementId 없으면 조용히 no-op.
 initAnalytics();

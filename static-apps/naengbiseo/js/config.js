@@ -44,7 +44,14 @@ export const AI_FN = 'https://asia-northeast3-icebi-308e0.cloudfunctions.net/ai'
 
 // ③ 앱인토스 입점 후 채우기 — 콘솔에서 발급받는 값 (비우면 개별 운영 모드로 자동 폴백)
 //    rewardAdId: 보상형 광고 단위 / promotionId: 토스포인트 프로모션 (비즈월렛 예산 선충전 필요)
-export const TOSS = { rewardAdId: '', promotionId: '' };
+// 앱인토스 광고 그룹 ID — 콘솔에서 발급받은 값. 앱 번들에 노출되는 '공개 식별자'라 코드에 두어도 안전
+// (API 키와 다름). 이 값이 비어 있으면 토스 광고는 호출조차 되지 않는다 → 노출 0 · 수익 0.
+//   rewardAdId : 보상형 '게임·레시피 리워드'   bannerAdId : '메인 배너'
+export const TOSS = {
+  rewardAdId: 'ait.v2.live.fe5fa753c6f54b1c',
+  bannerAdId: 'ait.v2.live.bd0104ba0ca24dec',
+  promotionId: '',
+};
 
 // ④ 쿠팡 파트너스 트래킹 ID — 장보기 "쿠팡" 버튼에 제휴 태그로 붙는다.
 //    설정에서 개별 ID를 넣으면 그게 우선한다(없으면 이 값 사용). 공정위 고지 문구가 함께 노출된다.

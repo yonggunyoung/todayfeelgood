@@ -38,7 +38,7 @@ jobs:
           DEST=hub/static-apps/geulkkumi
           rm -rf "$DEST"
           mkdir -p "$DEST"
-          cp -r "$SRC"/index.html "$SRC"/sw.js "$SRC"/manifest.webmanifest \
+          cp -r "$SRC"/index.html "$SRC"/privacy.html "$SRC"/sw.js "$SRC"/manifest.webmanifest \
                 "$SRC"/icon.svg "$SRC"/icon-180.png "$SRC"/icon-192.png "$SRC"/icon-512.png \
                 "$SRC"/mascot.svg "$SRC"/og.png "$SRC"/og.svg \
                 "$SRC"/sitemap.xml "$SRC"/css "$SRC"/js "$DEST"/
